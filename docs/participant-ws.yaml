@@ -460,32 +460,31 @@ components:
     # ── Notes & Summary ──────────────────────────────────────────────────────
 
     notes_updated:
-      summary: Notes file changed — non-empty line count updated
+      summary: Notes file changed — mtime timestamp updated
       x-feature: notes_summary
       payload:
         type: object
-        required: [type, count]
+        required: [type]
         properties:
           type:
             type: string
             enum: [notes_updated]
-          count:
-            type: integer
-            description: Number of non-empty lines in the notes file
+          updated_at:
+            type: string
+            format: date-time
+            nullable: true
+            description: ISO timestamp of notes file mtime
 
     summary_updated:
-      summary: AI summary file changed — parsed point count updated
+      summary: AI summary file changed — mtime timestamp updated
       x-feature: notes_summary
       payload:
         type: object
-        required: [type, count]
+        required: [type]
         properties:
           type:
             type: string
             enum: [summary_updated]
-          count:
-            type: integer
-            description: Number of parsed bullet-point objects in ai-summary.md
           updated_at:
             type: string
             format: date-time

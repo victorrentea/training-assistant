@@ -240,12 +240,11 @@ class FileUploadedMsg(BaseModel):
 
 class NotesUpdatedMsg(BaseModel):
     type: Literal["notes_updated"] = "notes_updated"
-    count: int  # non-empty lines in the notes file
+    updated_at: str | None = None  # ISO timestamp of notes file mtime
 
 
 class SummaryUpdatedMsg(BaseModel):
     type: Literal["summary_updated"] = "summary_updated"
-    count: int  # non-empty lines in ai-summary.md
     updated_at: str | None = None  # ISO timestamp of ai-summary.md mtime
 
 

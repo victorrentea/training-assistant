@@ -1,9 +1,9 @@
 """
-Hermetic E2E tests: notes/summary count display in participant bar.
+Hermetic E2E tests: notes/summary timestamp display in participant bar.
 
 Tests:
-1. Buttons disabled on page load when counts are zero
-2. Buttons enabled with correct count labels from /state (no flash)
+1. Buttons disabled on page load when files are absent
+2. Buttons enabled with HH:MM timestamp from /state (no flash)
 3. notes_updated WS message updates label and triggers flash
 4. summary_updated WS message updates label and triggers flash
 """
@@ -139,13 +139,14 @@ def test_notes_summary_count_display_and_ws_flash():
             msg="Notes button did not become enabled after writing notes file",
         )
         notes_text = pax_page.locator("#notes-btn").inner_text()
-        assert "13" in notes_text, f"Notes button label should contain '13', got: {notes_text!r}"
+        # Badge should show HH:MM timestamp format
+        assert ":" in notes_text, f"Notes badge should show HH:MM timestamp, got: {notes_text!r}"
 
         notes_class = pax_page.locator("#notes-btn").get_attribute("class") or ""
         assert "count-flash" in notes_class, (
             f"Notes button should have count-flash CSS class after WS update, got: {notes_class!r}"
         )
-        print(f"Step 2 OK: notes button enabled, label contains '13', flash class present")
+        print(f"Step 2 OK: notes button enabled, badge shows timestamp, flash class present")
 
         # ── Step 3: Write summary, wait for broadcast, check WS flash ──
         _write_summary(session_name, 17)
@@ -155,16 +156,15 @@ def test_notes_summary_count_display_and_ws_flash():
             msg="Summary button did not become enabled after writing summary file",
         )
         summary_text = pax_page.locator("#summary-btn").inner_text()
-        assert "17" in summary_text, f"Summary button label should contain '17', got: {summary_text!r}"
+        assert ":" in summary_text, f"Summary badge should show HH:MM timestamp, got: {summary_text!r}"
 
         summary_class = pax_page.locator("#summary-btn").get_attribute("class") or ""
         assert "count-flash" in summary_class, (
             f"Summary button should have count-flash CSS class after WS update, got: {summary_class!r}"
         )
-        print("Step 3 OK: summary button enabled, label contains '17', flash class present")
+        print("Step 3 OK: summary button enabled, badge shows timestamp, flash class present")
 
-        # ── Step 4: Reload page — counts should come from /state, no flash ──
-        # Update files to different counts before reload
+        # ── Step 4: Reload page — timestamps should come from /state, no flash ──
         _write_notes(session_name, 20)
         _write_summary(session_name, 5)
         # Wait for daemon to pick up the changes
@@ -176,11 +176,11 @@ def test_notes_summary_count_display_and_ws_flash():
         notes_text_after = pax_page.locator("#notes-btn").inner_text()
         summary_text_after = pax_page.locator("#summary-btn").inner_text()
 
-        assert "20" in notes_text_after, (
-            f"After reload, notes button should show 20, got: {notes_text_after!r}"
+        assert ":" in notes_text_after, (
+            f"After reload, notes button should show HH:MM timestamp, got: {notes_text_after!r}"
         )
-        assert "5" in summary_text_after, (
-            f"After reload, summary button should show 5, got: {summary_text_after!r}"
+        assert ":" in summary_text_after, (
+            f"After reload, summary button should show HH:MM timestamp, got: {summary_text_after!r}"
         )
 
         notes_class_after = pax_page.locator("#notes-btn").get_attribute("class") or ""
@@ -191,7 +191,7 @@ def test_notes_summary_count_display_and_ws_flash():
         assert "count-flash" not in summary_class_after, (
             f"Summary button should NOT flash on page load (state-driven), got: {summary_class_after!r}"
         )
-        print("Step 4 OK: reload shows updated counts without flash")
+        print("Step 4 OK: reload shows HH:MM timestamps without flash")
 
         browser.close()
 

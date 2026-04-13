@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from daemon.codereview.state import codereview_state
 from daemon.debate.state import debate_state
 from daemon.leaderboard.state import leaderboard_state
-from daemon.misc.content_files import read_notes_content, read_summary_payload
+from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import GitRepoActivity, participant_state
 from daemon.poll.state import poll_state
@@ -180,9 +180,8 @@ class HostStateResponse(BaseModel):
     daemon_session_folder: str | None = None
     daemon_session_notes: str | None = None
     leaderboard_data: LeaderboardData | None = None
-    summary_count: int
+    notes_updated_at: str | None = None
     summary_updated_at: str | None = None
-    notes_count: int
     token_usage: TokenUsage
     transcript_line_count: int
     transcript_total_lines: int
@@ -343,9 +342,7 @@ async def get_host_state(request: Request, session_id: str):
     cr = _build_codereview_for_host()
     debate = _build_debate_for_host()
     summary = read_summary_payload()
-    notes_content = read_notes_content()
-    notes_count = sum(1 for line in (notes_content or "").splitlines() if line.strip())
-    summary_count = len(summary["points"])
+    notes_updated_at = read_notes_updated_at()
 
     state_msg = {
         "type": "state",
@@ -391,10 +388,9 @@ async def get_host_state(request: Request, session_id: str):
         "daemon_session_notes": None,
         # Leaderboard
         "leaderboard_data": leaderboard_state.data,
-        # Summary / notes (counts only — full content fetched on modal open)
-        "summary_count": summary_count,
+        # Summary / notes (timestamps only — full content fetched on modal open)
+        "notes_updated_at": notes_updated_at,
         "summary_updated_at": summary["updated_at"],
-        "notes_count": notes_count,
         # Token usage
         "token_usage": _get_token_usage(),
         # Transcript info

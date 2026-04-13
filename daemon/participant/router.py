@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict
 from starlette.responses import Response
 
 from daemon.host_state_router import _build_host_participants_list
-from daemon.misc.content_files import read_notes_content, read_summary_payload
+from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
 from daemon.participant.state import GitRepoActivity, participant_state
 from daemon.ws_messages import ParticipantListUpdatedMsg
 from daemon.ws_publish import notify_host
@@ -224,9 +224,8 @@ class ParticipantStateResponse(BaseModel):
     codereview: CodeReviewParticipantState
     debate: DebateData
     slides_current: SlidesCurrentPayload | None = None
-    summary_count: int
+    notes_updated_at: str | None = None
     summary_updated_at: str | None = None
-    notes_count: int
     slides_history_count: int
     gdrive_url: str | None = None
     has_agenda: bool = False
@@ -569,8 +568,7 @@ async def get_participant_state(request: Request):
     cr = _build_codereview_for_participant(pid)
     debate = _build_debate_for_participant(pid)
     summary = read_summary_payload()
-    notes_content = read_notes_content()
-    notes_count = sum(1 for line in (notes_content or "").splitlines() if line.strip())
+    notes_updated_at = read_notes_updated_at()
 
     state_msg = {
         # Core identity / session
@@ -608,10 +606,9 @@ async def get_participant_state(request: Request):
         },
         # Slides (from misc state — synced from Railway)
         "slides_current": misc_state.slides_current,
-        # Summary / notes (counts only — full content fetched on demand)
-        "summary_count": len(summary["points"]),
+        # Summary / notes (timestamps only — full content fetched on demand)
+        "notes_updated_at": notes_updated_at,
         "summary_updated_at": summary["updated_at"],
-        "notes_count": notes_count,
         "slides_history_count": len(misc_state.slides_viewed),
         # Google Drive folder link for session materials
         "gdrive_url": misc_state.gdrive_url,

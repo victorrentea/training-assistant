@@ -477,28 +477,30 @@ def _send_global_state_saved_ack(
 
 
 def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
-    """Broadcast notes and/or summary counts to participants and host via WS.
+    """Broadcast notes and/or summary timestamps to participants and host via WS.
 
     Only broadcasts the message(s) for the part(s) that actually changed.
-    Skips broadcasting when both counts are 0 (e.g., fresh session start) —
-    participants already get zeros from GET /api/participant/state.
+    Skips broadcasting when both files are absent (e.g., fresh session start) —
+    participants already get nulls from GET /api/participant/state.
     """
-    notes = probe["notes_non_empty_lines"]
-    summary = probe["summary_point_count"]
-    if notes == 0 and summary == 0:
+    notes_mtime_ns = probe.get("notes_mtime_ns")
+    summary_mtime_ns = probe.get("summary_mtime_ns")
+    if notes_mtime_ns is None and summary_mtime_ns is None:
         return
+    from datetime import datetime, timezone
     from daemon.ws_messages import NotesUpdatedMsg, SummaryUpdatedMsg
     from daemon.ws_publish import broadcast
     parts = set(change_parts.split(","))
     if "notes" in parts or "session" in parts or "initial" in parts:
-        broadcast(NotesUpdatedMsg(count=notes))
+        notes_updated_at: str | None = None
+        if notes_mtime_ns:
+            notes_updated_at = datetime.fromtimestamp(notes_mtime_ns / 1e9, tz=timezone.utc).isoformat()
+        broadcast(NotesUpdatedMsg(updated_at=notes_updated_at))
     if "summary" in parts or "session" in parts or "initial" in parts:
-        mtime_ns = probe.get("summary_mtime_ns")
-        updated_at: str | None = None
-        if mtime_ns:
-            from datetime import datetime, timezone
-            updated_at = datetime.fromtimestamp(mtime_ns / 1e9, tz=timezone.utc).isoformat()
-        broadcast(SummaryUpdatedMsg(count=summary, updated_at=updated_at))
+        summary_updated_at: str | None = None
+        if summary_mtime_ns:
+            summary_updated_at = datetime.fromtimestamp(summary_mtime_ns / 1e9, tz=timezone.utc).isoformat()
+        broadcast(SummaryUpdatedMsg(updated_at=summary_updated_at))
 
 
 

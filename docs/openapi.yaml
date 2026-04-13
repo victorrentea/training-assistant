@@ -2024,17 +2024,16 @@ components:
           anyOf:
           - $ref: '#/components/schemas/LeaderboardData'
           - type: 'null'
-        summary_count:
-          type: integer
-          title: Summary Count
+        notes_updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Notes Updated At
         summary_updated_at:
           anyOf:
           - type: string
           - type: 'null'
           title: Summary Updated At
-        notes_count:
-          type: integer
-          title: Notes Count
         token_usage:
           $ref: '#/components/schemas/TokenUsage'
         transcript_line_count:
@@ -2077,8 +2076,6 @@ components:
       - slides_log
       - slides_log_deep_count
       - join_base_url
-      - summary_count
-      - notes_count
       - token_usage
       - transcript_line_count
       - transcript_total_lines
@@ -2239,17 +2236,16 @@ components:
           anyOf:
           - $ref: '#/components/schemas/SlidesCurrentPayload'
           - type: 'null'
-        summary_count:
-          type: integer
-          title: Summary Count
+        notes_updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Notes Updated At
         summary_updated_at:
           anyOf:
           - type: string
           - type: 'null'
           title: Summary Updated At
-        notes_count:
-          type: integer
-          title: Notes Count
         slides_history_count:
           type: integer
           title: Slides History Count
@@ -2275,8 +2271,6 @@ components:
       - vote_counts
       - codereview
       - debate
-      - summary_count
-      - notes_count
       - slides_history_count
       title: ParticipantStateResponse
     PasteEntry:

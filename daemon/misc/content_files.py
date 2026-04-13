@@ -21,6 +21,22 @@ def get_active_session_folder() -> Path | None:
     return folder
 
 
+def read_notes_updated_at() -> str | None:
+    """Return ISO timestamp of the notes file mtime, or None if no notes file exists."""
+    folder = get_active_session_folder()
+    if folder is None:
+        return None
+    notes_file = find_notes_in_folder(folder)
+    if notes_file is None:
+        return None
+    try:
+        mtime_ns = notes_file.stat().st_mtime_ns
+    except OSError:
+        return None
+    from datetime import datetime, timezone
+    return datetime.fromtimestamp(mtime_ns / 1e9, tz=timezone.utc).isoformat()
+
+
 def read_notes_content() -> str | None:
     folder = get_active_session_folder()
     if folder is None:

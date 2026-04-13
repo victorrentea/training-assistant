@@ -1723,13 +1723,20 @@ async function _refreshParticipantState() {
     if (state.my_avatar) _applyAvatar(state.my_avatar);
 
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
-    document.querySelector('[data-nav="notes"]').style.display = state.notes_count > 0 ? '' : 'none';
-    document.getElementById('notes-badge').textContent = state.notes_count || '';
-    document.getElementById('notes-badge').classList.toggle('badge-alert', LS.isNotesUnread());
+    document.querySelector('[data-nav="notes"]').style.display = state.notes_updated_at ? '' : 'none';
+    var notesBadge = document.getElementById('notes-badge');
+    if (state.notes_updated_at) {
+      var nd = new Date(state.notes_updated_at);
+      notesBadge.textContent = nd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      notesBadge.style.display = '';
+    } else {
+      notesBadge.style.display = 'none';
+    }
+    notesBadge.classList.toggle('badge-alert', LS.isNotesUnread());
     var summaryNav = document.querySelector('[data-nav="summary"]');
-    summaryNav.style.display = state.summary_count > 0 ? '' : 'none';
+    summaryNav.style.display = state.summary_updated_at ? '' : 'none';
     var summaryBadge = document.getElementById('summary-badge');
-    if (state.summary_count > 0 && state.summary_updated_at) {
+    if (state.summary_updated_at) {
       var d = new Date(state.summary_updated_at);
       summaryBadge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
       summaryBadge.style.display = '';
@@ -1743,8 +1750,8 @@ async function _refreshParticipantState() {
     _setPastSlidesBadge(state.slides_history_count || 0);
     var saved = LS.getView();
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
-    if (saved === 'notes' && !(state.notes_count > 0)) saved = 'slides';
-    if (saved === 'summary' && !(state.summary_count > 0)) saved = 'slides';
+    if (saved === 'notes' && !state.notes_updated_at) saved = 'slides';
+    if (saved === 'summary' && !state.summary_updated_at) saved = 'slides';
     _hostSlidesCurrent = state.slides_current || null;
     showView(saved);
     var followCb = document.getElementById('slides-follow-checkbox');
@@ -1764,16 +1771,21 @@ function _applySummaryBadgeUnread(unread) {
 }
 
 function _applyState(msg) {
-  if (msg.notes_count != null) {
-    document.querySelector('[data-nav="notes"]').style.display = msg.notes_count > 0 ? '' : 'none';
-    document.getElementById('notes-badge').textContent = msg.notes_count || '';
-    document.getElementById('notes-badge').classList.toggle('badge-alert', LS.isNotesUnread());
+  if (msg.notes_updated_at !== undefined) {
+    document.querySelector('[data-nav="notes"]').style.display = msg.notes_updated_at ? '' : 'none';
+    var notesBadge = document.getElementById('notes-badge');
+    if (msg.notes_updated_at) {
+      var nd = new Date(msg.notes_updated_at);
+      notesBadge.textContent = nd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      notesBadge.style.display = '';
+    } else { notesBadge.style.display = 'none'; }
+    notesBadge.classList.toggle('badge-alert', LS.isNotesUnread());
   }
-  if (msg.summary_count != null) {
+  if (msg.summary_updated_at !== undefined) {
     var summaryNav = document.querySelector('[data-nav="summary"]');
-    summaryNav.style.display = msg.summary_count > 0 ? '' : 'none';
+    summaryNav.style.display = msg.summary_updated_at ? '' : 'none';
     var badge = document.getElementById('summary-badge');
-    if (msg.summary_count > 0 && msg.summary_updated_at) {
+    if (msg.summary_updated_at) {
       var d = new Date(msg.summary_updated_at);
       badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
       badge.style.display = '';
@@ -1809,18 +1821,24 @@ function _handleWsMessage(msg) {
     case 'reload': location.reload(); break;
     case 'redirect': window.location.href = msg.url || '/'; break;
     case 'state': _applyState(msg); break;
-    case 'notes_updated':
-      document.querySelector('[data-nav="notes"]').style.display = msg.count > 0 ? '' : 'none';
-      document.getElementById('notes-badge').textContent = msg.count || '';
+    case 'notes_updated': {
+      document.querySelector('[data-nav="notes"]').style.display = msg.updated_at ? '' : 'none';
+      var notesBadge = document.getElementById('notes-badge');
+      if (msg.updated_at) {
+        var nd = new Date(msg.updated_at);
+        notesBadge.textContent = nd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        notesBadge.style.display = '';
+      } else { notesBadge.style.display = 'none'; }
       var onNotes = document.getElementById('notes-view').style.display !== 'none';
       _applyNotesBadgeUnread(!onNotes);
       if (onNotes) loadNotes();
       break;
+    }
     case 'summary_updated': {
       var summaryNav = document.querySelector('[data-nav="summary"]');
-      summaryNav.style.display = msg.count > 0 ? '' : 'none';
+      summaryNav.style.display = msg.updated_at ? '' : 'none';
       var badge = document.getElementById('summary-badge');
-      if (msg.count > 0 && msg.updated_at) {
+      if (msg.updated_at) {
         var d = new Date(msg.updated_at);
         badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         badge.style.display = '';
