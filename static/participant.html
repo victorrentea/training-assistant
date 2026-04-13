@@ -1739,7 +1739,10 @@ function _applySummaryBadgeUnread(unread) {
 
 function _applyState(msg) {
   if (msg.session_name != null) {
-    var parts = msg.session_name.split('@');
+    var sn = msg.session_name;
+    var spaceIdx = sn.indexOf(' ');
+    if (spaceIdx !== -1) sn = sn.slice(spaceIdx + 1);
+    var parts = sn.split('@');
     document.getElementById('session-title').textContent = parts[0].trim();
     var orgEl = document.getElementById('session-org');
     if (parts.length > 1 && parts[1].trim()) {
