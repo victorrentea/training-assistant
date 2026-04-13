@@ -476,9 +476,10 @@ def _send_global_state_saved_ack(
     pass  # global_state_saved removed: Railway no longer tracks ACKs
 
 
-def _broadcast_notes_summary_counts(probe: dict) -> None:
-    """Broadcast notes and summary line counts to participants and host via WS.
+def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
+    """Broadcast notes and/or summary counts to participants and host via WS.
 
+    Only broadcasts the message(s) for the part(s) that actually changed.
     Skips broadcasting when both counts are 0 (e.g., fresh session start) —
     participants already get zeros from GET /api/participant/state.
     """
@@ -488,13 +489,16 @@ def _broadcast_notes_summary_counts(probe: dict) -> None:
         return
     from daemon.ws_messages import NotesUpdatedMsg, SummaryUpdatedMsg
     from daemon.ws_publish import broadcast
-    broadcast(NotesUpdatedMsg(count=notes))
-    mtime_ns = probe.get("summary_mtime_ns")
-    updated_at: str | None = None
-    if mtime_ns:
-        from datetime import datetime, timezone
-        updated_at = datetime.fromtimestamp(mtime_ns / 1e9, tz=timezone.utc).isoformat()
-    broadcast(SummaryUpdatedMsg(count=summary, updated_at=updated_at))
+    parts = set(change_parts.split(","))
+    if "notes" in parts or "session" in parts or "initial" in parts:
+        broadcast(NotesUpdatedMsg(count=notes))
+    if "summary" in parts or "session" in parts or "initial" in parts:
+        mtime_ns = probe.get("summary_mtime_ns")
+        updated_at: str | None = None
+        if mtime_ns:
+            from datetime import datetime, timezone
+            updated_at = datetime.fromtimestamp(mtime_ns / 1e9, tz=timezone.utc).isoformat()
+        broadcast(SummaryUpdatedMsg(count=summary, updated_at=updated_at))
 
 
 
@@ -1293,13 +1297,14 @@ def run() -> None:
                 )
                 notes_summary_probe = _build_notes_summary_probe(config.session_folder)
                 if notes_summary_probe_prev != notes_summary_probe:
+                    change_parts = _probe_change_parts(notes_summary_probe_prev, notes_summary_probe)
                     _log_notes_summary_probe(
                         "change-detected",
                         notes_summary_probe,
-                        _probe_change_parts(notes_summary_probe_prev, notes_summary_probe),
+                        change_parts,
                     )
                     notes_summary_probe_prev = notes_summary_probe
-                    _broadcast_notes_summary_counts(notes_summary_probe)
+                    _broadcast_notes_summary_counts(notes_summary_probe, change_parts)
 
                 if now - last_persist_poll_at >= 3.0:
                     last_persist_poll_at = now
