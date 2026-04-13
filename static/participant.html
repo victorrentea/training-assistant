@@ -186,13 +186,13 @@ body{visibility:hidden}
     <input id="name-edit-input" type="text" maxlength="32" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
   </span>
 </div>
+</aside>
 <div id="deploy-age-line" onclick="resetStatePrompt()" title="Click to reset local state"
-  class="absolute bottom-0 left-0 right-0 px-2 py-1 text-center cursor-pointer select-none"
+  class="fixed bottom-0 left-0 px-2 py-1 cursor-pointer select-none z-50"
   style="font-size:0.625rem;line-height:1.3;color:var(--color-outline);opacity:0.5;transition:opacity 0.15s"
   onmouseenter="this.style.opacity='0.9'" onmouseleave="this.style.opacity='0.5'">
   <span id="version-tag-new">loading…</span>
 </div>
-</aside>
 <!-- MAIN CONTENT (80%) -->
 <main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
 <!-- Activity View -->
