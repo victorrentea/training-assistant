@@ -258,10 +258,20 @@ body{visibility:hidden}
 <!-- MAIN CONTENT (80%) -->
 <main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
 <!-- Activity View -->
-<div id="activity-view" style="display:none" class="h-full flex flex-col items-center justify-center px-16 py-12">
-  <span class="material-symbols-outlined text-6xl mb-4 text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">bolt</span>
-  <p class="text-lg font-semibold text-on-surface-variant">No activity right now</p>
-  <p class="text-sm text-on-surface-variant opacity-60 mt-1">The host will start an activity soon</p>
+<div id="activity-view" style="display:none" class="h-full flex flex-col items-center justify-center gap-8 px-16 py-12">
+  <div class="select-none" style="font-size:6rem;line-height:1">☕</div>
+  <div class="text-center">
+    <p class="text-2xl font-bold text-on-surface">Welcome!</p>
+    <p class="text-base text-on-surface-variant mt-2">Grab a coffee — we're about to start.</p>
+  </div>
+  <div id="activity-location-section" style="display:none" class="flex flex-col items-center gap-3 mt-2">
+    <p class="text-sm text-on-surface-variant text-center" style="max-width:18rem">Mind sharing where you're joining from? The host loves knowing who's in the room.</p>
+    <button id="activity-location-btn" onclick="requestParticipantLocation()"
+      class="flex items-center gap-2 px-5 py-2 rounded-full bg-surface-container-high text-on-surface text-sm font-medium hover:bg-surface-container-highest transition-colors cursor-pointer">
+      <span class="material-symbols-outlined" style="font-size:1rem">location_on</span>
+      <span id="activity-location-btn-text">Share my location</span>
+    </button>
+  </div>
 </div>
 <!-- AI Summary View -->
 <div id="notes-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('notes',this)">
@@ -1254,6 +1264,48 @@ function showView(name) {
   if (name === 'slides') {
     _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
   }
+  if (name === 'activity') initActivityView();
+}
+var _activityLocationSent = false;
+function initActivityView() {
+  if (_activityLocationSent) return;
+  if (!navigator.geolocation) return;
+  var section = document.getElementById('activity-location-section');
+  if (navigator.permissions) {
+    navigator.permissions.query({name: 'geolocation'}).then(function(result) {
+      if (result.state === 'granted') {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+          _sendParticipantLocation(pos.coords.latitude, pos.coords.longitude);
+        });
+      } else if (result.state === 'prompt') {
+        section.style.display = '';
+      }
+    }).catch(function() { section.style.display = ''; });
+  } else {
+    section.style.display = '';
+  }
+}
+function requestParticipantLocation() {
+  document.getElementById('activity-location-btn').disabled = true;
+  document.getElementById('activity-location-btn-text').textContent = 'Getting location…';
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      _sendParticipantLocation(pos.coords.latitude, pos.coords.longitude);
+      document.getElementById('activity-location-section').style.display = 'none';
+    },
+    function() {
+      document.getElementById('activity-location-section').style.display = 'none';
+    }
+  );
+}
+function _sendParticipantLocation(lat, lon) {
+  if (_activityLocationSent || !_sessionId) return;
+  _activityLocationSent = true;
+  fetch('/' + _sessionId + '/api/participant/location', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json', 'X-Participant-ID': _myUUID},
+    body: JSON.stringify({location: lat + ',' + lon})
+  }).catch(function() {});
 }
 function resetStatePrompt() {
   if (confirm('Reset local state? This will clear your saved emojis and preferences.')) {
