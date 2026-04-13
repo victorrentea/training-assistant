@@ -11,8 +11,9 @@
 body{visibility:hidden}
 .badge-new{margin-left:auto;font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
 .badge-live{font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4;animation:live-blink 2s ease-in-out infinite}
-#past-slides-badge,#notes-badge,#summary-badge{background:#9ca3af;transition:background-color 3s ease}
-.badge-alert{background:#ef4444!important;transition:none!important}
+#past-slides-badge{background:#9ca3af;transition:background-color 3s ease}
+#notes-badge,#summary-badge{background:#9ca3af}
+.badge-alert{background:#ef4444!important}
 @keyframes live-blink{0%,100%{opacity:1}50%{opacity:0.2}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes follow-pulse{0%,100%{border-color:black;background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
