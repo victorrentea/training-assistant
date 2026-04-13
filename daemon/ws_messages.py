@@ -254,6 +254,17 @@ class SummaryUpdatedMsg(BaseModel):
     updated_at: str | None = None  # ISO timestamp of ai-summary.md mtime
 
 
+# ── Host-only: Talk presentation ──────────────────────────────────────────────
+
+class TalkPdfReadyMsg(BaseModel):
+    type: Literal["talk_pdf_ready"] = "talk_pdf_ready"
+    slug: str
+
+
+class TalkPdfFailedMsg(BaseModel):
+    type: Literal["talk_pdf_failed"] = "talk_pdf_failed"
+
+
 # ── Addons inbound ───────────────────────────────────────────────────────────
 
 class GitFileOpenedMsg(BaseModel):
@@ -343,6 +354,9 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Notes & Summary
     "notes_updated": NotesUpdatedMsg,
     "summary_updated": SummaryUpdatedMsg,
+    # Talk presentation
+    "talk_pdf_ready": TalkPdfReadyMsg,
+    "talk_pdf_failed": TalkPdfFailedMsg,
     # Cross-cutting
     "reload": ReloadMsg,
 }
@@ -419,6 +433,9 @@ HOST_MESSAGE_FEATURES: dict[str, str] = {
     # Notes & Summary
     "notes_updated": "notes_summary",
     "summary_updated": "notes_summary",
+    # Talk presentation
+    "talk_pdf_ready": "slides",
+    "talk_pdf_failed": "slides",
     # Cross-cutting
     "reload": "reload",
 }

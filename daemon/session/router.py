@@ -21,7 +21,8 @@ from daemon import ws_publish
 from daemon.session import pending as session_pending
 from daemon.session import state as session_state
 from daemon.session_state import announce_session_id, load_session_meta, load_session_state, save_session_state
-from daemon.ws_messages import SlidesCurrentMsg
+from daemon.misc.state import misc_state
+from daemon.ws_messages import SlidesCurrentMsg, TalkPdfReadyMsg, TalkPdfFailedMsg
 from scripts.resolve_gdrive_link import resolve_gdrive_file_url, gdrive_view_url_to_presentation_export_url
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
@@ -229,6 +230,9 @@ async def talk_presentation_path(body: TalkPresentationPathRequest):
         state["talk_presentation_slug"] = slug
         save_session_state(folder, state)
 
+    misc_state.talk_presentation_name = pptx_path.stem
+    misc_state.talk_presentation_slug = None  # cleared until PDF is confirmed ready
+
     if pdf_export_url:
         asyncio.create_task(_download_and_activate_talk_slides(slug, pdf_export_url))
 
@@ -243,7 +247,10 @@ async def _download_and_activate_talk_slides(slug: str, pdf_export_url: str) -> 
         result = await asyncio.to_thread(download_on_railway, slug, pdf_export_url)
         sha = result.get("sha256", "")[:8]
         daemon_log.info("talk     ", f"download done slug={slug} sha={sha}")
+        misc_state.talk_presentation_slug = slug
+        await ws_publish.notify_host(TalkPdfReadyMsg(slug=slug))
         ws_publish.broadcast(SlidesCurrentMsg(slides_current={"slug": slug, "page": 1}))
         daemon_log.info("talk     ", f"slides_current pushed slug={slug}")
     except Exception as e:
         daemon_log.error("talk     ", f"download failed slug={slug}: {e}")
+        await ws_publish.notify_host(TalkPdfFailedMsg())

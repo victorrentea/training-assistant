@@ -171,6 +171,7 @@ class HostStateResponse(BaseModel):
     debate_round_timer_seconds: int | None = None
     debate_round_timer_started_at: str | None = None
     talk_presentation_name: str | None = None
+    talk_presentation_slug: str | None = None
     slides_current: SlidesCurrentPayload | None = None
     slides_log: list[SlidesLogEntry]
     slides_log_deep_count: int
@@ -381,6 +382,7 @@ async def get_host_state(request: Request, session_id: str):
         "debate_round_timer_started_at": debate.get("round_timer_started_at"),
         # Slides + session info (from misc state)
         "talk_presentation_name": misc_state.talk_presentation_name,
+        "talk_presentation_slug": misc_state.talk_presentation_slug,
         "slides_current": misc_state.slides_current,
         **_build_slides_log_fields(),
         "git_repos": [r.model_dump() for r in participant_state.git_repos],

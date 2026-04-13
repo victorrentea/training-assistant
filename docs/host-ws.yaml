@@ -36,6 +36,8 @@ channels:
           - $ref: '#/components/messages/participant_list_updated'
           - $ref: '#/components/messages/notes_updated'
           - $ref: '#/components/messages/summary_updated'
+          - $ref: '#/components/messages/talk_pdf_ready'
+          - $ref: '#/components/messages/talk_pdf_failed'
           - $ref: '#/components/messages/reload'
 
 components:
@@ -332,6 +334,32 @@ components:
             format: date-time
             nullable: true
             description: ISO timestamp of ai-summary.md mtime
+
+    # ── Talk presentation ─────────────────────────────────────────────────────
+
+    talk_pdf_ready:
+      summary: PDF was successfully downloaded to Railway and is ready to serve
+      x-feature: slides
+      payload:
+        type: object
+        required: [type, slug]
+        properties:
+          type:
+            type: string
+            enum: [talk_pdf_ready]
+          slug:
+            type: string
+
+    talk_pdf_failed:
+      summary: PDF download from Google Drive failed — host should be notified
+      x-feature: slides
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [talk_pdf_failed]
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 

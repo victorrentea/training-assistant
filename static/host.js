@@ -458,8 +458,7 @@
           renderMode(msg.mode);
         }
         if (msg.talk_presentation_name) {
-          const labelEl = document.getElementById('talk-pptx-label');
-          if (labelEl) labelEl.textContent = '▶ ' + msg.talk_presentation_name;
+          _setTalkPptxLabel(msg.talk_presentation_name, !!msg.talk_presentation_slug);
         }
         if (msg.summary_updated_at) summaryUpdatedAt = msg.summary_updated_at;
         if (msg.summary_count) updateSummaryLineCount(msg.summary_count);
@@ -472,6 +471,10 @@
         updateSummaryLineCount(msg.count);
       } else if (msg.type === 'summary') {
         updateSummary(msg.points, msg.updated_at);
+      } else if (msg.type === 'talk_pdf_ready') {
+        _setTalkPptxLabel(document.getElementById('talk-pptx-label')?.textContent?.replace(/^▶ /, '') || '', true);
+      } else if (msg.type === 'talk_pdf_failed') {
+        toast('Impossible to export PDF');
       } else if (msg.type === 'slides_cache_status') {
         _refreshHostSlidesCatalog();
       } else if (msg.type === 'vote_update') {
@@ -3610,12 +3613,19 @@ function stopInactivityTracking() {
 }
 
 // ── Talk mode: PPTX file picker / drop zone ──
+function _setTalkPptxLabel(name, slugReady) {
+  const labelEl = document.getElementById('talk-pptx-label');
+  if (!labelEl) return;
+  labelEl.textContent = '▶ ' + name;
+  const check = document.getElementById('talk-pptx-check');
+  if (check) check.style.display = slugReady ? '' : 'none';
+}
+
 function onTalkPptxSelected(input) {
   const file = input.files[0];
   if (!file) return;
   input.value = '';  // reset so same file can be re-selected
-  const labelEl = document.getElementById('talk-pptx-label');
-  if (labelEl) labelEl.textContent = '▶ ' + file.name.replace(/\.pptx?$/i, '');
+  _setTalkPptxLabel(file.name.replace(/\.pptx?$/i, ''), false);
   fetch('/api/session/talk-presentation-path', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},

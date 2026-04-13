@@ -24,6 +24,7 @@ class MiscState:
         self.gdrive_url: str | None = None
         self.agenda_docx_path: Path | None = None
         self.talk_presentation_name: str | None = None
+        self.talk_presentation_slug: str | None = None
 
     def sync_from_restore(self, data: dict):
         with self._lock:
@@ -65,6 +66,8 @@ class MiscState:
                 self.gdrive_url = data["gdrive_url"]
             if "talk_presentation_name" in data:
                 self.talk_presentation_name = data["talk_presentation_name"]
+            if "talk_presentation_slug" in data:
+                self.talk_presentation_slug = data["talk_presentation_slug"]
 
     def add_paste(self, pid: str, text: str) -> dict | None:
         entries = self.paste_texts.setdefault(pid, [])
@@ -158,6 +161,7 @@ class MiscState:
             self.slides_viewed = []
             self.gdrive_url = None
             self.talk_presentation_name = None
+            self.talk_presentation_slug = None
 
 
 misc_state = MiscState()
