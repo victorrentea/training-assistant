@@ -196,14 +196,14 @@ def named_participant_clicks_follow(name):
 @then(parsers.parse('{name} sees the slides overlay'))
 def named_overlay_visible(name):
     pax = _pax(name)
-    expect(pax._page.locator("#slides-overlay")).to_be_visible(timeout=10000)
+    expect(pax._page.locator("#slides-view")).to_be_visible(timeout=10000)
 
 
 @given(parsers.parse('the slides catalog does not contain "{slug}"'))
 def catalog_does_not_contain(connected, slug):
     pax = connected["pax"]
     pax.expand_slides_dock()
-    items = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
+    items = pax._page.locator(f'.topic-item[data-slide-id^="{slug}|"]')
     expect(items).to_have_count(0, timeout=3000)
 
 
@@ -237,7 +237,7 @@ def click_download_button(request, name, slug):
     # Use Playwright's download event to capture the file
     with pax._page.expect_download(timeout=30000) as download_info:
         pax._page.locator(
-            f'.slides-list-item[data-slug="{slug}"] .slides-list-download'
+            f'.topic-item[data-slide-id^="{slug}|"] span[title^="Download"]'
         ).click()
     download = download_info.value
     request.config._slides_download = download
@@ -275,9 +275,9 @@ def slide_content_rendered(request, connected):
     """Screenshot the PDF viewer and verify it has non-trivial content (not blank).
     Also stores screenshot for later comparison in 'the slide content has changed'."""
     pax = connected["pax"]
-    viewer = pax._page.locator("#slides-pdf-viewer")
+    viewer = pax._page.locator("#pdf-pages")
     expect(viewer).to_be_visible(timeout=15000)
-    pax._page.wait_for_selector("#slides-pdf-viewer canvas", timeout=15000)
+    pax._page.wait_for_selector("#pdf-pages canvas", timeout=15000)
     pax._page.wait_for_timeout(1000)  # allow render to complete
     screenshot = viewer.screenshot()
     unique_bytes = len(set(screenshot))
@@ -296,8 +296,8 @@ def slide_automatically_reloaded():
     pax = _pax("Alice")
     # Wait for WS notification and viewer reload
     pax._page.wait_for_timeout(5000)
-    # Verify overlay is still open after reload
-    expect(pax._page.locator("#slides-overlay")).to_be_visible(timeout=10000)
+    # Verify slides view is still open after reload
+    expect(pax._page.locator("#slides-view")).to_be_visible(timeout=10000)
 
 
 # ── Then steps ─────────────────────────────────────────────────────────
@@ -306,9 +306,9 @@ def slide_automatically_reloaded():
 def catalog_contains_with_timestamp(connected, slug):
     pax = connected["pax"]
     pax.expand_slides_dock()
-    item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
+    item = pax._page.locator(f'.topic-item[data-slide-id^="{slug}|"]')
     expect(item).to_be_visible(timeout=10000)
-    timestamp = item.locator(".slides-list-updated")
+    timestamp = item.locator(".opacity-50")
     try:
         expect(timestamp).to_be_visible(timeout=5000)
     except AssertionError:
@@ -316,9 +316,9 @@ def catalog_contains_with_timestamp(connected, slug):
         pax._page.wait_for_load_state("networkidle")
         pax._page.wait_for_timeout(3000)
         pax.expand_slides_dock()
-        item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
+        item = pax._page.locator(f'.topic-item[data-slide-id^="{slug}|"]')
         expect(item).to_be_visible(timeout=10000)
-        timestamp = item.locator(".slides-list-updated")
+        timestamp = item.locator(".opacity-50")
         expect(timestamp).to_be_visible(timeout=10000)
     text = timestamp.inner_text().strip()
     assert len(text) > 0, f"Timestamp for '{slug}' is empty"
@@ -331,9 +331,9 @@ def catalog_contains_with_updated_timestamp(connected, slug):
     pax.expand_slides_dock()
     # Wait for catalog refresh via WS notification, then reload if needed
     pax._page.wait_for_timeout(5000)
-    item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
+    item = pax._page.locator(f'.topic-item[data-slide-id^="{slug}|"]')
     expect(item).to_be_visible(timeout=10000)
-    timestamp = item.locator(".slides-list-updated")
+    timestamp = item.locator(".opacity-50")
     try:
         expect(timestamp).to_be_visible(timeout=5000)
     except AssertionError:
@@ -341,9 +341,9 @@ def catalog_contains_with_updated_timestamp(connected, slug):
         pax._page.wait_for_load_state("networkidle")
         pax._page.wait_for_timeout(3000)
         pax.expand_slides_dock()
-        item = pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')
+        item = pax._page.locator(f'.topic-item[data-slide-id^="{slug}|"]')
         expect(item).to_be_visible(timeout=10000)
-        timestamp = item.locator(".slides-list-updated")
+        timestamp = item.locator(".opacity-50")
         expect(timestamp).to_be_visible(timeout=10000)
     text = timestamp.inner_text().strip()
     assert len(text) > 0, f"Updated timestamp for '{slug}' is empty"
@@ -352,7 +352,7 @@ def catalog_contains_with_updated_timestamp(connected, slug):
 @then(parsers.parse("the participant sees at least {n:d} slides in the catalog"))
 def participant_sees_slides(connected, n):
     pax = connected["pax"]
-    expect(pax._page.locator(".slides-list-item")).to_have_count(n, timeout=10000)
+    expect(pax._page.locator(".topic-item")).to_have_count(n, timeout=10000)
 
 
 @then(parsers.parse('the slides catalog contains "{slug}"'))
@@ -363,13 +363,13 @@ def catalog_contains(request, slug):
         connected = request.getfixturevalue("connected")
         pax = connected["pax"]
     pax.expand_slides_dock()
-    expect(pax._page.locator(f'.slides-list-item[data-slug="{slug}"]')).to_be_visible(timeout=10000)
+    expect(pax._page.locator(f'.topic-item[data-slide-id^="{slug}|"]')).to_be_visible(timeout=10000)
 
 
 @then("the slides overlay is visible")
 def overlay_visible(connected):
     pax = connected["pax"]
-    expect(pax._page.locator("#slides-overlay")).to_be_visible(timeout=10000)
+    expect(pax._page.locator("#slides-view")).to_be_visible(timeout=10000)
 
 
 @then(parsers.parse('{name} sees page {page_num:d} of "{slug}"'))
@@ -399,17 +399,17 @@ def drive_called_at_most_n_times(n):
 @then("the slides overlay opens")
 def overlay_opens(connected):
     pax = connected["pax"]
-    expect(pax._page.locator("#slides-overlay")).to_be_visible(timeout=15000)
+    expect(pax._page.locator("#pdf-pages canvas")).to_be_visible(timeout=15000)
 
 
 @then(parsers.parse("the slides overlay opens within {seconds:d} seconds"))
 def overlay_opens_within(follow_pax, seconds):
-    expect(follow_pax._page.locator("#slides-overlay")).to_be_visible(timeout=seconds * 1000)
+    expect(follow_pax._page.locator("#pdf-pages canvas")).to_be_visible(timeout=seconds * 1000)
 
 
 @then("the follow button is still enabled")
 def follow_still_enabled(follow_pax):
-    btn = follow_pax._page.locator("#slides-follow-btn")
+    btn = follow_pax._page.locator("label[for='slides-follow-checkbox']")
     expect(btn).to_have_attribute("aria-pressed", "true", timeout=5000)
 
 
@@ -421,7 +421,7 @@ def active_slide_is(request, slug):
         connected = request.getfixturevalue("connected")
         pax = connected["pax"]
     pax.expand_slides_dock()
-    expect(pax._page.locator(f'.slides-list-item.active[data-slug="{slug}"]')).to_be_visible(
+    expect(pax._page.locator(f'.topic-item.topic-active[data-slide-id^="{slug}|"]')).to_be_visible(
         timeout=10000
     )
 
@@ -430,7 +430,7 @@ def active_slide_is(request, slug):
 def slide_content_changed(request, connected):
     """Compare current viewer screenshot with the one stored before the host update."""
     pax = connected["pax"]
-    viewer = pax._page.locator("#slides-pdf-viewer")
+    viewer = pax._page.locator("#pdf-pages")
     expect(viewer).to_be_visible(timeout=15000)
     pax._page.wait_for_timeout(1000)
     after_screenshot = viewer.screenshot()
