@@ -30,9 +30,12 @@ def set_current_session_id(session_id: str | None) -> None:
     _current_session_id = session_id
 
 
-def announce_session_id(session_id: str, session_type: str = "workshop") -> None:
+def announce_session_id(session_id: str, session_type: str | None = None) -> None:
     """Immediately notify Railway of a new session_id via WS."""
     if _ws_client and _ws_client.connected:
+        if session_type is None:
+            from daemon.participant.state import participant_state
+            session_type = participant_state.mode or "workshop"
         _ws_client.send({"type": "set_session_id", "session_id": session_id, "session_type": session_type})
 
 

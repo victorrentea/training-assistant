@@ -1160,7 +1160,7 @@ def run() -> None:
                                 log.info("session", f"Notes found ({notes_lines} lines): {notes_file.name}")
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                             if _active_session_id:
-                                announce_session_id(_active_session_id, session_type=session_type)
+                                announce_session_id(_active_session_id)
                             did_sync_in_create = True
                             # mode_changed removed — host.js/participant.js don't handle it; mode is in full state on reconnect
                             transcript_state.reset()
@@ -1170,7 +1170,7 @@ def run() -> None:
                             # active session id is persisted/broadcast even in that path.
                             _do_save_daemon_state()
                             if _active_session_id:
-                                announce_session_id(_active_session_id, session_type=session_type)
+                                announce_session_id(_active_session_id)
                         participant_join_link = (
                             f"{config.server_url}/{_active_session_id}"
                             if _active_session_id
