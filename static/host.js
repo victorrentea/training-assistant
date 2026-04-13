@@ -422,6 +422,10 @@
           _setFooterBadgeTooltip(gitBadge, 'Git repos activity');
         }
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts, msg.transcript_last_content_at);
+        if (msg.railway_connected !== undefined) {
+          _railwayConnected = msg.railway_connected;
+          setBadge(true);
+        }
         renderOverlayStatus(msg.overlay_connected);
         renderGdriveStatus(msg.gdrive_running);
         renderPendingDeploy(msg.pending_deploy);
@@ -749,12 +753,24 @@
   }
 
   let _unreachableTimer = null;
+  let _railwayConnected = null;  // null = unknown (before first state message)
 
-  function setBadge(ok) {
+  function setBadge(wsOk) {
     const b = document.getElementById('ws-badge');
-    b.textContent = ok ? '🟢' : '🟢';
-    b.className = `badge ${ok ? 'connected' : 'disconnected'}`;
-    _setFooterBadgeTooltip(b, ok ? 'Server connected' : 'Server disconnected — reconnecting');
+    let cls, tip;
+    if (!wsOk) {
+      cls = 'disconnected';
+      tip = 'Daemon unreachable — reconnecting';
+    } else if (_railwayConnected === false) {
+      cls = 'warning';
+      tip = 'Railway offline';
+    } else {
+      cls = 'connected';
+      tip = 'Railway connected';
+    }
+    b.textContent = '🟢';
+    b.className = `badge ${cls}`;
+    _setFooterBadgeTooltip(b, tip);
     if (ok) {
       if (_unreachableTimer) { clearTimeout(_unreachableTimer); _unreachableTimer = null; }
       const el = document.getElementById('server-unreachable-overlay');

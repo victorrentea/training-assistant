@@ -147,6 +147,7 @@ class HostStateResponse(BaseModel):
     participant_count: int
     participants: list[HostParticipant]
     daemon_connected: bool
+    railway_connected: bool
     overlay_connected: bool
     gdrive_running: bool
     wordcloud_words: dict[str, int]
@@ -352,6 +353,7 @@ async def get_host_state(request: Request, session_id: str):
         "participant_count": participant_count,
         "participants": _build_host_participants_list(),
         "daemon_connected": True,
+        "railway_connected": _get_railway_connected(),
         "overlay_connected": _get_overlay_connected(),
         "gdrive_running": _get_gdrive_running(),
         # Wordcloud
@@ -408,6 +410,14 @@ def _get_gdrive_running() -> bool:
     try:
         from daemon.slides.drive_sync import _is_google_drive_running
         return _is_google_drive_running()
+    except Exception:
+        return False
+
+
+def _get_railway_connected() -> bool:
+    try:
+        from daemon.session_state import _ws_client
+        return bool(_ws_client and _ws_client.connected)
     except Exception:
         return False
 
