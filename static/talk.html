@@ -179,19 +179,12 @@
 })();
 </script>
 <!-- TopAppBar Component -->
-<header class="bg-[#0f072e] sticky top-0 z-50 flex justify-between items-center px-4 py-3 w-full">
-<div class="flex items-center">
-<!-- Space for logo or Title if needed -->
-</div>
-<div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+<header class="bg-[#0f072e] sticky top-0 z-50 flex items-center px-4 py-3 w-full gap-2">
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
 <button id="btn-speaker" onclick="showView('speaker')" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
 <span class="material-symbols-outlined text-xl">mic</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Speaker</span>
 </button>
-<div id="pax-count-display" class="hidden flex-col items-center gap-0.5 px-2 min-w-[48px]">
-<span class="text-base leading-none">👥</span>
-<span id="pax-count" class="text-xs font-bold leading-none">0</span>
-</div>
 <button id="btn-slides" onclick="showView('slides')" class="tab-btn active flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
 <span class="material-symbols-outlined text-xl">slideshow</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Slides</span>
@@ -204,6 +197,10 @@
 <span class="material-symbols-outlined text-xl">commit</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Git Repo</span>
 </button>
+</div>
+<div id="pax-count-display" class="hidden flex-col items-center gap-1 p-2 bg-surface-container-highest/30 rounded-lg min-w-[64px] flex-shrink-0">
+<span class="text-xl leading-none">👥</span>
+<span id="pax-count" class="text-[10px] font-semibold uppercase tracking-tight">0</span>
 </div>
 </header>
 <main class="flex-1 min-h-0 flex flex-col w-full">
