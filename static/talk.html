@@ -429,6 +429,7 @@
       var state = await fetch('/' + _sessionId + '/api/participant/state', {
         headers: { 'X-Participant-ID': _uuid }
       }).then(function(r) { return r.json(); }).catch(function() { return {}; });
+      console.debug('[talk] state:', state);
       if (state.slides_current) await _applySlidesCurrent(state.slides_current);
       if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
     } catch (e) { console.error('[talk] init error', e); }
