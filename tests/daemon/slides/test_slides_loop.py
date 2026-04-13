@@ -90,3 +90,26 @@ def test_probe_railway_cache_skips_without_session():
 
     mocked_probe.assert_not_called()
     assert ms.slides_cache_status["slug1"]["status"] == "not_cached"
+
+
+def test_init_catalog_includes_source_name():
+    """source_name (pptx basename) must be in catalog so compilation can map file_name → slug."""
+    runner = _runner_with_state()
+    cfg = SimpleNamespace(catalog_file="unused", server_url="https://example.test")
+    ms = MiscState()
+
+    entries = [
+        {
+            "source": Path("/tmp/AI Coding.pptx"),
+            "target_pdf": "AI Coding.pdf",
+            "title": "AI Coding",
+            "drive_export_url": "https://docs.google.com/presentation/d/1/export/pdf",
+        },
+    ]
+
+    with patch("daemon.slides.loop.misc_state", ms), \
+         patch("daemon.slides.loop.load_catalog_entries", return_value=entries):
+        runner._init_misc_state_from_catalog(cfg)
+
+    slug = list(ms.slides_catalog.keys())[0]
+    assert ms.slides_catalog[slug]["source_name"] == "AI Coding.pptx"

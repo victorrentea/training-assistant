@@ -112,6 +112,7 @@ class SlidesRunner:
             catalog_entries.append({
                 "slug": slug,
                 "title": entry["title"],
+                "source_name": entry["source"].name,
                 "drive_export_url": entry["drive_export_url"],
                 "group": entry.get("group"),
             })
