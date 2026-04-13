@@ -1310,7 +1310,7 @@ function showView(name) {
     closeSlides({ focusAllTopics: false });
     var cb = document.getElementById('slides-follow-checkbox');
     if (cb) cb.checked = false;
-    LS.setFollow(false);
+    // intentionally not saving to LS — Follow preference is remembered for when slides is reopened
   }
   var followLabel = document.querySelector('label[for="slides-follow-checkbox"]');
   if (followLabel) followLabel.classList.remove('follow-notify');
@@ -1328,6 +1328,8 @@ function showView(name) {
   var saved = LS.getScroll(name);
   if (saved) el.scrollTop = parseInt(saved, 10);
   if (name === 'slides') {
+    var followCb = document.getElementById('slides-follow-checkbox');
+    if (followCb) followCb.checked = LS.getFollow();
     _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
   }
   if (name === 'activity') initActivityView();
@@ -1683,9 +1685,7 @@ async function _refreshParticipantState() {
     if (saved === 'notes' && !(state.notes_count > 0)) saved = 'slides';
     if (saved === 'summary' && !(state.summary_count > 0)) saved = 'slides';
     _hostSlidesCurrent = state.slides_current || null;
-    showView(saved);
-    var followCb = document.getElementById('slides-follow-checkbox');
-    if (followCb) followCb.checked = LS.getFollow();
+    showView(saved); // restores Follow from LS when saved view is 'slides'
   } catch (e) {
     console.error('[participant] failed to load state:', e);
   }
