@@ -1441,8 +1441,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .side-qr-container {
   display: none;
-  position: absolute;
-  inset: 0;
+  position: relative;
   flex-direction: column;
   align-items: center;
   justify-content: center;
