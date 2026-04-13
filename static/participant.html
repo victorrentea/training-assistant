@@ -155,7 +155,7 @@ body{visibility:hidden}
 <span class="text-base">Slides</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 <label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer">
-<input id="slides-follow-checkbox" type="checkbox" checked style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);" />
+<input id="slides-follow-checkbox" type="checkbox" checked tabindex="-1" onfocus="this.blur()" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
 <span>Follow</span>
 </label>
 <span class="material-symbols-outlined">history</span>
