@@ -755,7 +755,7 @@ function _loadSlideHistory() {
         var liveBadge = name === lastOrderName ? ' <span class="badge-live" style="vertical-align:middle">LIVE</span>' : '';
         return '<div class="slide-history-row px-4 py-0.5 text-sm leading-relaxed rounded transition-colors flex items-baseline gap-1">' +
           '<span class="flex-shrink-0 text-on-surface-variant opacity-60">•</span>' +
-          '<span><span class="font-semibold text-on-surface-variant opacity-60 mr-1">' + name + '</span>' +
+          '<span><span class="font-semibold text-on-surface-variant mr-1">' + name + '</span>' +
           pagesHtml + liveBadge + '</span></div>';
       }).join('');
       el.onclick = function(ev) {
