@@ -269,6 +269,12 @@ body{visibility:hidden}
       <p class="text-base text-on-surface-variant mt-2">Grab a coffee — we're about to start.</p>
     </div>
   </div>
+  <div id="activity-waiting-section" style="display:none">
+    <div class="select-none" style="font-size:6rem;line-height:1;text-align:center">⚡</div>
+    <div class="text-center">
+      <p class="text-base text-on-surface-variant mt-2">The host is about to start an activity — stay tuned!</p>
+    </div>
+  </div>
   <div id="activity-location-section" style="display:none" class="flex flex-col items-center gap-3 mt-2">
     <p class="text-sm text-on-surface-variant text-center" style="max-width:18rem">Mind sharing where you're joining from? The host loves knowing who's in the room.</p>
     <button id="activity-location-btn" onclick="requestParticipantLocation()"
@@ -1367,10 +1373,13 @@ function showView(name) {
 var _activityLocationSent = false;
 function initActivityView() {
   var welcome = document.getElementById('activity-welcome-section');
+  var waiting = document.getElementById('activity-waiting-section');
   if (LS.isActivitySeen()) {
     welcome.style.display = 'none';
+    waiting.style.display = '';
   } else {
     welcome.style.display = '';
+    waiting.style.display = 'none';
     LS.setActivitySeen();
   }
   if (_activityLocationSent) return;
