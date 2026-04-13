@@ -3158,6 +3158,28 @@ function hideStopConfirm() {
   const bubble = document.getElementById('stop-confirm-bubble-left');
   if (bubble) bubble.style.display = 'none';
 }
+function toggleSlidesCompileConfirm(evt) {
+  if (evt) evt.stopPropagation();
+  const bubble = document.getElementById('slides-compile-confirm');
+  if (!bubble) return;
+  const opening = bubble.style.display === 'none';
+  bubble.style.display = opening ? '' : 'none';
+  if (opening) {
+    // Close when clicking anywhere outside
+    setTimeout(() => {
+      document.addEventListener('click', function _close(e) {
+        if (!bubble.contains(e.target)) {
+          bubble.style.display = 'none';
+          document.removeEventListener('click', _close);
+        }
+      });
+    }, 0);
+  }
+}
+function triggerSlidesCompilationDownload() {
+  document.getElementById('slides-compile-confirm').style.display = 'none';
+  window.location = '/api/' + _currentSessionId + '/host/slides-compilation';
+}
 function stopSessionConfirmed() {
   // Show full-screen blocker while ending session
   let blocker = document.getElementById('session-ending-blocker');
@@ -3572,7 +3594,8 @@ function stopInactivityTracking() {
     }
   });
 
-  document.addEventListener('drop', (e) => {
+  window.addEventListener('drop', (e) => {
+    console.log('[pptx-drop] capture fired, mode:', currentMode, 'target:', e.target);
     layout.classList.remove('pptx-drop-hover');
     if (currentMode !== 'talk') return;
     if (!layout.contains(e.target) && e.target !== layout) return;
@@ -3594,7 +3617,7 @@ function stopInactivityTracking() {
     }).then(r => {
       if (!r.ok) console.warn('talk-presentation-path failed:', r.status);
     });
-  }, {capture: true});
+  }, true);
 })();
 
 startInactivityTracking();
