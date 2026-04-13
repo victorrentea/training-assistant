@@ -908,8 +908,7 @@ function openRepos() {
         var name = base.split('/').pop();
         var branchUrl = base + '/tree/' + repo.branch;
         var files = repo.files.map(function(f) {
-          var fileUrl = base + '/blob/' + repo.branch + '/' + f;
-          return '<li class="truncate"><a href="' + fileUrl + '" target="_blank" class="hover:underline">' + f + '</a></li>';
+          return '<li class="truncate">' + f + '</li>';
         }).join('');
         return '<div class="px-4 py-1.5">'
           + '<a href="' + branchUrl + '" target="_blank" class="text-sm font-medium text-on-surface hover:underline flex items-center gap-1">'
