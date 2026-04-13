@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
@@ -197,12 +197,10 @@ async def talk_presentation_path(body: TalkPresentationPathRequest):
     folder_name = session_state.get_active_session_name()
     root = _get_sessions_root()
     if not folder_name or not root:
-        from fastapi.responses import JSONResponse
-        return JSONResponse({"error": "No active session"}, status_code=400)
+        raise HTTPException(status_code=400, detail="No active session")
     meta = load_session_meta(root / folder_name)
     if meta.get("session_type") != "talk":
-        from fastapi.responses import JSONResponse
-        return JSONResponse({"error": "Not a talk session"}, status_code=400)
+        raise HTTPException(status_code=400, detail="Not a talk session")
 
     gdrive_url = resolve_gdrive_file_url(body.path)
 
