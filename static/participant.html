@@ -218,7 +218,7 @@ body{visibility:hidden}
 <a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
-<span class="badge-new" style="display:none">UPDATE</span>
+<span id="agenda-progress-badge" class="badge-new ml-auto" style="display:none"></span>
 </a>
 <a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">description</span>
@@ -1882,7 +1882,7 @@ async function loadAgenda() {
 
 function addAgendaProgress(container) {
   const blocks = Array.from(container.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
-  let sectionEl = null, total = 0, crossed = 0;
+  let sectionEl = null, total = 0, crossed = 0, grandTotal = 0, grandCrossed = 0;
 
   function finishSection() {
     if (!sectionEl) return;
@@ -1891,6 +1891,8 @@ function addAgendaProgress(container) {
     badge.textContent = pct + '%';
     badge.style.cssText = 'display:inline-block;margin-left:10px;font-size:0.72rem;font-weight:700;padding:1px 9px;border-radius:999px;background:var(--color-primary-container,#dfe0ff);color:var(--color-on-primary-container,#3747ac);vertical-align:middle';
     sectionEl.appendChild(badge);
+    grandTotal += total;
+    grandCrossed += crossed;
     sectionEl = null;
   }
 
@@ -1907,7 +1909,7 @@ function addAgendaProgress(container) {
       crossed = 0;
     } else if (sectionEl) {
       if (isBold) {
-        finishSection(); // bold non-§ line ends the section
+        finishSection();
       } else {
         total++;
         if (block.querySelector('s, del')) crossed++;
@@ -1915,6 +1917,13 @@ function addAgendaProgress(container) {
     }
   }
   finishSection();
+
+  const navBadge = document.getElementById('agenda-progress-badge');
+  if (navBadge && grandTotal > 0) {
+    const pct = Math.round(grandCrossed / grandTotal * 100);
+    navBadge.textContent = pct + '%';
+    navBadge.style.display = '';
+  }
 }
 
 function linkifyText(text) {
