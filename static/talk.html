@@ -162,7 +162,7 @@
 <span class="material-symbols-outlined text-xl">commit</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Git Repo</span>
 </button>
-<button class="flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px] text-white">
+<button id="btn-download-slides" class="flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px] text-white" disabled>
 <span class="material-symbols-outlined text-xl">download</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Slides</span>
 </button>
@@ -250,6 +250,8 @@
       if (_currentPdfUrl !== url) {
         _pdfDoc = await pdfjsLib.getDocument(url).promise;
         _currentPdfUrl = url;
+        var dlBtn = document.getElementById('btn-download-slides');
+        if (dlBtn) dlBtn.disabled = false;
         container.innerHTML = '';
         _renderedPages = 0;
       }
@@ -415,6 +417,18 @@
     };
     _ws.onclose = function(e) { if (e.code === 1008) return; setTimeout(_connectWS, 3000); };
   }
+
+  document.getElementById('btn-download-slides').addEventListener('click', function() {
+    if (!_currentPdfUrl) return;
+    var url = _currentPdfUrl;
+    if (url.indexOf('?') === -1) url += '?download=1'; else url += '&download=1';
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
 
   (async function init() {
     try {
