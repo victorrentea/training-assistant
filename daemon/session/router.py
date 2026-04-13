@@ -124,7 +124,7 @@ async def start_session(body: StartSessionRequest):
     })
     # Pre-register session_id with Railway immediately so host WS validates on first connect
     # (avoids race condition where host navigates before session_pending queue is processed)
-    announce_session_id(session_id)
+    announce_session_id(session_id, session_type=body.type)
     return SessionStartResponse(session_name=name, session_id=session_id)
 
 
