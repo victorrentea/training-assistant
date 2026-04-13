@@ -1688,6 +1688,7 @@ async function _refreshParticipantState() {
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
     document.querySelector('[data-nav="notes"]').style.display = state.notes_count > 0 ? '' : 'none';
     document.getElementById('notes-badge').textContent = state.notes_count || '';
+    document.getElementById('notes-badge').classList.toggle('badge-alert', LS.isNotesUnread());
     var summaryNav = document.querySelector('[data-nav="summary"]');
     summaryNav.style.display = state.summary_count > 0 ? '' : 'none';
     var summaryBadge = document.getElementById('summary-badge');
@@ -1698,6 +1699,7 @@ async function _refreshParticipantState() {
     } else {
       summaryBadge.style.display = 'none';
     }
+    summaryBadge.classList.toggle('badge-alert', LS.isSummaryUnread());
     var gdriveNav = document.getElementById('gdrive-nav');
     if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveNav.style.display = ''; }
     else { gdriveNav.style.display = 'none'; }
