@@ -19,6 +19,7 @@ from daemon import log as daemon_log
 from daemon.session import pending as session_pending
 from daemon.session import state as session_state
 from daemon.session_state import announce_session_id, load_session_meta
+from scripts.resolve_gdrive_link import resolve_gdrive_file_url
 
 
 def normalize_session_name(name: str) -> str:
@@ -115,6 +116,10 @@ class SessionActiveResponse(BaseModel):
     session_id: str | None
 
 
+class TalkPresentationPathRequest(BaseModel):
+    path: str
+
+
 @global_router.post("/create", response_model=SessionStartResponse)
 async def start_session(body: StartSessionRequest):
     """Host starts a new session (creates folder, assigns session_id, clean slate)."""
@@ -184,3 +189,27 @@ async def get_session_active():
     """Public endpoint: returns the active session_id or null."""
     active_session_id = session_state.get_active_session_id()
     return SessionActiveResponse(session_id=active_session_id)
+
+
+@global_router.post("/talk-presentation-path", status_code=204)
+async def talk_presentation_path(body: TalkPresentationPathRequest):
+    """Host drops a PPTX file during a talk — log its path and Google Drive URL."""
+    folder_name = session_state.get_active_session_name()
+    root = _get_sessions_root()
+    if not folder_name or not root:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"error": "No active session"}, status_code=400)
+    meta = load_session_meta(root / folder_name)
+    if meta.get("session_type") != "talk":
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"error": "Not a talk session"}, status_code=400)
+
+    gdrive_url = resolve_gdrive_file_url(body.path)
+
+    daemon_log.info("talk     ", f"pptx drop: {body.path}")
+    if gdrive_url:
+        daemon_log.info("talk     ", f"gdrive:    {gdrive_url}")
+    else:
+        daemon_log.info("talk     ", "not in Google Drive")
+
+    return Response(status_code=204)
