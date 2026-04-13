@@ -518,7 +518,7 @@ var LS = {
   setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
   getView:   function()     { return localStorage.getItem(LS.VIEW) || 'activity'; },
   setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
-  getFollow: function()     { return localStorage.getItem(LS.FOLLOW) === '1'; },
+  getFollow: function()     { var v = localStorage.getItem(LS.FOLLOW); return v === null ? true : v === '1'; },
   setFollow: function(val)  { localStorage.setItem(LS.FOLLOW, val ? '1' : '0'); },
   isNotesUnread:   function()  { return localStorage.getItem(LS.NOTES_UNREAD) === 'true'; },
   setNotesUnread:  function(v) { localStorage.setItem(LS.NOTES_UNREAD, v ? 'true' : 'false'); },
@@ -1712,7 +1712,9 @@ async function _refreshParticipantState() {
     if (saved === 'notes' && !(state.notes_count > 0)) saved = 'slides';
     if (saved === 'summary' && !(state.summary_count > 0)) saved = 'slides';
     _hostSlidesCurrent = state.slides_current || null;
-    showView(saved); // restores Follow from LS when saved view is 'slides'
+    showView(saved);
+    var followCb = document.getElementById('slides-follow-checkbox');
+    if (followCb) followCb.checked = LS.getFollow(); // init checkbox from LS (handles non-slides landing view)
   } catch (e) {
     console.error('[participant] failed to load state:', e);
   }
