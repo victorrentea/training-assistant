@@ -150,6 +150,11 @@ body{visibility:hidden}
 </div>
 <!-- Navigation Cluster -->
 <nav class="flex flex-col space-y-2 flex-1 overflow-y-auto min-h-0" style="row-gap:0.425rem;">
+<a data-nav="slides" onclick="showView('slides')" class="nav-item nav-active rounded-full px-2 h-10 font-semibold flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
+<span class="text-base">Current Slide</span>
+<span class="badge-new ml-auto">LIVE</span>
+</a>
 <!-- Past Slides (never active) -->
 <div>
 <a onclick="togglePastSlides()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
