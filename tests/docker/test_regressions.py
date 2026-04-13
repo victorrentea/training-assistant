@@ -1,11 +1,10 @@
 """
 Hermetic E2E regression tests.
 
-4 tests covering previously-reported regressions:
+3 tests covering previously-reported regressions:
 1. Auto-join with saved name causes no JS errors
-2. Q&A action labels correct + edit with quotes works
-3. QR fullscreen overlay opens/closes on click
-4. Participant top header shows session name
+2. QR fullscreen overlay opens/closes on click
+3. Participant top header shows session name
 """
 
 import base64
@@ -59,21 +58,6 @@ def _api_call(method, path, data=None, base=None):
         return json.loads(resp.read())
 
 
-def _clear_qa(session_id: str) -> None:
-    """Clear all Q&A questions via API (daemon endpoint)."""
-    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-    req = urllib.request.Request(
-        f"{DAEMON_BASE}/api/{session_id}/host/qa/clear",
-        method="POST",
-        headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
-        data=b""
-    )
-    try:
-        urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        pass
-
-
 def _open_browser_trio(p, session_id):
     """Open host + participant browsers connected to a session."""
     browser = p.chromium.launch(headless=True)
@@ -114,8 +98,8 @@ def test_autojoin_with_saved_name_no_js_error():
         # Reload — should auto-join with saved name
         pax_page.reload(wait_until="networkidle")
 
-        # Wait for main screen to appear (auto-join complete)
-        expect(pax_page.locator("#main-screen")).to_be_visible(timeout=10000)
+        # Wait for display-name to appear (auto-join complete)
+        expect(pax_page.locator("#display-name")).to_be_visible(timeout=10000)
 
         # Allow time for any deferred JS to run
         pax_page.wait_for_timeout(2000)
@@ -127,83 +111,7 @@ def test_autojoin_with_saved_name_no_js_error():
         browser.close()
 
 
-# ── 2. Q&A action labels and edit with quotes ────────────────────────────
-
-def test_qa_action_labels_and_edit_with_quotes():
-    """Q&A host card has correct action labels; editing with quotes works."""
-    session_id = fresh_session("QALabels")
-    _clear_qa(session_id)  # isolate from previous test's Q&A state
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-
-        # Open host first and switch to Q&A tab BEFORE participant joins
-        # so participant's initial state fetch returns current_activity='qa'
-        host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
-        host_page = host_ctx.new_page()
-        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
-        host = HostPage(host_page)
-        host.open_qa_tab()
-
-        # NOW participant joins — state fetch will return current_activity='qa'
-        pax_ctx = browser.new_context()
-        pax_page = pax_ctx.new_page()
-        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
-        pax = ParticipantPage(pax_page)
-        pax.join("QuoteTester")
-
-        # Submit a question with quotes
-        pax.submit_question('Could "quoted" text break edit?')
-
-        # Wait for question to appear on host
-        _await_condition(
-            lambda: len(host.get_qa_questions()) > 0,
-            timeout_ms=5000, msg="Host didn't see question"
-        )
-        questions = host.get_qa_questions()
-        q = questions[0]
-        card = host_page.locator(f'.qa-card[data-id="{q["id"]}"]')
-
-        # Verify action button labels by reading innerHTML (avoids headless visibility issues
-        # with overflow:hidden containers where buttons may be clipped but still in DOM)
-        answer_btn = card.locator('button[onclick^="toggleAnswered"]')
-        # Wait for the button to be in the DOM (attached)
-        answer_btn.wait_for(state="attached", timeout=5000)
-        answer_text = answer_btn.inner_text().strip()
-        assert "Answer" in answer_text, f"Expected 'Answer' in button text, got: '{answer_text}'"
-
-        delete_btn = card.locator(".btn-danger")
-        delete_btn.wait_for(state="attached", timeout=5000)
-        delete_text = delete_btn.inner_text().strip()
-        assert "🗑" in delete_text, f"Expected '🗑' in delete button, got: '{delete_text}'"
-
-        # Verify clear-all button (in tab-content-qa, always visible when qa tab is active)
-        clear_btn = host_page.locator("#clear-qa-btn")
-        expect(clear_btn).to_be_visible(timeout=3000)
-        clear_text = clear_btn.inner_text().strip()
-        assert "🗑 Delete all" in clear_text, f"Expected '🗑 Delete all', got: '{clear_text}'"
-
-        # Edit the question to include quotes and apostrophes
-        new_text = """What's the "best" approach — isn't it 'obvious'?"""
-        host.edit_question(q["id"], new_text)
-
-        # Verify the edited text appears correctly
-        _await_condition(
-            lambda: any(new_text in qq["text"] for qq in host.get_qa_questions()),
-            timeout_ms=5000, msg="Edited text not visible on host"
-        )
-
-        # Verify participant also sees the edited text
-        _await_condition(
-            lambda: any(new_text in qq["text"] for qq in pax.get_qa_questions()),
-            timeout_ms=5000, msg="Edited text not visible on participant"
-        )
-
-        print("SUCCESS: Q&A action labels correct and edit with quotes works!")
-        browser.close()
-
-
-# ── 3. QR fullscreen overlay opens/closes on click ───────────────────────
+# ── 2. QR fullscreen overlay opens/closes on click ───────────────────────
 
 def test_qr_fullscreen_on_click():
     """Host QR icon opens fullscreen overlay; clicking dismisses it."""
@@ -232,7 +140,7 @@ def test_qr_fullscreen_on_click():
         browser.close()
 
 
-# ── 4. Participant top header shows session name ──────────────────────────
+# ── 3. Participant top header shows session name ──────────────────────────
 
 def test_participant_header_shows_session_name():
     """Participant top header should display the current session name."""

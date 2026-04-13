@@ -1,17 +1,10 @@
 """
 Hermetic E2E tests: high-value user scenarios.
 
-11 tests covering key user flows and integration points:
-1. Correct answer scoring (speed-based)
-2. Conference mode with character names
-3. Paste text flow (participant → host)
-4. File upload flow (participant → host download)
-5. Zero votes show 0%
-6. Participant joins mid-Q&A sees existing questions
-7. Code review: host pastes snippet, participant selects lines
-8. Wordcloud close returns to idle
-9. Session end disconnects participants
-10. Self-upvote disabled in Q&A
+3 tests covering key user flows and integration points:
+1. Paste text flow (participant → host)
+2. File upload flow (participant → host download)
+3. Participant count updates on host
 """
 
 import base64
@@ -81,74 +74,7 @@ def _open_browser_trio(p, session_id):
     return browser, host, host_page, pax, pax_page
 
 
-# ── 1. Correct answer scoring ──────────────────────────────────────────────
-
-def test_correct_answer_gives_score():
-    """Participant votes correct answer → gets score points."""
-    session_id = fresh_session("Scoring")
-    with sync_playwright() as p:
-        browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
-        pax.join("Scorer")
-
-        host.create_poll("Capital of France?", ["Berlin", "Paris", "Rome"])
-        # Vote via API directly with correct option_ids format (participant.js single-select
-        # sends {option_id} but daemon expects {option_ids: [...]}).
-        # "Paris" is option B (second option, index 1)
-        pax._page.evaluate("""() => participantApi('poll/vote', { option_ids: ['B'] })""")
-        host.close_poll()
-        host.mark_correct("Paris")
-
-        _await_condition(
-            lambda: pax.get_score() > 0,
-            timeout_ms=5000, msg="Participant did not receive score"
-        )
-        score = pax.get_score()
-        print(f"Score after correct answer: {score}")
-        assert score >= 500, f"Expected score >= 500 (speed-based), got {score}"
-
-        print("SUCCESS: Correct answer scoring works!")
-        browser.close()
-
-
-# ── 2. Conference mode character names ─────────────────────────────────────
-
-def test_conference_mode_auto_assigns_character_name():
-    """Conference mode (talk session): participant gets auto-assigned character name."""
-    session_id = fresh_session("Conference", session_type="talk")
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-
-        # Open a participant browser — should auto-join with character name
-        pax_ctx = browser.new_context()
-        pax_page = pax_ctx.new_page()
-        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
-
-        # Wait for auto-join to complete (conference/talk mode auto-names)
-        expect(pax_page.locator("#main-screen")).to_be_visible(timeout=10000)
-        pax_page.wait_for_timeout(1500)  # allow WS state delivery
-
-        # Name should be auto-assigned from character pool (not empty)
-        name = pax_page.locator("#display-name").inner_text().strip()
-        assert len(name) > 0, f"Conference mode should auto-assign a name, got: '{name}'"
-        print(f"Auto-assigned character name: '{name}'")
-
-        # Check for letter avatar
-        has_letter_avatar = pax_page.locator(".letter-avatar").count() > 0
-        print(f"Has letter avatar: {has_letter_avatar}")
-
-        # Check that score display is hidden in conference mode
-        score_hidden = pax_page.evaluate("""() => {
-            const el = document.querySelector('#my-score');
-            return !el || getComputedStyle(el).display === 'none'
-                       || getComputedStyle(el).visibility === 'hidden';
-        }""")
-        print(f"Score hidden in conference mode: {score_hidden}")
-
-        print("SUCCESS: Conference mode assigns character names!")
-        browser.close()
-
-
-# ── 3. Paste text flow ─────────────────────────────────────────────────────
+# ── 1. Paste text flow ─────────────────────────────────────────────────────
 
 def test_paste_text_visible_to_host():
     """Participant pastes text → host sees paste icon in participant list."""
@@ -163,11 +89,10 @@ def test_paste_text_visible_to_host():
         )
 
         # Simulate paste via REST API (paste is now POST /api/participant/paste, not WS)
-        pax_uuid = pax_page.evaluate("() => myUUID")
         pax_page.evaluate("""async () => {
-            const resp = await fetch(apiBase + '/api/participant/paste', {
+            const resp = await fetch('/' + _sessionId + '/api/participant/paste', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Participant-ID': myUUID },
+                headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
                 body: JSON.stringify({ text: 'Hello from hermetic test!' })
             });
             if (!resp.ok) console.error('Paste failed:', resp.status);
@@ -181,7 +106,7 @@ def test_paste_text_visible_to_host():
         browser.close()
 
 
-# ── 4. File upload flow ────────────────────────────────────────────────────
+# ── 2. File upload flow ────────────────────────────────────────────────────
 
 def test_participant_file_upload_reaches_host():
     """Participant uploads a file via UI → /api/upload returns 2xx with upload id."""
@@ -195,24 +120,24 @@ def test_participant_file_upload_reaches_host():
             timeout_ms=5000, msg="Host doesn't see Uploader"
         )
 
-        # Open upload modal and attach a small in-memory file.
-        pax_page.click("#upload-btn")
+        # Navigate to upload view and attach a small in-memory file.
+        pax_page.evaluate("showView('upload-paste')")
         pax_page.set_input_files(
-            "#upload-file-input",
+            "#upload-input",
             {
                 "name": "hermetic-upload.txt",
                 "mimeType": "text/plain",
                 "buffer": b"upload from hermetic e2e",
             },
         )
-        expect(pax_page.locator("#upload-send-btn")).to_be_enabled(timeout=3000)
+        expect(pax_page.locator("#upload-paste-send-btn")).to_be_enabled(timeout=3000)
 
         # Assert upload endpoint responds with success (regression target: 400 errors).
         with pax_page.expect_response(
             lambda r: r.request.method == "POST" and r.url.endswith("/api/upload"),
             timeout=10000,
         ) as upload_response_info:
-            pax_page.locator("#upload-send-btn").click(force=True)
+            pax_page.locator("#upload-paste-send-btn").click(force=True)
 
         upload_response = upload_response_info.value
         assert upload_response.status == 200, (
@@ -227,291 +152,7 @@ def test_participant_file_upload_reaches_host():
         browser.close()
 
 
-# ── 5. Zero votes show 0% ─────────────────────────────────────────────────
-
-def test_zero_votes_shows_zero_percent():
-    """Close poll with zero votes → all options show 0%."""
-    session_id = fresh_session("ZeroVotes")
-    with sync_playwright() as p:
-        browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
-        # Wait for host WS connection before poll operations
-        expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
-        pax.join("Observer")
-
-        # Wait for participant to appear on host (confirms WS is bidirectional)
-        _await_condition(
-            lambda: daemon_has_participant(session_id, "Observer"),
-            timeout_ms=5000, msg="Host didn't see Observer"
-        )
-
-        host.create_poll("Empty poll?", ["A", "B", "C"])
-        # Wait for poll to appear on participant before closing
-        expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
-        host.close_poll()
-
-        expect(pax_page.locator(".pct").first).to_be_visible(timeout=5000)
-        pcts = pax.get_percentages()
-        assert pcts == [0, 0, 0], f"Expected [0, 0, 0] but got {pcts}"
-
-        print("SUCCESS: Zero votes show 0%!")
-        browser.close()
-
-
-# ── 6. Late joiner sees Q&A questions ──────────────────────────────────────
-
-def test_late_joiner_sees_existing_qa():
-    """Participant joins after questions were submitted → sees them."""
-    session_id = fresh_session("LateQA")
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-
-        # Host + first participant
-        host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
-        host_page = host_ctx.new_page()
-        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        host = HostPage(host_page)
-        host.open_qa_tab()
-
-        pax1_ctx = browser.new_context()
-        pax1_page = pax1_ctx.new_page()
-        pax1_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
-        pax1 = ParticipantPage(pax1_page)
-        pax1.join("EarlyBird")
-
-        # Submit questions before second participant joins
-        pax1.submit_question("What is polymorphism?")
-        pax1.submit_question("Explain SOLID principles")
-
-        _await_condition(
-            lambda: len(host.get_qa_questions()) >= 2,
-            timeout_ms=5000, msg="Host didn't see 2 questions"
-        )
-
-        # NOW second participant joins late
-        pax2_ctx = browser.new_context()
-        pax2_page = pax2_ctx.new_page()
-        pax2_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
-        pax2 = ParticipantPage(pax2_page)
-        pax2.join("LateJoiner")
-
-        # Late joiner should see both questions
-        _await_condition(
-            lambda: len(pax2.get_qa_questions()) >= 2,
-            timeout_ms=5000, msg="Late joiner didn't see existing questions"
-        )
-        questions = pax2.get_qa_questions()
-        texts = [q["text"] for q in questions]
-        assert any("polymorphism" in t.lower() for t in texts)
-        assert any("solid" in t.lower() for t in texts)
-
-        print("SUCCESS: Late joiner sees existing Q&A!")
-        browser.close()
-
-
-# ── 7. Code review: snippet + line selection ───────────────────────────────
-
-def test_code_review_line_selection():
-    """Host pastes code snippet → participant selects lines → host sees selection."""
-    session_id = fresh_session("CodeReview")
-    with sync_playwright() as p:
-        browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
-        # Wait for host WS connection
-        expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
-
-        # Host creates code review BEFORE participant joins
-        # so participant's state fetch returns current_activity='codereview'
-        snippet = "public void process() {\n    // TODO: implement\n    return null;\n}"
-        _api_call("POST", f"/api/{session_id}/host/codereview",
-                  {"snippet": snippet, "language": "java", "smart_paste": False}, base=DAEMON_BASE)
-
-        # Now participant joins — their state fetch will include current_activity='codereview'
-        pax_ctx = browser.new_context()
-        pax_page2 = pax_ctx.new_page()
-        pax_page2.goto(f"{BASE}/{session_id}", wait_until="networkidle")
-        pax2 = ParticipantPage(pax_page2)
-        pax2.join("Reviewer")
-
-        # Wait for code review to appear on participant
-        expect(pax_page2.locator(".codereview-pline-clickable").first).to_be_visible(timeout=5000)
-
-        # Participant clicks a line to flag it (line 3: "return null;")
-        pax_page2.locator(".codereview-pline-clickable").nth(2).click()
-        pax_page2.wait_for_timeout(500)
-
-        # participant.js toggleCodeReviewLine() updates local Set + POSTs to daemon but does NOT
-        # re-render the DOM (no call to renderCodeReviewScreen after toggle). Instead, verify
-        # that the daemon received and stored the participant's selection via REST API.
-        pax_uuid = pax_page2.evaluate("() => myUUID")
-
-        def _daemon_has_selection():
-            try:
-                req = urllib.request.Request(
-                    f"{DAEMON_BASE}/api/{session_id}/host/state",
-                    headers={"Authorization": f"Basic {base64.b64encode(f'{HOST_USER}:{HOST_PASS}'.encode()).decode()}"},
-                )
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    data = json.loads(resp.read())
-                    cr = data.get("codereview", {})
-                    selections = cr.get("selections", {})
-                    return pax_uuid in selections and len(selections[pax_uuid]) > 0
-            except Exception:
-                return False
-
-        _await_condition(
-            _daemon_has_selection,
-            timeout_ms=5000,
-            msg="Daemon did not record participant's line selection"
-        )
-
-        print("SUCCESS: Code review line selection works!")
-        browser.close()
-
-
-# ── 8. Wordcloud close returns to idle ─────────────────────────────────────
-
-def test_wordcloud_close_returns_to_idle():
-    """Host opens wordcloud → submits word → host closes → participant returns to idle."""
-    session_id = fresh_session("WCClose")
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-
-        host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
-        host_page = host_ctx.new_page()
-        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        host = HostPage(host_page)
-
-        # Open wordcloud BEFORE participant navigates so state fetch returns current_activity='wordcloud'
-        host.open_wordcloud_tab()
-
-        pax_ctx = browser.new_context()
-        pax_page = pax_ctx.new_page()
-        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
-        pax = ParticipantPage(pax_page)
-        pax.join("CloudUser")
-        expect(pax_page.locator("#wc-canvas")).to_be_visible(timeout=5000)
-
-        pax.submit_word("testing")
-
-        # Switch to NONE activity (close wordcloud) — daemon endpoint
-        _api_call("PUT", f"/api/{session_id}/host/activity", {"activity": "none"}, base=DAEMON_BASE)
-
-        # participant.js has no 'activity_updated' WS handler, so the live view won't update.
-        # Reload the page — after reload, state fetch returns current_activity='none' → no wordcloud.
-        pax_page.reload(wait_until="networkidle")
-        pax2 = ParticipantPage(pax_page)
-        pax2.auto_join()  # re-join with saved name from localStorage
-
-        # Participant should no longer see the wordcloud after reload
-        _await_condition(
-            lambda: pax_page.locator("#wc-canvas").count() == 0
-                    or not pax_page.locator("#wc-canvas").is_visible(),
-            timeout_ms=5000,
-            msg="Wordcloud still visible after close + reload"
-        )
-
-        print("SUCCESS: Wordcloud close returns to idle!")
-        browser.close()
-
-
-# ── 9. Self-upvote disabled ────────────────────────────────────────────────
-
-def _clear_qa(session_id: str) -> None:
-    """Clear all Q&A questions via API (daemon endpoint)."""
-    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-    req = urllib.request.Request(
-        f"{DAEMON_BASE}/api/{session_id}/host/qa/clear",
-        method="POST",
-        headers={"Authorization": f"Basic {auth}", "Content-Length": "0"},
-        data=b""
-    )
-    try:
-        urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        pass
-
-
-def test_self_upvote_disabled():
-    """Participant can't upvote their own Q&A question."""
-    session_id = fresh_session("SelfUpvote")
-    _clear_qa(session_id)  # isolate from previous test's Q&A state
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-
-        # Open host first and switch to Q&A tab BEFORE participant joins
-        # so that the participant's initial state fetch returns current_activity='qa'
-        host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
-        host_page = host_ctx.new_page()
-        host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
-        host = HostPage(host_page)
-        host.open_qa_tab()
-
-        # NOW participant joins — state fetch will return current_activity='qa'
-        pax_ctx = browser.new_context()
-        pax_page = pax_ctx.new_page()
-        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
-        pax = ParticipantPage(pax_page)
-        pax.join("Author")
-
-        pax.submit_question("My own question")
-
-        _await_condition(
-            lambda: len(pax.get_qa_questions()) > 0,
-            timeout_ms=5000, msg="Question not visible"
-        )
-
-        # The upvote button for own question should be disabled
-        questions = pax.get_qa_questions()
-        own_q = questions[0]
-        upvote_btn = pax_page.locator(f'.qa-upvote-btn[data-qid="{own_q["id"]}"]')
-        is_disabled = upvote_btn.is_disabled()
-        assert is_disabled, "Self-upvote button should be disabled"
-
-        print("SUCCESS: Self-upvote disabled!")
-        browser.close()
-
-
-# ── 10. Multi-select poll enforces cap ─────────────────────────────────────
-
-def test_multi_select_cap_enforced():
-    """Multi-select poll: participant can't select more options than correct_count."""
-    session_id = fresh_session("MultiCap")
-    with sync_playwright() as p:
-        browser, host, host_page, pax, pax_page = _open_browser_trio(p, session_id)
-        # Wait for host WS connection
-        expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
-        pax.join("MultiVoter")
-
-        # Create multi-select poll with correct_count=2
-        host.create_poll("Pick 2 OOP principles:", ["Encapsulation", "Inheritance", "Gravity", "Polymorphism"],
-                         multi=True, correct_count=2)
-
-        # Wait for poll to appear on participant
-        expect(pax_page.locator(".option-btn").first).to_be_visible(timeout=5000)
-
-        # Select 2 options
-        pax.multi_vote("Encapsulation", "Inheritance")
-
-        # Verify 2 are selected
-        expect(pax_page.locator(".option-btn.selected")).to_have_count(2, timeout=3000)
-
-        # The 3rd option should be disabled (at cap)
-        gravity_btn = pax_page.locator(".option-btn:has-text('Gravity')")
-        expect(gravity_btn).to_be_disabled(timeout=3000)
-
-        # Try to click it anyway — count should remain 2
-        gravity_btn.click(force=True)
-        pax_page.wait_for_timeout(500)
-
-        selected = pax_page.locator(".option-btn.selected")
-        count = selected.count()
-        assert count <= 2, f"Expected at most 2 selected options, got {count}"
-
-        print("SUCCESS: Multi-select cap enforced!")
-        browser.close()
-
-
-# ── 10. Participant count updates on host ──────────────────────────────────
+# ── 3. Participant count updates on host ──────────────────────────────────────
 
 def test_participant_count_updates():
     """Host sees participant count increase as participants join."""

@@ -98,9 +98,9 @@ def test_host_starts_session_with_real_daemon():
         pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
 
         # Wait for auto-name assignment
-        display_name = pax_page.locator("#display-name")
+        display_name = pax_page.locator("#display-name .display-name-text")
         display_name.wait_for(state="visible", timeout=10000)
-        pax_name = display_name.inner_text()
+        pax_name = display_name.inner_text().strip()
         assert pax_name, "Participant name should not be empty"
         print(f"Participant joined as: {pax_name}")
 
