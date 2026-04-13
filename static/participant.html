@@ -881,12 +881,19 @@ function togglePastSlides() {
 function _computeListHeight(list) {
   var nav = document.querySelector('nav');
   var wrapper = list.parentElement;
-  var siblingsH = 0;
+  var visibleSibRects = [];
   var sib = wrapper.nextElementSibling;
   while (sib) {
-    var h = sib.getBoundingClientRect().height;
-    if (h > 0) siblingsH += h + 8;
+    var rect = sib.getBoundingClientRect();
+    if (rect.height > 0) visibleSibRects.push(rect);
     sib = sib.nextElementSibling;
+  }
+  var siblingsH = 0;
+  if (visibleSibRects.length > 0) {
+    var wrapperBottom = wrapper.getBoundingClientRect().bottom;
+    var gapBeforeFirst = visibleSibRects[0].top - wrapperBottom;
+    var firstToLast = visibleSibRects[visibleSibRects.length - 1].bottom - visibleSibRects[0].top;
+    siblingsH = gapBeforeFirst + firstToLast;
   }
   return Math.max(nav.getBoundingClientRect().bottom - list.getBoundingClientRect().top - siblingsH - 4, 0);
 }
