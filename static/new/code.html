@@ -150,18 +150,13 @@ body{visibility:hidden}
 </div>
 <!-- Navigation Cluster -->
 <nav class="flex flex-col space-y-2 flex-1 overflow-y-auto min-h-0">
-<!-- Slides - ACTIVE -->
+<!-- Past Slides (never active) -->
 <div>
-<a data-nav="slides" onclick="toggleSlides()" class="nav-item nav-active rounded-full px-2 h-10 font-semibold flex items-center gap-3 transition-all cursor-pointer">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
-<span class="text-base">Current Slide</span>
-<span class="material-symbols-outlined slides-arrow text-xl transition-transform duration-300">chevron_right</span>
-<span class="badge-new ml-auto">LIVE</span>
+<a onclick="togglePastSlides()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined">history</span>
+<span class="text-base">Past Slides</span>
+<span class="material-symbols-outlined past-slides-arrow text-xl transition-transform duration-300">chevron_right</span>
 </a>
-<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="slides-list mx-2 mt-1 rounded-xl">
-<div class="slides-list-inner overflow-y-auto py-1 space-y-1.5">
-</div>
-</div>
 <div id="slide-history-list" class="mx-2 mt-1 rounded-xl overflow-hidden" style="display:none"></div>
 </div>
 <a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
@@ -449,41 +444,24 @@ function setActive(name) {
   var el = document.querySelector('[data-nav="' + name + '"]');
   if (el) el.classList.add('nav-active');
 }
-function openSlides() {
+function openPastSlides() {
   closeTopics(); closeRepos();
-  var list = document.querySelector('.slides-list');
-  var arrow = document.querySelector('.slides-arrow');
-  list.style.maxHeight = '0px';
-  requestAnimationFrame(function() {
-    var nav = document.querySelector('nav');
-    var wrapper = list.parentElement;
-    var siblingsH = 0;
-    var sib = wrapper.nextElementSibling;
-    while (sib) { siblingsH += sib.getBoundingClientRect().height + 8; sib = sib.nextElementSibling; }
-    var available = nav.getBoundingClientRect().bottom - list.getBoundingClientRect().top - siblingsH - 4;
-    list.style.maxHeight = Math.max(available, 0) + 'px';
-    setTimeout(function() {
-      list.style.overflowY = 'auto';
-      list.scrollTop = list.scrollHeight;
-    }, 620);
-  });
-  arrow.style.transform = 'rotate(90deg)';
-  showView('slides');
+  var arrow = document.querySelector('.past-slides-arrow');
+  if (arrow) arrow.style.transform = 'rotate(90deg)';
   _loadSlideHistory();
 }
-function closeSlides(options) {
+function closePastSlides(options) {
   options = options || {};
-  var list = document.querySelector('.slides-list');
-  var arrow = document.querySelector('.slides-arrow');
-  if (!list) return;
-  list.style.overflowY = 'hidden';
-  list.style.maxHeight = '0px';
-  arrow.style.transform = 'rotate(0deg)';
+  var arrow = document.querySelector('.past-slides-arrow');
+  if (arrow) arrow.style.transform = 'rotate(0deg)';
   _hideSlideHistory();
   if (options.focusAllTopics !== false) {
     _focusCurrentTopicInAllTopics();
   }
 }
+// Backward-compatible wrappers for existing calls.
+function openSlides() { openPastSlides(); }
+function closeSlides(options) { closePastSlides(options); }
 var _slideHistoryTimer = null;
 function _normalizeSlideMatchToken(value) {
   return String(value || '')
@@ -494,7 +472,8 @@ function _normalizeSlideMatchToken(value) {
     .toLowerCase();
 }
 function _isSlidesViewSelected() {
-  return document.querySelector('[data-nav="slides"].nav-active') != null;
+  var slidesView = document.getElementById('slides-view');
+  return !!(slidesView && slidesView.style.display !== 'none');
 }
 function _getHostCurrentPage(slidesCurrent) {
   var page = slidesCurrent
@@ -710,8 +689,6 @@ function _loadSlideHistory() {
           if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
           _historySelectedRowEl = row;
         }
-        var currentSlideNav = document.querySelector('[data-nav="slides"]');
-        if (currentSlideNav) currentSlideNav.classList.remove('nav-active');
         var fileName = link.getAttribute('data-history-file-name') || '';
         var page = Number(link.getAttribute('data-history-page') || '1');
         _openSlideFromHistory(fileName, page, row || link);
@@ -725,13 +702,15 @@ function _loadSlideHistory() {
     .catch(function() { var el = document.getElementById('slide-history-list'); if (el) el.style.display = 'none'; });
 }
 function toggleSlides() {
-  var list = document.querySelector('.slides-list');
-  if (!list.style.maxHeight || list.style.maxHeight === '0px') {
-    openSlides();
+  togglePastSlides();
+}
+function togglePastSlides() {
+  var el = document.getElementById('slide-history-list');
+  var isOpen = !!(el && el.style.display !== 'none');
+  if (!isOpen) {
+    openPastSlides();
   } else {
-    // User explicitly clicked Current Slide again: keep focus there, do not move to All Topics.
-    closeSlides({ focusAllTopics: false });
-    showView('slides');
+    closePastSlides({ focusAllTopics: false });
   }
 }
 function openTopics(options) {
