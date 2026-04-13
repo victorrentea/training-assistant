@@ -1812,8 +1812,9 @@ function _handleWsMessage(msg) {
     case 'notes_updated':
       document.querySelector('[data-nav="notes"]').style.display = msg.count > 0 ? '' : 'none';
       document.getElementById('notes-badge').textContent = msg.count || '';
-      _applyNotesBadgeUnread(true);
-      if (document.getElementById('notes-view').style.display !== 'none') loadNotes();
+      var onNotes = document.getElementById('notes-view').style.display !== 'none';
+      _applyNotesBadgeUnread(!onNotes);
+      if (onNotes) loadNotes();
       break;
     case 'summary_updated': {
       var summaryNav = document.querySelector('[data-nav="summary"]');
