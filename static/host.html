@@ -233,15 +233,18 @@
     </div>
     </div><!-- /left-tabs-wrapper -->
 
+    <!-- Conference mode: PPTX drop zone (above QR) -->
+    <label id="talk-pptx-drop" class="talk-pptx-drop" title="Drop PPTX or click to browse">
+      <input type="file" accept=".pptx,.ppt" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="onTalkPptxSelected(this)">
+      <span>📂 Drop PPTX or click to browse</span>
+    </label>
+
     <div id="slides-left-qr" class="side-qr-container">
       <div id="slides-left-qr-code"></div>
     </div>
 
-    <!-- Conference mode: PPTX drop zone (above QR) -->
-    <label id="talk-pptx-drop" class="talk-pptx-drop" title="Drop PPTX or click to browse">
-      <input type="file" accept=".pptx,.ppt" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="onTalkPptxSelected(this)">
-      <span>Drop PPTX or click to browse</span>
-    </label>
+    <!-- Conference mode: current PPTX name (below QR) -->
+    <div id="talk-pptx-name" style="display:none; text-align:center; font-size:.85rem; color:var(--text-muted,#aaa); padding:.3rem .5rem; word-break:break-word;"></div>
 
     <!-- Conference mode: QR code shown in left column -->
     <div id="conference-qr" class="conference-qr-container">

@@ -1484,7 +1484,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 /* Conference mode: left column splits into tabs (top) + QR (bottom) + status bar */
 .host-col-left.conference-layout {
   display: grid;
-  grid-template-rows: 1fr 1fr auto;
+  grid-template-rows: auto 1fr auto;
   gap: 0;
 }
 /* .host-col-left.conference-layout .left-status-bar removed — status bar is now in consolidated footer */
