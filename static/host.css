@@ -1702,6 +1702,15 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   border-radius: 4px;
   padding: 4px 8px;
 }
+.host-layout.pptx-drop-hover::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  border: 3px dashed #f5a623;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 9999;
+}
 .session-fragile-blink {
   animation: blink-yellow 0.7s ease-in-out infinite;
 }

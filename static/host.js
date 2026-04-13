@@ -3555,4 +3555,45 @@ function stopInactivityTracking() {
   );
 }
 
+// ── Talk mode: drag-and-drop PPTX to log Google Drive URL ──
+(function () {
+  const layout = document.querySelector('.host-layout');
+  if (!layout) return;
+
+  layout.addEventListener('dragover', (e) => {
+    if (currentMode !== 'talk') return;
+    e.preventDefault();
+    layout.classList.add('pptx-drop-hover');
+  });
+
+  layout.addEventListener('dragleave', (e) => {
+    if (!layout.contains(e.relatedTarget)) {
+      layout.classList.remove('pptx-drop-hover');
+    }
+  });
+
+  layout.addEventListener('drop', (e) => {
+    layout.classList.remove('pptx-drop-hover');
+    if (currentMode !== 'talk') return;
+    e.preventDefault();
+
+    const uriList = e.dataTransfer.getData('text/uri-list');
+    if (!uriList) return;
+
+    const fileUri = uriList.trim().split('\n').find(u => u.startsWith('file://'));
+    if (!fileUri) return;
+
+    const path = decodeURIComponent(fileUri.replace('file://', ''));
+    if (!path.endsWith('.pptx') && !path.endsWith('.ppt')) return;
+
+    fetch('/api/session/talk-presentation-path', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path}),
+    }).then(r => {
+      if (!r.ok) console.warn('talk-presentation-path failed:', r.status);
+    });
+  });
+})();
+
 startInactivityTracking();
