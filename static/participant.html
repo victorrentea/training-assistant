@@ -11,7 +11,7 @@
 body{visibility:hidden}
 .badge-new{margin-left:auto;font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
 .badge-live{font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4;animation:live-blink 2s ease-in-out infinite}
-#past-slides-badge{background:#374151;transition:background-color 3s ease}
+#past-slides-badge{background:#9ca3af;transition:background-color 3s ease}
 @keyframes live-blink{0%,100%{opacity:1}50%{opacity:0.2}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70)}
@@ -710,7 +710,7 @@ function _flashPastSlidesBadge() {
   void badge.offsetWidth;
   badge.style.transition = 'background-color 3s ease';
   _pastSlidesBadgeFadeTimer = setTimeout(function() {
-    badge.style.backgroundColor = '#374151';
+    badge.style.backgroundColor = '#9ca3af';
   }, 20);
 }
 function _setPastSlidesBadge(total, options) {
@@ -722,7 +722,7 @@ function _setPastSlidesBadge(total, options) {
   badge.style.display = n > 0 ? '' : 'none';
   if (n <= 0) {
     clearTimeout(_pastSlidesBadgeFadeTimer);
-    badge.style.backgroundColor = '#374151';
+    badge.style.backgroundColor = '#9ca3af';
     return;
   }
   if (options.highlight) {
@@ -730,7 +730,7 @@ function _setPastSlidesBadge(total, options) {
   } else {
     clearTimeout(_pastSlidesBadgeFadeTimer);
     badge.style.transition = 'background-color 3s ease';
-    badge.style.backgroundColor = '#374151';
+    badge.style.backgroundColor = '#9ca3af';
   }
 }
 function _autoHideSlideHistoryAndCloseSlides() {
