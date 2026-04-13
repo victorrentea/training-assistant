@@ -227,6 +227,7 @@ class ParticipantStateResponse(BaseModel):
     summary_count: int
     summary_updated_at: str | None = None
     notes_count: int
+    slides_history_count: int
     gdrive_url: str | None = None
     has_agenda: bool = False
 
@@ -611,6 +612,7 @@ async def get_participant_state(request: Request):
         "summary_count": len(summary["points"]),
         "summary_updated_at": summary["updated_at"],
         "notes_count": notes_count,
+        "slides_history_count": len(misc_state.slides_viewed),
         # Google Drive folder link for session materials
         "gdrive_url": misc_state.gdrive_url,
         # Agenda .docx availability

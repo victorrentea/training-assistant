@@ -705,16 +705,6 @@ function _setPastSlidesBadge(total) {
   badge.textContent = String(n);
   badge.style.display = n > 0 ? '' : 'none';
 }
-function _refreshPastSlidesBadge() {
-  if (!_sessionId) return;
-  fetch('/' + _sessionId + '/api/participant/slide-history')
-    .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
-    .then(function(data) {
-      var slides = Array.isArray(data.slides) ? data.slides : [];
-      _setPastSlidesBadge(slides.length);
-    })
-    .catch(function() { _setPastSlidesBadge(0); });
-}
 function _autoHideSlideHistoryAndCloseSlides() {
   if (_historySelectedRowEl) {
     closeSlides({ focusAllTopics: true });
@@ -1262,7 +1252,6 @@ var _myUUID = (function() {
     console.log('[participant] session_id:', _sessionId);
     if (!_sessionId) return;
     loadSlidesCatalog();
-    _refreshPastSlidesBadge();
     _connectWS();
     const state = await fetch(`/${_sessionId}/api/participant/state`).then(r => r.json());
     console.log('[participant] state:', state);
@@ -1282,6 +1271,7 @@ var _myUUID = (function() {
     var gdriveNav = document.getElementById('gdrive-nav');
     if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveNav.style.display = ''; }
     else { gdriveNav.style.display = 'none'; }
+    _setPastSlidesBadge(state.slides_history_count || 0);
     var saved = LS.getView();
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
     if (saved === 'notes' && !(state.notes_count > 0)) saved = 'slides';
@@ -1316,6 +1306,9 @@ function _applyState(msg) {
   if (msg.has_agenda !== undefined) {
     document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
   }
+  if (msg.slides_history_count != null) {
+    _setPastSlidesBadge(msg.slides_history_count);
+  }
 }
 
 function _handleWsMessage(msg) {
@@ -1344,6 +1337,7 @@ function _handleWsMessage(msg) {
       }).catch(function() {});
       break;
     case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
+    case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;
   }
 }
 

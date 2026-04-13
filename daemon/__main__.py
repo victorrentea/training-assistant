@@ -933,6 +933,8 @@ def run() -> None:
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
+    _prev_slides_history_count = len(misc_state.slides_viewed)
+
     notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
     runtime_session_snapshot: dict | None = _without_session_id(startup_session_state) if startup_session_state else None
     last_persist_poll_at: float = 0.0
@@ -1050,6 +1052,11 @@ def run() -> None:
             for _sv_batch in _bridge.drain_slides_viewed():
                 from daemon.slides.merge_viewed import merge_slides_viewed
                 merge_slides_viewed(misc_state.slides_viewed, _sv_batch)
+            _slides_history_count_after = len(misc_state.slides_viewed)
+            if _slides_history_count_after != _prev_slides_history_count:
+                from daemon.ws_messages import SlidesHistoryCountUpdatedMsg
+                ws_publish.broadcast(SlidesHistoryCountUpdatedMsg(count=_slides_history_count_after))
+                _prev_slides_history_count = _slides_history_count_after
 
             # ── Push overlay_connected state change to host ──
             _curr_overlay = _bridge.connected

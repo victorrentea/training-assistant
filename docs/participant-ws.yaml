@@ -22,6 +22,7 @@ channels:
           - $ref: '#/components/messages/slides_cache_status'
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/active_participants_count_updated'
+          - $ref: '#/components/messages/slides_history_count_updated'
           - $ref: '#/components/messages/poll_opened'
           - $ref: '#/components/messages/poll_closed'
           - $ref: '#/components/messages/poll_correct_revealed'
@@ -112,6 +113,19 @@ components:
           type:
             type: string
             enum: [active_participants_count_updated]
+          count:
+            type: integer
+
+    slides_history_count_updated:
+      summary: Participant slide history count changed
+      x-feature: slides
+      payload:
+        type: object
+        required: [type, count]
+        properties:
+          type:
+            type: string
+            enum: [slides_history_count_updated]
           count:
             type: integer
 

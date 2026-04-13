@@ -2250,6 +2250,9 @@ components:
         notes_count:
           type: integer
           title: Notes Count
+        slides_history_count:
+          type: integer
+          title: Slides History Count
         gdrive_url:
           anyOf:
           - type: string
@@ -2274,6 +2277,7 @@ components:
       - debate
       - summary_count
       - notes_count
+      - slides_history_count
       title: ParticipantStateResponse
     PasteEntry:
       properties:

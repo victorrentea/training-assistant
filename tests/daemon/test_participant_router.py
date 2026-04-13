@@ -225,6 +225,21 @@ class TestParticipantState:
         assert resp.status_code == 200
         assert "participant_count" not in resp.json()
 
+    def test_state_includes_slides_history_count(self, client, fresh_state):
+        from daemon.misc.state import misc_state
+
+        old_slides_viewed = list(misc_state.slides_viewed)
+        misc_state.slides_viewed = [
+            {"file_name": "AI.pptx", "page": 3, "seconds": 120},
+            {"file_name": "AI.pptx", "page": 4, "seconds": 30},
+        ]
+        try:
+            resp = client.get("/api/participant/state", headers={"X-Participant-ID": "uuid1"})
+            assert resp.status_code == 200
+            assert resp.json()["slides_history_count"] == 2
+        finally:
+            misc_state.slides_viewed = old_slides_viewed
+
 
 class TestNoParticipantWriteBackEvents:
     def test_register_does_not_emit_write_back_events(self, client_with_writeback_header):

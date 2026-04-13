@@ -40,6 +40,12 @@ class ActiveParticipantsCountUpdatedMsg(BaseModel):
     count: int
 
 
+class SlidesHistoryCountUpdatedMsg(BaseModel):
+    """Participant-only: total number of tracked viewed slides."""
+    type: Literal["slides_history_count_updated"] = "slides_history_count_updated"
+    count: int
+
+
 class ParticipantListUpdatedMsg(BaseModel):
     """Host-only: full participant list."""
     type: Literal["participant_list_updated"] = "participant_list_updated"
@@ -269,6 +275,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "activity_updated": ActivityUpdatedMsg,
     # Identity
     "active_participants_count_updated": ActiveParticipantsCountUpdatedMsg,
+    "slides_history_count_updated": SlidesHistoryCountUpdatedMsg,
     # Poll
     "poll_opened": PollOpenedMsg,
     "poll_closed": PollClosedMsg,
@@ -343,6 +350,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "activity_updated": "activity",
     # Identity
     "active_participants_count_updated": "identity",
+    "slides_history_count_updated": "slides",
     # Poll
     "poll_opened": "poll",
     "poll_closed": "poll",
