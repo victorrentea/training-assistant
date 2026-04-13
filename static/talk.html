@@ -244,13 +244,13 @@
 </div>
 </main>
 <!-- Floating Action Button -->
-<div id="fab-current-slide" class="fixed bottom-24 right-4 z-50">
+<div id="fab-current-slide" class="fixed bottom-20 right-4 z-50">
 <button onclick="scrollToCurrentSlide()" class="kinetic-gradient text-on-primary font-bold py-3 px-5 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(163,166,255,0.4)] hover:scale-105 active:scale-95 transition-transform">
 <span class="text-lg">Current Slide 🎯</span>
 </button>
 </div>
 <!-- Fixed Emoji Reaction Bar -->
-<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-center items-center px-4 py-4 bg-[#140b36]/80 backdrop-blur-2xl border-t border-white/5">
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-center items-center px-4 py-2 bg-[#140b36]/80 backdrop-blur-2xl border-t border-white/5">
 <div class="flex justify-around items-center w-full max-w-lg gap-1">
 <!-- Clap -->
 <button onclick="sendEmoji('👏', this)" class="flex flex-col items-center relative group">
@@ -280,7 +280,7 @@
 </div>
 </nav>
 <!-- Padding for Fixed Reaction Bar -->
-<div class="h-24"></div>
+<div class="h-20"></div>
 <script type="module">
   import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
@@ -344,7 +344,7 @@
         // Scroll to current slide after initial render
         const initialTarget = container.querySelector(`section[data-page="${pageNum}"]`);
         if (initialTarget) {
-          initialTarget.scrollIntoView({ block: 'end' });
+          initialTarget.scrollIntoView({ block: 'center' });
           initialTarget.classList.add('slide-highlight');
         }
       }
@@ -427,7 +427,7 @@
     var container = document.getElementById('view-slides');
     var target = container && container.querySelector('section[data-page="' + _currentPage + '"]');
     if (!target) return;
-    target.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     var done = false;
     var fallbackTimer;
     function highlight() {
