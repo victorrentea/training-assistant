@@ -451,12 +451,15 @@ function _renderSpeaker() {
     return _slidesCatalog.find(function(s) { return s.slug === slug; }) || null;
   }
 
+  function _slideUrl(slug) {
+    var slide = _findSlide(slug);
+    return (slide && slide.url) || ('/' + _sessionId + '/api/slides/download/' + encodeURIComponent(slug));
+  }
+
   async function _applySlidesCurrent(sc) {
     if (!sc || !sc.slug) return;
-    var slide = _findSlide(sc.slug);
-    if (!slide || !slide.url) return;
     _currentPage = _getPage(sc);
-    if (window.renderPage) await window.renderPage(slide.url, _currentPage);
+    if (window.renderPage) await window.renderPage(_slideUrl(sc.slug), _currentPage);
   }
 
   async function _loadCatalog() {
