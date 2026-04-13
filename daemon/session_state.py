@@ -1,9 +1,9 @@
-"""Session state management: daemon state persistence, key-points I/O, session helpers."""
+"""Session state management: daemon state persistence, session helpers."""
 
 import json
 import os
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 
 from daemon import log
@@ -49,10 +49,6 @@ def get_current_session_id() -> str | None:
     return _current_session_id
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-_KEY_POINTS_FILE = "transcript_discussion.md"
-_KEY_POINTS_FILE_LEGACY_MD = "transcript_keypoints.md"
-_KEY_POINTS_FILE_LEGACY = "key_points.json"
-_AI_SUMMARY_FILE = "ai-summary.md"
 GLOBAL_STATE_FILENAME = "global-state.json"
 _LEGACY_GLOBAL_STATE_FILENAME = "training-assistant-global-state.json"
 _LEGACY_DAEMON_STATE_FILENAME = "daemon_state.json"
@@ -67,9 +63,6 @@ _SLIDES_MANIFEST_CANDIDATES = (
 _SLIDES_MANIFEST_ERRORS: set[str] = set()
 
 _DEFAULT_MATERIALS_FOLDER = Path("/Users/victorrentea/Documents/workshop-materials")
-
-_DOW_RE = re.compile(r"^([A-Z][a-z]{2})\s+(\d{2}:\d{2})\s+(.+)$")
-_FRONTMATTER_WATERMARK_RE = re.compile(r"^watermark:\s*(\d+)")
 
 
 # ── Materials folder resolution ────────────────────────────────────────────────
@@ -91,135 +84,6 @@ def resolve_materials_folder() -> Path | None:
         if folder.exists() and folder.is_dir():
             return folder
     return None
-
-
-# ── Key points I/O ─────────────────────────────────────────────────────────────
-
-def load_key_points(session_folder: Path) -> tuple[list[dict], int]:
-    """Load key points from session folder. Returns (points, watermark).
-    Prefers ai-summary.md (external AI-generated file) if present.
-    Falls back to transcript_discussion.md, transcript_keypoints.md (legacy md),
-    or key_points.json (oldest legacy)."""
-    # Prefer external ai-summary.md if present
-    ai_summary_file = session_folder / _AI_SUMMARY_FILE
-    if ai_summary_file.exists():
-        try:
-            text = ai_summary_file.read_text(encoding="utf-8", errors="replace").strip()
-            points = []
-            for line in text.splitlines():
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if line.startswith("- ") or line.startswith("* "):
-                    text_content = line[2:].strip()
-                elif line and line[0].isdigit() and ". " in line:
-                    text_content = line.split(". ", 1)[1].strip()
-                else:
-                    text_content = line
-                if text_content:
-                    points.append({"text": text_content, "source": "notes"})
-            log.info("session", f"Summary found ({len(points)} lines): {_AI_SUMMARY_FILE}")
-            return points, 0
-        except Exception as e:
-            log.error("session", f"Failed to load {_AI_SUMMARY_FILE}: {e}")
-
-    md_file = session_folder / _KEY_POINTS_FILE
-    legacy_md_file = session_folder / _KEY_POINTS_FILE_LEGACY_MD
-    json_file = session_folder / _KEY_POINTS_FILE_LEGACY
-
-    def _parse_md_file(path: Path, label: str) -> tuple[list[dict], int]:
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-            watermark = 0
-            points = []
-            in_frontmatter = False
-            seen_open = False
-            for line in lines:
-                stripped = line.strip()
-                if not seen_open and stripped == "---":
-                    in_frontmatter = True
-                    seen_open = True
-                    continue
-                if in_frontmatter:
-                    if stripped == "---":
-                        in_frontmatter = False
-                        continue
-                    m = _FRONTMATTER_WATERMARK_RE.match(stripped)
-                    if m:
-                        watermark = int(m.group(1))
-                    continue
-                if not stripped:
-                    continue
-                m = _DOW_RE.match(stripped)
-                if m:
-                    points.append({"text": m.group(3), "time": m.group(2), "source": "discussion"})
-                else:
-                    points.append({"text": stripped, "source": "discussion"})
-            log.info("session", f"Summary ({len(points)} points{label})")
-            return points, watermark
-        except Exception as e:
-            log.error("session", f"Failed to load key points: {e}")
-            return [], 0
-
-    if md_file.exists():
-        return _parse_md_file(md_file, "")
-
-    if legacy_md_file.exists():
-        return _parse_md_file(legacy_md_file, " (legacy md)")
-
-    if json_file.exists():
-        try:
-            data = json.loads(json_file.read_text(encoding="utf-8"))
-            points = data.get("points", data.get("locked", []) + data.get("draft", []))
-            watermark = data.get("watermark", 0)
-            log.info("session", f"Summary ({len(points)} points, legacy)")
-            return points, watermark
-        except Exception as e:
-            log.error("session", f"Failed to load key points: {e}")
-            return [], 0
-
-    return [], 0
-
-
-def save_key_points(
-    session_folder: Path,
-    points: list[dict],
-    watermark: int = 0,
-    session_date: date | None = None,
-) -> None:
-    """Save key points to transcript_discussion.md with DOW HH:MM prefix per line."""
-    try:
-        session_folder.mkdir(parents=True, exist_ok=True)
-
-        # Only timed discussion points go to disk; notes-only bullets are ephemeral
-        timed = [(p, p["time"]) for p in points if p.get("time")]
-
-        # Sort by time and detect midnight crossings for DOW assignment
-        def _mins(t: str) -> int:
-            try:
-                return int(t[:2]) * 60 + int(t[3:5])
-            except Exception:
-                return 0
-
-        timed.sort(key=lambda x: _mins(x[1]))
-
-        base_date = session_date or date.today()
-        current_date = base_date
-        prev_mins: int | None = None
-        lines = ["---", f"watermark: {watermark}", "---", ""]
-
-        for point, time_str in timed:
-            mins = _mins(time_str)
-            # Crossed midnight: new time is significantly smaller than previous
-            if prev_mins is not None and mins < prev_mins - 30:
-                current_date += timedelta(days=1)
-            prev_mins = mins
-            dow = current_date.strftime("%a")
-            lines.append(f"{dow} {time_str} {point['text']}")
-
-        (session_folder / _KEY_POINTS_FILE).write_text("\n".join(lines) + "\n", encoding="utf-8")
-    except Exception as e:
-        log.error("session", f"Failed to save key points: {e}")
 
 
 # ── Daemon state persistence ────────────────────────────────────────────────────

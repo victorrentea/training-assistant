@@ -49,11 +49,6 @@ from daemon.session_state import (
     set_current_session_id,
 )
 from daemon.slides.loop import SlidesRunner
-from daemon.summary.loop import (
-    load_key_points,
-    run_summary_cycle,
-    save_key_points,
-)
 from daemon.transcript.loader import load_transcription_files
 from daemon.transcript.state import TranscriptStateManager
 from daemon.upload import handle_file_ready_for_download as _handle_file_download
@@ -826,8 +821,6 @@ def run() -> None:
                 session_name = _active_folder.name
 
     config, _ = _bind_initial_session_folder(config, sessions_root, session_name)
-    current_key_points: list[dict] = []
-    summary_watermark: int = 0
 
     pending_global_state: dict | None = None
 
@@ -866,14 +859,9 @@ def run() -> None:
             log.error("session", f"Failed to resolve Google Drive link: {e}")
             return None
 
-    if session_name:
-        # Restore from persisted session_name
-        current_folder = config.session_folder or (sessions_root / session_name)
-        current_key_points, summary_watermark = load_key_points(current_folder)
-    elif config.session_folder:
+    if not session_name and config.session_folder:
         # Auto-start from today's detected session folder
         session_name = config.session_folder.name
-        current_key_points, summary_watermark = load_key_points(config.session_folder)
         _do_save_daemon_state()
     # Resolve Google Drive folder URL for the active session folder
     if config.session_folder:
@@ -1152,7 +1140,6 @@ def run() -> None:
                             last_session_state_hash = _state_hash(runtime_session_snapshot)
 
                             session_name = name
-                            current_key_points, summary_watermark = load_key_points(folder)
                             _do_save_daemon_state()
                             notes_file = find_notes_in_folder(folder)
                             if notes_file:
@@ -1200,12 +1187,8 @@ def run() -> None:
                         if wrote:
                             log.info("session", f"Forced flush {SESSION_STATE_FILENAME} for {session_name}")
                         old_session_name = session_name
-                        ended_folder = sessions_root / old_session_name
-                        save_key_points(ended_folder, current_key_points, summary_watermark, date.today())
                         # Main session ended — clear everything
                         session_name = None
-                        current_key_points = []
-                        summary_watermark = 0
                         config = dc_replace(config, session_folder=None, session_notes=None)
                         _active_session_id = None
                         # Notify addons that session ended
@@ -1229,13 +1212,7 @@ def run() -> None:
                         if session_name:
                             old_name = session_name
                             new_folder = sessions_root / new_name
-                            # Load existing points from new folder FIRST (before overwriting)
-                            existing_pts, existing_wm = load_key_points(new_folder) if new_folder.exists() else ([], 0)
                             new_folder.mkdir(parents=True, exist_ok=True)
-                            if existing_pts:
-                                current_key_points, summary_watermark = existing_pts, existing_wm
-                            else:
-                                save_key_points(new_folder, current_key_points, summary_watermark, date.today())
                             session_name = new_name
                             _do_save_daemon_state()
                             notes_file = find_notes_in_folder(new_folder)
@@ -1411,20 +1388,9 @@ def run() -> None:
                     except Exception as e:
                         log.error("transcript", f"Error: {e}")
 
-                # ── Check for full-reset / forced summary request (via WS) ──
-                full_reset_data = _pending_requests.pop("summary_full_reset", None)
-                if full_reset_data:
-                    log.info("summarizer", "Full reset — triggering regeneration")
-
-                force_data = _pending_requests.pop("summary_force", None)
-                force_summary = bool(force_data) or bool(full_reset_data)
-
-                # ── On-demand summary generation (incremental when possible) ──
-                if force_summary and session_name:
-                    current_key_points, summary_watermark = run_summary_cycle(
-                        config, sessions_root, session_name,
-                        current_key_points, summary_watermark,
-                    )
+                # ── Drain stale summary force/reset requests (no longer used) ──
+                _pending_requests.pop("summary_full_reset", None)
+                _pending_requests.pop("summary_force", None)
 
                 # ── Static file sync (triggered by backend on WS connect) ──
                 sync_files_data = _pending_requests.pop("sync_files", None)

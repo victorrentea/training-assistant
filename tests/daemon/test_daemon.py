@@ -462,32 +462,12 @@ class TestManifest:
 # ═══════════════════════════════════════════════════════════════════════
 from daemon.session_state import (
     GLOBAL_STATE_FILENAME,
-    load_key_points as _load_key_points,
-    save_key_points as _save_key_points,
     load_daemon_state as _load_daemon_state,
     save_daemon_state as _save_daemon_state,
 )
 
 
-class TestSessionKeyPoints:
-    def test_load_from_empty_folder(self, tmp_path):
-        points, watermark = _load_key_points(tmp_path)
-        assert points == []
-        assert watermark == 0
-
-    def test_save_and_load_roundtrip(self, tmp_path):
-        points = [{"text": "P1", "source": "discussion", "time": "10:15"}]
-        _save_key_points(tmp_path, points, 5, None)
-        loaded, wm = _load_key_points(tmp_path)
-        assert loaded == points
-
-    def test_backward_compat_loads_locked_draft(self, tmp_path):
-        """Test migration from old summary_cache.json format."""
-        cache = tmp_path / "key_points.json"
-        cache.write_text('{"locked": [{"text": "L1"}], "draft": [{"text": "D1"}]}')
-        loaded, _ = _load_key_points(tmp_path)
-        assert len(loaded) == 2
-
+class TestDaemonState:
     def test_load_daemon_state(self, tmp_path):
         state_file = tmp_path / GLOBAL_STATE_FILENAME
         # Old stack format — should be migrated to {main, talk}

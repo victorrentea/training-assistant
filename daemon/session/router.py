@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from daemon import log as daemon_log
 from daemon.session import pending as session_pending
 from daemon.session import state as session_state
-from daemon.session_state import announce_session_id, load_session_meta
+from daemon.session_state import announce_session_id, load_session_meta, load_session_state
 from scripts.resolve_gdrive_link import resolve_gdrive_file_url
 
 
@@ -174,8 +174,9 @@ async def list_session_folders():
         filtered = _filter_folders_to_current_year(deduped)
         folder_infos = []
         for name in filtered:
-            meta = load_session_meta(root / name)
-            folder_infos.append(FolderInfo(name=name, session_type=meta.get("session_type")))
+            state = load_session_state(root / name)
+            session_type = state.get("mode") or state.get("session_type")
+            folder_infos.append(FolderInfo(name=name, session_type=session_type))
         return SessionFoldersResponse(folders=folder_infos)
     except Exception as e:
         daemon_log.error("session", f"Failed to list session folders: {e}")
