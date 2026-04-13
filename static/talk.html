@@ -244,7 +244,7 @@
 </div>
 </main>
 <!-- Floating Action Button -->
-<div class="fixed bottom-24 right-4 z-50">
+<div id="fab-current-slide" class="fixed bottom-24 right-4 z-50">
 <button onclick="scrollToCurrentSlide()" class="kinetic-gradient text-on-primary font-bold py-3 px-5 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(163,166,255,0.4)] hover:scale-105 active:scale-95 transition-transform">
 <span class="text-lg">Current Slide 🎯</span>
 </button>
@@ -374,6 +374,8 @@
       var btn = document.getElementById('btn-' + v);
       if (btn) btn.classList.toggle('active', v === name);
     });
+    var fab = document.getElementById('fab-current-slide');
+    if (fab) fab.classList.toggle('hidden', name !== 'slides');
     _activeView = name;
     if (name === 'summary') _loadSummary();
     if (name === 'speaker') _renderSpeaker();
