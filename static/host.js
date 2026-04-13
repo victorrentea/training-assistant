@@ -1087,7 +1087,7 @@
       leftCol.classList.add('conference-layout');
       if (leftTabsWrapper) leftTabsWrapper.style.display = 'none';
       if (slidesLeftQR) slidesLeftQR.style.display = 'flex';
-      if (pptxDrop) pptxDrop.style.display = 'block';
+      if (pptxDrop) pptxDrop.style.display = 'inline-flex';
       const pptxName = document.getElementById('talk-pptx-name');
       if (pptxName) pptxName.style.display = 'block';
       confQR.style.display = 'none';
