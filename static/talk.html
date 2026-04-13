@@ -136,6 +136,7 @@
           animation: slide-highlight 2s ease-out forwards;
         }
     </style>
+<script src="/static/emoji-float.js"></script>
 </head>
 <body class="bg-background text-on-background font-body min-h-screen flex flex-col">
 <!-- Desktop Warning -->
@@ -207,27 +208,27 @@
 <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-center items-center px-4 py-4 bg-[#140b36]/80 backdrop-blur-2xl border-t border-white/5">
 <div class="flex justify-around items-center w-full max-w-lg gap-1">
 <!-- Clap -->
-<button onclick="sendEmoji('👏')" class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('👏', this)" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">👏</div>
 <span id="emoji-count-clap" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 <!-- Heart -->
-<button onclick="sendEmoji('❤️')" class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('❤️', this)" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">❤️</div>
 <span id="emoji-count-heart" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 <!-- Fire -->
-<button onclick="sendEmoji('🔥')" class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('🔥', this)" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">🔥</div>
 <span id="emoji-count-fire" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 <!-- Lightbulb -->
-<button onclick="sendEmoji('💡')" class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('💡', this)" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">💡</div>
 <span id="emoji-count-bulb" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 <!-- Rocket -->
-<button onclick="sendEmoji('🚀')" class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('🚀', this)" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">🚀</div>
 <span id="emoji-count-rocket" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
@@ -362,7 +363,8 @@
     }
   }
 
-  function sendEmoji(emoji) {
+  function sendEmoji(emoji, btn) {
+    if (window.showDesktopEmojiFloat) showDesktopEmojiFloat(emoji, btn);
     if (!_sessionId) return;
     fetch('/' + _sessionId + '/api/participant/emoji/reaction', {
       method: 'POST',
