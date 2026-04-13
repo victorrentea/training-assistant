@@ -154,11 +154,13 @@ body{visibility:hidden}
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="text-base">Slides</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
-<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer">
+<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer rounded-full px-2 py-1 transition-colors hover:bg-surface-container-high">
 <input id="slides-follow-checkbox" type="checkbox" checked tabindex="-1" onfocus="this.blur()" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
 <span>Follow</span>
 </label>
+<button type="button" onclick="event.stopPropagation()" tabindex="-1" class="inline-flex items-center justify-center rounded-full p-1 transition-colors hover:bg-surface-container-high" style="line-height:1;">
 <span class="material-symbols-outlined">history</span>
+</button>
 </a>
 <div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="topics-list mx-2 mb-1 rounded-xl">
 <div class="overflow-y-auto h-full">
