@@ -510,7 +510,6 @@ var _activeSlideId = null;
 var _historySelectedRowEl = null;
 var _hostSlidesCurrent = null;
 var _lastHostSlidesCurrentKey = '';
-var _pastSlidesBadgeFadeTimer = null;
 
 function setActive(name) {
   document.querySelectorAll('.nav-item').forEach(function(el) { el.classList.remove('nav-active'); });
@@ -716,38 +715,12 @@ function _hideSlideHistory() {
     _historySelectedRowEl = null;
   }
 }
-function _flashPastSlidesBadge() {
-  var badge = document.getElementById('past-slides-badge');
-  if (!badge || badge.style.display === 'none') return;
-  clearTimeout(_pastSlidesBadgeFadeTimer);
-  badge.style.transition = 'none';
-  badge.style.backgroundColor = '#b91c1c';
-  // Force style flush so next change animates.
-  void badge.offsetWidth;
-  badge.style.transition = 'background-color 3s ease';
-  _pastSlidesBadgeFadeTimer = setTimeout(function() {
-    badge.style.backgroundColor = '#9ca3af';
-  }, 20);
-}
-function _setPastSlidesBadge(total, options) {
-  options = options || {};
+function _setPastSlidesBadge(total) {
   var badge = document.getElementById('past-slides-badge');
   if (!badge) return;
   var n = Math.max(0, Number(total || 0));
   badge.textContent = String(n);
   badge.style.display = n > 0 ? '' : 'none';
-  if (n <= 0) {
-    clearTimeout(_pastSlidesBadgeFadeTimer);
-    badge.style.backgroundColor = '#9ca3af';
-    return;
-  }
-  if (options.highlight) {
-    _flashPastSlidesBadge();
-  } else {
-    clearTimeout(_pastSlidesBadgeFadeTimer);
-    badge.style.transition = 'background-color 3s ease';
-    badge.style.backgroundColor = '#9ca3af';
-  }
 }
 function _autoHideSlideHistoryAndCloseSlides() {
   if (_historySelectedRowEl) {
@@ -1652,7 +1625,7 @@ function _handleWsMessage(msg) {
       }).catch(function() {});
       break;
     case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
-    case 'slides_history_count_updated': _setPastSlidesBadge(msg.count, { highlight: true }); break;
+    case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;
   }
 }
 
