@@ -444,7 +444,7 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
         new_v = payload.get(k)
         if old_v != new_v:
             changed_keys.append(k)
-    changed_suffix = f" [{', '.join(changed_keys)}]" if changed_keys else " [no changes]"
+    changed_suffix = f": {', '.join(changed_keys)}" if changed_keys else ""
     path = session_state_path(session_folder)
     tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
     tmp.write_text(json.dumps(payload, default=str, indent=2), encoding="utf-8")
