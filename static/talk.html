@@ -127,7 +127,7 @@
         body {
           min-height: max(884px, 100dvh);
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin { to { transform: rotate(-360deg); } }
         @keyframes slide-highlight {
           0%   { outline: 8px solid rgba(163,166,255,1); outline-offset: -8px; }
           100% { outline: 8px solid rgba(163,166,255,0); outline-offset: -8px; }
@@ -176,9 +176,11 @@
 <!-- Slides History -->
 <div class="relative flex-1">
 <div id="pdf-pages" class="absolute inset-0 overflow-y-auto flex flex-col gap-4 pb-32 scroll-smooth"></div>
-<div id="slide-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-on-surface-variant">
+<div id="slide-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-on-surface-variant pointer-events-none">
+<div class="flex flex-col items-center gap-3 bg-surface-container/50 backdrop-blur-sm rounded-2xl px-8 py-6">
 <span class="material-symbols-outlined text-5xl" style="animation:spin 1s linear infinite">sync</span>
 <span class="text-sm">Loading slides…</span>
+</div>
 </div>
 </div>
 <!-- Desktop Quick Controls (Emoji Bar) -->
