@@ -110,12 +110,6 @@
 
 /* ── Green hover utility (follow button, download icons) ─────── */
 .hover-green:hover {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-@media (prefers-color-scheme: dark) {
-  .hover-green:hover {
-    background-color: #1b3d1f;
-    color: #81c784;
-  }
+  background-color: #4caf50;
+  color: white;
 }
