@@ -1920,8 +1920,7 @@ function addAgendaProgress(container) {
 
   const navBadge = document.getElementById('agenda-progress-badge');
   if (navBadge && grandTotal > 0) {
-    const pct = Math.round(grandCrossed / grandTotal * 100);
-    navBadge.textContent = pct + '%';
+    navBadge.textContent = grandCrossed + '/' + grandTotal;
     navBadge.style.display = '';
   }
 }
