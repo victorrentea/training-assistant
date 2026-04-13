@@ -11,6 +11,7 @@
 body{visibility:hidden}
 .badge-new{margin-left:auto;font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
 .badge-live{font-size:.6rem;font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4;animation:live-blink 2s ease-in-out infinite}
+#past-slides-badge{background:#374151;transition:background-color 3s ease}
 @keyframes live-blink{0%,100%{opacity:1}50%{opacity:0.2}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70)}
@@ -493,6 +494,7 @@ var _activeSlideId = null;
 var _historySelectedRowEl = null;
 var _hostSlidesCurrent = null;
 var _lastHostSlidesCurrentKey = '';
+var _pastSlidesBadgeFadeTimer = null;
 
 function setActive(name) {
   document.querySelectorAll('.nav-item').forEach(function(el) { el.classList.remove('nav-active'); });
@@ -698,12 +700,38 @@ function _hideSlideHistory() {
     _historySelectedRowEl = null;
   }
 }
-function _setPastSlidesBadge(total) {
+function _flashPastSlidesBadge() {
+  var badge = document.getElementById('past-slides-badge');
+  if (!badge || badge.style.display === 'none') return;
+  clearTimeout(_pastSlidesBadgeFadeTimer);
+  badge.style.transition = 'none';
+  badge.style.backgroundColor = '#b91c1c';
+  // Force style flush so next change animates.
+  void badge.offsetWidth;
+  badge.style.transition = 'background-color 3s ease';
+  _pastSlidesBadgeFadeTimer = setTimeout(function() {
+    badge.style.backgroundColor = '#374151';
+  }, 20);
+}
+function _setPastSlidesBadge(total, options) {
+  options = options || {};
   var badge = document.getElementById('past-slides-badge');
   if (!badge) return;
   var n = Math.max(0, Number(total || 0));
   badge.textContent = String(n);
   badge.style.display = n > 0 ? '' : 'none';
+  if (n <= 0) {
+    clearTimeout(_pastSlidesBadgeFadeTimer);
+    badge.style.backgroundColor = '#374151';
+    return;
+  }
+  if (options.highlight) {
+    _flashPastSlidesBadge();
+  } else {
+    clearTimeout(_pastSlidesBadgeFadeTimer);
+    badge.style.transition = 'background-color 3s ease';
+    badge.style.backgroundColor = '#374151';
+  }
 }
 function _autoHideSlideHistoryAndCloseSlides() {
   if (_historySelectedRowEl) {
@@ -1337,7 +1365,7 @@ function _handleWsMessage(msg) {
       }).catch(function() {});
       break;
     case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
-    case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;
+    case 'slides_history_count_updated': _setPastSlidesBadge(msg.count, { highlight: true }); break;
   }
 }
 
