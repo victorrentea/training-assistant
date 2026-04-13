@@ -619,6 +619,8 @@ async def get_participant_state(request: Request):
         "gdrive_url": misc_state.gdrive_url,
         # Agenda .docx availability
         "has_agenda": misc_state.agenda_docx_path is not None and misc_state.agenda_docx_path.exists(),
+        # Last git repo URL — used by talk mode to enable the Git Repo top button
+        "last_git_url": ps.git_repos[-1].url if ps.git_repos else None,
     }
 
     return JSONResponse(state_msg)

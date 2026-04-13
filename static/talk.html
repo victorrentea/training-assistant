@@ -200,7 +200,7 @@
 <span class="material-symbols-outlined text-xl">download</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Download</span>
 </button>
-<button id="btn-git-repo" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
+<button id="btn-git-repo" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]" disabled>
 <span class="material-symbols-outlined text-xl">commit</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Git Repo</span>
 </button>
@@ -559,6 +559,13 @@
       if (state.slides_current) await _applySlidesCurrent(state.slides_current);
       if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
       if (state.summary_updated_at) _enableSummaryButton();
+      if (state.last_git_url) {
+        var gitBtn = document.getElementById('btn-git-repo');
+        if (gitBtn) {
+          gitBtn.disabled = false;
+          gitBtn.addEventListener('click', function() { window.open(state.last_git_url, '_blank'); });
+        }
+      }
     } catch (e) { console.error('[talk] init error', e); }
   })();
 </script>
