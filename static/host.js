@@ -771,7 +771,7 @@
     b.textContent = '🟢';
     b.className = `badge ${cls}`;
     _setFooterBadgeTooltip(b, tip);
-    if (ok) {
+    if (wsOk) {
       if (_unreachableTimer) { clearTimeout(_unreachableTimer); _unreachableTimer = null; }
       const el = document.getElementById('server-unreachable-overlay');
       if (el) el.remove();
