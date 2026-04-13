@@ -150,15 +150,21 @@ body{visibility:hidden}
 </div>
 <!-- Navigation Cluster -->
 <nav class="flex flex-col space-y-2 flex-1 overflow-y-hidden min-h-0" style="row-gap:0.425rem;">
-<a data-nav="slides" onclick="showView('slides')" class="nav-item nav-active rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="slides" onclick="toggleSlidesMenu()" class="nav-item nav-active rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
 <span class="text-base">Slides</span>
+<span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 <label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer">
 <input id="slides-follow-checkbox" type="checkbox" checked style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);" />
 <span>Follow</span>
 </label>
 <span class="badge-new">LIVE</span>
 </a>
+<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="topics-list mx-2 mb-1 rounded-xl">
+<div class="overflow-y-auto h-full">
+<div id="topics-inner" class="py-1"></div>
+</div>
+</div>
 <!-- Past Slides (never active) -->
 <div>
 <a onclick="togglePastSlides()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
@@ -184,18 +190,6 @@ body{visibility:hidden}
 <span class="text-base">AI Summary</span>
 <span id="summary-badge" class="badge-new" style="display:none"></span>
 </a>
-<div>
-<a data-nav="topics" onclick="toggleTopics()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
-<span class="material-symbols-outlined">topic</span>
-<span class="text-base">All Topics</span>
-<span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
-</a>
-<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="topics-list mx-2 mb-1 rounded-xl">
-<div class="overflow-y-auto h-full">
-<div id="topics-inner" class="py-1"></div>
-</div>
-</div>
-</div>
 <div>
 <a data-nav="gitrepos" onclick="toggleRepos()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">terminal</span>
@@ -1180,6 +1174,10 @@ function scheduleHideOverflow() {
 var VIEWS = ['slides', 'summary', 'notes', 'agenda', 'feedback', 'paste', 'upload'];
 function saveScroll(name, el) {
   LS.setScroll(name, el.scrollTop);
+}
+function toggleSlidesMenu() {
+  showView('slides');
+  toggleTopics();
 }
 function toggleTopics() {
   var list = document.querySelector('.topics-list');
