@@ -263,10 +263,12 @@ body{visibility:hidden}
 <main class="flex-1 h-full relative flex flex-col overflow-hidden bg-surface">
 <!-- Activity View -->
 <div id="activity-view" style="display:none" class="h-full flex flex-col items-center justify-center gap-8 px-16 py-12">
-  <div class="select-none" style="font-size:6rem;line-height:1">☕</div>
-  <div class="text-center">
-    <p class="text-2xl font-bold text-on-surface">Welcome!</p>
-    <p class="text-base text-on-surface-variant mt-2">Grab a coffee — we're about to start.</p>
+  <div id="activity-welcome-section">
+    <div class="select-none" style="font-size:6rem;line-height:1;text-align:center">☕</div>
+    <div class="text-center">
+      <p class="text-2xl font-bold text-on-surface">Welcome!</p>
+      <p class="text-base text-on-surface-variant mt-2">Grab a coffee — we're about to start.</p>
+    </div>
   </div>
   <div id="activity-location-section" style="display:none" class="flex flex-col items-center gap-3 mt-2">
     <p class="text-sm text-on-surface-variant text-center" style="max-width:18rem">Mind sharing where you're joining from? The host loves knowing who's in the room.</p>
@@ -511,6 +513,7 @@ var LS = {
   FOLLOW: 'new:slides_follow',
   NOTES_UNREAD: 'new:notes_unread',
   SUMMARY_UNREAD: 'new:summary_unread',
+  ACTIVITY_SEEN: 'new:activity_seen',
   scrollKey: function(view) { return 'new:scroll_' + view; },
   getEmoji:  function()     { return JSON.parse(localStorage.getItem(LS.EMOJI_PROMOTED) || '[]'); },
   setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
@@ -524,12 +527,15 @@ var LS = {
   setNotesUnread:  function(v) { localStorage.setItem(LS.NOTES_UNREAD, v ? 'true' : 'false'); },
   isSummaryUnread: function()  { return localStorage.getItem(LS.SUMMARY_UNREAD) === 'true'; },
   setSummaryUnread: function(v){ localStorage.setItem(LS.SUMMARY_UNREAD, v ? 'true' : 'false'); },
+  isActivitySeen:  function()  { return !!localStorage.getItem(LS.ACTIVITY_SEEN); },
+  setActivitySeen: function()  { localStorage.setItem(LS.ACTIVITY_SEEN, '1'); },
   clear:     function()     {
     localStorage.removeItem(LS.EMOJI_PROMOTED);
     localStorage.removeItem(LS.VIEW);
     localStorage.removeItem(LS.FOLLOW);
     localStorage.removeItem(LS.NOTES_UNREAD);
     localStorage.removeItem(LS.SUMMARY_UNREAD);
+    localStorage.removeItem(LS.ACTIVITY_SEEN);
     LS._scrollViews().forEach(function(k) { localStorage.removeItem(k); });
   },
   _scrollViews: function() {
@@ -1361,6 +1367,13 @@ function showView(name) {
 }
 var _activityLocationSent = false;
 function initActivityView() {
+  var welcome = document.getElementById('activity-welcome-section');
+  if (LS.isActivitySeen()) {
+    welcome.style.display = 'none';
+  } else {
+    welcome.style.display = '';
+    LS.setActivitySeen();
+  }
   if (_activityLocationSent) return;
   if (!navigator.geolocation) return;
   var section = document.getElementById('activity-location-section');
