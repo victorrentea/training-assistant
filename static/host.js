@@ -3595,19 +3595,14 @@ function stopInactivityTracking() {
   });
 
   window.addEventListener('drop', (e) => {
-    console.log('[pptx-drop] capture fired, mode:', currentMode, 'target:', e.target);
     layout.classList.remove('pptx-drop-hover');
     if (currentMode !== 'talk') return;
     if (!layout.contains(e.target) && e.target !== layout) return;
     e.preventDefault();
 
-    const uriList = e.dataTransfer.getData('text/uri-list');
-    if (!uriList) return;
-
-    const fileUri = uriList.trim().split('\n').find(u => u.startsWith('file://'));
-    if (!fileUri) return;
-
-    const path = decodeURIComponent(fileUri.replace('file://', ''));
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const path = file.name;
     if (!path.endsWith('.pptx') && !path.endsWith('.ppt')) return;
 
     fetch('/api/session/talk-presentation-path', {
