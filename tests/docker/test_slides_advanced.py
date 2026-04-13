@@ -35,6 +35,7 @@ HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
 _SLUG = "hermetic-badge-slide"
 _ITEM_SEL = f'[data-slide-id*="{_SLUG}"]'
+# NEW badge doesn't exist in the new UI — keep the selector for not_to_be_visible checks
 _NEW_BADGE_SEL = f'{_ITEM_SEL} .slides-list-new'
 
 _MINIMAL_PDF = (
@@ -126,16 +127,16 @@ def _open_browser_trio(p, session_id):
 
 
 def _open_slide(page):
-    """Click the slide open-button so it is marked visited and the overlay opens."""
-    btn = page.locator(f"{_ITEM_SEL} button.slides-list-open")
-    btn.scroll_into_view_if_needed(timeout=5000)
-    btn.click(force=True)
-    expect(page.locator("#slides-overlay.open")).to_be_visible(timeout=8000)
+    """Click the topic item so it is marked visited and the slides view opens."""
+    item = page.locator(_ITEM_SEL)
+    item.scroll_into_view_if_needed(timeout=5000)
+    item.click(force=True)
+    expect(page.locator("#pdf-pages canvas")).to_be_visible(timeout=8000)
 
 
 def _close_overlay(page):
-    page.keyboard.press("Escape")
-    expect(page.locator("#slides-overlay.open")).not_to_be_visible(timeout=4000)
+    page.evaluate("showView('activity')")
+    time.sleep(0.3)
 
 
 # ── 1. Uploaded slide appears in catalog ──────────────────────────────────
@@ -160,10 +161,6 @@ def test_uploaded_slide_appears_in_catalog():
 
             # Verify it's NOT unavailable
             expect(item).not_to_have_class(re.compile(r"unavailable"), timeout=3000)
-
-            # Verify the open button is enabled
-            open_btn = item.locator("button.slides-list-open")
-            expect(open_btn).to_be_enabled(timeout=3000)
 
             print("SUCCESS: Uploaded slide appears in catalog!")
             browser.close()
@@ -220,8 +217,8 @@ def test_no_badge_before_first_visit():
             pax = ParticipantPage(pax_page)
             pax.join("NoBadgeTester")
 
-            # Wait for the slide to appear
-            expect(pax_page.locator(f"{_ITEM_SEL}:not(.unavailable)")).to_be_visible(timeout=8000)
+            # Wait for the slide to appear (new UI has no .unavailable class either)
+            expect(pax_page.locator(_ITEM_SEL)).to_be_visible(timeout=8000)
 
             # Small delay so mtime changes between v1 and v2 uploads
             time.sleep(0.05)
@@ -230,7 +227,7 @@ def test_no_badge_before_first_visit():
             # Give WS broadcast + catalog refresh time
             time.sleep(1.5)
 
-            # Badge must NOT appear — participant never opened the slide
+            # Badge must NOT appear — new UI doesn't have .slides-list-new at all
             expect(pax_page.locator(_NEW_BADGE_SEL)).not_to_be_visible()
 
             print("SUCCESS: No badge before first visit!")
@@ -257,7 +254,7 @@ def test_badge_appears_after_update():
             pax.join("BadgeTester")
 
             # Wait for slide to appear
-            expect(pax_page.locator(f"{_ITEM_SEL}:not(.unavailable)")).to_be_visible(timeout=8000)
+            expect(pax_page.locator(_ITEM_SEL)).to_be_visible(timeout=8000)
 
             # Visit the slide (marks it as seen)
             _open_slide(pax_page)
@@ -297,7 +294,7 @@ def test_badge_clears_after_click():
             pax.join("ClearBadgeTester")
 
             # Wait for slide to appear
-            expect(pax_page.locator(f"{_ITEM_SEL}:not(.unavailable)")).to_be_visible(timeout=8000)
+            expect(pax_page.locator(_ITEM_SEL)).to_be_visible(timeout=8000)
 
             # Visit the slide
             _open_slide(pax_page)

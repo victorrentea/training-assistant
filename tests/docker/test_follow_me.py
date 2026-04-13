@@ -104,7 +104,8 @@ def test_follow_me_basic():
             lambda: pax_page.evaluate("""
                 () => {
                     try {
-                        const el = document.getElementById('slides-follow-btn');
+                        const el = document.getElementById('slides-follow-checkbox')
+                            || document.querySelector('label[for="slides-follow-checkbox"]');
                         return el !== null;
                     } catch { return false; }
                 }
@@ -136,15 +137,15 @@ def test_follow_me_basic():
         )
         print(f"Backend slides_current slug: {slug}")
 
-        # Click the Follow button
-        follow_btn = pax_page.locator("#slides-follow-btn")
+        # Click the Follow button (label for the checkbox)
+        follow_btn = pax_page.locator("label[for='slides-follow-checkbox']")
         follow_btn.wait_for(state="visible", timeout=5000)
         follow_btn.click()
         print("Clicked Follow button")
 
-        # The slides overlay should open with the correct topic
-        expect(pax_page.locator("#slides-overlay.open")).to_be_visible(timeout=10000)
-        print("Slides overlay opened")
+        # The slides view should become visible
+        expect(pax_page.locator("#slides-view")).to_be_visible(timeout=10000)
+        print("Slides view opened")
 
         # Verify the PDF was fetched (from mock Drive or cache)
         slug = "clean-code"
@@ -158,12 +159,13 @@ def test_follow_me_basic():
 
         # Verify the participant navigated to the correct slide
         active_slide = _await_condition(
-            lambda: pax_page.locator(".slides-list-item.active").count() > 0,
+            lambda: pax_page.locator(".topic-item.topic-active").count() > 0,
             timeout_ms=15000,
             msg="No active slide item after clicking Follow"
         )
-        active_id = pax_page.locator(".slides-list-item.active").get_attribute("data-slide-id")
+        active_id = pax_page.locator(".topic-item.topic-active").get_attribute("data-slide-id")
         print(f"Active slide ID: {active_id}")
+        # data-slide-id format is "slug|url", so check the slug part
         assert "clean-code" in (active_id or ""), f"Expected active slide to be 'clean-code', got '{active_id}'"
 
         # Verify the PDF endpoint is reachable

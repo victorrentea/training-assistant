@@ -71,7 +71,7 @@ def test_participant_views_slide_from_catalog():
         pax.join("SlideViewer")
 
         # Wait for slides catalog to load into the dock
-        slide_items = pax_page.locator(".slides-list-item")
+        slide_items = pax_page.locator(".topic-item")
         _await_condition(
             lambda: slide_items.count() > 0,
             timeout_ms=10000,
@@ -81,9 +81,9 @@ def test_participant_views_slide_from_catalog():
         print(f"Found {slide_count} slides in catalog")
         assert slide_count >= 3, f"Expected at least 3 slides, got {slide_count}"
 
-        # Get the first slide's title
+        # Get the first slide's title (inner_text on the item directly)
         first_slide = slide_items.first
-        slide_title = first_slide.locator(".slides-list-title").inner_text()
+        slide_title = first_slide.inner_text().split("\n")[0].strip()
         print(f"Opening slide: '{slide_title}'")
 
         # PDF.js is loaded from CDN which is unreachable inside Docker.
@@ -123,17 +123,17 @@ def test_second_participant_gets_cached_pdf():
         pax = ParticipantPage(pax_page)
         pax.join("SecondViewer")
 
-        # Wait for catalog, then click first slide via JS
-        slide_items = pax_page.locator(".slides-list-item")
+        # Wait for catalog, then click first topic item directly
+        slide_items = pax_page.locator(".topic-item")
         _await_condition(
             lambda: slide_items.count() > 0,
             timeout_ms=10000,
             msg="No slide items found"
         )
 
-        pax_page.evaluate("document.querySelector('.slides-list-open').click();")
+        pax_page.evaluate("document.querySelector('.topic-item').click();")
 
-        expect(pax_page.locator("#slides-overlay.open")).to_be_visible(timeout=5000)
+        expect(pax_page.locator("#slides-view")).to_be_visible(timeout=5000)
 
         # Verify the PDF endpoint still works (from cache)
         slug = "clean-code"
