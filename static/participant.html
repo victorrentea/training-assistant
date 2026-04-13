@@ -93,18 +93,6 @@ body{visibility:hidden}
 </p>
 </div>
 </div>
-<div id="profile-card" class="p-3 bg-surface-container-low rounded-xl group cursor-pointer hover:bg-surface-bright transition-all duration-300">
-<div class="flex items-center gap-2">
-<div class="w-8 h-8 rounded-full bg-primary-container flex-shrink-0 overflow-hidden">
-<img id="my-avatar" alt="Avatar" class="w-full h-full rounded-full object-cover" style="display:none" src=""/>
-<span id="my-avatar-letter" class="w-full h-full rounded-full flex items-center justify-center text-white font-extrabold text-xs" style="display:none"></span>
-</div>
-<span id="display-name" class="text-base font-medium text-on-surface cursor-pointer hover:underline" title="Click to edit name" style="display:none"><span class="display-name-text"></span><span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-60 transition-opacity ml-1" style="font-size:14px;vertical-align:middle">edit</span></span>
-<span id="name-edit-wrap" style="display:none" class="flex-1">
-<input id="name-edit-input" type="text" maxlength="32" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
-</span>
-</div>
-</div>
 </div>
 <!-- Navigation Cluster -->
 <nav class="flex flex-col space-y-2 flex-1 overflow-y-hidden min-h-0" style="row-gap:0.189rem;" onmouseenter="clearTimeout(_menuCollapseTimer)" onmouseleave="_startMenuCollapseTimer()">
@@ -186,10 +174,16 @@ body{visibility:hidden}
 <span class="text-base">Upload / Paste</span>
 </a>
 </nav>
-<a data-nav="feedback" onclick="showView('feedback')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
-  <span class="material-symbols-outlined">chat_bubble</span>
-  <span class="text-base">Feedback</span>
-</a>
+<div id="profile-card" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer group">
+  <div class="w-6 h-6 rounded-full bg-primary-container flex-shrink-0 overflow-hidden">
+    <img id="my-avatar" alt="Avatar" class="w-full h-full rounded-full object-cover" style="display:none" src=""/>
+    <span id="my-avatar-letter" class="w-full h-full rounded-full flex items-center justify-center text-white font-extrabold text-xs" style="display:none"></span>
+  </div>
+  <span id="display-name" class="text-base flex-1 cursor-pointer" title="Click to edit name" style="display:none"><span class="display-name-text"></span><span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-60 transition-opacity ml-1" style="font-size:14px;vertical-align:middle">edit</span></span>
+  <span id="name-edit-wrap" style="display:none" class="flex-1">
+    <input id="name-edit-input" type="text" maxlength="32" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
+  </span>
+</div>
 <div id="deploy-age-line" onclick="resetStatePrompt()" title="Click to reset local state"
   class="absolute bottom-0 left-0 right-0 px-2 py-1 text-center cursor-pointer select-none"
   style="font-size:0.625rem;line-height:1.3;color:var(--color-outline);opacity:0.5;transition:opacity 0.15s"
