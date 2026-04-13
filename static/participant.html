@@ -880,7 +880,10 @@ function openRepos() {
         var name = base.split('/').pop();
         var branchUrl = base + '/tree/' + repo.branch;
         var files = repo.files.map(function(f) {
-          return '<li class="truncate">' + f + '</li>';
+          return '<li class="flex items-center gap-1 min-w-0 py-0.5">'
+            + '<span class="flex-shrink-0">•</span>'
+            + '<span class="truncate">' + f + '</span>'
+            + '</li>';
         }).join('');
         return '<div class="text-sm">'
           + '<a href="' + branchUrl + '" target="_blank" class="nav-item rounded-lg px-3 py-1.5 flex items-center gap-2 transition-all cursor-pointer ml-4 mr-1">'
@@ -888,7 +891,7 @@ function openRepos() {
           + '<span class="flex-1">' + name + '</span>'
           + '<span class="material-symbols-outlined text-sm flex-shrink-0">open_in_new</span>'
           + '</a>'
-          + (files ? '<ul class="mt-0.5 ml-4 text-sm text-on-surface-variant list-inside list-disc space-y-0.5 px-3 pb-1">' + files + '</ul>' : '')
+          + (files ? '<ul class="mt-0.5 ml-10 mr-2 text-sm text-on-surface-variant list-none space-y-0 pb-1">' + files + '</ul>' : '')
           + '</div>';
       }).join('');
     })
