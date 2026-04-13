@@ -878,7 +878,7 @@ function openRepos() {
       }
       el.innerHTML = repos.map(function(repo) {
         var base = repo.url.replace(/\.git$/, '');
-        var name = base.split('/').pop();
+        var name = base.split('/').pop() + '.git';
         var branchUrl = base + '/tree/' + repo.branch;
         var files = repo.files.map(function(f) {
           return '<li class="flex items-center gap-1 min-w-0 py-0.5">'
