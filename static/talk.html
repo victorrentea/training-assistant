@@ -128,11 +128,11 @@
           min-height: max(884px, 100dvh);
         }
         @keyframes slide-highlight {
-          0%   { box-shadow: inset 0 0 0 3px #a3a6ff; }
-          100% { box-shadow: inset 0 0 0 3px transparent; }
+          0%   { box-shadow: inset 0 0 0 8px #a3a6ff; }
+          100% { box-shadow: inset 0 0 0 8px transparent; }
         }
         .slide-highlight {
-          animation: slide-highlight 1s ease-out forwards;
+          animation: slide-highlight 2s ease-out forwards;
         }
     </style>
 </head>
@@ -316,9 +316,23 @@
     var target = container && container.querySelector('section[data-page="' + _currentPage + '"]');
     if (!target) return;
     target.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    target.classList.remove('slide-highlight');
-    void target.offsetWidth; // restart animation
-    target.classList.add('slide-highlight');
+    var done = false;
+    var fallbackTimer;
+    function highlight() {
+      if (done) return;
+      done = true;
+      container.removeEventListener('scroll', onScroll);
+      target.classList.remove('slide-highlight');
+      void target.offsetWidth;
+      target.classList.add('slide-highlight');
+    }
+    var debounceTimer;
+    function onScroll() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(highlight, 150);
+    }
+    container.addEventListener('scroll', onScroll);
+    fallbackTimer = setTimeout(highlight, 600);
   }
 
   function _getPage(sc) { return sc.page ?? sc.current_page ?? sc.slide ?? 1; }
