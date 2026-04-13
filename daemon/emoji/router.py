@@ -1,5 +1,7 @@
 """Daemon emoji reaction router — participant endpoint."""
+import asyncio
 import logging
+import time
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
@@ -7,8 +9,8 @@ from pydantic import BaseModel
 
 from daemon import log as daemon_log
 from daemon.participant.state import participant_state
-from daemon.ws_messages import EmojiReactionMsg
-from daemon.ws_publish import notify_host
+from daemon.ws_messages import EmojiCountersUpdatedMsg, EmojiReactionMsg
+from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,32 @@ class OkResponse(BaseModel):
 
 
 participant_router = APIRouter(prefix="/api/participant/emoji", tags=["emoji"])
+
+# ── Emoji counter throttle (at most one broadcast per second, trailing-edge) ──
+
+_last_broadcast_time: float = 0.0
+_pending_broadcast_handle: object | None = None  # asyncio.TimerHandle
+_BROADCAST_INTERVAL = 1.0  # seconds
+
+
+async def _broadcast_emoji_counters_now() -> None:
+    global _last_broadcast_time, _pending_broadcast_handle
+    _pending_broadcast_handle = None
+    _last_broadcast_time = time.monotonic()
+    broadcast(EmojiCountersUpdatedMsg(counters=dict(participant_state.emoji_counters)))
+
+
+def _schedule_emoji_broadcast() -> None:
+    global _pending_broadcast_handle
+    elapsed = time.monotonic() - _last_broadcast_time
+    remaining = _BROADCAST_INTERVAL - elapsed
+    if remaining <= 0:
+        asyncio.ensure_future(_broadcast_emoji_counters_now())
+    elif _pending_broadcast_handle is None:
+        loop = asyncio.get_event_loop()
+        _pending_broadcast_handle = loop.call_later(
+            remaining, lambda: asyncio.ensure_future(_broadcast_emoji_counters_now())
+        )
 
 
 @participant_router.post("/reaction", status_code=204)
@@ -50,5 +78,10 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
 
     # Forward to host browser (local WS)
     await notify_host(EmojiReactionMsg(emoji=emoji))
+
+    # In talk mode: update cumulative counter and broadcast to all participants
+    if participant_state.mode == "talk":
+        participant_state.emoji_counters[emoji] = participant_state.emoji_counters.get(emoji, 0) + 1
+        _schedule_emoji_broadcast()
 
     return Response(status_code=204)

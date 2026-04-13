@@ -44,6 +44,7 @@ channels:
           - $ref: '#/components/messages/notes_updated'
           - $ref: '#/components/messages/summary_updated'
           - $ref: '#/components/messages/reload'
+          - $ref: '#/components/messages/emoji_counters_updated'
 
 components:
   messages:
@@ -505,6 +506,24 @@ components:
           type:
             type: string
             enum: [reload]
+
+    # ── Emoji ─────────────────────────────────────────────────────────────────
+
+    emoji_counters_updated:
+      summary: Cumulative emoji reaction counts for the current talk session
+      x-feature: emoji
+      payload:
+        type: object
+        required: [type, counters]
+        properties:
+          type:
+            type: string
+            enum: [emoji_counters_updated]
+          counters:
+            type: object
+            additionalProperties:
+              type: integer
+            description: Map of emoji character to total reaction count
 
   schemas:
 
