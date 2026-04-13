@@ -228,7 +228,7 @@ SESSION_STATE_FILENAME = "session-state.json"
 _LEGACY_SESSION_STATE_FILENAME = ".session-state.json"
 SESSION_META_FILENAME = SESSION_STATE_FILENAME
 _LEGACY_SESSION_META_FILENAME = "session_meta.json"
-_SESSION_META_KEYS = ("session_id",)
+_SESSION_META_KEYS = ("session_id", "session_type")
 
 
 def load_daemon_state(sessions_root: Path) -> dict:

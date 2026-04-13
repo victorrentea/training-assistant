@@ -22,6 +22,7 @@ class PersistedSessionMeta(PersistedModel):
     """Read-only projection: extracts session identity from `session-state.json`."""
 
     session_id: str | None = None
+    session_type: str | None = None
 
 
 class PersistedParticipant(PersistedModel):

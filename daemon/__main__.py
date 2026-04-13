@@ -1104,7 +1104,7 @@ def run() -> None:
                         existed = folder.exists()
                         folder.mkdir(parents=True, exist_ok=True)
                         if sid:
-                            save_session_meta(folder, {"session_id": sid})
+                            save_session_meta(folder, {"session_id": sid, "session_type": session_type})
                         log.info("session", f"{'Found' if existed else 'Created'} folder: {folder}")
                         if existed:
                             try:

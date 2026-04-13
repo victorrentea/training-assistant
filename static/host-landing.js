@@ -62,14 +62,18 @@ function buildFolderList(folders, today) {
   }
 
   const items = folders.map(f => {
-    const {dateStr, dates, topic} = parseFolderDates(f);
+    const folderName = f.name || f;
+    const sessionType = f.session_type || null;
+    const typeIcon = sessionType === 'talk' ? '🎙️' : '👨‍🏫';
+    const {dateStr, dates, topic} = parseFolderDates(folderName);
     const isToday = today && dates.includes(today);
     const todayTag = isToday ? `<span class="folder-today-tag">TODAY</span>` : '';
     return `
-    <li class="folder-row${isToday ? ' folder-row-today' : ''}" onclick='doResumeFolder(${JSON.stringify(f)})'>
+    <li class="folder-row${isToday ? ' folder-row-today' : ''}" onclick='doResumeFolder(${JSON.stringify(folderName)})'>
       <span class="folder-date">${_esc(dateStr)}</span>
       <span class="folder-topic">${_esc(topic)}${todayTag}</span>
-      <button class="folder-play-btn" onclick='event.stopPropagation(); doResumeFolder(${JSON.stringify(f)})' title="Resume session">▶</button>
+      <span class="folder-type-icon">${typeIcon}</span>
+      <button class="folder-play-btn" onclick='event.stopPropagation(); doResumeFolder(${JSON.stringify(folderName)})' title="Resume session">▶</button>
     </li>`;
   }).join('');
 

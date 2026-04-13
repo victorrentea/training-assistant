@@ -183,7 +183,7 @@ body {
 
 .folder-row {
   display: grid;
-  grid-template-columns: 8rem 1fr auto;
+  grid-template-columns: 8rem 1fr auto auto;
   align-items: center;
   gap: .75rem;
   padding: .5rem 1rem .5rem 1.5rem;
@@ -216,6 +216,12 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.folder-type-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .folder-play-btn {

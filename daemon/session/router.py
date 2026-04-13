@@ -102,8 +102,13 @@ class SessionStartResponse(BaseModel):
     session_id: str
 
 
+class FolderInfo(BaseModel):
+    name: str
+    session_type: str | None = None
+
+
 class SessionFoldersResponse(BaseModel):
-    folders: list[str]
+    folders: list[FolderInfo]
 
 
 class SessionActiveResponse(BaseModel):
@@ -162,7 +167,11 @@ async def list_session_folders():
             sorted([f.name for f in root.iterdir() if f.is_dir()], reverse=True)
         )
         filtered = _filter_folders_to_current_year(deduped)
-        return SessionFoldersResponse(folders=filtered)
+        folder_infos = []
+        for name in filtered:
+            meta = load_session_meta(root / name)
+            folder_infos.append(FolderInfo(name=name, session_type=meta.get("session_type")))
+        return SessionFoldersResponse(folders=folder_infos)
     except Exception as e:
         daemon_log.error("session", f"Failed to list session folders: {e}")
         return SessionFoldersResponse(folders=[])
