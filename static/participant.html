@@ -18,6 +18,8 @@ body{visibility:hidden}
 @keyframes follow-pulse{0%,100%{border-color:black;background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
 .follow-notify{animation:follow-pulse 1.2s ease-in-out infinite}
 .follow-paused{opacity:0.45;pointer-events:none;cursor:default}
+@keyframes slides-nav-pulse{0%,100%{color:var(--color-on-surface-variant,#5e6b70)}50%{color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
+.slides-nav-blink{animation:slides-nav-pulse 1.2s ease-in-out infinite}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70)}
 .nav-item:hover{color:var(--color-on-surface,#161d1f);background-color:var(--color-surface-container-high,#dde3e5)}
 .nav-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
@@ -748,6 +750,8 @@ async function _applyHostSlideFollow(slidesCurrent) {
 function _onIncomingHostSlidesCurrent(slidesCurrent) {
   _hostSlidesCurrent = slidesCurrent || null;
   if (!_isSlidesViewSelected()) {
+    var slidesNav = document.querySelector('[data-nav="slides"]');
+    if (slidesNav) slidesNav.classList.add('slides-nav-blink');
     if (!_isSlidesFollowEnabled()) {
       var label = document.querySelector('label[for="slides-follow-checkbox"]');
       if (label) label.classList.add('follow-notify');
@@ -1348,6 +1352,8 @@ function showView(name) {
     if (followLabel) followLabel.classList.add('follow-paused');
   } else {
     if (followLabel) followLabel.classList.remove('follow-paused');
+    var slidesNav = document.querySelector('[data-nav="slides"]');
+    if (slidesNav) slidesNav.classList.remove('slides-nav-blink');
   }
   if (followLabel) followLabel.classList.remove('follow-notify');
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
