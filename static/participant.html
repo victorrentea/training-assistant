@@ -1863,6 +1863,27 @@ function addAgendaProgress(container) {
     navBadge.innerHTML = makePieSvg(grandCrossed / grandTotal);
     navBadge.style.cssText = 'display:inline-block;margin-left:auto;padding:0;background:none;line-height:0;vertical-align:middle';
   }
+
+  if (grandTotal > 0) {
+    const ratio = grandCrossed / grandTotal;
+    const summary = document.createElement('div');
+    summary.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e5e7eb';
+    summary.innerHTML = makePieSvg32(ratio) +
+      `<span style="font-size:0.95rem;font-weight:600;color:#6b7280">${grandCrossed} / ${grandTotal} done</span>`;
+    container.prepend(summary);
+  }
+}
+
+function makePieSvg32(ratio) {
+  const r = 14, cx = 16, cy = 16, size = 32;
+  const bg = '#d1d5db', fg = '#6b7280';
+  if (ratio <= 0) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${bg}"/></svg>`;
+  if (ratio >= 1) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fg}"/></svg>`;
+  const angle = ratio * 2 * Math.PI;
+  const x = +(cx + r * Math.sin(angle)).toFixed(3);
+  const y = +(cy - r * Math.cos(angle)).toFixed(3);
+  const large = ratio > 0.5 ? 1 : 0;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${bg}"/><path d="M${cx},${cy} L${cx},${cy-r} A${r},${r} 0 ${large},1 ${x},${y} Z" fill="${fg}"/></svg>`;
 }
 
 function linkifyText(text) {
