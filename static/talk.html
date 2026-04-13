@@ -282,6 +282,9 @@
           }
         }
         _renderedPages = _pdfDoc.numPages;
+        // Scroll to current slide after initial render
+        const initialTarget = container.querySelector(`section[data-page="${pageNum}"]`);
+        if (initialTarget) initialTarget.scrollIntoView({ block: 'end' });
       }
       if (placeholder) placeholder.style.display = 'none';
     } catch (e) {
@@ -301,7 +304,7 @@
   function scrollToCurrentSlide() {
     var container = document.getElementById('pdf-pages');
     var target = container && container.querySelector('section[data-page="' + _currentPage + '"]');
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }
 
   function _getPage(sc) { return sc.page ?? sc.current_page ?? sc.slide ?? 1; }
