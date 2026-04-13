@@ -1825,7 +1825,9 @@ function _handleWsMessage(msg) {
         badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         badge.style.display = '';
       } else { badge.style.display = 'none'; }
-      _applySummaryBadgeUnread(true);
+      var onSummary = document.getElementById('summary-view').style.display !== 'none';
+      _applySummaryBadgeUnread(!onSummary);
+      if (onSummary) loadSummary();
       break;
     }
     case 'slides_cache_status':
