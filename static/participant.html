@@ -773,13 +773,15 @@ function _loadSlideHistory() {
         if (!groups[name]) { groups[name] = []; order.push(name); }
         groups[name].push(s.page);
       });
+      var lastOrderName = order[order.length - 1];
       el.innerHTML = order.map(function(name) {
         var pagesHtml = groups[name].map(function(p) {
           return '<a href="#" onclick="return false" class="text-primary underline hover:text-primary-dim" data-history-file-name="' + name.replace(/"/g, '&quot;') + '" data-history-page="' + Number(p || 1) + '">' + p + '</a>';
         }).join(', ');
+        var liveBadge = name === lastOrderName ? ' <span class="badge-live" style="vertical-align:middle">LIVE</span>' : '';
         return '<div class="slide-history-row px-4 py-0.5 text-xs leading-relaxed rounded transition-colors">' +
           '<span class="font-semibold text-on-surface-variant opacity-60 mr-1">' + name + '</span>' +
-          pagesHtml + '</div>';
+          pagesHtml + liveBadge + '</div>';
       }).join('');
       el.onclick = function(ev) {
         var link = ev.target && ev.target.closest('a[data-history-file-name][data-history-page]');
@@ -1129,46 +1131,39 @@ async function loadSlidesCatalog() {
     var hasGroups = slides.some(function(s) { return s.group; });
     if (!hasGroups) {
       slides.forEach(function(slide) { container.appendChild(_buildTopicItem(slide)); });
-    } else {
-      // Count per group to decide whether to show header
-      var groupCounts = {};
-      slides.forEach(function(s) { if (s.group) groupCounts[s.group] = (groupCounts[s.group] || 0) + 1; });
-      var currentGroup = null;
-      var currentGroupEl = null;
-      slides.forEach(function(slide) {
-        if (slide.group && slide.group !== currentGroup) {
-          currentGroup = slide.group;
-          currentGroupEl = document.createElement('div');
-          currentGroupEl.style.cssText = 'margin-top:4px';
-          var color = _SLIDES_GROUP_COLORS[slide.group] || '#888';
-          if (groupCounts[slide.group] > 1) {
-            var header = document.createElement('div');
-            header.textContent = slide.group;
-            header.style.cssText = 'font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 16px 2px 16px;color:' + color + ';opacity:0.85';
-            currentGroupEl.appendChild(header);
-          }
-          container.appendChild(currentGroupEl);
-        }
-        var item = _buildTopicItem(slide);
-        if (slide.group) {
-          // Color accent: left border
-          item.style.borderLeft = '2px solid ' + (_SLIDES_GROUP_COLORS[slide.group] || '#888');
-          item.style.paddingLeft = '10px';
-          item.style.paddingRight = '4px';
-          currentGroupEl.appendChild(item);
-        } else {
-          currentGroup = null; currentGroupEl = null;
-          container.appendChild(item);
-        }
-      });
+      return;
     }
-    var liveBubbleWrapper = document.createElement('div');
-    liveBubbleWrapper.style.cssText = 'display:flex;justify-content:center;padding:8px 0 4px';
-    var liveBubble = document.createElement('span');
-    liveBubble.className = 'badge-live';
-    liveBubble.textContent = 'LIVE';
-    liveBubbleWrapper.appendChild(liveBubble);
-    container.appendChild(liveBubbleWrapper);
+    // Count per group to decide whether to show header
+    var groupCounts = {};
+    slides.forEach(function(s) { if (s.group) groupCounts[s.group] = (groupCounts[s.group] || 0) + 1; });
+    var currentGroup = null;
+    var currentGroupEl = null;
+    slides.forEach(function(slide) {
+      if (slide.group && slide.group !== currentGroup) {
+        currentGroup = slide.group;
+        currentGroupEl = document.createElement('div');
+        currentGroupEl.style.cssText = 'margin-top:4px';
+        var color = _SLIDES_GROUP_COLORS[slide.group] || '#888';
+        if (groupCounts[slide.group] > 1) {
+          var header = document.createElement('div');
+          header.textContent = slide.group;
+          header.style.cssText = 'font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 16px 2px 16px;color:' + color + ';opacity:0.85';
+          currentGroupEl.appendChild(header);
+        }
+        container.appendChild(currentGroupEl);
+      }
+      var item = _buildTopicItem(slide);
+      if (slide.group) {
+        // Color accent: left border
+        item.style.borderLeft = '2px solid ' + (_SLIDES_GROUP_COLORS[slide.group] || '#888');
+        item.style.paddingLeft = '10px';
+        item.style.paddingRight = '4px';
+        currentGroupEl.appendChild(item);
+      } else {
+        currentGroup = null; currentGroupEl = null;
+        container.appendChild(item);
+      }
+    });
   } catch(e) {
     console.error('Failed to load slides catalog', e);
   }
