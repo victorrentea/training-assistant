@@ -17,10 +17,10 @@ body{visibility:hidden}
 .badge-alert{background:#ef4444!important}
 @keyframes live-blink{0%,100%{opacity:1}50%{opacity:0.2}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes follow-pulse{0%,100%{border-color:black;background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
+@keyframes follow-pulse{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
 .follow-notify{animation:follow-pulse 1.2s ease-in-out infinite}
 .follow-paused{opacity:0.45;pointer-events:none;cursor:default}
-@keyframes follow-blink-red{0%,100%{border-color:black;background-color:transparent}50%{border-color:#e53935;background-color:#ffebee}}
+@keyframes follow-blink-red{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:#e53935;background-color:#ffebee}}
 .follow-blink-red{animation:follow-blink-red 180ms ease-in-out 3}
 @keyframes slides-nav-pulse{0%,100%{color:var(--color-on-surface-variant,#5e6b70)}50%{color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
 .slides-nav-blink{animation:slides-nav-pulse 1.2s ease-in-out infinite}
@@ -110,7 +110,7 @@ body{visibility:hidden}
 <span class="text-base">Slides</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 </span>
-<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-base font-medium whitespace-nowrap cursor-pointer rounded-full px-2 py-1 transition-colors hover:bg-surface-container-high" style="border:1px dotted black;">
+<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-base font-medium whitespace-nowrap cursor-pointer rounded-full px-2 py-1 transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);">
 <input id="slides-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onFollowChange(this.checked)" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
 <span>Follow</span>
 </label>
@@ -232,7 +232,7 @@ body{visibility:hidden}
   <input type="file" id="upload-input" class="hidden" onchange="uploadFileSelected(this.files)"/>
   <textarea id="paste-textarea"
     class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant"
-    placeholder="Paste any text, code snippet, or question here…"
+    placeholder="Paste any text, code snippet, or question here… (up to 100 KB)"
     oninput="updateUploadPasteBtn()"
     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendUploadPaste();}"></textarea>
   <div class="flex items-center gap-3 my-3 text-on-surface-variant" style="font-size:0.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase">
@@ -283,7 +283,7 @@ body{visibility:hidden}
 </div>
 <!-- PDF Viewer Toolbar (Minimalist) -->
 <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
-<a id="pdf-download" href="#" download class="p-2 hover:bg-primary-container rounded-full text-on-surface-variant hover:text-primary transition-all flex">
+<a id="pdf-download" href="#" download class="p-2 rounded-full text-on-surface-variant transition-all flex hover-green">
 <span class="material-symbols-outlined">download</span>
 </a>
 </div>
@@ -748,7 +748,7 @@ function _loadSlideHistory() {
       var lastOrderName = order[order.length - 1];
       el.innerHTML = order.map(function(name) {
         var pagesHtml = groups[name].map(function(p) {
-          return '<a href="#" onclick="return false" class="text-primary underline hover:text-primary-dim" data-history-file-name="' + name.replace(/"/g, '&quot;') + '" data-history-page="' + Number(p || 1) + '">' + p + '</a>';
+          return '<a href="#" onclick="return false" class="text-primary underline hover:text-white" data-history-file-name="' + name.replace(/"/g, '&quot;') + '" data-history-page="' + Number(p || 1) + '">' + p + '</a>';
         }).join(', ');
         var liveBadge = name === lastOrderName ? ' <span class="badge-live" style="vertical-align:middle">LIVE</span>' : '';
         return '<div class="slide-history-row pl-4 pr-4 py-0.5 text-sm leading-relaxed rounded transition-colors flex items-baseline gap-1">' +
@@ -1080,7 +1080,7 @@ function _buildTopicItem(slide) {
   }
   el.appendChild(dotEl);
   var dlBtn = document.createElement('span');
-  dlBtn.className = 'material-symbols-outlined flex-shrink-0 rounded p-0.5 bg-surface-container-highest hover:text-on-primary-container hover:bg-primary-container transition-colors cursor-pointer';
+  dlBtn.className = 'material-symbols-outlined flex-shrink-0 rounded p-0.5 bg-surface-container-highest hover-green transition-colors cursor-pointer';
   dlBtn.style.cssText = 'font-size:14px;font-family:"Material Symbols Outlined"';
   dlBtn.textContent = 'download';
   dlBtn.title = 'Download ' + slide.name;
