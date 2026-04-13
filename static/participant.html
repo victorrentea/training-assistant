@@ -1296,7 +1296,9 @@ async function selectTopic(el, event, slide) {
   }
 }
 function showView(name) {
+  closeRepos();
   if (name !== 'slides') {
+    closeTopics();
     closeSlides({ focusAllTopics: false });
     var cb = document.getElementById('slides-follow-checkbox');
     if (cb) cb.checked = false;
