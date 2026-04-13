@@ -506,6 +506,7 @@ body{visibility:hidden}
 var LS = {
   EMOJI_PROMOTED: 'new:emoji_bar_promoted',
   VIEW: 'new:current_view',
+  FOLLOW: 'new:slides_follow',
   scrollKey: function(view) { return 'new:scroll_' + view; },
   getEmoji:  function()     { return JSON.parse(localStorage.getItem(LS.EMOJI_PROMOTED) || '[]'); },
   setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
@@ -513,9 +514,12 @@ var LS = {
   setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
   getView:   function()     { return localStorage.getItem(LS.VIEW) || 'activity'; },
   setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
+  getFollow: function()     { return localStorage.getItem(LS.FOLLOW) === '1'; },
+  setFollow: function(val)  { localStorage.setItem(LS.FOLLOW, val ? '1' : '0'); },
   clear:     function()     {
     localStorage.removeItem(LS.EMOJI_PROMOTED);
     localStorage.removeItem(LS.VIEW);
+    localStorage.removeItem(LS.FOLLOW);
     LS._scrollViews().forEach(function(k) { localStorage.removeItem(k); });
   },
   _scrollViews: function() {
@@ -568,6 +572,7 @@ function _startMenuCollapseTimer() {
   }, 10000);
 }
 function _onFollowChange(checked) {
+  LS.setFollow(checked);
   var label = document.querySelector('label[for="slides-follow-checkbox"]');
   if (label) label.classList.remove('follow-notify');
   if (!checked) return;
@@ -1295,6 +1300,7 @@ function showView(name) {
     closeSlides({ focusAllTopics: false });
     var cb = document.getElementById('slides-follow-checkbox');
     if (cb) cb.checked = false;
+    LS.setFollow(false);
   }
   var followLabel = document.querySelector('label[for="slides-follow-checkbox"]');
   if (followLabel) followLabel.classList.remove('follow-notify');
@@ -1668,6 +1674,8 @@ async function _refreshParticipantState() {
     if (saved === 'summary' && !(state.summary_count > 0)) saved = 'slides';
     _hostSlidesCurrent = state.slides_current || null;
     showView(saved);
+    var followCb = document.getElementById('slides-follow-checkbox');
+    if (followCb) followCb.checked = LS.getFollow();
   } catch (e) {
     console.error('[participant] failed to load state:', e);
   }
