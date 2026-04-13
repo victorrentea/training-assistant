@@ -50,6 +50,7 @@ class ParticipantState:
         self.mode: str = "workshop"
         self.current_activity: str = "none"
         self.git_repos: list[GitRepoActivity] = []
+        self.emoji_counters: dict[str, int] = {}
 
     def accumulate_git_file(self, url: str, branch: str, file: str) -> None:
         """Add a git file-open event to the session's accumulated git activity."""
@@ -153,6 +154,7 @@ class ParticipantState:
                 "mode": self.mode,
                 "current_activity": self.current_activity,
                 "git_repos": [r.model_dump() for r in self.git_repos],
+                "emoji_counters": dict(self.emoji_counters),
             }
 
     def reset(self, *, mode: str = "workshop") -> None:
@@ -169,6 +171,7 @@ class ParticipantState:
             self.mode = mode
             self.current_activity = "none"
             self.git_repos.clear()
+            self.emoji_counters.clear()
 
 
 # Module-level singleton

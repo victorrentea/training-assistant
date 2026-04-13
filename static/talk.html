@@ -204,29 +204,29 @@
 <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-center items-center px-4 py-4 bg-[#140b36]/80 backdrop-blur-2xl border-t border-white/5">
 <div class="flex justify-around items-center w-full max-w-lg gap-1">
 <!-- Clap -->
-<button class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('👏')" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">👏</div>
-<span class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">248</span>
+<span id="emoji-count-clap" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 <!-- Heart -->
-<button class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('❤️')" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">❤️</div>
-<span class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">1.2k</span>
+<span id="emoji-count-heart" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 <!-- Fire -->
-<button class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('🔥')" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">🔥</div>
-<span class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">692</span>
+<span id="emoji-count-fire" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 <!-- Lightbulb -->
-<button class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('💡')" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">💡</div>
-<span class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">114</span>
+<span id="emoji-count-bulb" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 <!-- Rocket -->
-<button class="flex flex-col items-center relative group">
+<button onclick="sendEmoji('🚀')" class="flex flex-col items-center relative group">
 <div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">🚀</div>
-<span class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">405</span>
+<span id="emoji-count-rocket" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 </div>
 </nav>
@@ -335,6 +335,37 @@
     fallbackTimer = setTimeout(highlight, 600);
   }
 
+  var _emojiCounterIds = {
+    '👏': 'emoji-count-clap',
+    '❤️': 'emoji-count-heart',
+    '🔥': 'emoji-count-fire',
+    '💡': 'emoji-count-bulb',
+    '🚀': 'emoji-count-rocket',
+  };
+
+  function _applyEmojiCounters(counters) {
+    for (var emoji in _emojiCounterIds) {
+      var span = document.getElementById(_emojiCounterIds[emoji]);
+      if (!span) continue;
+      var count = (counters && counters[emoji]) || 0;
+      if (count > 0) {
+        span.textContent = count >= 1000 ? (count / 1000).toFixed(1).replace('.0', '') + 'k' : count;
+        span.classList.remove('hidden');
+      } else {
+        span.classList.add('hidden');
+      }
+    }
+  }
+
+  function sendEmoji(emoji) {
+    if (!_sessionId) return;
+    fetch('/' + _sessionId + '/api/participant/emoji/reaction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _uuid },
+      body: JSON.stringify({ emoji: emoji })
+    }).catch(function() {});
+  }
+
   function _getPage(sc) { return sc.page ?? sc.current_page ?? sc.slide ?? 1; }
 
   function _findSlide(slug) {
@@ -376,6 +407,7 @@
         var sc = msg.slides_current || (msg.type === 'announce' && msg.slides_current);
         if (msg.type === 'slides_current' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
         if (msg.type === 'announce' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
+        if (msg.type === 'emoji_counters_updated' && msg.counters) _applyEmojiCounters(msg.counters);
       } catch (_) {}
     };
     _ws.onclose = function(e) { if (e.code === 1008) return; setTimeout(_connectWS, 3000); };
@@ -397,6 +429,7 @@
         headers: { 'X-Participant-ID': _uuid }
       }).then(function(r) { return r.json(); }).catch(function() { return {}; });
       if (state.slides_current) await _applySlidesCurrent(state.slides_current);
+      if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
     } catch (e) { console.error('[talk] init error', e); }
   })();
 </script>

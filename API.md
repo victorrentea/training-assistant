@@ -324,6 +324,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- | --- |
 | Emoji Reaction, participant sends an emoji reaction.<br>`POST /api/participant/emoji/reaction` | `emoji: string` | - |
 
+### Participant WS
+| Message | Payload |
+| --- | --- |
+| Cumulative emoji reaction counts for the current talk session<br>`emoji_counters_updated` | `counters: dict[str, int]  # Map of emoji character to total reaction count` |
+
 ### Host WS
 | Message | Payload |
 | --- | --- |

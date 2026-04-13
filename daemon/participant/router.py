@@ -607,6 +607,8 @@ async def get_participant_state(request: Request):
             "round_timer_seconds": debate.get("round_timer_seconds"),
             "round_timer_started_at": debate.get("round_timer_started_at"),
         },
+        # Emoji counters (talk mode)
+        "emoji_counters": dict(ps.emoji_counters),
         # Slides (from misc state — synced from Railway)
         "slides_current": misc_state.slides_current,
         # Summary / notes (timestamps only — full content fetched on demand)

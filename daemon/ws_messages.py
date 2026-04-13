@@ -211,6 +211,12 @@ class EmojiReactionMsg(BaseModel):
     emoji: str
 
 
+class EmojiCountersUpdatedMsg(BaseModel):
+    """Cumulative emoji reaction counts broadcast to all talk-mode participants."""
+    type: Literal["emoji_counters_updated"] = "emoji_counters_updated"
+    counters: dict[str, int]
+
+
 # ── Host-only: Addon bridge status ────────────────────────────────────────────
 
 class OverlayConnectedMsg(BaseModel):
@@ -304,6 +310,8 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Notes & Summary
     "notes_updated": NotesUpdatedMsg,
     "summary_updated": SummaryUpdatedMsg,
+    # Emoji
+    "emoji_counters_updated": EmojiCountersUpdatedMsg,
     # Cross-cutting
     "reload": ReloadMsg,
 }
@@ -378,6 +386,8 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Notes & Summary
     "notes_updated": "notes_summary",
     "summary_updated": "notes_summary",
+    # Emoji
+    "emoji_counters_updated": "emoji",
     # Cross-cutting
     "reload": "reload",
 }
