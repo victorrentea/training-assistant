@@ -1223,8 +1223,14 @@ function toggleRepos() {
 async function selectTopic(el, event, slide) {
   if (event) event.stopPropagation();
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('nav-active'); });
+  var slidesNav = document.querySelector('[data-nav="slides"]');
+  if (slidesNav) slidesNav.classList.add('nav-active');
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
   if (el) el.classList.add('topic-active');
+  if (event && slide && slide._id !== _activeSlideId) {
+    var cb = document.getElementById('slides-follow-checkbox');
+    if (cb) cb.checked = false;
+  }
   VIEWS.forEach(function(v) {
     document.getElementById(v + '-view').style.display = v === 'slides' ? '' : 'none';
   });
