@@ -160,6 +160,7 @@ body{visibility:hidden}
 <a onclick="togglePastSlides()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">history</span>
 <span class="text-base">Past Slides</span>
+<span id="past-slides-badge" class="badge-new ml-auto" style="display:none"></span>
 <span class="material-symbols-outlined past-slides-arrow text-xl transition-transform duration-300">chevron_right</span>
 </a>
 <div id="slide-history-list" class="mx-2 mt-1 rounded-xl overflow-hidden" style="display:none"></div>
@@ -644,6 +645,23 @@ function _hideSlideHistory() {
     _historySelectedRowEl = null;
   }
 }
+function _setPastSlidesBadge(total) {
+  var badge = document.getElementById('past-slides-badge');
+  if (!badge) return;
+  var n = Math.max(0, Number(total || 0));
+  badge.textContent = String(n);
+  badge.style.display = n > 0 ? '' : 'none';
+}
+function _refreshPastSlidesBadge() {
+  if (!_sessionId) return;
+  fetch('/' + _sessionId + '/api/participant/slide-history')
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(data) {
+      var slides = Array.isArray(data.slides) ? data.slides : [];
+      _setPastSlidesBadge(slides.length);
+    })
+    .catch(function() { _setPastSlidesBadge(0); });
+}
 function _autoHideSlideHistoryAndCloseSlides() {
   if (_historySelectedRowEl) {
     closeSlides({ focusAllTopics: true });
@@ -663,6 +681,7 @@ function _loadSlideHistory() {
     .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
     .then(function(data) {
       var slides = data.slides || [];
+      _setPastSlidesBadge(slides.length);
       var el = document.getElementById('slide-history-list');
       if (!el) return;
       if (!slides.length) { el.style.display = 'none'; return; }
@@ -1186,6 +1205,7 @@ var _myUUID = (function() {
     console.log('[participant] session_id:', _sessionId);
     if (!_sessionId) return;
     loadSlidesCatalog();
+    _refreshPastSlidesBadge();
     _connectWS();
     const state = await fetch(`/${_sessionId}/api/participant/state`).then(r => r.json());
     console.log('[participant] state:', state);
