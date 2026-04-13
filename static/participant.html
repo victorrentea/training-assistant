@@ -155,7 +155,7 @@ body{visibility:hidden}
 <h1 class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate">Event-Driven Architectures</h1>
 <p class="text-xl font-medium text-primary flex items-center justify-between">
 <span>orange.ro</span>
-<span class="flex items-center gap-1">👥 30</span>
+<span class="flex items-center gap-1">👥 <span id="pax-count">30</span></span>
 </p>
 </div>
 </div>
@@ -1855,6 +1855,7 @@ function _handleWsMessage(msg) {
       break;
     case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
     case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;
+    case 'active_participants_count_updated': document.getElementById('pax-count').textContent = msg.count; break;
   }
 }
 
