@@ -877,7 +877,7 @@ function openRepos() {
         var name = base.split('/').pop() + '.git';
         var branchUrl = base + '/tree/' + repo.branch;
         var files = repo.files.map(function(f) {
-          return '<li class="flex items-center gap-1 min-w-0 py-0.5">'
+          return '<li class="flex items-center gap-1 min-w-0 py-0.5 pl-5">'
             + '<span class="flex-shrink-0">•</span>'
             + '<span class="truncate">' + f + '</span>'
             + '</li>';
