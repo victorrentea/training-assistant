@@ -23,6 +23,7 @@ dev = [
 ]
 daemon = [
     "anthropic>=0.85.0",
+    "pypdf>=4.0",
 ]
 telemetry = [
     "opentelemetry-api>=1.20",
