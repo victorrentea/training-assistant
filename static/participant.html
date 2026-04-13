@@ -152,9 +152,9 @@ body{visibility:hidden}
 <div class="space-y-4">
 <div class="flex items-center gap-1 min-w-0">
 <div class="flex-1 min-w-0">
-<h1 class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate">Event-Driven Architectures</h1>
+<h1 id="session-title" class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate">Event-Driven Architectures</h1>
 <p class="text-xl font-medium text-primary flex items-center justify-between">
-<span>orange.ro</span>
+<span id="session-org">orange.ro</span>
 <span class="flex items-center gap-1">👥 <span id="pax-count">30</span></span>
 </p>
 </div>
@@ -1731,6 +1731,14 @@ function _applySummaryBadgeUnread(unread) {
 }
 
 function _applyState(msg) {
+  if (msg.session_name != null) {
+    var parts = msg.session_name.split('@');
+    document.getElementById('session-title').textContent = parts[0].trim();
+    var orgEl = document.getElementById('session-org');
+    if (parts.length > 1 && parts[1].trim()) {
+      orgEl.textContent = parts[1].trim();
+    }
+  }
   if (msg.notes_updated_at !== undefined) {
     document.querySelector('[data-nav="notes"]').style.display = msg.notes_updated_at ? '' : 'none';
     var notesBadge = document.getElementById('notes-badge');

@@ -215,6 +215,7 @@ class ParticipantStateResponse(BaseModel):
     my_name: str
     my_avatar: str
     current_activity: str
+    session_name: str | None = None
     wordcloud: WordcloudData
     qa_questions: list[QAQuestionRaw]
     poll: PollData | None = None
@@ -570,6 +571,7 @@ async def get_participant_state(request: Request):
     summary = read_summary_payload()
     notes_updated_at = read_notes_updated_at()
 
+    from daemon.session.state import get_active_session_name
     state_msg = {
         # Core identity / session
         "mode": ps.mode,
@@ -577,6 +579,7 @@ async def get_participant_state(request: Request):
         "my_name": ps.participant_names.get(pid, ""),
         "my_avatar": ps.participant_avatars.get(pid, ""),
         "current_activity": ps.current_activity,
+        "session_name": get_active_session_name(),
         # Wordcloud
         "wordcloud": {
             "words": wc.words,
