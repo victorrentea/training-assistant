@@ -53,6 +53,7 @@
   .bg-surface-container-high   { background-color: var(--color-surface-container-high); }
   .bg-surface-container-highest{ background-color: var(--color-surface-container-highest); }
   .bg-primary                  { background-color: var(--color-primary); }
+  .bg-primary-dim              { background-color: rgb(160 168 230); }
   .bg-primary-container        { background-color: var(--color-primary-container); }
   .bg-outline-variant          { background-color: var(--color-outline-variant); }
 
