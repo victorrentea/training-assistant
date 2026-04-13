@@ -60,8 +60,8 @@ async def host_page(session_id: str):
 
 @participant_router.get("/", response_class=HTMLResponse)
 async def participant_page():
-    if state.session_type == "conference":
-        return _serve_html_with_otel("static/conference.html", service_name="Conference")
+    if state.session_type == "talk":
+        return _serve_html_with_otel("static/talk.html", service_name="Talk")
     return _serve_html_with_otel("static/participant.html", service_name="Participant")
 
 

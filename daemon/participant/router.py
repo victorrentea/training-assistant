@@ -415,7 +415,7 @@ async def register_participant(request: Request, body: RegisterRequest):
         if explicit_name in taken:
             return Response(status_code=409)
         raw_name = explicit_name
-    elif ps.mode == "conference":
+    elif ps.mode == "talk":
         # Conference mode: auto-assign character name
         fake_state = _build_mini_state()
         char_name, universe = assign_conference_name(fake_state)
@@ -575,7 +575,7 @@ async def get_participant_state(request: Request):
     state_msg = {
         # Core identity / session
         "mode": ps.mode,
-        "my_score": 0 if ps.mode == "conference" else _get_score(pid),
+        "my_score": 0 if ps.mode == "talk" else _get_score(pid),
         "my_name": ps.participant_names.get(pid, ""),
         "my_avatar": ps.participant_avatars.get(pid, ""),
         "current_activity": ps.current_activity,

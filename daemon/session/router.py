@@ -90,7 +90,7 @@ public_router = APIRouter(prefix="/api/session", tags=["session"])
 
 class StartSessionRequest(BaseModel):
     name: str
-    type: Literal["workshop", "conference"]
+    type: Literal["workshop", "talk"]
 
 
 class ResumeSessionRequest(BaseModel):

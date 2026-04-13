@@ -131,7 +131,7 @@ def test_generator_pretty_prints_multi_field_shapes_one_per_line():
 
     start_session_row = re.search(r"^\| .*`POST /api/session/create`.*\|$", output, re.MULTILINE)
     assert start_session_row, "Missing table row for POST /api/session/create"
-    assert "`name: string`<br>`type: 'workshop' \\| 'conference'`" in start_session_row.group(0)
+    assert "`name: string`<br>`type: 'workshop' \\| 'talk'`" in start_session_row.group(0)
     assert "{name: string, type?: string}" not in start_session_row.group(0)
 
     poll_closed_row = re.search(r"^\| .*`poll_closed`.*\|$", output, re.MULTILINE)

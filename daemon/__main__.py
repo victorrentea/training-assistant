@@ -1137,7 +1137,7 @@ def run() -> None:
                             from daemon.scores import scores as _scores_state
                             from daemon.wordcloud.state import wordcloud_state as _wordcloud_state
 
-                            _participant_state.reset(mode="conference" if session_type == "talk" else "workshop")
+                            _participant_state.reset(mode="talk" if session_type == "talk" else "workshop")
                             _wordcloud_state.clear()
                             _qa_state.clear()
                             _misc_state.reset_for_new_session()
@@ -1160,7 +1160,7 @@ def run() -> None:
                                 log.info("session", f"Notes found ({notes_lines} lines): {notes_file.name}")
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                             if _active_session_id:
-                                announce_session_id(_active_session_id)
+                                announce_session_id(_active_session_id, session_type=session_type)
                             did_sync_in_create = True
                             # mode_changed removed — host.js/participant.js don't handle it; mode is in full state on reconnect
                             transcript_state.reset()
@@ -1170,7 +1170,7 @@ def run() -> None:
                             # active session id is persisted/broadcast even in that path.
                             _do_save_daemon_state()
                             if _active_session_id:
-                                announce_session_id(_active_session_id)
+                                announce_session_id(_active_session_id, session_type=session_type)
                         participant_join_link = (
                             f"{config.server_url}/{_active_session_id}"
                             if _active_session_id

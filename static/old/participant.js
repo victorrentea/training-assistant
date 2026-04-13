@@ -3894,7 +3894,7 @@ function closeAgendaModal() {
   function sendEmoji(emoji, ev) {
     participantApi('emoji/reaction', { emoji });
     const btn = ev && ev.currentTarget;
-    if (currentMode === 'conference' || window.innerWidth <= 600) {
+    if (currentMode === 'talk' || window.innerWidth <= 600) {
       showMobileEmojiShake(emoji);
     } else {
       showDesktopEmojiFloat(emoji, emoji === '❤️' ? null : btn);
@@ -4264,7 +4264,7 @@ function closeAgendaModal() {
 
   // ── Render ──
   function applyParticipantMode(mode) {
-    const isConference = mode === 'conference';
+    const isConference = mode === 'talk';
     // Hide/show status bar elements
     const statusLeft = document.querySelector('.status-left');
     if (statusLeft) statusLeft.style.display = '';
@@ -4284,7 +4284,7 @@ function closeAgendaModal() {
     if (urlDisplay) urlDisplay.textContent = 'https://' + location.host;
 
     const pasteBtn = document.getElementById('paste-btn');
-    if (pasteBtn) pasteBtn.style.display = mode === 'conference' ? 'none' : 'flex';
+    if (pasteBtn) pasteBtn.style.display = mode === 'talk' ? 'none' : 'flex';
 
 
   }
@@ -4293,7 +4293,7 @@ function closeAgendaModal() {
     const el = document.getElementById('content');
     const confGrid = document.getElementById('conference-emoji-grid');
     // Conference mode: show emoji grid when idle, hide when activity (poll) is active
-    if (currentMode === 'conference') {
+    if (currentMode === 'talk') {
       if (!currentPoll) {
         if (el) el.dataset.screen = 'conference-idle';
         el.innerHTML = '';

@@ -78,6 +78,7 @@ async def _handle_code_timestamp(data: dict):
 async def _handle_set_session_id(data: dict):
     """Daemon sets/changes active session. Drop stale host/participant connections."""
     new_id = data.get("session_id")
+    state.session_type = data.get("session_type", "workshop")
     old_id = state.session_id
     had_active_session = bool(old_id)
 

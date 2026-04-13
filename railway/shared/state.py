@@ -68,9 +68,9 @@ class AppState:
         self.summary_raw_markdown: str | None = None
         self.summary_updated_at: Optional[datetime] = None
         # Session state
-        self.session_type: str = "workshop"     # "workshop" | "conference"
+        self.session_type: str = "workshop"     # "workshop" | "talk"
         self.token_usage: dict = {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0}
-        self.mode: str = "workshop"  # "workshop" | "conference"
+        self.mode: str = "workshop"  # "workshop" | "talk"
         self.pending_deploy: dict | None = None  # {sha, message} set by watcher when push detected
         self.session_id: str | None = None  # 6-char alphanumeric session code for participant URLs
         self.slides_log, self.git_repos = [], []

@@ -76,7 +76,7 @@ class TestRegister:
         assert resp1.json()["name"] != resp2.json()["name"]
 
     def test_conference_mode_auto_assigns_name(self, client, fresh_state):
-        fresh_state.mode = "conference"
+        fresh_state.mode = "talk"
         resp = client.post("/api/participant/register",
                            json={},
                            headers={"X-Participant-ID": "uuid1"})

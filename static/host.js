@@ -1046,7 +1046,7 @@
   }
 
   function renderMode(mode) {
-    applyConferenceLayout(mode === 'conference');
+    applyConferenceLayout(mode === 'talk');
   }
 
   function applyConferenceLayout(isConference) {
@@ -2483,7 +2483,7 @@
 
     html += `<div style="font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Users that selected this line</div>`;
     if (lineParticipants.length > 0) {
-      if (currentMode === 'conference') {
+      if (currentMode === 'talk') {
         html += `<div style="font-size:2rem;font-weight:700;color:var(--accent);text-align:center;margin:.5rem 0;">${lineParticipants.length}</div>`;
       } else {
         const sorted = [...lineParticipants].sort((a, b) => {

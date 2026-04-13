@@ -30,10 +30,10 @@ def set_current_session_id(session_id: str | None) -> None:
     _current_session_id = session_id
 
 
-def announce_session_id(session_id: str) -> None:
+def announce_session_id(session_id: str, session_type: str = "workshop") -> None:
     """Immediately notify Railway of a new session_id via WS."""
     if _ws_client and _ws_client.connected:
-        _ws_client.send({"type": "set_session_id", "session_id": session_id})
+        _ws_client.send({"type": "set_session_id", "session_id": session_id, "session_type": session_type})
 
 
 def announce_session_cleared() -> None:
