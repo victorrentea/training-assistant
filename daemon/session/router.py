@@ -199,14 +199,6 @@ async def get_session_active():
 @global_router.post("/talk-presentation-path", status_code=204)
 async def talk_presentation_path(body: TalkPresentationPathRequest):
     """Host drops a PPTX file during a talk — log its path and Google Drive URL."""
-    folder_name = session_state.get_active_session_name()
-    root = _get_sessions_root()
-    if not folder_name or not root:
-        raise HTTPException(status_code=400, detail="No active session")
-    meta = load_session_meta(root / folder_name)
-    if meta.get("session_type") != "talk":
-        raise HTTPException(status_code=400, detail="Not a talk session")
-
     gdrive_url = resolve_gdrive_file_url(body.path)
 
     daemon_log.info("talk     ", f"pptx drop: {body.path}")
