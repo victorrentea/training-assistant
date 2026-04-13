@@ -1068,11 +1068,9 @@
       rightCol.style.display = 'none';
       grid.style.gridTemplateColumns = '25% 1fr';
       leftCol.classList.add('conference-layout');
-      if (leftTabsWrapper) leftTabsWrapper.style.display = 'flex';
-      if (slidesLeftQR) slidesLeftQR.style.display = 'none';
-      // Show left QR only when an activity is active (center QR not visible)
-      const centerQRVisible = document.getElementById('center-qr').style.display !== 'none';
-      confQR.style.display = centerQRVisible ? 'none' : 'flex';
+      if (leftTabsWrapper) leftTabsWrapper.style.display = 'none';
+      if (slidesLeftQR) slidesLeftQR.style.display = 'flex';
+      confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
       if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
@@ -2108,13 +2106,9 @@
     const slidesLeftQR = document.getElementById('slides-left-qr');
     const isConferenceLayout = !!(leftCol && leftCol.classList.contains('conference-layout'));
     if (leftTabsWrapper) {
-      leftTabsWrapper.style.display = currentActivity === 'none' && !isConferenceLayout ? 'none' : 'flex';
+      leftTabsWrapper.style.display = currentActivity === 'none' ? 'none' : 'flex';
     }
-    if (slidesLeftQR) slidesLeftQR.style.display = currentActivity === 'none' && !isConferenceLayout ? 'flex' : 'none';
-    if (leftCol && leftCol.classList.contains('conference-layout')) {
-      const confQR = document.getElementById('conference-qr');
-      confQR.style.display = 'flex';
-    }
+    if (slidesLeftQR) slidesLeftQR.style.display = currentActivity === 'none' ? 'flex' : 'none';
     // Sync slides tab active state
     const slidesTab = document.getElementById('tab-slides');
     if (slidesTab) slidesTab.classList.toggle('active', currentActivity === 'none');
