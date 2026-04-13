@@ -113,6 +113,11 @@ def create_app(backend_url: str) -> FastAPI:
         return response
 
     # --- Host HTML page ---
+    @app.get("/")
+    async def redirect_root():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/host")
+
     @app.get("/host/{session_id}")
     async def serve_host_page(session_id: str):
         """Serve host.html from local static/ directory."""
