@@ -88,6 +88,8 @@
         },
       }
     </script>
+<!-- Marked.js for markdown rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 <style>
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -122,6 +124,29 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+        /* Tab button active state */
+        .tab-btn { color: #aea5d4; }
+        .tab-btn.active { background: #271c53 !important; color: #a3a6ff; }
+        .tab-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .tab-btn:disabled:hover { background: rgba(39, 28, 83, 0.3) !important; }
+        /* Markdown content styling */
+        .md-content h1, .md-content h2, .md-content h3 {
+            color: #a3a6ff; font-family: 'Space Grotesk', sans-serif;
+            margin: 1.25rem 0 0.5rem; font-weight: 600;
+        }
+        .md-content h1 { font-size: 1.4rem; }
+        .md-content h2 { font-size: 1.15rem; }
+        .md-content h3 { font-size: 1rem; }
+        .md-content p { margin: 0.6rem 0; color: #e9e1ff; line-height: 1.6; }
+        .md-content ul, .md-content ol { padding-left: 1.5rem; color: #e9e1ff; margin: 0.5rem 0; }
+        .md-content li { margin: 0.3rem 0; line-height: 1.5; }
+        .md-content strong { color: #c8bbff; }
+        .md-content em { color: #aea5d4; }
+        .md-content code {
+            background: rgba(39,28,83,0.8); padding: 0.1rem 0.35rem;
+            border-radius: 0.25rem; font-size: 0.85em; color: #a3a6ff;
+        }
+        .md-content hr { border-color: #4a426b; margin: 1rem 0; }
     </style>
 <style>
         body {
@@ -159,30 +184,50 @@
 <!-- Space for logo or Title if needed -->
 </div>
 <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
-<button class="flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px] text-white">
-<span class="material-symbols-outlined text-xl">commit</span>
-<span class="text-[10px] font-semibold uppercase tracking-tight">Git Repo</span>
+<button id="btn-speaker" onclick="showView('speaker')" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
+<span class="material-symbols-outlined text-xl">face</span>
+<span class="text-[10px] font-semibold uppercase tracking-tight">Speaker</span>
 </button>
-<button id="btn-download-slides" class="flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px] text-white" disabled>
-<span class="material-symbols-outlined text-xl">download</span>
+<button id="btn-slides" onclick="showView('slides')" class="tab-btn active flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
+<span class="material-symbols-outlined text-xl">slideshow</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Slides</span>
 </button>
-<button class="flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px] text-white">
+<button id="btn-summary" onclick="showView('summary')" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]" disabled>
 <span class="material-symbols-outlined text-xl">auto_awesome</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Summary</span>
+</button>
+<button id="btn-download-slides" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]" disabled>
+<span class="material-symbols-outlined text-xl">download</span>
+<span class="text-[10px] font-semibold uppercase tracking-tight">Download</span>
+</button>
+<button id="btn-git-repo" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
+<span class="material-symbols-outlined text-xl">commit</span>
+<span class="text-[10px] font-semibold uppercase tracking-tight">Git Repo</span>
 </button>
 </div>
 </header>
 <main class="flex-1 flex flex-col w-full">
-<!-- Slides History -->
+<!-- Content views -->
 <div class="relative flex-1">
-<div id="pdf-pages" class="absolute inset-0 overflow-y-auto flex flex-col gap-4 pb-32 scroll-smooth"></div>
-<div id="slide-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-on-surface-variant pointer-events-none">
-<div class="flex flex-col items-center gap-3 bg-surface-container/50 backdrop-blur-sm rounded-2xl px-8 py-6">
-<span class="material-symbols-outlined text-5xl" style="animation:spin 1s linear infinite">sync</span>
-<span class="text-sm">Loading slides…</span>
-</div>
-</div>
+  <!-- Slides View (default active) -->
+  <div id="view-slides" class="absolute inset-0 overflow-y-auto flex flex-col gap-4 pb-32 scroll-smooth">
+    <div id="pdf-pages"></div>
+  </div>
+  <!-- Slide loading placeholder -->
+  <div id="slide-placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-on-surface-variant pointer-events-none">
+  <div class="flex flex-col items-center gap-3 bg-surface-container/50 backdrop-blur-sm rounded-2xl px-8 py-6">
+  <span class="material-symbols-outlined text-5xl" style="animation:spin 1s linear infinite">sync</span>
+  <span class="text-sm">Loading slides…</span>
+  </div>
+  </div>
+  <!-- Summary View (hidden by default) -->
+  <div id="view-summary" class="absolute inset-0 hidden overflow-y-auto p-4 pb-32">
+    <div id="summary-content" class="md-content text-sm"></div>
+  </div>
+  <!-- Speaker View (hidden by default) -->
+  <div id="view-speaker" class="absolute inset-0 hidden overflow-y-auto p-4 pb-32">
+    <div id="speaker-content" class="md-content text-sm"></div>
+  </div>
 </div>
 <!-- Desktop Quick Controls (Emoji Bar) -->
 <div class="hidden md:flex bg-surface-container rounded-xl p-6 items-center justify-between w-full">
@@ -251,6 +296,7 @@
       if (_currentPdfUrl !== url) {
         _pdfDoc = await pdfjsLib.getDocument(url).promise;
         _currentPdfUrl = url;
+        window._currentPdfUrl = url;
         var dlBtn = document.getElementById('btn-download-slides');
         if (dlBtn) dlBtn.disabled = false;
         container.innerHTML = '';
@@ -313,12 +359,70 @@
   var _slidesCatalog = [];
   var _ws = null;
   var _currentPage = 1;
+  var _activeView = 'slides';
   var _uuid = sessionStorage.getItem('talk_uuid') || (function() {
     var u = crypto.randomUUID(); sessionStorage.setItem('talk_uuid', u); return u;
   })();
 
+  // View names that have a tab button
+  var _viewNames = ['speaker', 'slides', 'summary'];
+
+  function showView(name) {
+    _viewNames.forEach(function(v) {
+      var view = document.getElementById('view-' + v);
+      if (view) view.classList.toggle('hidden', v !== name);
+      var btn = document.getElementById('btn-' + v);
+      if (btn) btn.classList.toggle('active', v === name);
+    });
+    _activeView = name;
+    if (name === 'summary') _loadSummary();
+    if (name === 'speaker') _renderSpeaker();
+  }
+
+  function _enableSummaryButton() {
+    var btn = document.getElementById('btn-summary');
+    if (btn) btn.disabled = false;
+  }
+
+  async function _loadSummary() {
+    if (!_sessionId) return;
+    var contentEl = document.getElementById('summary-content');
+    if (!contentEl) return;
+    try {
+      var data = await fetch('/' + _sessionId + '/api/participant/summary', {
+        headers: { 'X-Participant-ID': _uuid }
+      }).then(function(r) { return r.ok ? r.json() : null; });
+      if (data && data.raw_markdown) {
+        contentEl.innerHTML = marked.parse(data.raw_markdown);
+      } else {
+        contentEl.innerHTML = '<p style="color:#aea5d4">No summary available yet.</p>';
+      }
+    } catch (e) {
+      contentEl.innerHTML = '<p style="color:#aea5d4">Failed to load summary.</p>';
+    }
+  }
+
+  function _renderSpeaker() {
+    var contentEl = document.getElementById('speaker-content');
+    if (!contentEl || contentEl._rendered) return;
+    contentEl._rendered = true;
+    var dummy = [
+      '## Your Speaker',
+      '',
+      '**Victor Rentea** is an independent trainer, software craftsman, and Java Champion.',
+      '',
+      '- Lead developer and architect with 11+ years at IBM',
+      '- Founder of the Romania Java User Group (RoJUG)',
+      '- Trainer at 100+ companies across Europe',
+      '- Passionate about clean code, refactoring, and testing',
+      '',
+      '*"Write code that humans can read."*',
+    ].join('\n');
+    contentEl.innerHTML = marked.parse(dummy);
+  }
+
   function scrollToCurrentSlide() {
-    var container = document.getElementById('pdf-pages');
+    var container = document.getElementById('view-slides');
     var target = container && container.querySelector('section[data-page="' + _currentPage + '"]');
     if (!target) return;
     target.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -411,18 +515,18 @@
     _ws.onmessage = function(e) {
       try {
         var msg = JSON.parse(e.data);
-        var sc = msg.slides_current || (msg.type === 'announce' && msg.slides_current);
         if (msg.type === 'slides_current' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
         if (msg.type === 'announce' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
         if (msg.type === 'emoji_counters_updated' && msg.counters) _applyEmojiCounters(msg.counters);
+        if (msg.type === 'summary_updated' && msg.updated_at) _enableSummaryButton();
       } catch (_) {}
     };
     _ws.onclose = function(e) { if (e.code === 1008) return; setTimeout(_connectWS, 3000); };
   }
 
   document.getElementById('btn-download-slides').addEventListener('click', function() {
-    if (!_currentPdfUrl) return;
-    var url = _currentPdfUrl;
+    var url = window._currentPdfUrl;
+    if (!url) return;
     if (url.indexOf('?') === -1) url += '?download=1'; else url += '&download=1';
     var a = document.createElement('a');
     a.href = url;
@@ -450,6 +554,7 @@
       console.log('[talk] state:', state);
       if (state.slides_current) await _applySlidesCurrent(state.slides_current);
       if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
+      if (state.summary_updated_at) _enableSummaryButton();
     } catch (e) { console.error('[talk] init error', e); }
   })();
 </script>
