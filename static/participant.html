@@ -1813,6 +1813,7 @@ function _handleWsMessage(msg) {
       document.querySelector('[data-nav="notes"]').style.display = msg.count > 0 ? '' : 'none';
       document.getElementById('notes-badge').textContent = msg.count || '';
       _applyNotesBadgeUnread(true);
+      if (document.getElementById('notes-view').style.display !== 'none') loadNotes();
       break;
     case 'summary_updated': {
       var summaryNav = document.querySelector('[data-nav="summary"]');
