@@ -14,6 +14,9 @@ from railway.shared.state import state
 @pytest.fixture(autouse=True)
 def clean_state():
     """Reset relevant state fields before each test."""
+    import railway.shared.messaging as _msg
+    _msg._participant_update_throttle._last_run = 0.0
+    _msg._participant_update_throttle._pending_handle = None
     state.reset()
     state.generate_session_id()
     yield
@@ -52,8 +55,13 @@ def test_ws_notifies_daemon_about_presence_changes():
         assert {"type": "participant_presence", "uuid": "presence-uuid", "online": False} in sent_messages
 
 
-def test_ws_participant_count_uses_total_known_participants():
-    """Count reflects total known non-host participants in the session."""
+def test_ws_participant_count_uses_connected_participants():
+    """Count reflects currently connected (live WS) non-host participants, not offline known names.
+
+    Commit 1abe5ca0: switched from participant_names to participants so count stays accurate
+    even when Railway restarts and participant_names haven't been re-synced from daemon yet.
+    """
+    # These are known but offline — should NOT be counted
     state.participant_names = {
         "offline-1": "Alice",
         "offline-2": "Bob",
@@ -64,4 +72,4 @@ def test_ws_participant_count_uses_total_known_participants():
     with client.websocket_connect(f"/ws/{state.session_id}/only-live-client") as ws:
         msg = ws.receive_json()
         assert msg.get("type") == "active_participants_count_updated"
-        assert msg.get("count") == 3
+        assert msg.get("count") == 1  # only the one live WS connection

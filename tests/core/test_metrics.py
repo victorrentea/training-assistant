@@ -53,8 +53,16 @@ def _get_metric_value(name, labels=None):
     return None
 
 
+def _reset_throttle():
+    """Reset broadcast throttle so WS tests don't wait 1s between each other."""
+    import railway.shared.messaging as _msg
+    _msg._participant_update_throttle._last_run = 0.0
+    _msg._participant_update_throttle._pending_handle = None
+
+
 def test_ws_connection_increments_gauge():
     """WebSocket connect should increment ws_connections_active."""
+    _reset_throttle()
     state.reset()
     state.generate_session_id()
     client = TestClient(app)
@@ -73,6 +81,7 @@ def test_ws_connection_increments_gauge():
 
 def test_ws_messages_tracked_by_type():
     """Every WS message should increment ws_messages_total with type label."""
+    _reset_throttle()
     state.reset()
     state.generate_session_id()
     client = TestClient(app)
