@@ -70,6 +70,7 @@ Feature: Slides Catalog, Viewing, and Follow Mode
     Then the active slide is "design-patterns"
     And Alice sees page 2 of "design-patterns"
 
+  @nightly
   Scenario: Follow mode survives slow Google Drive
     Given a 20 second Drive delay on "clean-code"
     And the addons bridge reports current slide is "Clean Code.pptx" page 2

@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.request
 
 sys.path.insert(0, "/app")
@@ -55,6 +56,19 @@ def _mock_drive_reset():
     urllib.request.urlopen(req, timeout=3)
 
 
+def _prime_slide_cache(session_id: str, slug: str) -> None:
+    """Ensure Railway has the PDF cached by calling daemon /check with force."""
+    import base64
+    auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+    url = f"{DAEMON_BASE}/{session_id}/api/slides/check/{slug}?force=true"
+    req = urllib.request.Request(url, headers={"Authorization": f"Basic {auth}"})
+    try:
+        with urllib.request.urlopen(req, timeout=37) as resp:
+            assert resp.status == 200, f"/check returned {resp.status}"
+    except urllib.error.HTTPError as e:
+        raise AssertionError(f"/check returned HTTP {e.code}") from e
+
+
 def test_participant_views_slide_from_catalog():
     """Participant selects a slide topic, backend fetches PDF from mock Drive."""
     session_id = fresh_session("SlidesView")
@@ -88,11 +102,9 @@ def test_participant_views_slide_from_catalog():
 
         # PDF.js is loaded from CDN which is unreachable inside Docker.
         # Instead of relying on the frontend to trigger the PDF fetch,
-        # verify the backend can serve the PDF.
-        # Note: the daemon's PPTX polling may have already fetched and cached PDFs
-        # from mock Drive before this test runs — that's fine, it proves the
-        # end-to-end flow works.
+        # prime the cache via daemon /check then verify the backend can serve the PDF.
         slug = "clean-code"  # first in catalog
+        _prime_slide_cache(session_id, slug)
         pdf_url = f"{BASE}/{session_id}/api/slides/download/{slug}"
         req = urllib.request.Request(pdf_url)
         with urllib.request.urlopen(req, timeout=15) as resp:
@@ -109,8 +121,8 @@ def test_second_participant_gets_cached_pdf():
     """Second participant viewing the same slide gets it from cache (no extra Drive call)."""
     session_id = fresh_session("SlidesCached")
 
-    # First, ensure the slide is already cached from the previous test
-    # (or trigger a load if not)
+    # Ensure the slide is cached (bypasses daemon in-memory fast-path too)
+    _prime_slide_cache(session_id, "clean-code")
     stats_before = _mock_drive_stats()
     initial_count = sum(stats_before.values())
 

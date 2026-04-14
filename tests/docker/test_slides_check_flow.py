@@ -43,9 +43,11 @@ def _await_condition(fn, timeout_ms=10_000, poll_ms=300, msg=""):
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
 
 
-def _check_slide(sid: str, slug: str, timeout_s: int = 35) -> int:
+def _check_slide(sid: str, slug: str, timeout_s: int = 35, force: bool = False) -> int:
     """Call /check/{slug} via daemon. Returns HTTP status code."""
     url = f"{DAEMON_BASE}/{sid}/api/slides/check/{slug}"
+    if force:
+        url += "?force=true"
     req = urllib.request.Request(url)
     try:
         with urllib.request.urlopen(req, timeout=timeout_s + 2) as resp:
@@ -98,6 +100,15 @@ def _mock_drive_reset_delays():
         pass
 
 
+def _clear_slide_cache(slug: str) -> None:
+    """Delete the cached PDF file to force a fresh re-download."""
+    import os
+    try:
+        os.remove(f"/tmp/slides-cache/{slug}.pdf")
+    except FileNotFoundError:
+        pass
+
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 def test_check_triggers_download_and_returns_200():
@@ -111,13 +122,14 @@ def test_check_triggers_download_and_returns_200():
     - /download returns actual PDF bytes
     """
     sid = fresh_session("CheckFlow")
+    _clear_slide_cache(_SLUG)  # ensure no stale cache from earlier tests
     _mock_drive_reset_stats()
     _mock_drive_reset_delays()
 
     print(f"[test1] Session: {sid}, slug: {_SLUG}")
 
     # /check should block until Railway fetches the PDF and notifies daemon
-    status = _check_slide(sid, _SLUG, timeout_s=35)
+    status = _check_slide(sid, _SLUG, timeout_s=35, force=True)
     assert status == 200, f"Expected /check to return 200, got {status}"
     print(f"[test1] /check returned {status} ✓")
 
@@ -187,6 +199,7 @@ def test_check_503_on_slow_drive_then_self_heals():
     - /download returns a valid PDF once the background download completes
     """
     sid = fresh_session("CheckSelfHeal")
+    _clear_slide_cache(_SLUG)  # ensure no stale cache from earlier tests
     _mock_drive_reset_stats()
     _mock_drive_reset_delays()
 
@@ -197,7 +210,7 @@ def test_check_503_on_slow_drive_then_self_heals():
     print(f"[test3] Set mock Drive delay to 35s for '{_SLUG}'")
 
     # /check should time out and return 503
-    status = _check_slide(sid, _SLUG, timeout_s=35)
+    status = _check_slide(sid, _SLUG, timeout_s=35, force=True)
     assert status == 503, f"Expected /check to return 503 (timeout), got {status}"
     print(f"[test3] /check returned {status} (timeout as expected) ✓")
 

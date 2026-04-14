@@ -147,7 +147,7 @@ def set_drive_delay(delay, slug):
 
 @given(parsers.parse('slide "{slug}" is cached'))
 def slide_is_cached(session_id, slug):
-    status, _ = _api("GET", f"/api/slides/check/{slug}", timeout=35)
+    status, _ = _api("GET", f"/{session_id}/api/slides/check/{slug}?force=true", timeout=35)
     assert status == 200, f"Failed to cache slide {slug}"
 
 
@@ -375,9 +375,9 @@ def overlay_visible(connected):
 @then(parsers.parse('{name} sees page {page_num:d} of "{slug}"'))
 def sees_page_of_slide(name, page_num, slug):
     pax = _pax(name)
-    # PDF.js page indicator in the emoji bar
-    page_indicator = pax._page.locator("#slides-page-inline")
-    expect(page_indicator).to_contain_text(f"Page {page_num}/", timeout=5000)
+    # Hidden element updated by updatePageInfo() — format "N / total"
+    page_indicator = pax._page.locator("#pdf-page-info")
+    expect(page_indicator).to_contain_text(f"{page_num} /", timeout=5000)
 
 
 @then(parsers.parse("Google Drive was called {n:d} time"))
@@ -409,8 +409,8 @@ def overlay_opens_within(follow_pax, seconds):
 
 @then("the follow button is still enabled")
 def follow_still_enabled(follow_pax):
-    btn = follow_pax._page.locator("label[for='slides-follow-checkbox']")
-    expect(btn).to_have_attribute("aria-pressed", "true", timeout=5000)
+    cb = follow_pax._page.locator("#slides-follow-checkbox")
+    expect(cb).to_be_checked(timeout=5000)
 
 
 @then(parsers.parse('the active slide is "{slug}"'))

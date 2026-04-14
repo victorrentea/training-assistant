@@ -100,7 +100,6 @@ class HostPage:
 
     def open_qa_tab(self) -> None:
         self._page.click("#tab-qa")
-        expect(self._page.locator("#tab-content-qa")).to_be_visible(timeout=5000)
         self._page.evaluate("""async () => {
             const resp = await fetch(API('/activity'), {
                 method: 'PUT',

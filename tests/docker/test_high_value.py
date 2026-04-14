@@ -177,7 +177,7 @@ def test_participant_count_updates():
             pax.join(name)
             paxes.append(pax)
 
-            expect(host_page.locator("#pax-count")).to_have_text(str(len(paxes)), timeout=8000)
+            expect(host_page.locator("#pax-count .pax-active-count")).to_have_text(str(len(paxes)), timeout=8000)
 
         print("SUCCESS: Participant count updates on host!")
         browser.close()

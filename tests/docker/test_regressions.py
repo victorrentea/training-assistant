@@ -124,7 +124,7 @@ def test_qr_fullscreen_on_click():
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
 
         # Check QR icon exists and is visible
-        qr_icon = host_page.locator("#footer-qr-icon")
+        qr_icon = host_page.locator("#top-qr-icon")
         expect(qr_icon).to_be_visible(timeout=5000)
 
         # Click QR icon → overlay should open
@@ -145,7 +145,9 @@ def test_qr_fullscreen_on_click():
 def test_participant_header_shows_session_name():
     """Participant top header should display the current session name."""
     session_prefix = "SessionTitle"
-    session_id = fresh_session(session_prefix)
+    # fresh_session creates "x SessionTitle {ts}"; _applyState strips before first space
+    # so displayed title becomes "SessionTitle {ts}" which contains session_prefix
+    session_id = fresh_session(f"x {session_prefix}")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -156,10 +158,14 @@ def test_participant_header_shows_session_name():
         pax = ParticipantPage(pax_page)
         pax.auto_join()
 
-        session_title = pax_page.locator("#session-title")
-        expect(session_title).to_be_visible(timeout=10000)
+        # Wait for WS to deliver session_name (overrides hardcoded default "Event-Driven Architectures")
+        pax_page.wait_for_function(
+            f"() => {{ const el = document.getElementById('session-title'); return el && el.textContent.includes('{session_prefix}'); }}",
+            timeout=10000,
+        )
 
-        title_text = session_title.inner_text().strip()
+        session_title = pax_page.locator("#session-title")
+        title_text = session_title.text_content().strip()
         assert title_text, "Expected non-empty session title in participant header"
         assert session_prefix in title_text, (
             f"Expected participant header session title to contain '{session_prefix}', got: '{title_text}'"

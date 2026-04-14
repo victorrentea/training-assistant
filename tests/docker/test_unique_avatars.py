@@ -140,7 +140,7 @@ def test_avatar_refresh_gives_unique_avatar_to_second_participant():
         # P1 refreshes avatar via REST API (direct call from test, not browser JS),
         # then validates the resulting identity assignment for the next participant.
         # Get P1's UUID from the page
-        p1_uuid = page1.evaluate("() => myUUID")
+        p1_uuid = page1.evaluate("() => _myUUID")
         roll_req = urllib.request.Request(
             f"{DAEMON_BASE}/api/participant/roll-avatar",
             method="POST",
@@ -191,7 +191,7 @@ def test_rename_rejected_when_name_already_taken():
         pax2.auto_join()  # should be Frodo
 
         # P2 tries to take P1's name — server reassigns to next available LOTR name
-        page2.evaluate("startNameEdit()")
+        page2.evaluate("_startNameEdit()")
         edit_input = page2.locator("#name-edit-input")
         expect(edit_input).to_be_visible(timeout=3000)
         edit_input.fill("Myname")

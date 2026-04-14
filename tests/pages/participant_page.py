@@ -17,9 +17,9 @@ class ParticipantPage:
 
     def auto_join(self) -> str:
         """Wait for auto-join to complete and return the server-assigned name (no rename)."""
-        expect(self._page.locator("#main-screen")).to_be_visible(timeout=10000)
-        expect(self._page.locator("#display-name")).not_to_be_empty(timeout=5000)
-        return self._page.locator("#display-name").inner_text().strip()
+        expect(self._page.locator("#display-name")).to_be_visible(timeout=10000)
+        expect(self._page.locator("#display-name .display-name-text")).not_to_be_empty(timeout=5000)
+        return self._page.locator("#display-name .display-name-text").inner_text().strip()
 
     def get_avatar_src(self) -> str:
         """Return the current avatar image filename (e.g. 'gandalf.png'), or '' if none."""
@@ -31,19 +31,19 @@ class ParticipantPage:
         Participants auto-join with a LotR name, so wait for main screen,
         then rename via inline edit."""
         # Wait for auto-join to complete
-        expect(self._page.locator("#main-screen")).to_be_visible(timeout=10000)
+        expect(self._page.locator("#display-name")).to_be_visible(timeout=10000)
         # Rename via inline edit
-        expect(self._page.locator("#display-name")).not_to_be_empty(timeout=3000)
+        expect(self._page.locator("#display-name .display-name-text")).not_to_be_empty(timeout=3000)
         self.rename(name)
 
     def rename(self, name: str) -> None:
         """Trigger inline name edit and set a new name."""
-        self._page.evaluate("startNameEdit()")
+        self._page.evaluate("_startNameEdit()")
         edit_input = self._page.locator("#name-edit-input")
         expect(edit_input).to_be_visible(timeout=3000)
         edit_input.fill(name)
         edit_input.press("Enter")
-        expect(self._page.locator("#display-name")).to_have_text(name, timeout=3000)
+        expect(self._page.locator("#display-name .display-name-text")).to_have_text(name, timeout=3000)
 
     # ── Poll ─────────────────────────────────────────────────────────────────
 
@@ -174,61 +174,69 @@ class ParticipantPage:
     # ── Slides ─────────────────────────────────────────────────────────────
 
     def expand_slides_dock(self) -> None:
-        """Expand the slides dock so list items are visible and clickable."""
+        """Open the slides topics menu so topic items are visible and clickable."""
         self._page.evaluate("""() => {
-            const dock = document.getElementById('slides-dock');
-            const list = document.getElementById('slides-list');
-            if (dock) dock.classList.add('expanded');
-            if (list) list.classList.add('expanded');
+            const list = document.querySelector('.topics-list');
+            if (list && (!list.style.maxHeight || list.style.maxHeight === '0px')) {
+                openTopics();
+            }
         }""")
         self._page.wait_for_timeout(400)  # allow CSS transition
 
     def open_slide(self, slug: str) -> None:
-        """Click a slide in the catalog to open it in the viewer."""
+        """Click a slide topic item to open it in the viewer."""
         self.expand_slides_dock()
-        self._page.locator(f'.slides-list-item[data-slug="{slug}"] .slides-list-open').click()
-        expect(self._page.locator("#slides-overlay")).to_have_class(re.compile(r"open"), timeout=15000)
-        # Wait for PDF.js to render at least one canvas (fast-polls via Playwright)
-        self._page.wait_for_selector("#slides-pdf-viewer canvas", timeout=30000)
+        self._page.locator(f'.topic-item[data-slide-id^="{slug}|"]').click()
+        # Wait for slides view to show PDF canvas
+        expect(self._page.locator("#slides-view")).to_be_visible(timeout=15000)
+        self._page.wait_for_selector("#pdf-pages canvas", timeout=30000)
 
     def navigate_to_page(self, target_page: int) -> None:
-        """Navigate to a specific page in the currently open slide via PDF.js."""
+        """Navigate to a specific page in the currently open slide."""
         self._page.evaluate(f"""() => {{
-            if (typeof slidesPdfViewer !== 'undefined' && slidesPdfViewer) {{
-                slidesPdfViewer.currentPageNumber = {target_page};
-            }}
-            // Persist page to localStorage — find slug from the active list item
-            const activeItem = document.querySelector('.slides-list-item.active');
-            const slug = activeItem ? activeItem.getAttribute('data-slug') : null;
+            const container = document.getElementById('pdf-pages');
+            const section = container ? container.querySelector('section[data-page="{target_page}"]') : null;
+            if (section) section.scrollIntoView({{ behavior: 'instant', block: 'start' }});
+            // Persist page to localStorage — find slug from the active topic item
+            const activeItem = document.querySelector('.topic-item.topic-active');
+            const slideId = activeItem ? activeItem.getAttribute('data-slide-id') : null;
+            const slug = slideId ? slideId.split('|')[0] : null;
             if (slug) {{
                 localStorage.setItem('workshop_slide_page:' + slug, String({target_page}));
             }}
         }}""")
-        self._page.wait_for_timeout(500)  # allow PDF.js to render
+        self._page.wait_for_timeout(500)  # allow render
 
     def click_follow(self) -> None:
-        self._page.locator("#slides-follow-btn").click()
+        self._page.locator("label[for='slides-follow-checkbox']").click()
 
     def get_page_indicator(self) -> str:
-        """Return current page indicator text, e.g. 'Page 3/5'."""
-        return self._page.locator("#slides-page-inline").inner_text()
+        """Return current page indicator text, e.g. '3 / 5'."""
+        return self._page.locator("#pdf-page-info").inner_text()
 
     def get_catalog_slugs(self) -> list[str]:
         """Return list of slide slugs visible in the catalog."""
-        items = self._page.locator(".slides-list-item").all()
-        return [item.get_attribute("data-slug") for item in items if item.get_attribute("data-slug")]
+        items = self._page.locator(".topic-item[data-slide-id]").all()
+        result = []
+        for item in items:
+            slide_id = item.get_attribute("data-slide-id") or ""
+            slug = slide_id.split("|")[0] if "|" in slide_id else slide_id
+            if slug:
+                result.append(slug)
+        return result
 
     def get_catalog_timestamp(self, slug: str) -> str:
-        """Return the last-modified timestamp label for a catalog item."""
-        item = self._page.locator(f'.slides-list-item[data-slug="{slug}"] .slides-list-updated')
+        """Return the last-modified age label for a catalog item (e.g. '5m ago')."""
+        item = self._page.locator(f'.topic-item[data-slide-id^="{slug}|"] .opacity-50')
         return item.inner_text() if item.count() > 0 else ""
 
     def is_overlay_open(self) -> bool:
-        return "open" in (self._page.locator("#slides-overlay").get_attribute("class") or "")
+        """Return True if the slides view is currently active (PDF viewer visible)."""
+        return self._page.locator("#slides-view").is_visible()
 
     def screenshot_viewer(self) -> bytes:
         """Take a screenshot of the slides viewer area."""
-        viewer = self._page.locator("#slides-pdf-viewer")
+        viewer = self._page.locator("#pdf-pages")
         expect(viewer).to_be_visible(timeout=15000)
         self._page.wait_for_timeout(1000)
         return viewer.screenshot()

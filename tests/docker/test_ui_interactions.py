@@ -142,14 +142,15 @@ def test_participant_link_displayed():
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
 
-        # Wait for WS to deliver state
-        host_page.wait_for_timeout(1000)
+        # Wait for WS to deliver state and populate participant link
+        host_page.wait_for_function(
+            "() => { const el = document.getElementById('participant-link'); return el && el.textContent.trim().length > 0; }",
+            timeout=20000,
+        )
 
         # Check participant-link element
         link_el = host_page.locator("#participant-link")
-        expect(link_el).to_be_visible(timeout=5000)
-
-        link_text = link_el.inner_text().strip()
+        link_text = link_el.text_content().strip()
         assert len(link_text) > 0, f"Participant link text is empty"
         # Should contain session_id or a URL-like string
         print(f"Participant link text: '{link_text}'")

@@ -21,7 +21,7 @@ from railway.shared.state import state
 logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path("/tmp/slides-cache")
-_DOWNLOAD_TIMEOUT_S = 60  # single HTTP download timeout
+_DOWNLOAD_TIMEOUT_S = 30  # single HTTP download timeout
 
 
 # ---------------------------------------------------------------------------

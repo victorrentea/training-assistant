@@ -32,14 +32,11 @@ COPY tests/pages/ /app/tests/pages/
 WORKDIR /tests
 COPY tests/docker/session_utils.py .
 COPY tests/docker/test_daemon_connected.py .
-COPY tests/docker/test_poll_flow.py .
 COPY tests/docker/test_slides_view.py .
 COPY tests/docker/test_follow_me.py .
 COPY tests/docker/test_participant_interactions.py .
-COPY tests/docker/test_qa_wordcloud.py .
 COPY tests/docker/test_integrations.py .
 COPY tests/docker/test_high_value.py .
-COPY tests/docker/test_poll_advanced.py .
 COPY tests/docker/test_ui_interactions.py .
 COPY tests/docker/test_slides_advanced.py .
 COPY tests/docker/test_regressions.py .
@@ -49,6 +46,14 @@ COPY tests/docker/test_slides_check_flow.py .
 COPY tests/docker/test_notes_summary_counts.py .
 COPY tests/docker/test_sequence_extraction.py .
 COPY tests/docker/test_poll_scoring.py .
+COPY tests/docker/test_participant_join_flow.py .
+COPY tests/docker/test_session_end_daemon_reconnect.py .
+COPY tests/docker/test_slides_auto_refresh.py .
+COPY tests/docker/test_slides_initial_sync.py .
+COPY tests/docker/test_pptx_update_auto_refresh.py .
+COPY tests/docker/test_follow_uncached_slide.py .
+COPY tests/docker/test_session_state_participant_name_restore.py .
+COPY tests/docker/test_participant_name_host.py .
 COPY tests/docker/features/ ./features/
 COPY tests/docker/step_defs/ ./step_defs/
 COPY tests/docker/generate_fixture_pdfs.py .

@@ -64,13 +64,25 @@ def _mock_drive_reset():
     urllib.request.urlopen(req, timeout=3)
 
 
+def _mock_drive_reset_delays():
+    req = urllib.request.Request(
+        f"{MOCK_DRIVE}/mock-drive/reset-delays",
+        method="POST",
+        data=b"{}",
+    )
+    try:
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
+        pass
+
+
 def _auth_header() -> str:
     return "Basic " + base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
 
 
 def _prime_slide_cache(session_id: str) -> None:
     """Download the slide PDF via daemon /check so Railway has a cached copy."""
-    url = f"{DAEMON_BASE}/{session_id}/api/slides/check/{_SLUG}"
+    url = f"{DAEMON_BASE}/{session_id}/api/slides/check/{_SLUG}?force=true"
     req = urllib.request.Request(url, headers={"Authorization": _auth_header()})
     try:
         with urllib.request.urlopen(req, timeout=35) as resp:
@@ -93,7 +105,7 @@ def _get_drive_export_url(session_id: str) -> str:
 
 def _call_invalidate(session_id: str, drive_export_url: str = "") -> int:
     """POST /api/slides/invalidate/{slug} on Railway. Returns HTTP status code."""
-    url = f"{BASE}/{session_id}/api/slides/invalidate/{_SLUG}"
+    url = f"{BASE}/api/{session_id}/api/slides/invalidate/{_SLUG}"
     body = json.dumps({"drive_export_url": drive_export_url}).encode()
     req = urllib.request.Request(
         url,
@@ -117,6 +129,7 @@ def _call_invalidate(session_id: str, drive_export_url: str = "") -> int:
 def test_invalidate_triggers_railway_redownload():
     """POST /api/slides/invalidate/{slug} causes Railway to re-download from mock Drive."""
     session_id = fresh_session("AutoRefresh")
+    _mock_drive_reset_delays()
     _mock_drive_reset()
 
     # Prime cache: participant /check → Railway downloads once from mock Drive
@@ -159,6 +172,7 @@ def test_invalidate_triggers_railway_redownload():
 def test_invalidate_without_drive_url_in_body_uses_stored_catalog():
     """If drive_export_url is omitted from body, Railway uses the stored catalog URL."""
     session_id = fresh_session("AutoRefreshNoUrl")
+    _mock_drive_reset_delays()
     _prime_slide_cache(session_id)
     _mock_drive_reset()
 
@@ -172,6 +186,7 @@ def test_invalidate_without_drive_url_in_body_uses_stored_catalog():
 def test_participant_receives_refreshed_slugs_in_ws():
     """Participant WS receives slides_cache_status with refreshed_slugs after invalidate."""
     session_id = fresh_session("AutoRefreshWS")
+    _mock_drive_reset_delays()
     _prime_slide_cache(session_id)
 
     drive_export_url = _get_drive_export_url(session_id)
@@ -206,7 +221,7 @@ def test_participant_receives_refreshed_slugs_in_ws():
 
         # Wait for participant to connect
         _await_condition(
-            lambda: pax_page.locator(".slides-list-item").count() > 0,
+            lambda: pax_page.locator(".topic-item").count() > 0,
             timeout_ms=10_000,
             msg="No slides loaded for participant",
         )
@@ -232,6 +247,7 @@ def test_participant_receives_refreshed_slugs_in_ws():
 def test_participant_auto_reloads_active_slide_after_invalidate():
     """Participant reloads the active slide PDF when slides_cache_status has refreshed_slugs."""
     session_id = fresh_session("AutoRefreshReload")
+    _mock_drive_reset_delays()
     _prime_slide_cache(session_id)
 
     drive_export_url = _get_drive_export_url(session_id)
@@ -257,14 +273,14 @@ def test_participant_auto_reloads_active_slide_after_invalidate():
 
         # Wait for catalog and open slides dock
         _await_condition(
-            lambda: pax_page.locator(".slides-list-item").count() > 0,
+            lambda: pax_page.locator(".topic-item").count() > 0,
             timeout_ms=10_000,
             msg="Slide list not loaded",
         )
 
         # Select the target slide so slidesSelectedSlug = _SLUG
         pax_page.evaluate(f"""() => {{
-            const items = document.querySelectorAll('.slides-list-item');
+            const items = document.querySelectorAll('.topic-item');
             for (const item of items) {{
                 const id = item.getAttribute('data-slide-id') || '';
                 if (id.includes('{_SLUG}')) {{ item.click(); break; }}

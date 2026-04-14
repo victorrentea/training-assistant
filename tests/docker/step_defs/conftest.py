@@ -70,6 +70,14 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
 from pytest_bdd import given, parsers  # noqa: E402, I001
 
 
+def pytest_bdd_apply_tag(tag, function):
+    """Map BDD feature file tags to pytest marks."""
+    if tag == "nightly":
+        function.pytestmark = getattr(function, "pytestmark", []) + [pytest.mark.nightly]
+        return True
+    return None
+
+
 # ── BDD phase tracking for OTel ──────────────────────────────────────────
 
 @pytest.hookimpl

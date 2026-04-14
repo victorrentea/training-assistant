@@ -287,6 +287,8 @@ body{visibility:hidden}
 </div>
 <!-- Slides Container -->
 <div id="pdf-pages" class="flex-grow overflow-y-auto scroll-smooth py-8 px-8 space-y-8 h-full"></div>
+<!-- Hidden page info element updated by JS — read by tests -->
+<span id="pdf-page-info" hidden></span>
 </div><!-- end slides-view -->
 <!-- Floating Reaction UI (Bottom Right) — always on top across all views -->
 <div class="absolute bottom-6 right-6 flex flex-col items-end gap-4 z-30">
@@ -1278,6 +1280,13 @@ async function selectTopic(el, event, slide) {
     if (dlBtn) { dlBtn.href = dlUrl; dlBtn.setAttribute('download', slide.name || ''); }
     await window.loadPdf(slide.url);
     _activeSlideId = slide._id || null;
+    // Restore last viewed page from localStorage
+    if (slide.slug) {
+      var storedPage = parseInt(localStorage.getItem('workshop_slide_page:' + slide.slug) || '1', 10);
+      if (storedPage > 1) {
+        setTimeout(function() { _scrollSlidesToPage(storedPage); }, 300);
+      }
+    }
   }
 }
 function showView(name) {

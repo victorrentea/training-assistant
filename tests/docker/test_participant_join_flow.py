@@ -26,6 +26,7 @@ from session_utils import (
     _req,
     fresh_session,
 )
+from pages.participant_page import ParticipantPage
 
 # ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,13 @@ def _end_session():
     while time.monotonic() < deadline:
         data = _get_json(f"{DAEMON_BASE}/api/session/active")
         if data.get("session_id") is None:
+            break
+        time.sleep(0.3)
+    # Also wait for Railway to reflect no active session
+    deadline = time.monotonic() + 8
+    while time.monotonic() < deadline:
+        data = _get_json(f"{BASE}/api/status")
+        if not data.get("session_id"):
             return
         time.sleep(0.3)
 
@@ -125,16 +133,14 @@ class TestIsActiveSessionCheck:
 
 class TestCodeEntry:
     def test_valid_code_redirects(self, browser, session_id):
-        """Entering a valid 6-char code redirects to ?session_id={code}."""
+        """Entering a valid 6-char code redirects to /{session_id}/ participant page."""
         ctx, page = _open_landing(browser)
         try:
             expect(page.locator("#screen-code-entry")).to_be_visible(timeout=10000)
             code_input = page.locator("#code-input")
             code_input.fill(session_id)
-            # Auto-submits on 6 chars — wait for navigation to name entry or entering
-            page.wait_for_url(f"**/?session_id={session_id}", timeout=10000)
-            # After redirect, should proceed to name entry screen
-            expect(page.locator("#screen-name-entry")).to_be_visible(timeout=10000)
+            # Auto-submits on 6 chars — wait for navigation to participant page
+            page.wait_for_url(f"**/{session_id}/**", timeout=10000)
         finally:
             ctx.close()
 
@@ -182,138 +188,40 @@ class TestSessionMismatch:
             ctx.close()
 
 
-# ── 5. TestNameEntry ───────────────────────────────────────────────────────
-
-class TestNameEntry:
-    def _go_to_name_entry(self, browser, session_id):
-        """Navigate directly to landing with valid session_id to reach name entry."""
-        ctx, page = _open_landing(browser, f"?session_id={session_id}")
-        expect(page.locator("#screen-name-entry")).to_be_visible(timeout=10000)
-        return ctx, page
-
-    def test_valid_session_shows_name_entry(self, browser, session_id):
-        """Valid session_id in URL leads to name entry screen."""
-        ctx, page = self._go_to_name_entry(browser, session_id)
-        try:
-            expect(page.locator("#name-input")).to_be_visible()
-            expect(page.locator("#name-join-btn")).to_be_visible()
-            expect(page.locator("#random-name-btn")).to_be_visible()
-        finally:
-            ctx.close()
-
-    def test_submit_custom_name_enters_app(self, browser, session_id):
-        """Submitting a custom name navigates to /{session_id} app."""
-        ctx, page = self._go_to_name_entry(browser, session_id)
-        try:
-            name_input = page.locator("#name-input")
-            join_btn = page.locator("#name-join-btn")
-            name_input.fill("CustomTestUser")
-            expect(join_btn).to_be_enabled()
-            join_btn.click()
-            # Should navigate to /{session_id} and show main screen
-            page.wait_for_url(f"**/{session_id}", timeout=10000)
-            expect(page.locator("#main-screen")).to_be_visible(timeout=10000)
-        finally:
-            ctx.close()
-
-    def test_random_name_enters_app(self, browser, session_id):
-        """Clicking 'Random name' enters the app with a server-assigned name."""
-        ctx, page = self._go_to_name_entry(browser, session_id)
-        try:
-            random_btn = page.locator("#random-name-btn")
-            random_btn.click()
-            # Should navigate to /{session_id} and show main screen
-            page.wait_for_url(f"**/{session_id}", timeout=10000)
-            expect(page.locator("#main-screen")).to_be_visible(timeout=10000)
-        finally:
-            ctx.close()
-
-    def test_duplicate_name_shakes_input(self, browser, session_id):
-        """Submitting a taken name shows 'Name taken' toast and stays on name screen."""
-        # First participant takes a name
-        ctx1, page1 = self._go_to_name_entry(browser, session_id)
-        try:
-            page1.locator("#name-input").fill("TakenName")
-            page1.locator("#name-join-btn").click()
-            page1.wait_for_url(f"**/{session_id}", timeout=10000)
-            expect(page1.locator("#main-screen")).to_be_visible(timeout=10000)
-        finally:
-            ctx1.close()
-
-        # Second participant tries the same name
-        ctx2, page2 = self._go_to_name_entry(browser, session_id)
-        try:
-            page2.locator("#name-input").fill("TakenName")
-            page2.locator("#name-join-btn").click()
-            # Should show toast and stay on name screen
-            toaster = page2.locator("#toaster")
-            expect(toaster).to_have_class(re.compile(r"visible"), timeout=5000)
-            expect(toaster).to_contain_text("Name taken")
-            expect(page2.locator("#screen-name-entry")).to_be_visible()
-        finally:
-            ctx2.close()
-
-    def test_join_button_disabled_when_empty(self, browser, session_id):
-        """Join button is disabled when name input is empty or whitespace."""
-        ctx, page = self._go_to_name_entry(browser, session_id)
-        try:
-            join_btn = page.locator("#name-join-btn")
-            name_input = page.locator("#name-input")
-            # Initially disabled
-            expect(join_btn).to_be_disabled()
-            # Type whitespace only — still disabled
-            name_input.fill("   ")
-            expect(join_btn).to_be_disabled()
-            # Type real text — enabled
-            name_input.fill("RealName")
-            expect(join_btn).to_be_enabled()
-            # Clear — disabled again
-            name_input.fill("")
-            expect(join_btn).to_be_disabled()
-        finally:
-            ctx.close()
-
-
-# ── 6. TestRejoin ──────────────────────────────────────────────────────────
+# ── 5. TestRejoin ─────────────────────────────────────────────────────────
 
 class TestRejoin:
     def test_returning_participant_auto_enters(self, browser, session_id):
-        """Participant with stored UUID+custom name auto-enters on second visit."""
-        # First visit: join with a custom name
+        """Participant with stored UUID auto-enters on second visit with same name."""
+        # First visit: go directly to participant page, auto-join
         ctx1 = browser.new_context()
         page1 = ctx1.new_page()
         try:
-            page1.goto(f"{BASE}/?session_id={session_id}", wait_until="networkidle")
-            expect(page1.locator("#screen-name-entry")).to_be_visible(timeout=10000)
-            page1.locator("#name-input").fill("RejoinerTest")
-            page1.locator("#name-join-btn").click()
-            page1.wait_for_url(f"**/{session_id}", timeout=10000)
-            expect(page1.locator("#main-screen")).to_be_visible(timeout=10000)
+            page1.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+            pax1 = ParticipantPage(page1)
+            name = pax1.auto_join()
 
-            # Grab the UUID and custom-name flag from localStorage
+            # Capture UUID and name from localStorage
             uuid = page1.evaluate("() => localStorage.getItem('workshop_participant_uuid')")
-            custom_flag = page1.evaluate("() => localStorage.getItem('workshop_custom_name')")
             stored_name = page1.evaluate("() => localStorage.getItem('workshop_participant_name')")
             assert uuid, "UUID should be stored in localStorage"
-            assert custom_flag == "1", "Custom name flag should be '1'"
         finally:
             ctx1.close()
 
-        # Second visit: new context but inject the same UUID + flags into localStorage
+        # Second visit: inject same UUID into fresh context
         ctx2 = browser.new_context()
         page2 = ctx2.new_page()
         try:
-            # Navigate to landing first to set localStorage on the correct origin
-            page2.goto(f"{BASE}/", wait_until="networkidle")
+            page2.goto(f"{BASE}/{session_id}", wait_until="networkidle")
             page2.evaluate(f"""() => {{
                 localStorage.setItem('workshop_participant_uuid', '{uuid}');
-                localStorage.setItem('workshop_custom_name', '1');
                 localStorage.setItem('workshop_participant_name', '{stored_name}');
             }}""")
-            # Now navigate to the session landing
-            page2.goto(f"{BASE}/?session_id={session_id}", wait_until="networkidle")
-            # Should auto-enter without showing name screen
-            page2.wait_for_url(f"**/{session_id}", timeout=10000)
-            expect(page2.locator("#main-screen")).to_be_visible(timeout=10000)
+            page2.reload(wait_until="networkidle")
+            pax2 = ParticipantPage(page2)
+            name_second = pax2.auto_join()
+            assert name_second == name, (
+                f"Returning participant got different name: was '{name}', now '{name_second}'"
+            )
         finally:
             ctx2.close()
