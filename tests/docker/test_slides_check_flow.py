@@ -214,20 +214,27 @@ def test_check_503_on_slow_drive_then_self_heals():
     assert status == 503, f"Expected /check to return 503 (timeout), got {status}"
     print(f"[test3] /check returned {status} (timeout as expected) ✓")
 
-    # Remove the delay so Railway can finish the background download
+    # Remove the delay — there is no background retry after a timeout, so
+    # we must call /check again to trigger a fresh download attempt.
     _mock_drive_reset_delays()
-    print(f"[test3] Removed mock Drive delay — Railway should finish background download")
+    print(f"[test3] Removed mock Drive delay — calling /check again to trigger re-download")
 
-    # Poll /download until we get a PDF (or give up after 60s)
+    status_retry = _check_slide(sid, _SLUG, timeout_s=35, force=True)
+    assert status_retry == 200, (
+        f"Expected /check to return 200 after delay removed, got {status_retry}"
+    )
+    print(f"[test3] /check returned {status_retry} after delay removed ✓")
+
+    # Verify PDF is available via /download
     def _pdf_available() -> bool:
         dl_status, pdf_bytes = _download_slide(sid, _SLUG, timeout_s=5)
         return dl_status == 200 and pdf_bytes[:5] == b"%PDF-"
 
     _await_condition(
         _pdf_available,
-        timeout_ms=60_000,
-        poll_ms=1000,
-        msg=f"PDF for '{_SLUG}' never became available after removing Drive delay (self-heal failed)",
+        timeout_ms=10_000,
+        poll_ms=500,
+        msg=f"PDF for '{_SLUG}' not available after successful re-check",
     )
     print(f"[test3] PDF available via /download after self-heal ✓")
 

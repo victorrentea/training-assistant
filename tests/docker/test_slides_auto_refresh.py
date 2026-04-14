@@ -200,23 +200,21 @@ def test_participant_receives_refreshed_slugs_in_ws():
         pax = ParticipantPage(pax_page)
         pax.join("RefreshWatcher")
 
-        # Inject a WS message listener to capture refreshed_slugs
+        # Inject a WS message listener on the already-open _ws connection.
+        # Overriding the WebSocket class here would not catch messages on the
+        # existing connection that was established during page load.
         pax_page.evaluate("""() => {
             window._capturedRefreshedSlugs = [];
-            const origWs = window.WebSocket;
-            window.WebSocket = class extends origWs {
-                constructor(url, protocols) {
-                    super(url, protocols);
-                    this.addEventListener('message', (evt) => {
-                        try {
-                            const msg = JSON.parse(evt.data);
-                            if (msg.type === 'slides_cache_status' && Array.isArray(msg.refreshed_slugs)) {
-                                window._capturedRefreshedSlugs.push(...msg.refreshed_slugs);
-                            }
-                        } catch {}
-                    });
-                }
-            };
+            if (typeof _ws !== 'undefined' && _ws) {
+                _ws.addEventListener('message', (evt) => {
+                    try {
+                        const msg = JSON.parse(evt.data);
+                        if (msg.type === 'slides_cache_status' && Array.isArray(msg.refreshed_slugs)) {
+                            window._capturedRefreshedSlugs.push(...msg.refreshed_slugs);
+                        }
+                    } catch {}
+                });
+            }
         }""")
 
         # Wait for participant to connect
@@ -258,56 +256,42 @@ def test_participant_auto_reloads_active_slide_after_invalidate():
         pax_ctx = browser.new_context()
         pax_page = pax_ctx.new_page()
 
-        # Track requests to the PDF download URL
-        download_requests = []
-        pax_page.on(
-            "request",
-            lambda req: download_requests.append(req.url)
-            if f"/api/slides/download/{_SLUG}" in req.url
-            else None,
-        )
-
         pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
         pax = ParticipantPage(pax_page)
         pax.join("ReloadWatcher")
 
-        # Wait for catalog and open slides dock
-        _await_condition(
-            lambda: pax_page.locator(".topic-item").count() > 0,
-            timeout_ms=10_000,
-            msg="Slide list not loaded",
-        )
+        # Open the slide and wait for PDF canvas (ensures _activeSlideId is set in JS)
+        pax.open_slide(_SLUG)
+        print(f"[test] Slide '{_SLUG}' opened and PDF rendered ✓")
 
-        # Select the target slide so slidesSelectedSlug = _SLUG
-        pax_page.evaluate(f"""() => {{
-            const items = document.querySelectorAll('.topic-item');
-            for (const item of items) {{
-                const id = item.getAttribute('data-slide-id') || '';
-                if (id.includes('{_SLUG}')) {{ item.click(); break; }}
-            }}
-        }}""")
-
-        # Clear requests captured during initial load
-        time.sleep(1)
-        download_requests.clear()
-        requests_before = len(download_requests)
+        # Inject a spy on window.loadPdf to detect reloads without relying on network monitoring.
+        # Network monitoring is unreliable (pdf.js may use workers, caching, etc.).
+        pax_page.evaluate("""() => {
+            const origLoadPdf = window.loadPdf;
+            window._loadPdfCalls = [];
+            window.loadPdf = async function(...args) {
+                window._loadPdfCalls.push(args[0] || '');
+                return origLoadPdf(...args);
+            };
+        }""")
 
         # Trigger invalidate (simulates daemon notification after PPTX save)
         status = _call_invalidate(session_id, drive_export_url)
         assert status == 200, f"POST /invalidate returned {status}"
         print(f"[test] POST /invalidate returned {status} ✓")
 
-        # Participant should auto-reload the slide (issue a new download request)
+        # Participant should auto-reload the slide: window.loadPdf called with ?v= URL
         _await_condition(
-            lambda: len(download_requests) > requests_before,
-            timeout_ms=15_000,
+            lambda: pax_page.evaluate("() => window._loadPdfCalls.length > 0"),
+            timeout_ms=20_000,
             msg=f"Participant did not auto-reload slide '{_SLUG}' after invalidate",
         )
-        reload_url = download_requests[-1]
-        print(f"[test] Participant reloaded slide: {reload_url} ✓")
-        # URL should have ?v= cache-bust parameter added by forceReload+cacheVersion
-        assert "?v=" in reload_url or f"/download/{_SLUG}" in reload_url, (
-            f"Expected reload request to download URL, got: {reload_url}"
+        calls = pax_page.evaluate("() => window._loadPdfCalls")
+        reload_url = calls[-1] if calls else ""
+        print(f"[test] Participant reloaded slide via loadPdf: {reload_url} ✓")
+        # URL should have ?v= cache-bust parameter
+        assert "?v=" in reload_url, (
+            f"Expected reload URL to have ?v= cache-buster, got: {reload_url!r}"
         )
 
         browser.close()

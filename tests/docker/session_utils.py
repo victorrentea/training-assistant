@@ -107,6 +107,16 @@ def fresh_session(name: str = "Test", session_type: str = "workshop") -> str:
         msg=f"Railway did not activate session_id={session_id!r}",
     )
 
+    # Step 4b: wait for daemon main loop to process the CREATE request.
+    # The router returns immediately after announce_session_id(), but the main loop
+    # (which calls _participant_state.reset() and set_active_session()) runs up to 1s later.
+    # Without this, participant registration may race against the reset.
+    _wait_until(
+        lambda: _get_json(f"{DAEMON_BASE}/api/session/active").get("session_id") == session_id,
+        timeout_ms=5000,
+        msg=f"Daemon did not process session creation for session_id={session_id!r}",
+    )
+
     # Step 5: reset scores on daemon so previous test's score accumulation doesn't bleed in
     try:
         _req("DELETE", f"{DAEMON_BASE}/api/{session_id}/host/scores")

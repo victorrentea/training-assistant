@@ -55,7 +55,7 @@ def _run_mock_addon_bridge(deck: str, slide: int, stop_event: threading.Event):
     import websockets
 
     async def handle(websocket):
-        await websocket.send(json.dumps({"type": "slide", "deck": deck, "slide": slide, "presenting": True}))
+        await websocket.send(json.dumps({"type": "slide_presenting_now", "deck": deck, "slide": slide, "presenting": True}))
         # Hold the connection open until the test is done
         await asyncio.get_event_loop().run_in_executor(None, stop_event.wait, 30)
 

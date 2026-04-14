@@ -1800,9 +1800,27 @@ function _handleWsMessage(msg) {
       break;
     }
     case 'slides_cache_status':
-      loadSlidesCatalog().then(function() {
-        _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
-      }).catch(function() {});
+      (function(refreshedSlugs) {
+        // Capture active slug before catalog reload clears the DOM.
+        // Prefer _activeSlideId (set after loadPdf completes), fall back to
+        // topic-active class (set synchronously on click, before async ops).
+        var activeSlug = _activeSlideId ? (_activeSlideId.split('|')[0] || null) : null;
+        if (!activeSlug) {
+          var _activeEl = document.querySelector('.topic-item.topic-active');
+          if (_activeEl) { activeSlug = (_activeEl.getAttribute('data-slide-id') || '').split('|')[0] || null; }
+        }
+        loadSlidesCatalog().then(function() {
+          _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+          if (Array.isArray(refreshedSlugs) && refreshedSlugs.length && activeSlug && window.loadPdf) {
+            if (refreshedSlugs.indexOf(activeSlug) >= 0) {
+              var activeSlide = _slidesCatalog.find(function(s) { return s.slug === activeSlug; });
+              if (activeSlide) {
+                window.loadPdf(activeSlide.url + (activeSlide.url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + Date.now());
+              }
+            }
+          }
+        }).catch(function() {});
+      })(msg.refreshed_slugs);
       break;
     case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
     case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;
