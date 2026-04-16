@@ -26,6 +26,7 @@ from daemon.slides.catalog import (
     _slides_from_state,
     detect_changed_files,
     ensure_slug,
+    migrate_bare_uuid_slugs,
     resolve_tracked_sources,
     write_material_last_modified,
 )
@@ -329,6 +330,9 @@ def bootstrap_drive_urls(catalog_path: Path, source_url: str) -> tuple[int, int]
 
 def run_forever(config: SlidesDaemonConfig) -> None:
     daemon_state = load_daemon_state(config.state_file)
+    if migrate_bare_uuid_slugs(daemon_state):
+        save_daemon_state(config.state_file, daemon_state)
+        log.info("slides", "Migrated legacy bare-UUID slugs to human-readable prefixes")
     source_desc = f"catalog={config.catalog_file}" if config.catalog_file and config.catalog_file.exists() else f"watch={config.watch_dir}"
     log.info(
         "slides",

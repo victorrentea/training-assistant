@@ -250,6 +250,21 @@ def refresh_pptx_mtimes(files: list[Path], daemon_state: dict) -> bool:
 _BARE_UUID_RE = re.compile(r"^[0-9a-f]{32}$")
 
 
+def migrate_bare_uuid_slugs(daemon_state: dict) -> bool:
+    """Prefix any legacy bare-UUID slugs with a human-readable stem. Returns True if anything changed."""
+    migrated = False
+    for key, entry in daemon_state.get("files", {}).items():
+        if not isinstance(entry, dict):
+            continue
+        slug = entry.get("slug", "")
+        if slug and _BARE_UUID_RE.match(slug):
+            prefix = _slugify(Path(key).stem)
+            entry["slug"] = f"{prefix}-{slug}"
+            entry.pop("last_exported_mtime", None)
+            migrated = True
+    return migrated
+
+
 def ensure_slug(daemon_state: dict, pptx_path: Path) -> str:
     key = _abs_key(pptx_path)
     tracked = daemon_state.setdefault("files", {})
