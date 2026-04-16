@@ -182,6 +182,7 @@ class HostStateResponse(BaseModel):
     join_base_url: str
     daemon_session_folder: str | None = None
     daemon_session_notes: str | None = None
+    session_type: str = "workshop"
     leaderboard_data: LeaderboardData | None = None
     notes_updated_at: str | None = None
     summary_updated_at: str | None = None
@@ -309,6 +310,16 @@ def _get_session_name() -> str | None:
     return session_shared_state.get_active_session_name()
 
 
+def _get_session_notes_filename() -> str | None:
+    from daemon.misc.content_files import get_active_session_folder
+    from daemon.session_state import find_notes_in_folder
+    folder = get_active_session_folder()
+    if folder is None:
+        return None
+    notes = find_notes_in_folder(folder)
+    return notes.name if notes else None
+
+
 def _get_join_base_url() -> str:
     return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
 
@@ -390,8 +401,9 @@ async def get_host_state(request: Request, session_id: str):
         # Session tracking
         "session_id": _get_current_session_id(),
         "join_base_url": _get_join_base_url(),
-        "daemon_session_folder": None,   # daemon doesn't currently expose this via state endpoint
-        "daemon_session_notes": None,
+        "daemon_session_folder": _get_session_name(),
+        "daemon_session_notes": _get_session_notes_filename(),
+        "session_type": participant_state.mode or "workshop",
         # Leaderboard
         "leaderboard_data": leaderboard_state.data,
         # Summary / notes (timestamps only — full content fetched on modal open)

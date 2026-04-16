@@ -18,6 +18,7 @@
   let summaryUpdatedAt = null;
   let daemonLastSeen = null;
   let daemonSessionFolder = null;
+  let daemonSessionType = 'workshop';
   let _slidesCacheStatus = {};
   let _slidesCatalog = [];
   let _currentSessionId = null;
@@ -430,6 +431,7 @@
         renderGdriveStatus(msg.gdrive_running);
         renderPendingDeploy(msg.pending_deploy);
         daemonSessionFolder = msg.daemon_session_folder || null;
+        if (msg.session_type !== undefined) daemonSessionType = msg.session_type || 'workshop';
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         renderPreview(msg.quiz_preview || null);
         renderPollDisplay();
@@ -3442,7 +3444,9 @@ function renderSessionPanel() {
   // Session title in top bar center
   const titleEl = document.getElementById('host-top-title');
   if (titleEl) {
-    titleEl.innerHTML = formatHostTopTitleHtml(daemonSessionFolder || '');
+    const typeEmoji = daemonSessionType === 'talk' ? '🎙️' : '👨‍🏫';
+    const titleHtml = formatHostTopTitleHtml(daemonSessionFolder || '');
+    titleEl.innerHTML = titleHtml ? `${typeEmoji} ${titleHtml}` : '';
   }
 
   // Stop button is always enabled (host can always request session end).
