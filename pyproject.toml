@@ -20,6 +20,7 @@ dev = [
     "import-linter>=2.5",
     "vulture>=2.14",
     "ruff>=0.6",
+    "pyright>=1.1",
 ]
 daemon = [
     "anthropic>=0.85.0",
