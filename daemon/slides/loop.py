@@ -19,6 +19,7 @@ from daemon.slides.catalog import (
 )
 from daemon.slides.router import _is_cached_on_railway
 
+_REDOWNLOAD_FIRST_DELAY_S = 30.0
 _REDOWNLOAD_RETRY_INTERVAL_S = 5.0
 _REDOWNLOAD_MAX_RETRIES = 5
 
@@ -42,6 +43,8 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
     prev_hash = misc_state.slides_cache_status.get(slug, {}).get("last_sha256", "")
 
     try:
+        log.info("slides", f"Waiting {_REDOWNLOAD_FIRST_DELAY_S:.0f}s for Google Drive to sync before polling slug={slug}")
+        time.sleep(_REDOWNLOAD_FIRST_DELAY_S)
         for attempt in range(1, _REDOWNLOAD_MAX_RETRIES + 1):
             try:
                 result = download_on_railway(slug, drive_export_url)

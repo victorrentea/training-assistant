@@ -1814,7 +1814,9 @@ function _handleWsMessage(msg) {
             if (refreshedSlugs.indexOf(activeSlug) >= 0) {
               var activeSlide = _slidesCatalog.find(function(s) { return s.slug === activeSlug; });
               if (activeSlide) {
-                window.loadPdf(activeSlide.url + (activeSlide.url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + Date.now());
+                window.loadPdf(activeSlide.url + (activeSlide.url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + Date.now()).then(function() {
+                  _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+                });
               }
             }
           }
