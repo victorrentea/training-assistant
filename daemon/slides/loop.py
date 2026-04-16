@@ -19,7 +19,7 @@ from daemon.slides.catalog import (
 )
 from daemon.slides.router import _is_cached_on_railway
 
-_REDOWNLOAD_FIRST_DELAY_S = 30.0
+_REDOWNLOAD_FIRST_DELAY_S = 10.0
 _REDOWNLOAD_RETRY_INTERVAL_S = 5.0
 _REDOWNLOAD_MAX_RETRIES = 5
 
