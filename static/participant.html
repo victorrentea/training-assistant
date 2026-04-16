@@ -238,7 +238,7 @@ body{visibility:hidden}
     <div class="flex-1 h-px bg-outline-variant"></div>
   </div>
   <div id="upload-dropzone"
-    class="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all duration-200 text-on-surface-variant hover:text-primary"
+    class="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant cursor-pointer bg-surface-container-low hover:border-primary hover:bg-surface-container transition-all duration-200 text-on-surface-variant hover:text-primary"
     onclick="document.getElementById('upload-input').click()"
     ondragover="event.preventDefault();this.classList.add('border-primary','bg-surface-container-low','text-primary')"
     ondragleave="this.classList.remove('border-primary','bg-surface-container-low','text-primary')"
@@ -886,8 +886,8 @@ function openRepos() {
         return '<div class="text-sm">'
           + '<a href="' + branchUrl + '" target="_blank" class="nav-item rounded-lg px-2 py-1.5 flex items-center gap-2 transition-all cursor-pointer mx-1 min-w-0">'
           + '<span class="material-symbols-outlined flex-shrink-0" style="font-size:1.25rem">commit</span>'
-          + '<span class="flex-1 truncate min-w-0">' + name + '</span>'
-          + '<span class="min-w-0 shrink text-on-surface-variant" style="font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%">(' + repo.branch + ')</span>'
+          + '<span class="flex-shrink-0">' + name + ' -</span>'
+          + '<span class="min-w-0 text-on-surface-variant font-normal" style="font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + repo.branch + '</span>'
           + '</a>'
           + (files ? '<ul class="mt-0 ml-7 mr-2 text-sm text-on-surface-variant list-none space-y-0 pb-1">' + files + '</ul>' : '')
           + '</div>';
