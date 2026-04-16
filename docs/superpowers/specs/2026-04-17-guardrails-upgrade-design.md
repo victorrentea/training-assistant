@@ -56,20 +56,25 @@ Add `pyrightconfig.json` at repo root:
 
 Add `pyright>=1.1` to `dev` extras in `pyproject.toml`.
 
-### 3. Gitleaks Replaces Custom Secret Scanner in Pre-commit Hook
+### 3. Gitleaks Complements (Does Not Replace) the Custom Secret Scanner
 
-**Remove** the custom secret-scan block from `hooks/pre-commit` (the `while IFS='=' read ...` loop that checks against `secrets.env` values).
+The two scanners are complementary, not redundant:
 
-**Add** in its place:
+- **Custom scanner** (`secrets.env` loop): catches this project's own known secrets by value — precise, zero false negatives for project credentials
+- **Gitleaks**: catches real-world secret patterns (API keys, tokens, private keys) that weren't in `secrets.env` — broad coverage for accidental leaks
+
+**Change:** Keep the custom secret-scan block in `hooks/pre-commit` unchanged. Add Gitleaks **after** it:
 
 ```sh
-gitleaks protect --staged --no-banner 2>&1 || {
-  echo "ERROR: Gitleaks detected potential secrets in staged changes. Aborting." >&2
-  exit 1
-}
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner 2>&1 || {
+    echo "ERROR: Gitleaks detected potential secrets in staged changes. Aborting." >&2
+    exit 1
+  }
+fi
 ```
 
-Requires `gitleaks` installed locally (`brew install gitleaks`). The CI Gitleaks action is the backstop for machines without it.
+The `command -v` guard makes it optional locally (`brew install gitleaks` to enable). The CI Gitleaks action (Section 1) is the mandatory backstop.
 
 The rest of `hooks/pre-commit` (API.md regen, SVG rendering) is unchanged.
 
@@ -129,5 +134,5 @@ This fires on every `Bash` tool call, checks if the command contains `git commit
 |---|---|
 | `--no-verify` bypasses all quality checks | CI lint job catches ruff/pyright/shellcheck/secrets on every push |
 | No static type checking | Pyright basic mode on Railway + daemon code |
-| Fragile secret scanner (only checks own secrets.env) | Gitleaks with a real ruleset, in both hook and CI |
+| Custom scanner catches project secrets; no broad pattern coverage | Custom scanner kept + Gitleaks layered on top for real-world secret patterns |
 | Agent self-discipline: none | Pre-commit checklist skill + auto-hook nudge |
