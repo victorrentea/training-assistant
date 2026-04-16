@@ -81,6 +81,30 @@
   }
 }
 
+/* ── Prose (agenda) dark overrides ──────────────────────────────
+   Tailwind prose uses --tw-prose-* hardcoded for light backgrounds.
+   Override here so headings/body/links are readable in dark mode.
+   ─────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .prose {
+    --tw-prose-headings:      rgb(220 228 233);
+    --tw-prose-body:          rgb(196 204 210);
+    --tw-prose-bold:          rgb(220 228 233);
+    --tw-prose-links:         rgb(188 196 255);
+    --tw-prose-counters:      rgb(169 180 185);
+    --tw-prose-bullets:       rgb(130 141 146);
+    --tw-prose-hr:            rgb(60 72 77);
+    --tw-prose-quotes:        rgb(220 228 233);
+    --tw-prose-quote-borders: rgb(60 72 77);
+    --tw-prose-captions:      rgb(130 141 146);
+    --tw-prose-code:          rgb(220 228 233);
+    --tw-prose-pre-code:      rgb(220 228 233);
+    --tw-prose-pre-bg:        rgb(28 33 38);
+    --tw-prose-th-borders:    rgb(60 72 77);
+    --tw-prose-td-borders:    rgb(38 43 49);
+  }
+}
+
 /* ── Component dark overrides ────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   /* Frosted glass toolbar (PDF viewer, top-right) */
