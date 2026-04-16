@@ -355,7 +355,8 @@ body{visibility:hidden}
       const annotations = await page.getAnnotations({ intent: 'display' });
       if (annotations && annotations.length) {
         const annLayer = document.createElement('div');
-        annLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
+        const cssScale = canvas.offsetWidth / viewport.width;
+        annLayer.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;pointer-events:none;transform:scale(${cssScale});transform-origin:top left;`;
         section.appendChild(annLayer);
         for (const ann of annotations) {
           if (!ann || ann.subtype !== 'Link' || !Array.isArray(ann.rect)) continue;
