@@ -138,10 +138,24 @@ def save_daemon_state(sessions_root: Path, daemon_state: dict) -> None:
         payload = daemon_state if isinstance(daemon_state, dict) else {}
         payload = PersistedGlobalState.model_validate(payload).model_dump(mode="json", exclude_unset=True)
         path = sessions_root / GLOBAL_STATE_FILENAME
+        existing: dict = {}
+        if path.exists():
+            try:
+                existing = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(existing, dict):
+                    existing = {}
+            except Exception:
+                existing = {}
+        changed_keys: list[str] = []
+        for k in sorted(set(existing.keys()) | set(payload.keys())):
+            if existing.get(k) != payload.get(k):
+                changed_keys.append(k)
+        if not changed_keys:
+            return
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(payload, default=str, indent=2), encoding="utf-8")
         tmp.replace(path)
-        log.info("session", f"💾 {GLOBAL_STATE_FILENAME}")
+        log.info("session", f"💾 {GLOBAL_STATE_FILENAME}: {', '.join(changed_keys)}")
     except Exception as e:
         log.error("session", f"Failed to save daemon state: {e}")
 
