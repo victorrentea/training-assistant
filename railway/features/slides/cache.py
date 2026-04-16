@@ -240,7 +240,7 @@ async def do_download(slug: str, url: str) -> Path:
     """
     dest = _cache_path(slug)
     _set_status(slug, "downloading")
-    await _push_log(slug, "download_slide_start", url)
+    await _push_log(slug, "download_slide_request", url)
     try:
         size = await _download_pdf(url, dest)
         downloaded_at = datetime.now(timezone.utc).isoformat()
