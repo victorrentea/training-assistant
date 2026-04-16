@@ -1853,7 +1853,12 @@ async function loadAgenda() {
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
-    el.innerHTML = result.value.replace(/<a /g, '<a target="_blank" rel="noopener" ');
+    // Strip hardcoded Word colors — they're designed for white bg and invisible in dark mode
+    const cleanHtml = result.value.replace(/\sstyle="([^"]*)"/g, (_, s) => {
+      const cleaned = s.replace(/(?:color|background-color)\s*:[^;"]*(;|(?="))/gi, '').replace(/;+\s*$/,'').trim();
+      return cleaned ? ` style="${cleaned}"` : '';
+    }).replace(/<a /g, '<a target="_blank" rel="noopener" ');
+    el.innerHTML = cleanHtml;
     addAgendaProgress(el);
   } catch (e) {
     el.textContent = 'Failed to load agenda.';
