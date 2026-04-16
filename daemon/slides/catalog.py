@@ -247,12 +247,20 @@ def refresh_pptx_mtimes(files: list[Path], daemon_state: dict) -> bool:
     return changed
 
 
+_BARE_UUID_RE = re.compile(r"^[0-9a-f]{32}$")
+
+
 def ensure_slug(daemon_state: dict, pptx_path: Path) -> str:
     key = _abs_key(pptx_path)
     tracked = daemon_state.setdefault("files", {})
     entry = tracked.setdefault(key, {})
     slug = entry.get("slug")
     if slug:
+        if _BARE_UUID_RE.match(slug):
+            prefix = _slugify(pptx_path.stem)
+            slug = f"{prefix}-{slug}"
+            entry["slug"] = slug
+            entry.pop("last_exported_mtime", None)  # force re-upload under new slug
         return slug
     prefix = _slugify(pptx_path.stem)
     slug = f"{prefix}-{uuid.uuid4().hex}"
