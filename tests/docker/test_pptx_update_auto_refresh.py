@@ -230,9 +230,9 @@ def test_pptx_update_triggers_participant_refresh():
             print(f"[test] Backend slides_current slug='{SLUG}' ✓")
 
             # Wait for participant to have the slide loaded (follow auto-triggers)
-            expect(pax_page.locator("#slides-overlay.open")).to_be_visible(timeout=20_000)
-            expect(pax_page.locator("#slides-page-inline")).to_contain_text(
-                f"Page {HOST_PAGE}/", timeout=15_000
+            expect(pax_page.locator("#slides-view")).to_be_visible(timeout=20_000)
+            expect(pax_page.locator("#pdf-page-info")).to_contain_text(
+                f"{HOST_PAGE} /", timeout=15_000
             )
             print(f"[test] Participant following host at page {HOST_PAGE} ✓")
 
@@ -269,13 +269,13 @@ def test_pptx_update_triggers_participant_refresh():
             print("[test] Participant re-downloaded slide ✓")
 
             # Verify participant still on the correct page with updated page count
-            expect(pax_page.locator("#slides-page-inline")).to_contain_text(
-                f"Page {HOST_PAGE}/", timeout=10_000
+            expect(pax_page.locator("#pdf-page-info")).to_contain_text(
+                f"{HOST_PAGE} /", timeout=10_000
             )
 
             # Verify the new PDF has the expected page count
-            page_text = pax_page.locator("#slides-page-inline").inner_text()
-            assert f"/{NEW_PAGE_COUNT}" in page_text, (
+            page_text = pax_page.locator("#pdf-page-info").inner_text()
+            assert f"/ {NEW_PAGE_COUNT}" in page_text, (
                 f"Expected {NEW_PAGE_COUNT} total pages in updated PDF, got: {page_text}"
             )
             print(f"[test] Updated PDF has {NEW_PAGE_COUNT} pages, showing page {HOST_PAGE} ✓")

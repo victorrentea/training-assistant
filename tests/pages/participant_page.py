@@ -85,7 +85,11 @@ class ParticipantPage:
         """Upvote a Q&A question via the participant API (bypasses DOM to avoid visibility issues)."""
         import json as _json
         self._page.evaluate(f"""async () => {{
-            await participantApi('qa/upvote', {{question_id: {_json.dumps(question_id)}}});
+            await fetch('/' + _sessionId + '/api/participant/qa/upvote', {{
+                method: 'POST',
+                headers: {{'Content-Type': 'application/json', 'x-participant-id': _myUUID}},
+                body: JSON.stringify({{question_id: {_json.dumps(question_id)}}})
+            }});
         }}""")
 
     def get_qa_questions(self) -> list[dict]:

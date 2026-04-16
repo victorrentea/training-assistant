@@ -115,27 +115,25 @@ def _backend_slides_current_slug() -> str | None:
 
 
 def _assert_follow_result(pax_page, slug: str, expected_page: int, timeout_ms: int):
-    """Assert overlay open, correct slide active, correct page, follow still ON."""
-    expect(pax_page.locator("#slides-overlay.open")).to_be_visible(timeout=timeout_ms)
+    """Assert slides view open, correct slide active, correct page, follow still ON."""
+    expect(pax_page.locator("#slides-view")).to_be_visible(timeout=timeout_ms)
 
-    expect(pax_page.locator("#slides-page-inline")).to_contain_text(
-        f"Page {expected_page}/",
+    expect(pax_page.locator("#pdf-page-info")).to_contain_text(
+        f"{expected_page} /",
         timeout=timeout_ms,
     )
 
-    active_items = pax_page.locator(".slides-list-item.active")
+    active_items = pax_page.locator(".topic-item.topic-active")
     expect(active_items).to_have_count(1, timeout=5_000)
     active_id = active_items.first.get_attribute("data-slide-id") or ""
     assert slug in active_id, f"Expected active slide to contain '{slug}', got '{active_id}'"
 
-    aria_pressed = pax_page.locator("#slides-follow-btn").get_attribute("aria-pressed")
-    assert aria_pressed == "true", (
-        f"Follow mode was disabled during load! aria-pressed='{aria_pressed}'"
-    )
+    is_checked = pax_page.locator("#slides-follow-checkbox").is_checked()
+    assert is_checked, "Follow mode was disabled during load! slides-follow-checkbox is unchecked"
 
-    page_text = pax_page.locator("#slides-page-inline").inner_text()
-    m = re.match(r"Page (\d+)/", page_text)
-    assert m, f"Unexpected page text: {page_text!r}"
+    page_text = pax_page.locator("#pdf-page-info").inner_text()
+    m = re.match(r"(\d+) /", page_text)
+    assert m, f"Unexpected #pdf-page-info text: {page_text!r}"
     assert int(m.group(1)) == expected_page, f"Expected page {expected_page}, got {m.group(1)}"
 
 

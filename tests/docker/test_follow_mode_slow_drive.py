@@ -131,33 +131,30 @@ def _backend_slides_current_slug() -> str | None:
 
 def _assert_follow_mode_active_and_on_page(pax_page, delay_s: int, slug: str, expected_page: int, pdf_ready_timeout_ms: int):
     """Wait for the PDF to render and assert follow mode + page are correct."""
-    # #slides-page-inline shows "Page X/N" only after the PDF is fully loaded
-    # and _syncSlidesPageControls has run with a live PdfViewer document.
-    expect(pax_page.locator("#slides-page-inline")).to_contain_text(
-        f"Page {expected_page}/",
+    # #pdf-page-info shows "X / N" after the PDF is fully loaded
+    expect(pax_page.locator("#pdf-page-info")).to_contain_text(
+        f"{expected_page} /",
         timeout=pdf_ready_timeout_ms,
     )
-    print(f"[{delay_s}s] PDF rendered — page indicator shows 'Page {expected_page}/…'")
+    print(f"[{delay_s}s] PDF rendered — page indicator shows '{expected_page} /…'")
 
-    # Follow mode must still be ENABLED.  If the bug is present, aria-pressed
-    # flips to 'false' when updateviewarea fires after the suppression window expires.
-    aria_pressed = pax_page.locator("#slides-follow-btn").get_attribute("aria-pressed")
-    assert aria_pressed == "true", (
+    # Follow mode must still be ENABLED.
+    is_checked = pax_page.locator("#slides-follow-checkbox").is_checked()
+    assert is_checked, (
         f"[delay={delay_s}s] Follow mode was auto-disabled during slow PDF load! "
-        f"Expected aria-pressed='true', got '{aria_pressed}'. "
-        "Suppression window likely expired before pagesloaded."
+        "slides-follow-checkbox is unchecked."
     )
     print(f"[{delay_s}s] Follow mode still ACTIVE ✓")
 
-    page_text = pax_page.locator("#slides-page-inline").inner_text()
-    m = re.match(r"Page (\d+)/", page_text)
-    assert m, f"Unexpected #slides-page-inline text: {page_text!r}"
+    page_text = pax_page.locator("#pdf-page-info").inner_text()
+    m = re.match(r"(\d+) /", page_text)
+    assert m, f"Unexpected #pdf-page-info text: {page_text!r}"
     assert int(m.group(1)) == expected_page, (
         f"[delay={delay_s}s] Expected page {expected_page}, got {m.group(1)}"
     )
     print(f"[{delay_s}s] Participant is on page {expected_page} ✓")
 
-    active_items = pax_page.locator(".slides-list-item.active")
+    active_items = pax_page.locator(".topic-item.topic-active")
     expect(active_items).to_have_count(1, timeout=3_000)
     active_id = active_items.first.get_attribute("data-slide-id") or ""
     assert slug in active_id, (
@@ -210,7 +207,7 @@ def test_follow_mode_survives_slow_drive(delay_s, presentation, slug, host_slide
             print(f"[{delay_s}s] Backend received slides_current slug='{slug}'")
 
             # Overlay opens as soon as auto-follow triggers (before PDF finishes).
-            expect(pax_page.locator("#slides-overlay.open")).to_be_visible(timeout=15_000)
+            expect(pax_page.locator("#slides-view")).to_be_visible(timeout=15_000)
             print(f"[{delay_s}s] Overlay opened — Drive download starts (~{delay_s}s delay)")
 
             _assert_follow_mode_active_and_on_page(
