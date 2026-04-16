@@ -108,6 +108,7 @@ def backend():
 
 # ── Test ─────────────────────────────────────────────────────────────────────────
 
+@pytest.mark.skip(reason="Railway session/create, session/end, session/sync HTTP endpoints removed; test needs architectural rewrite")
 @pytest.mark.nightly
 def test_session_end_survives_daemon_reconnect_reactivation(backend):
     """

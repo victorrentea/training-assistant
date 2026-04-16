@@ -58,7 +58,7 @@ def test_participant_name_shown_in_host_ui():
         print(f"Daemon assigned participant name: {assigned_name!r}")
 
         # Wait for host UI to show participant count = 1 (confirms WS broadcast arrived)
-        expect(host_page.locator("#pax-count")).to_have_text("1", timeout=8000)
+        expect(host_page.locator("#pax-count .pax-active-count")).to_have_text("1", timeout=8000)
 
         # The name shown must be the real assigned name, not a 'Guest ...' fallback
         name_text = host_page.locator("#pax-list .pax-name-text").first.inner_text().strip()
@@ -104,7 +104,7 @@ def test_participant_count_correct_in_host_ui():
         print(f"Participants joined: {name1!r}, {name2!r}")
 
         # Host should show count = 2
-        expect(host_page.locator("#pax-count")).to_have_text("2", timeout=8000)
+        expect(host_page.locator("#pax-count .pax-active-count")).to_have_text("2", timeout=8000)
 
         # Both names must be real (no 'Guest ...' entries)
         name_els = host_page.locator("#pax-list .pax-name-text").all()

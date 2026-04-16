@@ -76,7 +76,7 @@ def test_participant_name_survives_close_reopen():
         pax = ParticipantPage(pax_page)
         pax.auto_join()
         pax.rename("Persisted Tester")
-        expect(pax_page.locator("#display-name")).to_have_text("Persisted Tester", timeout=5000)
+        expect(pax_page.locator("#display-name .display-name-text")).to_have_text("Persisted Tester", timeout=5000)
 
         _wait_until(
             lambda: daemon_has_participant(session_id, "Persisted Tester"),
@@ -102,7 +102,7 @@ def test_participant_name_survives_close_reopen():
         )
 
         pax_page.goto(f"{BASE}/{resumed_id}", wait_until="networkidle")
-        expect(pax_page.locator("#display-name")).to_have_text("Persisted Tester", timeout=10000)
+        expect(pax_page.locator("#display-name .display-name-text")).to_have_text("Persisted Tester", timeout=10000)
 
         _wait_until(
             lambda: daemon_has_participant(resumed_id, "Persisted Tester"),

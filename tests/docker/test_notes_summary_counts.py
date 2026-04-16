@@ -52,7 +52,7 @@ def _get_active_session_name(session_id: str) -> str | None:
         )
         with urllib.request.urlopen(req, timeout=5) as resp:
             data = json.loads(resp.read())
-            return data.get("session_name")
+            return data.get("daemon_session_folder")
     except Exception:
         return None
 
