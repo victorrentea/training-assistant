@@ -14,6 +14,7 @@ from daemon.slides.catalog import (
     _iso_utc,
     _slugify,
     load_catalog_entries,
+    migrate_bare_uuid_slugs,
     refresh_pptx_mtimes,
     resolve_tracked_sources,
 )
@@ -95,6 +96,9 @@ class SlidesRunner:
 
         self._slides_config = cfg
         self._slides_state = slides_daemon.load_daemon_state(cfg.state_file)
+        if migrate_bare_uuid_slugs(self._slides_state):
+            slides_daemon.save_daemon_state(cfg.state_file, self._slides_state)
+            log.info("slides", "Migrated legacy bare-UUID slugs to human-readable prefixes")
         self._init_misc_state_from_catalog(cfg)
         # Run initial PPTX mtime scan so modified_at is available immediately
         self.scan_pptx_mtimes()
