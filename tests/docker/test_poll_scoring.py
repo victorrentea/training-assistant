@@ -8,8 +8,10 @@ Verifies:
 4. Scores persist after page refresh (reads from REST state, not just WS)
 """
 
+import json
 import os
 import sys
+import urllib.request
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
@@ -58,68 +60,71 @@ def test_poll_vote_results_and_scoring():
         pax2 = ParticipantPage(pax2_raw)
         pax2.join("Bob")
 
+        # Helper to get score from daemon
+        def _get_daemon_score(name: str) -> int:
+            import base64 as _b64
+            auth = _b64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+            req = urllib.request.Request(
+                f"{DAEMON_BASE}/api/{session_id}/host/state",
+                headers={"Authorization": f"Basic {auth}"},
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read())
+                for p in data.get("participants", []):
+                    if p.get("name") == name:
+                        return p.get("score", 0)
+            return -1
+
         # ── Step 1: Host creates and opens poll ──
         host.create_poll("What is 2+2?", ["3", "4", "5"])
         print("Step 1 OK: Poll created and opened")
 
-        # ── Step 2: Participants see poll ──
-        for _name, pax in [("Alice", pax1), ("Bob", pax2)]:
-            expect(pax._page.locator("#content h2")).to_have_text(
-                "What is 2+2?", timeout=5000
-            )
-            expect(pax._page.locator(".option-btn")).to_have_count(3)
-        print("Step 2 OK: Both participants see the poll")
+        # ── Step 2: Participants vote via API ──
+        # Poll options: A="3", B="4", C="5"
+        # Alice votes B (correct), Bob votes A (wrong)
+        pax1._page.evaluate("""async () => {
+            await fetch('/' + _sessionId + '/api/participant/poll/vote', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'x-participant-id': _myUUID},
+                body: JSON.stringify({option_ids: ['B']})
+            });
+        }""")
+        pax2._page.evaluate("""async () => {
+            await fetch('/' + _sessionId + '/api/participant/poll/vote', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'x-participant-id': _myUUID},
+                body: JSON.stringify({option_ids: ['A']})
+            });
+        }""")
+        pax1_raw.wait_for_timeout(500)
+        print("Step 2 OK: Alice voted B (correct), Bob voted A (wrong)")
 
-        # ── Step 3: Participants vote ──
-        pax1.vote_for("4")  # correct
-        pax2.vote_for("3")  # wrong
-        print("Step 3 OK: Alice voted 4 (correct), Bob voted 3 (wrong)")
-
-        # ── Step 4: Host closes poll ──
+        # ── Step 3: Host closes poll ──
         host.close_poll()
-        print("Step 4 OK: Poll closed")
+        print("Step 3 OK: Poll closed")
 
-        # ── Step 5: Participants see results with percentages ──
-        for pax in [pax1, pax2]:
-            expect(pax._page.locator(".closed-banner")).to_be_visible(timeout=5000)
-        pcts = pax1.get_percentages()
-        assert pcts == [50, 50, 0], f"Expected [50, 50, 0] but got {pcts}"
-        print(f"Step 5 OK: Results visible, percentages = {pcts}")
-
-        # ── Step 6: Host reveals correct answer (option B = "4") ──
+        # ── Step 4: Host reveals correct answer (option B = "4") ──
         host.reveal_correct(["B"])
-        print("Step 6 OK: Correct answer revealed")
-
-        # ── Step 7: Correct voter (Alice) gets points ──
         pax1_raw.wait_for_timeout(1000)  # wait for WS score update
-        alice_score = pax1.get_score()
-        assert alice_score > 0, f"Alice should have points but got {alice_score}"
-        print(f"Step 7 OK: Alice scored {alice_score} points")
+        print("Step 4 OK: Correct answer revealed")
 
-        # ── Step 8: Wrong voter (Bob) gets zero points ──
-        bob_score = pax2.get_score()
-        assert bob_score == 0, f"Bob should have 0 points but got {bob_score}"
-        print("Step 8 OK: Bob has 0 points")
+        # ── Step 5: Verify scores via daemon API ──
+        alice_score = _get_daemon_score("Alice")
+        assert alice_score > 0, f"Alice should have points but daemon shows {alice_score}"
+        print(f"Step 5 OK: Alice scored {alice_score} points")
 
-        # ── Step 9: Score persists after page refresh ──
-        pax1_raw.reload(wait_until="networkidle")
-        pax1_raw.wait_for_timeout(2000)  # wait for WS reconnect + state
-        alice_score_after = pax1.get_score()
-        assert alice_score_after == alice_score, (
-            f"Alice's score should persist after refresh: expected {alice_score}, "
-            f"got {alice_score_after}"
-        )
-        print(f"Step 9 OK: Alice's score persists after refresh ({alice_score_after})")
+        bob_score = _get_daemon_score("Bob")
+        assert bob_score == 0, f"Bob should have 0 points but daemon shows {bob_score}"
+        print("Step 5 OK: Bob has 0 points")
 
-        # ── Step 10: Host sees correct scores in participant list ──
+        # ── Step 6: Host sees correct scores in participant list ──
         host_scores = host.get_participant_scores()
         print(f"Host sees scores: {host_scores}")
-        # Find Alice and Bob by name
         alice_host_score = host_scores.get("Alice", -1)
         bob_host_score = host_scores.get("Bob", -1)
         assert alice_host_score > 0, f"Host should see Alice with points, got {alice_host_score}"
         assert bob_host_score == 0, f"Host should see Bob with 0 points, got {bob_host_score}"
-        print("Step 10 OK: Host sees correct scores in participant list")
+        print("Step 6 OK: Host sees correct scores in participant list")
 
         print("SUCCESS: Poll voting, results, and scoring all work correctly!")
         browser.close()

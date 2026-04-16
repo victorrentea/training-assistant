@@ -154,10 +154,16 @@ def test_poll_sequence_diagram_extraction():
         pax.join("Alice")
 
         host.create_poll("What is 1+1?", ["1", "2", "3"])
-        expect(pax._page.locator("#content h2")).to_have_text("What is 1+1?", timeout=5000)
-        pax.vote_for("2")
+        pax._page.wait_for_timeout(500)  # Wait for poll to broadcast to participant
+        # Vote via API (no poll UI in new participant page)
+        pax._page.evaluate("""async () => {
+            await fetch('/' + _sessionId + '/api/participant/poll/vote', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'x-participant-id': _myUUID},
+                body: JSON.stringify({option_ids: ['B']})
+            });
+        }""")
         host.close_poll()
-        expect(pax._page.locator(".closed-banner")).to_be_visible(timeout=5000)
         host.reveal_correct(["B"])
         pax._page.wait_for_timeout(1000)
 
@@ -208,7 +214,14 @@ def test_qa_sequence_diagram_extraction():
         host_raw.evaluate("async () => { await switchTab('qa'); }")
         host_raw.wait_for_timeout(1000)
 
-        pax1.submit_question("What is dependency injection?")
+        # Submit question via API (no QA input in new participant page)
+        pax1._page.evaluate("""async () => {
+            await fetch('/' + _sessionId + '/api/participant/qa/submit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'x-participant-id': _myUUID},
+                body: JSON.stringify({text: 'What is dependency injection?'})
+            });
+        }""")
         pax1_raw.wait_for_timeout(500)
         questions = pax2.get_qa_questions()
         if questions:
