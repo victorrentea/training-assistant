@@ -117,6 +117,7 @@ def _validate_quiz(quiz: dict, raw: str) -> None:
     options = quiz.get("options")
     if not isinstance(options, list) or not (2 <= len(options) <= 8):
         _quiz_error("'options' must be a list of 2-8 strings", raw)
+        return  # unreachable but narrows type
     if not all(isinstance(o, str) and o.strip() for o in options):
         _quiz_error("Each option must be a non-empty string", raw)
     ci = quiz.get("correct_indices")
@@ -162,7 +163,7 @@ def generate_quiz(text: str, config: Config) -> dict:
         get_project_tools,
         handle_project_tool_call,
     )
-    tools.extend(get_project_tools(config.project_folder))
+    tools.extend(get_project_tools(config.project_folder or ""))
 
     messages = [{"role": "user", "content": prompt_content}]
 
@@ -177,7 +178,7 @@ def generate_quiz(text: str, config: Config) -> dict:
             )
 
             # Append assistant's response to conversation
-            messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "assistant", "content": response.content})  # type: ignore[dict-item]
 
             if response.stop_reason == "tool_use":
                 tool_use_blocks = [c for c in response.content if c.type == "tool_use"]
@@ -185,8 +186,9 @@ def generate_quiz(text: str, config: Config) -> dict:
                 tool_results = []
                 for tool_call in tool_use_blocks:
                     if tool_call.name == "search_materials":
-                        log.info("quiz", f"Claude searching: {tool_call.input['query']}")
-                        search_results = _search_materials(tool_call.input["query"])
+                        _query = str(tool_call.input["query"])
+                        log.info("quiz", f"Claude searching: {_query}")
+                        search_results = _search_materials(_query)
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": tool_call.id,
@@ -194,7 +196,7 @@ def generate_quiz(text: str, config: Config) -> dict:
                         })
                     elif tool_call.name in PROJECT_TOOL_NAMES:
                         result = handle_project_tool_call(
-                            tool_call.name, tool_call.input, config.project_folder
+                            tool_call.name, tool_call.input, config.project_folder or ""
                         )
                         tool_results.append({
                             "type": "tool_result",
@@ -211,11 +213,12 @@ def generate_quiz(text: str, config: Config) -> dict:
                 # Append ALL tool results as a single user message
                 messages.append({
                     "role": "user",
-                    "content": tool_results
+                    "content": tool_results  # type: ignore[dict-item]
                 })
                 # Continue the loop
             else:
-                raw = response.content[0].text
+                _block = response.content[0]
+                raw = getattr(_block, 'text', '')
                 break
 
     except anthropic.APIError as e:
@@ -262,7 +265,8 @@ def refine_quiz(quiz: dict, target: str, original_text: str, config: Config) -> 
         )
     except anthropic.APIError as e:
         raise RuntimeError(f"Claude API error: {e}") from e
-    raw = response.content[0].text
+    _refine_block = response.content[0]
+    raw = getattr(_refine_block, 'text', '')
     try:
         updated = _parse_raw_response(raw)
     except json.JSONDecodeError:

@@ -709,6 +709,32 @@ paths:
         '204':
           description: Successful Response
       x-feature: paste_upload
+  /api/{session_id}/host/slides-compilation:
+    get:
+      tags:
+      - misc
+      summary: Get Slides Compilation
+      description: 'Compile all viewed slide pages into one PDF and return as a download.
+
+
+        Long-running: may trigger Railway to download PDFs from Google Drive first.
+
+        Progress is logged to the daemon log.'
+      operationId: get_slides_compilation_api__session_id__host_slides_compilation_get
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+      x-feature: misc
   /api/{session_id}/host/quiz-request:
     post:
       tags:
@@ -1188,8 +1214,8 @@ paths:
       tags:
       - session
       summary: Talk Presentation Path
-      description: Host drops a PPTX file during a talk — log its path and Google
-        Drive URL.
+      description: Host drops a PPTX file during a talk — resolve GDrive URL, trigger
+        Railway download, push slides_current.
       operationId: talk_presentation_path_api_session_talk_presentation_path_post
       requestBody:
         content:
@@ -1909,6 +1935,9 @@ components:
         daemon_connected:
           type: boolean
           title: Daemon Connected
+        railway_connected:
+          type: boolean
+          title: Railway Connected
         overlay_connected:
           type: boolean
           title: Overlay Connected
@@ -2007,6 +2036,16 @@ components:
           - type: string
           - type: 'null'
           title: Debate Round Timer Started At
+        talk_presentation_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Talk Presentation Name
+        talk_presentation_slug:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Talk Presentation Slug
         slides_current:
           anyOf:
           - $ref: '#/components/schemas/SlidesCurrentPayload'
@@ -2052,6 +2091,10 @@ components:
           - type: string
           - type: 'null'
           title: Daemon Session Notes
+        session_type:
+          type: string
+          title: Session Type
+          default: workshop
         leaderboard_data:
           anyOf:
           - $ref: '#/components/schemas/LeaderboardData'
@@ -2090,6 +2133,7 @@ components:
       - participant_count
       - participants
       - daemon_connected
+      - railway_connected
       - overlay_connected
       - gdrive_running
       - wordcloud_words
@@ -2273,6 +2317,11 @@ components:
           anyOf:
           - $ref: '#/components/schemas/SlidesCurrentPayload'
           - type: 'null'
+        talk_presentation_slug:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Talk Presentation Slug
         notes_updated_at:
           anyOf:
           - type: string
