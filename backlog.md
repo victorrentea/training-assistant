@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] direct request (2026-04-17): participant workshop-mode onboarding overlay — first-visit dims screen to 50% opacity, keeps emoji bar lit, shows motivational bubble ("React as often as you can — tell me how you feel. Tap ☕ when you get tired."); participant must click an emoji to dismiss (flag `workshop_onboarding_seen` persisted in localStorage). Bottom-right version line rewired to clear only the onboarding flag for easy testing.
 - [x] bugfix: Railway now handles daemon identity write-back events (`participant_registered`/`participant_renamed`/`participant_avatar_updated`/`participant_location`) and updates in-memory participant maps before broadcasting WS count/list updates.
 - [x] direct request: participant count is now WS-only in participant UI (removed `participant_count` from `GET /api/participant/state`), and WS `count` now reflects total known non-host participants.
 - [x] direct request: participant `GET /api/participant/state` now reports active connected non-host `participant_count` (from online presence), not total known participants.
