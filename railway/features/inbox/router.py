@@ -1,3 +1,4 @@
+import base64
 import hmac
 import json
 import logging
@@ -12,17 +13,29 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _verify_svix(request: Request, body_bytes: bytes) -> bool:
+    """Verify Svix webhook signature (used by AgentMail)."""
+    secret = os.environ.get("AGENTMAIL_WEBHOOK_SECRET", "")
+    if not secret:
+        return False
+    key = base64.b64decode(secret.removeprefix("whsec_"))
+    msg_id = request.headers.get("svix-id", "")
+    timestamp = request.headers.get("svix-timestamp", "")
+    signed = f"{msg_id}.{timestamp}.".encode() + body_bytes
+    expected_sig = base64.b64encode(hmac.new(key, signed, "sha256").digest()).decode()
+    for sig in request.headers.get("svix-signature", "").split(" "):
+        if sig.startswith("v1,") and hmac.compare_digest(sig[3:], expected_sig):
+            return True
+    return False
+
+
 @router.post("/webhook/agentmail")
 async def agentmail_webhook(request: Request):
-    body = await request.json()
-    logger.info("inbox webhook received — headers: %s body_keys: %s", dict(request.headers), list(body.keys()))
-
-    expected = os.environ.get("AGENTMAIL_WEBHOOK_SECRET", "")
-    incoming = request.headers.get("x-webhook-secret", "")
-    if not expected or not hmac.compare_digest(expected.encode(), incoming.encode()):
-        logger.warning("inbox webhook 403 — x-webhook-secret=%r", incoming[:20] if incoming else "")
+    body_bytes = await request.body()
+    if not _verify_svix(request, body_bytes):
         return JSONResponse(status_code=403, content={"error": "Forbidden"})
 
+    body = json.loads(body_bytes)
     if body.get("event_type") != "message.received":
         return {"ok": True, "ignored": True}
 
