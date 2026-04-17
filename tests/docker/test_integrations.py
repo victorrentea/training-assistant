@@ -91,13 +91,13 @@ def test_pptx_change_triggers_slide_invalidation():
 
     # The daemon polls PPTX files every ~5s. When it detects the mtime change,
     # it sends slide_invalidated via WS. The backend logs this.
-    # We verify by checking the backend's slides_cache_status — it should show
+    # We verify by checking the backend's slides_updated — it should show
     # a "stale" or "polling_drive" status for the invalidated slug.
 
     # Note: the daemon generates a UUID-based slug (not the catalog slug).
     # This is a known limitation (#97-adjacent). For this test, we verify
     # the daemon DID detect and report the change by checking the backend's
-    # slides_cache_status dict has any entry with status != "cached".
+    # slides_updated dict has any entry with status != "cached".
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -109,7 +109,7 @@ def test_pptx_change_triggers_slide_invalidation():
         expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
 
         # Wait for daemon to detect PPTX change and send slide_invalidated
-        # The host page's WS state includes slides_cache_status updates
+        # The host page's WS state includes slides_updated updates
         _await_condition(
             lambda: host_page.evaluate("""() => {
                 try {

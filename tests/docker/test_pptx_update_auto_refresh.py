@@ -9,7 +9,7 @@ Flow:
    hasn't published yet), retries every 5s
 4. After ~10s the fixture PDF is swapped to a new version (7 pages)
 5. Railway detects hash change → stores new PDF → sends pdf_download_complete
-   with changed=True → daemon broadcasts slides_cache_status with refreshed_slugs
+   with changed=True → daemon broadcasts slides_updated with refreshed_slugs
 6. Participant auto-refreshes and sees the updated PDF (7 pages) at page 3
 """
 

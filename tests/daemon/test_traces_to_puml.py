@@ -267,7 +267,7 @@ def test_scenarios_parameter_colors_by_trace_id():
         _make_span("POST /api/participant/register", "Daemon", span_id="s2", parent_span_id="s1",
                     start_time=1001),
         # When-phase spans (after when_start_ns=1500)
-        _make_span("broadcast:slides_cache_status", "Daemon", span_id="s3",
+        _make_span("broadcast:slides_updated", "Daemon", span_id="s3",
                     start_time=2000),
     ])
 
@@ -279,7 +279,7 @@ def test_scenarios_parameter_colors_by_trace_id():
     register_line = [line for line in content.split("\n") if "register" in line][0]
     assert "[#gray]" in register_line
     # When-phase arrow should NOT be gray
-    broadcast_line = [line for line in content.split("\n") if "slides_cache_status" in line][0]
+    broadcast_line = [line for line in content.split("\n") if "slides_updated" in line][0]
     assert "[#gray]" not in broadcast_line
     # Scenario separator should be present
     assert "== Open slide ==" in content

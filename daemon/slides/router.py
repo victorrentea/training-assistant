@@ -83,8 +83,8 @@ def download_on_railway(slug: str, drive_export_url: str) -> dict:
 
 
 def _mark_cache_status(slug: str, status: str, **extra) -> None:
-    misc_state.slides_cache_status[slug] = {
-        **misc_state.slides_cache_status.get(slug, {}),
+    misc_state.slides_updated[slug] = {
+        **misc_state.slides_updated.get(slug, {}),
         "status": status,
         **extra,
     }
@@ -108,7 +108,7 @@ def _slides_with_embedded_cache_status() -> list[dict]:
             continue
         entry = dict(raw)
         slug = str(entry.get("slug", "")).strip()
-        status_entry = misc_state.slides_cache_status.get(slug, {}) if slug else {}
+        status_entry = misc_state.slides_updated.get(slug, {}) if slug else {}
         if isinstance(status_entry, dict):
             entry.update(status_entry)
         if "status" not in entry:
@@ -162,7 +162,7 @@ def _uploaded_slide_meta(slug: str) -> tuple[str, str | None]:
     return name, str(updated_at) if updated_at else None
 
 
-def _broadcast_slides_cache_status(refreshed_slugs: list[str] | None = None) -> None:
+def _broadcast_slides_updated(refreshed_slugs: list[str] | None = None) -> None:
     from daemon.ws_messages import SlidesCacheStatusMsg
     from daemon.ws_publish import broadcast
     broadcast(SlidesCacheStatusMsg(refreshed_slugs=refreshed_slugs or []))
@@ -185,7 +185,7 @@ async def check_slide_cache(session_id: str, slug: str, force: bool = False):
     _event_loop = asyncio.get_event_loop()
 
     # Fast path: trust daemon-side cache status (kept in sync via WS reconnect probing).
-    if not force and misc_state.slides_cache_status.get(slug, {}).get("status") == "cached":
+    if not force and misc_state.slides_updated.get(slug, {}).get("status") == "cached":
         return SlidesCheckResponse(status="cached")
 
     drive_export_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url")
@@ -193,12 +193,12 @@ async def check_slide_cache(session_id: str, slug: str, force: bool = False):
         return JSONResponse({"status": "error", "detail": "no drive_export_url"}, status_code=404)
 
     _mark_cache_status(slug, "downloading")
-    _broadcast_slides_cache_status()
+    _broadcast_slides_updated()
 
     try:
         result = await asyncio.to_thread(download_on_railway, slug, drive_export_url)
         _mark_cache_status(slug, "cached", last_sha256=result.get("sha256", ""))
-        _broadcast_slides_cache_status()
+        _broadcast_slides_updated()
         return SlidesCheckResponse(status="cached")
     except Exception as exc:
         logger.warning("slides/check: Railway download failed for slug=%s: %s", slug, exc)

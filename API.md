@@ -107,19 +107,19 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Slides Cache Status, primarily for diagnostics;<br>UI cache invalidation is event-driven via slides_cache_status WS.<br>`GET /api/participant/slides-cache-status` | - | `slides_cache_status?: dict[str, SlidesCacheStatusEntry {`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
+| Get Slides Cache Status, primarily for diagnostics;<br>UI cache invalidation is event-driven via slides_updated WS.<br>`GET /api/participant/slides-cache-status` | - | `slides_updated?: dict[str, SlidesCacheStatusEntry {`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
 
 ### Participant WS
 | Message | Payload |
 | --- | --- |
 | Host navigated to a new slide<br>`slides_current` | `slides_current?: SlidesCurrent {`<br>&nbsp;&nbsp;&nbsp;&nbsp;`url?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`presentation_name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`current_page?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`updated_at?:string`<br>`}  # null means no active slide` |
-| Invalidation signal — participant must call GET /api/slides to refresh<br>Client must refetch slide list; payload intentionally carries no cache map.<br>`slides_cache_status` | `refreshed_slugs?: list[string]` |
+| Invalidation signal — participant must call GET /api/slides to refresh<br>Client must refetch slide list; payload intentionally carries no cache map.<br>`slides_updated` | `refreshed_slugs?: list[string]` |
 | Participant slide history count changed<br>`slides_history_count_updated` | `count: int` |
 
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Invalidation signal — host must call GET /api/slides to refresh<br>Host should refetch slides list; payload intentionally carries no cache map.<br>`slides_cache_status` | `refreshed_slugs?: list[string]` |
+| Invalidation signal — host must call GET /api/slides to refresh<br>Host should refetch slides list; payload intentionally carries no cache map.<br>`slides_updated` | `refreshed_slugs?: list[string]` |
 | PDF was successfully downloaded to Railway and is ready to serve<br>`talk_pdf_ready` | `slug: string` |
 | PDF download from Google Drive failed — host should be notified<br>`talk_pdf_failed` | - |
 

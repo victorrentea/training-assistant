@@ -49,19 +49,19 @@ def test_init_catalog_marks_all_not_cached():
     assert ms.slides_catalog["reactive-webflux"]["title"] == "Reactive/WebFlux"
     assert ms.slides_catalog["caching"]["title"] == "Caching"
     assert ms.slides_catalog["caching"]["group"] == "Architecture"
-    assert ms.slides_cache_status["reactive-webflux"]["status"] == "not_cached"
-    assert ms.slides_cache_status["caching"]["status"] == "not_cached"
+    assert ms.slides_updated["reactive-webflux"]["status"] == "not_cached"
+    assert ms.slides_updated["caching"]["status"] == "not_cached"
 
 
 def test_probe_railway_cache_updates_status():
-    """probe_railway_cache() HEAD-checks Railway and updates slides_cache_status."""
+    """probe_railway_cache() HEAD-checks Railway and updates slides_updated."""
     runner = _runner_with_state()
     ms = MiscState()
     ms.slides_catalog = {
         "reactive-webflux": {"slug": "reactive-webflux", "title": "Reactive/WebFlux"},
         "caching": {"slug": "caching", "title": "Caching"},
     }
-    ms.slides_cache_status = {
+    ms.slides_updated = {
         "reactive-webflux": {"status": "not_cached"},
         "caching": {"status": "not_cached"},
     }
@@ -69,11 +69,11 @@ def test_probe_railway_cache_updates_status():
     with patch("daemon.slides.loop.misc_state", ms), \
          patch("daemon.slides.loop.get_active_session_id", return_value="sid123"), \
          patch("daemon.slides.loop._is_cached_on_railway", side_effect=[True, False]), \
-         patch("daemon.slides.router._broadcast_slides_cache_status"):
+         patch("daemon.slides.router._broadcast_slides_updated"):
         runner.probe_railway_cache()
 
-    assert ms.slides_cache_status["reactive-webflux"]["status"] == "cached"
-    assert ms.slides_cache_status["caching"]["status"] == "not_cached"
+    assert ms.slides_updated["reactive-webflux"]["status"] == "cached"
+    assert ms.slides_updated["caching"]["status"] == "not_cached"
 
 
 def test_probe_railway_cache_skips_without_session():
@@ -81,7 +81,7 @@ def test_probe_railway_cache_skips_without_session():
     runner = _runner_with_state()
     ms = MiscState()
     ms.slides_catalog = {"slug1": {"slug": "slug1"}}
-    ms.slides_cache_status = {"slug1": {"status": "not_cached"}}
+    ms.slides_updated = {"slug1": {"status": "not_cached"}}
 
     with patch("daemon.slides.loop.misc_state", ms), \
          patch("daemon.slides.loop.get_active_session_id", return_value=None), \
@@ -89,7 +89,7 @@ def test_probe_railway_cache_skips_without_session():
         runner.probe_railway_cache()
 
     mocked_probe.assert_not_called()
-    assert ms.slides_cache_status["slug1"]["status"] == "not_cached"
+    assert ms.slides_updated["slug1"]["status"] == "not_cached"
 
 
 def test_init_catalog_includes_source_name():

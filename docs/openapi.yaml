@@ -619,7 +619,7 @@ paths:
       - misc
       summary: Get Slides Cache Status
       description: Get slides cache status.
-      operationId: get_slides_cache_status_api_participant_slides_cache_status_get
+      operationId: get_slides_updated_api_participant_slides_updated_get
       responses:
         '200':
           description: Successful Response
@@ -629,7 +629,7 @@ paths:
                 $ref: '#/components/schemas/SlidesCacheStatusResponse'
       x-feature: slides
       x-doc-notes:
-      - Primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status
+      - Primarily for diagnostics; UI cache invalidation is event-driven via slides_updated
         WS.
   /api/participant/agenda:
     get:
@@ -2886,7 +2886,7 @@ components:
       title: SlidesCacheStatusEntry
     SlidesCacheStatusResponse:
       properties:
-        slides_cache_status:
+        slides_updated:
           additionalProperties:
             $ref: '#/components/schemas/SlidesCacheStatusEntry'
           type: object

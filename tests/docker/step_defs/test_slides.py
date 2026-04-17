@@ -326,7 +326,7 @@ def slide_content_rendered(request, connected):
 @then("Alice's displayed slide is automatically reloaded")
 def slide_automatically_reloaded():
     """Wait for the slide viewer to auto-refresh after host update.
-    The slides_cache_status WS message triggers a viewer reload."""
+    The slides_updated WS message triggers a viewer reload."""
     pax = _pax("Alice")
     # Wait for WS notification and viewer reload
     pax._page.wait_for_timeout(5000)

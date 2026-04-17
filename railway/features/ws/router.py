@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from railway.features.slides.cache import broadcast_slides_cache_status
+from railway.features.slides.cache import broadcast_slides_updated
 from railway.features.ws.daemon_protocol import (
     MSG_BROADCAST,
     MSG_CODE_TIMESTAMP,
@@ -241,7 +241,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
     except Exception:
         logger.warning("Failed to sync online participants to daemon on connect")
 
-    await broadcast_slides_cache_status()
+    await broadcast_slides_updated()
 
     # Send static file inventory for daemon to diff and upload changes
     try:
@@ -286,7 +286,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
             except Exception:
                 pass
             state.participants.pop(pid, None)
-        await broadcast_slides_cache_status()
+        await broadcast_slides_updated()
 
 
 async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool):

@@ -1367,8 +1367,8 @@ def run() -> None:
                 if slides_runner and now - last_slides_mtime_scan_at >= 10.0:
                     last_slides_mtime_scan_at = now
                     if slides_runner.scan_pptx_mtimes():
-                        from daemon.slides.router import _broadcast_slides_cache_status
-                        _broadcast_slides_cache_status()
+                        from daemon.slides.router import _broadcast_slides_updated
+                        _broadcast_slides_updated()
 
                 # ── Push transcript stats every 10s ──
                 if now - last_transcript_stats_at >= 10.0:

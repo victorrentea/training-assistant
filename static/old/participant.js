@@ -263,7 +263,7 @@ function closeEmojiPopup(ev) {
   let _pdfResizeTimer = null;
   let hostSlidesCurrent = null;   // what host is showing NOW
   let lastHostSlidesCurrentKey = '';
-  let _pendingFollowRetry = false; // retry follow when next slides_cache_status arrives
+  let _pendingFollowRetry = false; // retry follow when next slides_updated arrives
   let slidesFollowQueue = Promise.resolve();
 
   // escHtml is now in utils.js
@@ -3353,7 +3353,7 @@ function closeAgendaModal() {
       case 'summary_updated':
         updateSummaryCount(msg.count, true, msg.updated_at);
         break;
-      case 'slides_cache_status': {
+      case 'slides_updated': {
         // Snapshot old status for the active slide before catalog refresh.
         const _prevActiveStatus = slidesSelectedSlug
           ? (slidesCatalog.find(s => s.slug === slidesSelectedSlug) || {}).status

@@ -21,7 +21,7 @@ class SlidesCurrentMsg(BaseModel):
 
 
 class SlidesCacheStatusMsg(BaseModel):
-    type: Literal["slides_cache_status"] = "slides_cache_status"
+    type: Literal["slides_updated"] = "slides_updated"
     refreshed_slugs: list[str] = []
 
 
@@ -286,7 +286,7 @@ class ReloadMsg(BaseModel):
 PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
     "slides_current": SlidesCurrentMsg,
-    "slides_cache_status": SlidesCacheStatusMsg,
+    "slides_updated": SlidesCacheStatusMsg,
     # Activity
     "activity_updated": ActivityUpdatedMsg,
     # Identity
@@ -329,7 +329,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
 
 HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
-    "slides_cache_status": SlidesCacheStatusMsg,
+    "slides_updated": SlidesCacheStatusMsg,
     # Poll
     "poll_ai_generated": PollAiGeneratedMsg,
     "vote_update": VoteUpdateMsg,
@@ -366,7 +366,7 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
 PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Slides
     "slides_current": "slides",
-    "slides_cache_status": "slides",
+    "slides_updated": "slides",
     # Activity
     "activity_updated": "activity",
     # Identity
@@ -408,7 +408,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
 
 HOST_MESSAGE_FEATURES: dict[str, str] = {
     # Slides
-    "slides_cache_status": "slides",
+    "slides_updated": "slides",
     # Poll
     "poll_ai_generated": "poll",
     "vote_update": "poll",

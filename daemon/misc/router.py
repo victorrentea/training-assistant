@@ -55,7 +55,7 @@ class SlidesCacheStatusEntry(BaseModel):
     error: str | None = None
 
 class SlidesCacheStatusResponse(BaseModel):
-    slides_cache_status: dict[str, SlidesCacheStatusEntry] = {}
+    slides_updated: dict[str, SlidesCacheStatusEntry] = {}
 
 class PasteEntry(BaseModel):
     id: str
@@ -144,9 +144,9 @@ async def get_summary():
 
 
 @participant_router.get("/slides-cache-status", response_model=SlidesCacheStatusResponse)
-async def get_slides_cache_status():
+async def get_slides_updated():
     """Get slides cache status."""
-    return SlidesCacheStatusResponse(slides_cache_status=misc_state.slides_cache_status)
+    return SlidesCacheStatusResponse(slides_updated=misc_state.slides_updated)
 
 
 @participant_router.get("/agenda", response_model=AgendaResponse)
@@ -269,7 +269,7 @@ async def get_slides_compilation(session_id: str):
     total = len(needed)
     uncached = [
         d for d in needed
-        if misc_state.slides_cache_status.get(d["slug"], {}).get("status") != "cached"
+        if misc_state.slides_updated.get(d["slug"], {}).get("status") != "cached"
     ]
     done_count = total - len(uncached)
     log.info("slides-compile", f"Starting: {total} decks, {len(uncached)} need GDrive download")

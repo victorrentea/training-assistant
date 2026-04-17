@@ -16,7 +16,7 @@ Tests:
 
   test_follow_retries_after_cache_status_event:
     32s Drive delay → exceeds daemon's 30s wait (returns 503). Railway finishes
-    download in background. Daemon broadcasts slides_cache_status. Participant
+    download in background. Daemon broadcasts slides_updated. Participant
     auto-retries and loads the slide.
 """
 
@@ -207,13 +207,13 @@ def test_follow_retries_after_cache_status_event():
     """
     When the Drive delay exceeds the daemon's 30s check timeout (returns 503),
     the participant auto-retries once the background download completes and the
-    daemon broadcasts slides_cache_status.
+    daemon broadcasts slides_updated.
 
     Flow:
       1. Drive delay = 32s → /check returns 503 after 30s (daemon timeout)
       2. _pendingFollowRetry is set instead of showing a permanent error
       3. Remove the delay → Railway finishes the background download
-      4. Daemon broadcasts slides_cache_status → participant re-queues follow
+      4. Daemon broadcasts slides_updated → participant re-queues follow
       5. Second /check → 200 → slide loads at host's current page
     """
     DRIVE_DELAY_S = 32        # beyond daemon's 30s wait
@@ -259,7 +259,7 @@ def test_follow_retries_after_cache_status_event():
             print(f"Removed mock Drive delay after {REMOVE_DELAY_AFTER_S}s — background download will complete")
 
             # Daemon will eventually get pdf_download_complete and broadcast
-            # slides_cache_status. Participant's handler will re-queue the follow.
+            # slides_updated. Participant's handler will re-queue the follow.
             # Allow up to 60s for the retry cycle to complete.
             _assert_follow_result(
                 pax_page,

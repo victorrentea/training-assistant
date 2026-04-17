@@ -54,7 +54,7 @@ _DOC_NOTES: dict[tuple[str, str], list[str]] = {
         "Returns host-facing full state snapshot.",
     ],
     ("GET", "/api/participant/slides-cache-status"): [
-        "Primarily for diagnostics; UI cache invalidation is event-driven via slides_cache_status WS.",
+        "Primarily for diagnostics; UI cache invalidation is event-driven via slides_updated WS.",
     ],
 }
 

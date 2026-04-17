@@ -18,7 +18,7 @@ from railway.shared.state import state
 
 def _reset_state():
     """Reset all slides-cache-related state fields to clean values."""
-    state.slides_cache_status = {}
+    state.slides_updated = {}
     state.daemon_ws = None
 
 
@@ -135,7 +135,7 @@ class TestDoDownload(unittest.TestCase):
             result = run_async(_run())
 
         assert result == cache_dir / "my-deck.pdf"
-        assert state.slides_cache_status["my-deck"]["status"] == "cached"
+        assert state.slides_updated["my-deck"]["status"] == "cached"
 
     def test_do_download_failure_updates_status(self):
         """do_download sets status to 'download_failed' and re-raises on failure."""
@@ -157,4 +157,4 @@ class TestDoDownload(unittest.TestCase):
 
             run_async(_run())
 
-        assert state.slides_cache_status["bad-deck"]["status"] == "download_failed"
+        assert state.slides_updated["bad-deck"]["status"] == "download_failed"

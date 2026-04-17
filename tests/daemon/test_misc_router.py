@@ -89,7 +89,7 @@ def test_compilation_skips_file_with_no_catalog_entry():
     with patch("daemon.misc.router.misc_state") as ms:
         ms.slides_viewed = [{"file_name": "Unknown.pptx", "page": 1, "seconds": 10}]
         ms.slides_catalog = {}
-        ms.slides_cache_status = {}
+        ms.slides_updated = {}
         resp = client.get("/api/test-session/host/slides-compilation")
     assert resp.status_code == 204
 
@@ -121,7 +121,7 @@ def test_compilation_returns_pdf_for_cached_slide():
                 "drive_export_url": "https://gdrive.example.com/pdf",
             }
         }
-        ms.slides_cache_status = {"ai-coding-abc": {"status": "cached"}}
+        ms.slides_updated = {"ai-coding-abc": {"status": "cached"}}
         resp = client.get("/api/test-session/host/slides-compilation")
 
     assert resp.status_code == 200

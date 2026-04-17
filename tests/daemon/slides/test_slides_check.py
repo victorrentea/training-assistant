@@ -31,7 +31,7 @@ def client(fresh_misc_state):
 
 def test_check_returns_200_when_cached(client, fresh_misc_state):
     """When cache status is cached, /check returns 200 immediately (trusts daemon state)."""
-    fresh_misc_state.slides_cache_status["myslug"] = {"status": "cached"}
+    fresh_misc_state.slides_updated["myslug"] = {"status": "cached"}
 
     resp = client.get("/test-session/api/slides/check/myslug")
 
@@ -47,7 +47,7 @@ def test_list_slides_embeds_cache_status(client, fresh_misc_state):
             "drive_export_url": "https://docs.google.com/presentation/d/abc/export/pdf",
         }
     }
-    fresh_misc_state.slides_cache_status["reactive"] = {"status": "cached", "size_bytes": 42}
+    fresh_misc_state.slides_updated["reactive"] = {"status": "cached", "size_bytes": 42}
 
     resp = client.get("/test-session/api/slides")
     assert resp.status_code == 200
@@ -84,8 +84,8 @@ def test_check_calls_railway_rest_and_returns_200(fresh_misc_state, monkeypatch)
 
     assert resp.status_code == 200
     assert resp.json()["status"] == "cached"
-    assert fresh_misc_state.slides_cache_status["myslug"]["status"] == "cached"
-    assert fresh_misc_state.slides_cache_status["myslug"]["last_sha256"] == "abc123"
+    assert fresh_misc_state.slides_updated["myslug"]["status"] == "cached"
+    assert fresh_misc_state.slides_updated["myslug"]["last_sha256"] == "abc123"
     assert len(broadcasts) >= 2  # downloading + cached
 
 
@@ -109,7 +109,7 @@ def test_check_returns_503_on_railway_failure(fresh_misc_state, monkeypatch):
         resp = client.get("/test-session/api/slides/check/myslug")
 
     assert resp.status_code == 503
-    assert fresh_misc_state.slides_cache_status["myslug"]["status"] == "download_failed"
+    assert fresh_misc_state.slides_updated["myslug"]["status"] == "download_failed"
 
 
 def test_check_returns_404_when_no_drive_url(client, fresh_misc_state):

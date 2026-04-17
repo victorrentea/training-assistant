@@ -16,7 +16,7 @@ class MiscState:
         self.summary_points: list[dict] = []
         self.summary_raw_markdown: str | None = None
         self.summary_updated_at: str | None = None  # ISO string
-        self.slides_cache_status: dict[str, dict] = {}
+        self.slides_updated: dict[str, dict] = {}
         self.slides_catalog: dict[str, dict] = {}   # slug → catalog entry (drive_export_url, title, etc.)
         # Synced from Railway state (slides + session info)
         self.slides_current: dict | None = None
@@ -56,9 +56,9 @@ class MiscState:
                 self.summary_raw_markdown = data["summary_raw_markdown"]
             if "summary_updated_at" in data:
                 self.summary_updated_at = data["summary_updated_at"]
-            if "slides_cache_status" in data:
-                self.slides_cache_status.clear()
-                self.slides_cache_status.update(data["slides_cache_status"])
+            if "slides_updated" in data:
+                self.slides_updated.clear()
+                self.slides_updated.update(data["slides_updated"])
             if "slides_current" in data:
                 self.slides_current = data["slides_current"]
             if "slides_viewed" in data:
@@ -158,7 +158,7 @@ class MiscState:
             self.summary_points = []
             self.summary_raw_markdown = None
             self.summary_updated_at = None
-            # slides_cache_status is NOT cleared — it's infrastructure state
+            # slides_updated is NOT cleared — it's infrastructure state
             # (PDF cache + PPTX file timestamps) that survives session changes.
             self.slides_current = None
             self.slides_viewed = []

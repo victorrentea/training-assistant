@@ -55,11 +55,11 @@ async def _push_log(slug: str, event: str, detail: str = "") -> None:
 
 
 def _set_status(slug: str, status: str, **extra) -> None:
-    """Update slides_cache_status for a slug."""
-    entry = state.slides_cache_status.get(slug) or {}
+    """Update slides_updated for a slug."""
+    entry = state.slides_updated.get(slug) or {}
     entry = {**entry, "status": status}
     entry.update(extra)
-    state.slides_cache_status[slug] = entry
+    state.slides_updated[slug] = entry
 
 
 def _cache_path(slug: str) -> Path:
@@ -69,7 +69,7 @@ def _cache_path(slug: str) -> Path:
 
 def _slides_with_embedded_cache_status() -> list[dict]:
     """Build slides list where cache status fields are embedded per slide."""
-    status_map = state.slides_cache_status if isinstance(state.slides_cache_status, dict) else {}
+    status_map = state.slides_updated if isinstance(state.slides_updated, dict) else {}
     slides = state.slides if isinstance(state.slides, list) else []
     merged: list[dict] = []
     seen_slugs: set[str] = set()
@@ -157,19 +157,19 @@ def _cache_map_from_slides(slides: list[dict]) -> dict[str, dict]:
     return cache_map
 
 
-async def broadcast_slides_cache_status() -> None:
+async def broadcast_slides_updated() -> None:
     """Broadcast cache status update with embedded slide statuses."""
     slides = await _fetch_latest_slides_from_daemon()
     if slides is None:
         slides = _slides_with_embedded_cache_status()
     else:
         state.slides = slides
-        state.slides_cache_status = _cache_map_from_slides(slides)
+        state.slides_updated = _cache_map_from_slides(slides)
     await broadcast(
         {
-            "type": "slides_cache_status",
+            "type": "slides_updated",
             "slides": slides,
-            "slides_cache_status": state.slides_cache_status,
+            "slides_updated": state.slides_updated,
         }
     )
 
@@ -190,12 +190,12 @@ async def do_invalidate_download(slug: str, drive_export_url: str) -> None:
         slides = _slides_with_embedded_cache_status()
     else:
         state.slides = slides
-        state.slides_cache_status = _cache_map_from_slides(slides)
+        state.slides_updated = _cache_map_from_slides(slides)
     await broadcast(
         {
-            "type": "slides_cache_status",
+            "type": "slides_updated",
             "slides": slides,
-            "slides_cache_status": state.slides_cache_status,
+            "slides_updated": state.slides_updated,
             "refreshed_slugs": [slug],
         }
     )

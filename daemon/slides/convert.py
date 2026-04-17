@@ -70,7 +70,7 @@ async def _probe_fingerprint(url: str) -> str:
 async def poll_fingerprint_until_changed(slug: str, url: str, baseline_fingerprint: str) -> None:
     """
     Poll GDrive fingerprint every 3s for up to 60s.
-    If fingerprint changes: marks slug as stale in misc_state.slides_cache_status.
+    If fingerprint changes: marks slug as stale in misc_state.slides_updated.
     If timeout: logs silently and returns.
     """
     _fingerprints[slug] = baseline_fingerprint
@@ -88,8 +88,8 @@ async def poll_fingerprint_until_changed(slug: str, url: str, baseline_fingerpri
         if new_fp != _fingerprints[slug]:
             log.info("slides", f"fingerprint changed for slug={slug}: {_fingerprints[slug][:20]}... -> {new_fp[:20]}... — marking stale")
             _fingerprints[slug] = new_fp
-            entry = misc_state.slides_cache_status.get(slug) or {}
-            misc_state.slides_cache_status[slug] = {**entry, "status": "stale"}
+            entry = misc_state.slides_updated.get(slug) or {}
+            misc_state.slides_updated[slug] = {**entry, "status": "stale"}
             return
 
     log.info("slides", f"fingerprint poll timeout for slug={slug} after {_FINGERPRINT_TIMEOUT_S:.0f}s — no change detected")

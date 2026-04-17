@@ -36,12 +36,12 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
     On exhaustion (hash unchanged after retries): logs warning, beeps.
     """
     from daemon.slides.router import (
-        _broadcast_slides_cache_status,
+        _broadcast_slides_updated,
         _mark_cache_status,
         download_on_railway,
     )
 
-    prev_hash = misc_state.slides_cache_status.get(slug, {}).get("last_sha256", "")
+    prev_hash = misc_state.slides_updated.get(slug, {}).get("last_sha256", "")
 
     try:
         log.info("slides", f"Waiting {_REDOWNLOAD_FIRST_DELAY_S:.0f}s for Google Drive to sync before polling slug={slug}")
@@ -54,7 +54,7 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
                 if new_hash != prev_hash:
                     log.info("slides", f"Google Drive PDF updated for slug={slug} (attempt {attempt})")
                     _mark_cache_status(slug, "cached", last_sha256=new_hash)
-                    _broadcast_slides_cache_status(refreshed_slugs=[slug])
+                    _broadcast_slides_updated(refreshed_slugs=[slug])
                     return
 
                 log.info("slides", f"Google Drive PDF unchanged for slug={slug} (attempt {attempt}/{_REDOWNLOAD_MAX_RETRIES})")
@@ -131,7 +131,7 @@ class SlidesRunner:
         for entry, catalog_entry in zip(entries, catalog_entries):
             slug = catalog_entry["slug"]
             status: dict = {
-                **misc_state.slides_cache_status.get(slug, {}),
+                **misc_state.slides_updated.get(slug, {}),
                 "status": "not_cached",
             }
             # Read mtime from the actual PPTX source file
@@ -141,7 +141,7 @@ class SlidesRunner:
                     status["modified_at"] = _iso_utc(source.stat().st_mtime)
             except OSError:
                 pass
-            misc_state.slides_cache_status[slug] = status
+            misc_state.slides_updated[slug] = status
         log.info("slides", f"Initialized catalog: {len(catalog_entries)} entries")
 
     def probe_railway_cache(self) -> None:
@@ -159,22 +159,22 @@ class SlidesRunner:
         log.info("slides", f"Probing Railway cache for {len(slugs)} slugs (session={session_id})")
         for slug in slugs:
             status = "cached" if _is_cached_on_railway(session_id, slug) else "not_cached"
-            misc_state.slides_cache_status[slug] = {
-                **misc_state.slides_cache_status.get(slug, {}),
+            misc_state.slides_updated[slug] = {
+                **misc_state.slides_updated.get(slug, {}),
                 "status": status,
             }
-        from daemon.slides.router import _broadcast_slides_cache_status
-        _broadcast_slides_cache_status()
+        from daemon.slides.router import _broadcast_slides_updated
+        _broadcast_slides_updated()
         log.info("slides", "Railway cache probe complete")
 
     def scan_pptx_mtimes(self) -> bool:
-        """Read st_mtime for all tracked PPTX files; update misc_state.slides_cache_status.
+        """Read st_mtime for all tracked PPTX files; update misc_state.slides_updated.
 
         When a PPTX mtime changes and the slide was previously cached, starts
         a background poller thread that calls Railway REST to re-download the PDF,
         comparing hashes until Google Drive publishes the new version.
 
-        Returns True if any modified_at changed (caller should broadcast slides_cache_status).
+        Returns True if any modified_at changed (caller should broadcast slides_updated).
         Called every ~10s from the main loop.
         """
         if not self._slides_config:
@@ -195,10 +195,10 @@ class SlidesRunner:
             pptx_mtime = entry.get("pptx_mtime")
             if pptx_mtime is None:
                 continue
-            existing = misc_state.slides_cache_status.get(slug, {})
+            existing = misc_state.slides_updated.get(slug, {})
             iso = _iso_utc(pptx_mtime)
             if existing.get("modified_at") != iso:
-                misc_state.slides_cache_status[slug] = {**existing, "modified_at": iso}
+                misc_state.slides_updated[slug] = {**existing, "modified_at": iso}
                 if existing.get("status") == "cached":
                     drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
                     if drive_url:

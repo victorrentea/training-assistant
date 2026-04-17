@@ -2000,7 +2000,7 @@ function _handleWsMessage(msg) {
       if (onSummary) loadSummary();
       break;
     }
-    case 'slides_cache_status':
+    case 'slides_updated':
       (function(refreshedSlugs) {
         // Capture active slug before catalog reload clears the DOM.
         // Prefer _activeSlideId (set after loadPdf completes), fall back to

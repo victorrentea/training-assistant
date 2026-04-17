@@ -33,7 +33,7 @@ async def invalidate_slide(slug: str, body: SlideInvalidateRequest | None = None
 
     Called by the slides upload daemon after it detects a PPTX was saved and
     Google Drive has the updated PDF. Railway deletes the old cached file,
-    re-downloads from Drive, then broadcasts slides_cache_status with
+    re-downloads from Drive, then broadcasts slides_updated with
     refreshed_slugs so connected participants auto-reload the active slide.
     """
     from railway.features.slides.cache import _cache_path, _set_status, do_invalidate_download

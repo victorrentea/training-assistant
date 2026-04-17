@@ -5,7 +5,7 @@ Flow under test:
 1. Participant opens the session; slides catalog loads
 2. Daemon (simulated via direct API call) calls POST /{sid}/api/slides/invalidate/{slug}
 3. Railway deletes its cached PDF and re-downloads from mock Google Drive
-4. Railway broadcasts slides_cache_status with refreshed_slugs=[slug]
+4. Railway broadcasts slides_updated with refreshed_slugs=[slug]
 5. Participant browser receives the WS message and calls _loadSlideIntoViewer
    with forceReload=true, triggering a fresh GET /api/slides/download/{slug}?v=...
 6. Railway serves the re-downloaded PDF bytes
@@ -184,7 +184,7 @@ def test_invalidate_without_drive_url_in_body_uses_stored_catalog():
 
 
 def test_participant_receives_refreshed_slugs_in_ws():
-    """Participant WS receives slides_cache_status with refreshed_slugs after invalidate."""
+    """Participant WS receives slides_updated with refreshed_slugs after invalidate."""
     session_id = fresh_session("AutoRefreshWS")
     _mock_drive_reset_delays()
     _prime_slide_cache(session_id)
@@ -209,7 +209,7 @@ def test_participant_receives_refreshed_slugs_in_ws():
                 _ws.addEventListener('message', (evt) => {
                     try {
                         const msg = JSON.parse(evt.data);
-                        if (msg.type === 'slides_cache_status' && Array.isArray(msg.refreshed_slugs)) {
+                        if (msg.type === 'slides_updated' && Array.isArray(msg.refreshed_slugs)) {
                             window._capturedRefreshedSlugs.push(...msg.refreshed_slugs);
                         }
                     } catch {}
@@ -228,7 +228,7 @@ def test_participant_receives_refreshed_slugs_in_ws():
         status = _call_invalidate(session_id, drive_export_url)
         assert status == 200, f"POST /invalidate returned {status}"
 
-        # Participant should receive slides_cache_status with refreshed_slugs=[slug]
+        # Participant should receive slides_updated with refreshed_slugs=[slug]
         _await_condition(
             lambda: pax_page.evaluate(
                 f"() => window._capturedRefreshedSlugs.includes('{_SLUG}')"
@@ -243,7 +243,7 @@ def test_participant_receives_refreshed_slugs_in_ws():
 
 
 def test_participant_auto_reloads_active_slide_after_invalidate():
-    """Participant reloads the active slide PDF when slides_cache_status has refreshed_slugs."""
+    """Participant reloads the active slide PDF when slides_updated has refreshed_slugs."""
     session_id = fresh_session("AutoRefreshReload")
     _mock_drive_reset_delays()
     _prime_slide_cache(session_id)

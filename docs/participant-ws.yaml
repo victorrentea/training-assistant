@@ -19,7 +19,7 @@ channels:
       message:
         oneOf:
           - $ref: '#/components/messages/slides_current'
-          - $ref: '#/components/messages/slides_cache_status'
+          - $ref: '#/components/messages/slides_updated'
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/active_participants_count_updated'
           - $ref: '#/components/messages/slides_history_count_updated'
@@ -66,7 +66,7 @@ components:
             nullable: true
             description: null means no active slide
 
-    slides_cache_status:
+    slides_updated:
       summary: Invalidation signal — participant must call GET /api/slides to refresh
       x-feature: slides
       x-doc-notes:
@@ -77,7 +77,7 @@ components:
         properties:
           type:
             type: string
-            enum: [slides_cache_status]
+            enum: [slides_updated]
           refreshed_slugs:
             type: array
             items:

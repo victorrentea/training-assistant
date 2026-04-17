@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from railway.features.slides.cache import broadcast_slides_cache_status
+from railway.features.slides.cache import broadcast_slides_updated
 
 router = APIRouter()
 
@@ -62,7 +62,7 @@ async def upload_slide_pdf(
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     _uploaded_slide_meta_path(target_slug).write_text(json.dumps(meta), encoding="utf-8")
-    await broadcast_slides_cache_status()
+    await broadcast_slides_updated()
 
     slide = {
         "name": display_name,
