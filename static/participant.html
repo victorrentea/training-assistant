@@ -225,7 +225,7 @@ body{visibility:hidden}
   </span>
 </div>
 </aside>
-<div id="deploy-age-line" onclick="resetStatePrompt()" title="Click to reset local state"
+<div id="deploy-age-line" onclick="resetOnboardingForTest()" title="Click to reset onboarding (for testing)"
   class="fixed bottom-0 right-0 px-2 py-1 cursor-pointer select-none"
   style="font-size:0.625rem;line-height:1.3;color:var(--color-outline);opacity:0.5;transition:opacity 0.15s;z-index:100"
   onmouseenter="this.style.opacity='0.9'" onmouseleave="this.style.opacity='0.5'">
@@ -519,6 +519,7 @@ var LS = {
     localStorage.removeItem(LS.NOTES_UNREAD);
     localStorage.removeItem(LS.SUMMARY_UNREAD);
     localStorage.removeItem(LS.ACTIVITY_SEEN);
+    localStorage.removeItem('workshop_onboarding_seen');
     LS._scrollViews().forEach(function(k) { localStorage.removeItem(k); });
   },
   _scrollViews: function() {
@@ -1422,6 +1423,10 @@ function resetStatePrompt() {
     LS.clear();
     location.reload();
   }
+}
+function resetOnboardingForTest() {
+  localStorage.removeItem('workshop_onboarding_seen');
+  location.reload();
 }
 </script>
 <script src="/static/version-age.js"></script>
