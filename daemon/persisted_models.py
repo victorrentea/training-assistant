@@ -182,10 +182,14 @@ class PersistedSessionState(PersistedModel):
                 elif isinstance(entry, dict):
                     participants[pid_str] = dict(entry)
 
-        names = data.get("participant_names") if isinstance(data.get("participant_names"), dict) else {}
-        avatars = data.get("participant_avatars") if isinstance(data.get("participant_avatars"), dict) else {}
-        scores = data.get("scores") if isinstance(data.get("scores"), dict) else {}
-        locations = data.get("locations") if isinstance(data.get("locations"), dict) else {}
+        _names_raw = data.get("participant_names")
+        names: dict = _names_raw if isinstance(_names_raw, dict) else {}
+        _avatars_raw = data.get("participant_avatars")
+        avatars: dict = _avatars_raw if isinstance(_avatars_raw, dict) else {}
+        _scores_raw = data.get("scores")
+        scores: dict = _scores_raw if isinstance(_scores_raw, dict) else {}
+        _locations_raw = data.get("locations")
+        locations: dict = _locations_raw if isinstance(_locations_raw, dict) else {}
 
         all_ids = set(participants) | {str(pid) for pid in names} | {str(pid) for pid in avatars}
         all_ids |= {str(pid) for pid in scores} | {str(pid) for pid in locations}

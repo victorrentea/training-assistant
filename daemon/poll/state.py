@@ -56,7 +56,7 @@ class PollState:
         total = len(self.votes)
         return {"vote_counts": counts, "total_votes": total}
 
-    def cast_vote(self, pid: str, option_ids: list[str] = None) -> bool:
+    def cast_vote(self, pid: str, option_ids: list[str] | None = None) -> bool:
         if not self.poll or not self.poll_active:
             return False
         if pid in self.votes:
@@ -84,9 +84,10 @@ class PollState:
         correct_set = set(correct_ids)
         now = datetime.now(timezone.utc)
         opened_at = self.poll_opened_at or now
-        all_option_ids = {opt["id"] for opt in self.poll.get("options", [])}
+        poll = self.poll or {}
+        all_option_ids = {opt["id"] for opt in poll.get("options", [])}
         wrong_set = all_option_ids - correct_set
-        multi = self.poll.get("multi", False)
+        multi = poll.get("multi", False)
 
         correct_voters = set()
         for pid, vote in self.votes.items():

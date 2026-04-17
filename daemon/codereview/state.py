@@ -44,7 +44,7 @@ class CodeReviewState:
                     payload.get("phase")
                     if "phase" in payload
                     else data.get("codereview_phase")
-                )
+                ) or "idle"
             if "selections" in payload or "codereview_selections" in data:
                 self.selections.clear()
                 selections = (

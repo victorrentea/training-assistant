@@ -27,6 +27,13 @@ if [ -f "$SECRETS_FILE" ]; then
   fi
 fi
 
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner 2>&1 || {
+    echo "ERROR: Gitleaks detected potential secrets in staged changes. Aborting." >&2
+    exit 1
+  }
+fi
+
 stage_index_sequence_svgs() {
   render_mode="$1"
   tmp_dir="$(mktemp -d)"

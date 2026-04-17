@@ -1,6 +1,8 @@
 """Debate AI cleanup — called by the daemon when backend requests it."""
 import json
 
+import anthropic
+
 from daemon.llm.adapter import create_message
 
 
@@ -46,7 +48,8 @@ Return JSON (no markdown fences):
         messages=[{"role": "user", "content": prompt}],
     )
 
-    raw_text = response.content[0].text.strip()
+    block = response.content[0]
+    raw_text = (block.text if isinstance(block, anthropic.types.TextBlock) else "").strip()
     # Strip markdown fences if Claude wrapped the JSON
     if raw_text.startswith("```"):
         raw_text = raw_text.split("\n", 1)[1]

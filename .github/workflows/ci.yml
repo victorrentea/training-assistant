@@ -86,3 +86,32 @@ jobs:
 
       - name: Hermetic Docker tests (backend + daemon + Playwright)
         run: bash tests/docker/build-daemon.sh
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install lint tools
+        run: pip install ruff pyright
+
+      - name: Ruff — lint all Python
+        run: ruff check .
+
+      - name: Pyright — type check
+        run: pyright
+
+      - name: Shellcheck — lint shell scripts
+        run: |
+          sudo apt-get install -y shellcheck
+          git ls-files '*.sh' | xargs shellcheck
+
+      - name: Gitleaks — secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

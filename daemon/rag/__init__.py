@@ -18,7 +18,7 @@ _collection = None
 def _get_embedder():
     global _embedder
     if _embedder is None:
-        from sentence_transformers import SentenceTransformer
+        from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
         _embedder = SentenceTransformer(EMBED_MODEL)
     return _embedder
 
@@ -26,7 +26,7 @@ def _get_embedder():
 def _get_collection():
     global _collection
     if _collection is None:
-        import chromadb
+        import chromadb  # type: ignore[import-untyped]
         client = chromadb.PersistentClient(path=str(CHROMA_PATH))
         _collection = client.get_or_create_collection(COLLECTION_NAME)
     return _collection

@@ -123,7 +123,7 @@ async def _resolve_location_metadata(loc: str) -> tuple[str, str, str]:
         if isinstance(country_city, Exception):
             resolved_country, resolved_city = "", ""
         else:
-            resolved_country, resolved_city = country_city
+            resolved_country, resolved_city = country_city  # type: ignore[misc]
             resolved_country = str(resolved_country or "").strip().upper()
         return resolved_tz, resolved_country, resolved_city
 
@@ -515,7 +515,7 @@ async def roll_avatar_endpoint(request: Request, body: AvatarRequest):
     rejected = set(body.rejected)
 
     fake_state = _build_mini_state()
-    new_avatar = _refresh_avatar_logic(fake_state, pid, rejected)
+    new_avatar = _refresh_avatar_logic(fake_state, pid, rejected)  # type: ignore[arg-type]
 
     if not new_avatar:
         return JSONResponse({"error": "No avatar available"}, status_code=409)
@@ -666,7 +666,7 @@ async def resolve_participant_locations(session_id: str):
         try:
             tz, country, city = await _resolve_location_metadata(loc)
         except Exception as exc:
-            _log.warning("participant", f"resolve-locations failed for {pid}: {exc}")
+            _log.error("participant", f"resolve-locations failed for {pid}: {exc}")
             return
         if city:
             ps.locations[pid] = city
@@ -683,7 +683,7 @@ async def resolve_participant_locations(session_id: str):
         try:
             country = await asyncio.to_thread(_country_from_timezone, tz)
         except Exception as exc:
-            _log.warning("participant", f"resolve-country failed for {pid}: {exc}")
+            _log.error("participant", f"resolve-country failed for {pid}: {exc}")
             return
         if country:
             ps.location_countries[pid] = country

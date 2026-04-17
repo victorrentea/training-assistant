@@ -15,6 +15,7 @@ import json
 import os
 import queue
 import threading
+from typing import Any, Callable
 
 from daemon import log
 
@@ -32,7 +33,7 @@ class AddonBridgeClient:
         self._thread: threading.Thread | None = None
         self._slide_queue: queue.Queue = queue.Queue()
         self._slides_viewed_queue: queue.Queue = queue.Queue()
-        self._on_connection_change: callable | None = None
+        self._on_connection_change: Callable[..., Any] | None = None
 
     # ── Public API (callable from any thread) ─────────────────────────────────
 
@@ -41,7 +42,7 @@ class AddonBridgeClient:
         with self._ws_lock:
             return self._ws is not None
 
-    def set_on_connection_change(self, callback: callable) -> None:
+    def set_on_connection_change(self, callback: Callable[..., Any]) -> None:
         """callback(connected: bool) — called from WS thread on state change."""
         self._on_connection_change = callback
 

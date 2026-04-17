@@ -17,6 +17,7 @@ from daemon import log
 from daemon.config import (
     DAEMON_POLL_INTERVAL,
     DEFAULT_TRANSCRIPT_MINUTES,
+    Config,
     config_from_env,
     find_session_folder,
 )
@@ -595,7 +596,7 @@ def _log_notes_summary_probe(reason: str, probe: dict, change_parts: str | None 
     )
 
 
-def _bind_initial_session_folder(config, sessions_root: Path, session_name: str | None) -> tuple[object, str]:
+def _bind_initial_session_folder(config: Config, sessions_root: Path, session_name: str | None) -> tuple[Config, str]:
     """Resolve and log session folder binding at daemon startup."""
     today_folder = today_notes = None
     if not session_name:
@@ -620,14 +621,14 @@ def _bind_initial_session_folder(config, sessions_root: Path, session_name: str 
 
 
 def _refresh_session_folder_binding(
-    config,
+    config: Config,
     sessions_root: Path,
     session_name: str | None,
     today: date,
     last_detected_date: date | None,
     last_session_check_at: float,
     now_mono: float,
-) -> tuple[object, date | None, float, bool]:
+) -> tuple[Config, date | None, float, bool]:
     """Periodic session-folder refresh: prefer active session_name, fallback to today detection when none."""
     notes_missing = config.session_notes is None
     date_changed = today != last_detected_date
@@ -1083,7 +1084,7 @@ def run() -> None:
                 try:
                     session_req = session_pending.pop("session_request")
                     action = session_req.get("action") if session_req else None
-                    if action == "create":
+                    if action == "create" and session_req is not None:
                         name = session_req["name"]
                         sid = session_req.get("session_id")
                         session_type = session_req.get("type", "workshop")
@@ -1210,7 +1211,7 @@ def run() -> None:
                         announce_session_cleared()
                         transcript_state.reset()
 
-                    elif action == "rename":
+                    elif action == "rename" and session_req is not None:
                         new_name = session_req["name"]
                         if session_name:
                             old_name = session_name

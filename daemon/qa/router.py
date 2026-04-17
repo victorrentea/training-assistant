@@ -99,7 +99,8 @@ async def upvote_question(request: Request, body: UpvoteQuestionBody):
     raw_questions = _build_questions_for_broadcast()
     host_questions = _build_questions_for_host()
 
-    scores.add_score(author_pid, 50)
+    if author_pid:
+        scores.add_score(author_pid, 50)
     scores.add_score(pid, 25)
     request.state.write_back_events = [
         broadcast_event(QaUpdatedMsg(questions=raw_questions)),

@@ -40,7 +40,7 @@ class WordCloudState:
             has_topic = "topic" in payload or "wordcloud_topic" in data
             topic = payload.get("topic") if "topic" in payload else data.get("wordcloud_topic")
             if has_topic:
-                self.topic = topic
+                self.topic = topic or ""
 
     def add_word(self, word: str) -> dict:
         """Add a word, return current state for broadcast."""

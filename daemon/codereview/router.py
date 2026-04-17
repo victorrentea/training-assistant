@@ -5,6 +5,8 @@ import logging
 import os
 from typing import Optional
 
+import anthropic
+
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -89,7 +91,8 @@ def _extract_code_with_ai(raw_snippet: str) -> tuple[str, str | None] | None:
             timeout=5.0,
         )
 
-        text = response.content[0].text.strip()
+        block = response.content[0]
+        text = (block.text if isinstance(block, anthropic.types.TextBlock) else "").strip()
         # Strip markdown fences if Claude wrapped the JSON
         if text.startswith("```"):
             text = text.split("\n", 1)[1] if "\n" in text else text[3:]

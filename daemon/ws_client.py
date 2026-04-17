@@ -6,6 +6,7 @@ import os
 import queue
 import ssl
 import threading
+from typing import Any, Callable
 
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import connect as ws_connect
@@ -37,12 +38,12 @@ class DaemonWsClient:
         self._ws_lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = None
-        self._handlers: dict[str, callable] = {}
+        self._handlers: dict[str, Callable[..., Any]] = {}
         self._inline_handlers: set[str] = set()
-        self._on_connect_callbacks: list[callable] = []
+        self._on_connect_callbacks: list[Callable[..., Any]] = []
         self._work_queue: queue.Queue = queue.Queue()
 
-    def register_handler(self, msg_type: str, handler: callable, *, inline: bool = False):
+    def register_handler(self, msg_type: str, handler: Callable[..., Any], *, inline: bool = False):
         """Register a handler for a backend-pushed message type."""
         self._handlers[msg_type] = handler
         if inline:
@@ -50,7 +51,7 @@ class DaemonWsClient:
         else:
             self._inline_handlers.discard(msg_type)
 
-    def on_connect(self, callback: callable):
+    def on_connect(self, callback: Callable[..., Any]):
         """Register a callback invoked on each (re)connect. Runs on WS thread."""
         self._on_connect_callbacks.append(callback)
 

@@ -3,6 +3,17 @@
     "superpowers@claude-plugins-official": true
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "COMMAND=$(jq -r '.tool_input.command // \"\"'); echo \"$COMMAND\" | grep -q 'git commit' || exit 0; echo 'REMINDER: Run /victor-skills:pre-commit-checklist before committing.'"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

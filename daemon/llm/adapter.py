@@ -1,6 +1,7 @@
 import os as _os
 import time
 from dataclasses import dataclass
+from typing import Any
 
 import anthropic
 
@@ -57,11 +58,11 @@ def _real_create_message(
     timeout: float | None = None,
 ) -> anthropic.types.Message:
     """Thin wrapper around anthropic.Anthropic().messages.create that tracks tokens."""
-    client_kwargs = {"api_key": api_key}
+    client_kwargs: dict[str, Any] = {"api_key": api_key}
     if timeout is not None:
         client_kwargs["timeout"] = timeout
     client = anthropic.Anthropic(**client_kwargs)
-    kwargs = dict(model=model, max_tokens=max_tokens, messages=messages)
+    kwargs: dict[str, Any] = dict(model=model, max_tokens=max_tokens, messages=messages)
     if system:
         kwargs["system"] = system
     if tools:

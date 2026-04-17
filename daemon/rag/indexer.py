@@ -39,8 +39,8 @@ def _extract_pdf(path: Path) -> list[tuple[int, str]]:
 def _extract_epub(path: Path) -> list[tuple[int, str]]:
     from html.parser import HTMLParser
 
-    import ebooklib
-    from ebooklib import epub
+    import ebooklib  # type: ignore[import-untyped]
+    from ebooklib import epub  # type: ignore[import-untyped]
 
     class _TextExtractor(HTMLParser):
         def __init__(self):
@@ -340,7 +340,7 @@ def _make_handler(folder: Path):
 
     class _Handler(FileSystemEventHandler):
         def __init__(self):
-            self._pending: dict[str, float] = {}
+            self._pending: dict[str, tuple[float, str]] = {}
             self._lock = threading.Lock()
             self._manifest_files = _load_manifest(folder)
             # Start debounce worker
