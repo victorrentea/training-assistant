@@ -495,6 +495,9 @@ body{visibility:hidden}
   };
 </script>
 <script>
+var _notesDirty = true;
+var _summaryDirty = true;
+var _agendaDirty = true;
 // ── Local-storage namespace ───────────────────────────────────────────────────
 var LS = {
   EMOJI_PROMOTED: 'new:emoji_bar_promoted',
@@ -1869,6 +1872,7 @@ function _applyState(msg) {
   }
   if (msg.has_agenda !== undefined) {
     document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
+    if (msg.has_agenda) _agendaDirty = true;
   }
   if (msg.slides_history_count != null) {
     _setPastSlidesBadge(msg.slides_history_count);
@@ -1899,6 +1903,7 @@ function _handleWsMessage(msg) {
         notesBadge.textContent = nd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         notesBadge.style.display = '';
       } else { notesBadge.style.display = 'none'; }
+      _notesDirty = true;
       var onNotes = document.getElementById('notes-view').style.display !== 'none';
       _applyNotesBadgeUnread(!onNotes);
       if (onNotes) loadNotes();
@@ -1913,6 +1918,7 @@ function _handleWsMessage(msg) {
         badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         badge.style.display = '';
       } else { badge.style.display = 'none'; }
+      _summaryDirty = true;
       var onSummary = document.getElementById('summary-view').style.display !== 'none';
       _applySummaryBadgeUnread(!onSummary);
       if (onSummary) loadSummary();
@@ -1966,6 +1972,8 @@ function _connectWS() {
 }
 
 async function loadAgenda() {
+  if (!_agendaDirty) return;
+  _agendaDirty = false;
   const el = document.getElementById('agenda-content');
   el.textContent = 'Loading…';
   try {
@@ -1981,10 +1989,12 @@ async function loadAgenda() {
     }).replace(/<a /g, '<a target="_blank" rel="noopener" ');
     el.innerHTML = cleanHtml;
     addAgendaProgress(el);
-    var _agendaSaved = LS.getScroll('agenda');
-    if (_agendaSaved) { var _agendaEl = document.getElementById('agenda-view'); setTimeout(function() { _agendaEl.scrollTop = parseInt(_agendaSaved, 10); }, 0); }
+    var viewEl = document.getElementById('agenda-view');
+    var saved = LS.getScroll('agenda');
+    if (saved) viewEl.scrollTop = parseInt(saved, 10);
   } catch (e) {
     el.textContent = 'Failed to load agenda.';
+    _agendaDirty = true;
   }
 }
 
@@ -2073,6 +2083,8 @@ function linkifyText(text) {
 }
 
 async function loadNotes() {
+  if (!_notesDirty) return;
+  _notesDirty = false;
   const el = document.getElementById('notes-content');
   el.textContent = 'Loading…';
   try {
@@ -2082,14 +2094,18 @@ async function loadNotes() {
     } else {
       el.textContent = 'No notes yet.';
     }
-    var _notesSaved = LS.getScroll('notes');
-    if (_notesSaved) { var _notesEl = document.getElementById('notes-view'); setTimeout(function() { _notesEl.scrollTop = parseInt(_notesSaved, 10); }, 0); }
+    var viewEl = document.getElementById('notes-view');
+    var saved = LS.getScroll('notes');
+    if (saved) viewEl.scrollTop = parseInt(saved, 10);
   } catch (e) {
     el.textContent = 'Failed to load notes.';
+    _notesDirty = true;
   }
 }
 
 async function loadSummary() {
+  if (!_summaryDirty) return;
+  _summaryDirty = false;
   const el = document.getElementById('summary-content');
   el.textContent = 'Loading…';
   try {
@@ -2101,10 +2117,12 @@ async function loadSummary() {
     } else {
       el.textContent = 'No summary yet.';
     }
-    var _summarySaved = LS.getScroll('summary');
-    if (_summarySaved) { var _summaryEl = document.getElementById('summary-view'); setTimeout(function() { _summaryEl.scrollTop = parseInt(_summarySaved, 10); }, 0); }
+    var viewEl = document.getElementById('summary-view');
+    var saved = LS.getScroll('summary');
+    if (saved) viewEl.scrollTop = parseInt(saved, 10);
   } catch (e) {
     el.textContent = 'Failed to load summary.';
+    _summaryDirty = true;
   }
 }
 </script>
