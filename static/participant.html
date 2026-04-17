@@ -1475,6 +1475,15 @@ function _dismissOnboarding() {
   }, 300);
 }
 
+document.addEventListener('click', function (e) {
+  if (!document.body.classList.contains('onboarding-active')) return;
+  var bar = document.getElementById('emoji-main-bar');
+  var overflow = document.getElementById('emoji-overflow');
+  if ((bar && bar.contains(e.target)) || (overflow && overflow.contains(e.target))) {
+    _dismissOnboarding();
+  }
+}, true);
+
 function _avatarColorFromUuid(uuid) {
   var hash = parseInt((uuid || '').replace(/-/g, '').slice(0, 8), 16);
   return 'hsl(' + (hash % 360) + ', 60%, 40%)';
