@@ -18,7 +18,7 @@ An onboarding moment on first visit — one that forces a single click — conve
 
 - **Trigger:** on `participant.html` load (workshop mode — served when `state.session_type != "talk"`), if `localStorage['workshop_onboarding_seen']` is not set.
 - **Suppression:** host tabs (`_isHostTab === true`, based on the `is_host=1` cookie) never see the onboarding. They use `sessionStorage` for identity anyway, so the flag check is explicitly gated by `_isHostTab`.
-- **Ordering with avatar picker:** first-time participants already see an avatar-picker modal on entry. The onboarding overlay appears **after** that modal is dismissed, not stacked on top of it.
+- **Ordering with loading screen:** the participant page shows a "Connecting…" loading screen (`#loading-screen`) while identity and state are fetched. The onboarding overlay appears **after** that loading screen is hidden, so the participant sees a stable UI underneath the dimmed overlay.
 - **Dismissal:** the only way to dismiss is pressing an emoji button in `#emoji-main-bar` or `#emoji-overflow`. No gray-area click, no X button, no timeout. On dismissal, `localStorage['workshop_onboarding_seen'] = '1'` is set; the overlay and tooltip fade out over 300 ms.
 - **Persistence:** flag persists across sessions and days on the same browser. Clearing `localStorage` resurrects it (documented as the manual recovery path — no admin control needed).
 - **Talk mode:** `talk.html` is served for `session_type == "talk"` and is not touched by this change.
@@ -195,11 +195,15 @@ Wiring changes in the HTML:
 - For consistency, also add `localStorage.removeItem(LS_ONBOARDING_KEY);` inside `LS.clear()` so if any future flow calls the bulk reset, onboarding resets alongside.
 - The old full-state reset path (`resetStatePrompt()` → `LS.clear()`) is kept as a function but loses its only call site. Since it has no other callers today, leaving it unreferenced is acceptable; a future cleanup can remove it. Don't delete it in this change — that's scope creep.
 
-### Entry point — after avatar picker
+### Entry point — after loading screen hides
 
-The avatar-picker modal is shown on first visit before the main UI is interactive. The onboarding must fire **after** that modal closes, not at boot. Concretely: in the avatar-picker close path, call `if (_shouldShowOnboarding()) _showOnboarding();`. Participants returning to the site (no avatar modal) already have the flag set, so `_shouldShowOnboarding()` returns false for them.
+The onboarding should fire after the participant state is loaded and the `#loading-screen` overlay is removed. Concrete insertion point: right after `document.getElementById('loading-screen').style.display = 'none';` inside `loadParticipantState()` (currently around line 1664). Add:
 
-For safety, a second call site at the tail of `main()` handles the case of a participant with a saved name but no onboarding flag (edge case: they were on a very old build before the flag existed). Both call sites go through `_shouldShowOnboarding()`, which is idempotent.
+```js
+if (_shouldShowOnboarding()) _showOnboarding();
+```
+
+Single call site — `_shouldShowOnboarding()` gates both first-time and returning participants correctly (returning participants have the flag set and get `false`).
 
 ---
 
