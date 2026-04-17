@@ -466,7 +466,13 @@ body{visibility:hidden}
   }
 
   (function init() {
-    document.getElementById('pdf-pages').addEventListener('scroll', updatePageInfo);
+    document.getElementById('pdf-pages').addEventListener('scroll', function() {
+      updatePageInfo();
+      var page = _getCurrentSlidesPage();
+      if (page && _activeSlideSlug) {
+        localStorage.setItem('workshop_slide_page:' + _activeSlideSlug, page);
+      }
+    });
     const infoEl = document.getElementById('pdf-page-info');
     if (infoEl) infoEl.textContent = '— / —';
   })();
@@ -494,6 +500,7 @@ var LS = {
   EMOJI_PROMOTED: 'new:emoji_bar_promoted',
   VIEW: 'new:current_view',
   FOLLOW: 'new:slides_follow',
+  ACTIVE_SLIDE: 'new:active_slide_slug',
   NOTES_UNREAD: 'new:notes_unread',
   SUMMARY_UNREAD: 'new:summary_unread',
   ACTIVITY_SEEN: 'new:activity_seen',
@@ -506,6 +513,8 @@ var LS = {
   setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
   getFollow: function()     { var v = localStorage.getItem(LS.FOLLOW); return v === null ? true : v === '1'; },
   setFollow: function(val)  { localStorage.setItem(LS.FOLLOW, val ? '1' : '0'); },
+  getActiveSlide: function()     { return localStorage.getItem(LS.ACTIVE_SLIDE); },
+  setActiveSlide: function(slug) { localStorage.setItem(LS.ACTIVE_SLIDE, slug); },
   isNotesUnread:   function()  { return localStorage.getItem(LS.NOTES_UNREAD) === 'true'; },
   setNotesUnread:  function(v) { localStorage.setItem(LS.NOTES_UNREAD, v ? 'true' : 'false'); },
   isSummaryUnread: function()  { return localStorage.getItem(LS.SUMMARY_UNREAD) === 'true'; },
@@ -534,6 +543,7 @@ var LS = {
 // ─────────────────────────────────────────────────────────────────────────────
 var _slidesCatalog = [];
 var _activeSlideId = null;
+var _activeSlideSlug = null;
 var _historySelectedRowEl = null;
 var _hostSlidesCurrent = null;
 var _lastHostSlidesCurrentKey = '';
@@ -1325,6 +1335,8 @@ async function selectTopic(el, event, slide) {
     if (dlBtn) { dlBtn.href = dlUrl; dlBtn.setAttribute('download', slide.name || ''); }
     await window.loadPdf(slide.url);
     _activeSlideId = slide._id || null;
+    _activeSlideSlug = slide.slug || null;
+    if (_activeSlideSlug) LS.setActiveSlide(_activeSlideSlug);
     // Restore last viewed page from localStorage
     if (slide.slug) {
       var storedPage = parseInt(localStorage.getItem('workshop_slide_page:' + slide.slug) || '1', 10);
@@ -1363,7 +1375,22 @@ function showView(name) {
   if (name === 'slides') {
     var followCb = document.getElementById('slides-follow-checkbox');
     if (followCb) followCb.checked = LS.getFollow();
-    _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+    if (_isSlidesFollowEnabled()) {
+      _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+    } else if (!_activeSlideId) {
+      var lastSlug = LS.getActiveSlide();
+      if (lastSlug) {
+        var restoreSlide = function() {
+          var slide = _slidesCatalog.find(function(s) { return s.slug === lastSlug; });
+          if (slide) {
+            var topicEl = document.querySelector('.topic-item[data-slide-id="' + slide._id + '"]');
+            selectTopic(topicEl, null, slide);
+          }
+        };
+        if (_slidesCatalog.length) { restoreSlide(); }
+        else { loadSlidesCatalog().then(restoreSlide).catch(function() {}); }
+      }
+    }
   }
   if (name === 'activity') initActivityView();
 }
@@ -1954,6 +1981,9 @@ async function loadAgenda() {
     }).replace(/<a /g, '<a target="_blank" rel="noopener" ');
     el.innerHTML = cleanHtml;
     addAgendaProgress(el);
+    var viewEl = document.getElementById('agenda-view');
+    var saved = LS.getScroll('agenda');
+    if (saved) viewEl.scrollTop = parseInt(saved, 10);
   } catch (e) {
     el.textContent = 'Failed to load agenda.';
   }
@@ -2053,6 +2083,9 @@ async function loadNotes() {
     } else {
       el.textContent = 'No notes yet.';
     }
+    var viewEl = document.getElementById('notes-view');
+    var saved = LS.getScroll('notes');
+    if (saved) viewEl.scrollTop = parseInt(saved, 10);
   } catch (e) {
     el.textContent = 'Failed to load notes.';
   }
@@ -2070,6 +2103,9 @@ async function loadSummary() {
     } else {
       el.textContent = 'No summary yet.';
     }
+    var viewEl = document.getElementById('summary-view');
+    var saved = LS.getScroll('summary');
+    if (saved) viewEl.scrollTop = parseInt(saved, 10);
   } catch (e) {
     el.textContent = 'Failed to load summary.';
   }
