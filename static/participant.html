@@ -1441,6 +1441,39 @@ var _myName = '';
 var _rejectedAvatars = [];
 var LS_NAME_KEY = 'workshop_participant_name';
 var LS_CUSTOM_NAME_KEY = 'workshop_custom_name';
+var LS_ONBOARDING_KEY = 'workshop_onboarding_seen';
+
+function _shouldShowOnboarding() {
+  if (_isHostTab) return false;
+  return !localStorage.getItem(LS_ONBOARDING_KEY);
+}
+
+function _showOnboarding() {
+  document.body.classList.add('onboarding-active');
+  var overlay = document.getElementById('onboarding-overlay');
+  var tooltip = document.getElementById('onboarding-tooltip');
+  if (!overlay || !tooltip) return;
+  overlay.classList.remove('hidden');
+  tooltip.classList.remove('hidden');
+  requestAnimationFrame(function () {
+    overlay.classList.add('visible');
+    tooltip.classList.add('visible');
+  });
+}
+
+function _dismissOnboarding() {
+  if (!document.body.classList.contains('onboarding-active')) return;
+  localStorage.setItem(LS_ONBOARDING_KEY, '1');
+  var overlay = document.getElementById('onboarding-overlay');
+  var tooltip = document.getElementById('onboarding-tooltip');
+  if (overlay) overlay.classList.remove('visible');
+  if (tooltip) tooltip.classList.remove('visible');
+  setTimeout(function () {
+    if (overlay) overlay.classList.add('hidden');
+    if (tooltip) tooltip.classList.add('hidden');
+    document.body.classList.remove('onboarding-active');
+  }, 300);
+}
 
 function _avatarColorFromUuid(uuid) {
   var hash = parseInt((uuid || '').replace(/-/g, '').slice(0, 8), 16);
