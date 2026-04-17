@@ -1,0 +1,27 @@
+@startuml C4_Slides_Containers
+!include <C4/C4_Container>
+
+title Slides Feature — C4 Container View (generated from 06-slides sequence)
+caption <color:gray>Generated from docs/sequences/extracted/06-slides.puml</color>
+LAYOUT_WITH_LEGEND()
+
+Person(host, "Host", "Controls the session and slides")
+Person(participant, "Participant", "Follows slides in browser (e.g. Alice, Bob)")
+
+System_Boundary(workshop, "Workshop Tool") {
+    Container(training_daemon, "Training Daemon", "Python / FastAPI (localhost)", "Owns session state, slide orchestration, and cache management. Serves host REST and proxies participant REST via Railway WS bridge.")
+    Container(railway_backend, "Railway Backend", "FastAPI on Railway", "Transparent proxy for participant REST calls to daemon. Triggers GDrive slide downloads on behalf of daemon.")
+}
+
+System_Ext(google_drive, "Google Drive", "Source of slide PDF exports")
+
+Rel(host, training_daemon, "Session init, state query, scores reset", "REST (DELETE/GET /api/.../host/*)")
+Rel(participant, training_daemon, "Register, set name, check slides cache", "REST via Railway proxy")
+
+Rel(training_daemon, host, "Pushes participant list updates", "WS push: participant_list_updated")
+Rel(training_daemon, participant, "Pushes slides cache status", "WS push: slides_cache_status")
+
+Rel(training_daemon, railway_backend, "Requests GDrive slide download", "POST /api/slides/download-from-gdrive/{slug}")
+Rel(railway_backend, google_drive, "Fetches slide PDF", "HTTPS GET *.pdf")
+
+@enduml
