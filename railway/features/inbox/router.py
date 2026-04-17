@@ -14,12 +14,15 @@ logger = logging.getLogger(__name__)
 
 @router.post("/webhook/agentmail")
 async def agentmail_webhook(request: Request):
+    body = await request.json()
+    logger.info("inbox webhook received — headers: %s body_keys: %s", dict(request.headers), list(body.keys()))
+
     expected = os.environ.get("AGENTMAIL_WEBHOOK_SECRET", "")
     incoming = request.headers.get("x-webhook-secret", "")
     if not expected or not hmac.compare_digest(expected.encode(), incoming.encode()):
+        logger.warning("inbox webhook 403 — x-webhook-secret=%r", incoming[:20] if incoming else "")
         return JSONResponse(status_code=403, content={"error": "Forbidden"})
 
-    body = await request.json()
     if body.get("event_type") != "message.received":
         return {"ok": True, "ignored": True}
 
