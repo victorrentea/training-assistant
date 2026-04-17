@@ -1981,9 +1981,8 @@ async function loadAgenda() {
     }).replace(/<a /g, '<a target="_blank" rel="noopener" ');
     el.innerHTML = cleanHtml;
     addAgendaProgress(el);
-    var viewEl = document.getElementById('agenda-view');
-    var saved = LS.getScroll('agenda');
-    if (saved) viewEl.scrollTop = parseInt(saved, 10);
+    var _agendaSaved = LS.getScroll('agenda');
+    if (_agendaSaved) { var _agendaEl = document.getElementById('agenda-view'); setTimeout(function() { _agendaEl.scrollTop = parseInt(_agendaSaved, 10); }, 0); }
   } catch (e) {
     el.textContent = 'Failed to load agenda.';
   }
@@ -2083,9 +2082,8 @@ async function loadNotes() {
     } else {
       el.textContent = 'No notes yet.';
     }
-    var viewEl = document.getElementById('notes-view');
-    var saved = LS.getScroll('notes');
-    if (saved) viewEl.scrollTop = parseInt(saved, 10);
+    var _notesSaved = LS.getScroll('notes');
+    if (_notesSaved) { var _notesEl = document.getElementById('notes-view'); setTimeout(function() { _notesEl.scrollTop = parseInt(_notesSaved, 10); }, 0); }
   } catch (e) {
     el.textContent = 'Failed to load notes.';
   }
@@ -2103,9 +2101,8 @@ async function loadSummary() {
     } else {
       el.textContent = 'No summary yet.';
     }
-    var viewEl = document.getElementById('summary-view');
-    var saved = LS.getScroll('summary');
-    if (saved) viewEl.scrollTop = parseInt(saved, 10);
+    var _summarySaved = LS.getScroll('summary');
+    if (_summarySaved) { var _summaryEl = document.getElementById('summary-view'); setTimeout(function() { _summaryEl.scrollTop = parseInt(_summarySaved, 10); }, 0); }
   } catch (e) {
     el.textContent = 'Failed to load summary.';
   }
