@@ -39,6 +39,11 @@ async def agentmail_webhook(request: Request):
     if body.get("event_type") != "message.received":
         return {"ok": True, "ignored": True}
 
+    senders = body.get("thread", {}).get("senders", [])
+    if not any("victorrentea@gmail.com" in s for s in senders):
+        logger.info("inbox: skipping thread not from victorrentea@gmail.com (senders=%s)", senders)
+        return {"ok": True, "ignored": True}
+
     ws = state.claude_inbox_ws
     if ws is not None:
         try:
