@@ -46,6 +46,7 @@ class AppState:
         self.slides: list[dict] = []
         self.daemon_last_seen: Optional[datetime] = None
         self.daemon_ws: Optional[WebSocket] = None
+        self.claude_inbox_ws: WebSocket | None = None
         self.daemon_code_timestamp: Optional[str] = None  # ISO timestamp of last git commit in daemon repo
         self.slides_current: Optional[dict] = None
         # Slides cache (server-side GDrive download)
