@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 async def agentmail_webhook(request: Request):
     expected = os.environ.get("AGENTMAIL_WEBHOOK_SECRET", "")
     incoming = request.headers.get("x-webhook-secret", "")
-    if not expected or not hmac.compare_digest(incoming.encode(), expected.encode()):
+    if not expected or not hmac.compare_digest(expected.encode(), incoming.encode()):
         return JSONResponse(status_code=403, content={"error": "Forbidden"})
 
     body = await request.json()
@@ -31,6 +31,10 @@ async def agentmail_webhook(request: Request):
         except Exception as exc:
             logger.warning("inbox ↓ listener send failed: %s", exc)
             state.claude_inbox_ws = None
+            try:
+                await ws.close(code=1011)
+            except Exception:
+                pass
     else:
         logger.warning("inbox: no listener connected — event dropped")
 
@@ -40,7 +44,7 @@ async def agentmail_webhook(request: Request):
 @router.websocket("/ws/claude-inbox")
 async def claude_inbox_ws_endpoint(websocket: WebSocket, token: str = ""):
     expected = os.environ.get("CLAUDE_INBOX_WS_TOKEN", "")
-    if not expected or not hmac.compare_digest(token.encode(), expected.encode()):
+    if not expected or not hmac.compare_digest(expected.encode(), token.encode()):
         await websocket.close(code=4003)
         return
 

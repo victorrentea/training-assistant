@@ -76,3 +76,16 @@ class TestWebhookForwarding:
             headers={"x-webhook-secret": GOOD_SECRET},
         )
         assert resp.status_code == 200
+
+    def test_clears_state_when_listener_send_fails(self):
+        mock_ws = AsyncMock()
+        mock_ws.send_text.side_effect = Exception("boom")
+        state_module.state.claude_inbox_ws = mock_ws
+
+        resp = client.post(
+            "/webhook/agentmail",
+            json={"event_type": "message.received"},
+            headers={"x-webhook-secret": GOOD_SECRET},
+        )
+        assert resp.status_code == 200
+        assert state_module.state.claude_inbox_ws is None
