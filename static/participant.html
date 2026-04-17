@@ -71,6 +71,50 @@ body{visibility:hidden}
         .avatar-changed{animation:avatar-changed .4s ease-in-out}
         @keyframes avatar-swap{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
         .avatar-swap{animation:avatar-swap .3s ease-out}
+        #onboarding-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 40;
+          opacity: 0;
+          transition: opacity 300ms ease;
+          pointer-events: none;
+        }
+        #onboarding-overlay.visible { opacity: 1; }
+        #onboarding-overlay.hidden, #onboarding-tooltip.hidden { display: none; }
+        #onboarding-tooltip {
+          position: fixed;
+          bottom: calc(6rem + 4.5rem);
+          right: 1.5rem;
+          z-index: 51;
+          opacity: 0;
+          transform: translateY(8px);
+          transition: opacity 300ms ease, transform 300ms ease;
+          pointer-events: none;
+        }
+        #onboarding-tooltip.visible { opacity: 1; transform: translateY(0); }
+        .onboarding-bubble {
+          position: relative;
+          background: var(--color-primary, #4555ba);
+          color: var(--color-on-primary, #fff);
+          padding: 0.75rem 1.25rem;
+          border-radius: 1rem;
+          font-size: 0.95rem;
+          font-weight: 600;
+          max-width: 20rem;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+          line-height: 1.4;
+        }
+        .onboarding-arrow {
+          position: absolute;
+          bottom: -6px;
+          right: 2rem;
+          width: 12px;
+          height: 12px;
+          background: var(--color-primary, #4555ba);
+          transform: rotate(45deg);
+        }
+        body.onboarding-active .absolute.bottom-6.right-6 { z-index: 50; }
     </style>
 <link rel="stylesheet" href="/static/participant-theme.css"/>
 </head>
