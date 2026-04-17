@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 
 import railway.shared.metrics as metrics  # noqa: F401 - import for Prometheus metric registration side effects
+from railway.features.inbox.router import router as inbox_router
 from railway.features.internal.router import router as internal_router
 from railway.features.pages.router import host_router, landing_router, participant_router
 from railway.features.session.notes_router import public_router as session_public_router
@@ -120,6 +121,9 @@ Instrumentator().instrument(app).expose(
 app.include_router(ws.router)
 # WebSocket: session-scoped participant connections
 app.include_router(ws_session_router)
+
+# AgentMail webhook receiver + claude-inbox WebSocket
+app.include_router(inbox_router)
 
 # Pages: landing at /, host at /host (auth-protected)
 app.include_router(landing_router)
