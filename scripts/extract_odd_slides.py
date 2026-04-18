@@ -10,13 +10,12 @@ The slug is fetched from /api/status (cached slide) or passed explicitly.
 Credentials are read from ~/.training-assistants-secrets.env.
 """
 
-import os
 import ssl
 import sys
-import urllib.request
 import urllib.parse
-from pathlib import Path
+import urllib.request
 from io import BytesIO
+from pathlib import Path
 
 _SSL_CTX = ssl.create_default_context()
 try:
@@ -81,7 +80,8 @@ def main() -> None:
 
     if len(sys.argv) < 2:
         # auto-detect slug from active session
-        import json, urllib.request
+        import json
+        import urllib.request
         with urllib.request.urlopen(f"{base_url}/api/status", context=_SSL_CTX, timeout=10) as resp:
             status = json.loads(resp.read())
         slug = (status.get("slides_current") or {}).get("slug", "")

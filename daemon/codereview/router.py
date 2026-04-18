@@ -6,7 +6,6 @@ import os
 from typing import Optional
 
 import anthropic
-
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel

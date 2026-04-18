@@ -311,8 +311,9 @@ async def get_slides_compilation(session_id: str):
 
     log.info("slides-compile", f"Done — {total_pages} pages compiled from {len(needed)} decks")
 
-    from daemon.session import state as session_shared_state
     import re
+
+    from daemon.session import state as session_shared_state
     raw_name = session_shared_state.get_active_session_name() or ""
     safe_name = re.sub(r"[^\w\s\-]", "", raw_name).strip().replace(" ", "-")
     filename = f"slides-compilation-{safe_name}.pdf" if safe_name else "slides-compilation.pdf"

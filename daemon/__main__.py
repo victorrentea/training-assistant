@@ -487,6 +487,7 @@ def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
     if notes_mtime_ns is None and summary_mtime_ns is None:
         return
     from datetime import datetime, timezone
+
     from daemon.ws_messages import NotesUpdatedMsg, SummaryUpdatedMsg
     from daemon.ws_publish import broadcast
     parts = set(change_parts.split(","))

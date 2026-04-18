@@ -13,17 +13,25 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
 from daemon import ws_publish
+from daemon.misc.state import misc_state
 from daemon.session import pending as session_pending
 from daemon.session import state as session_state
-from daemon.session_state import announce_session_id, load_session_meta, load_session_state, save_session_state
-from daemon.misc.state import misc_state
-from daemon.ws_messages import SlidesCurrentMsg, TalkPdfReadyMsg, TalkPdfFailedMsg
-from scripts.resolve_gdrive_link import resolve_gdrive_file_url, gdrive_view_url_to_presentation_export_url
+from daemon.session_state import (
+    announce_session_id,
+    load_session_meta,
+    load_session_state,
+    save_session_state,
+)
+from daemon.ws_messages import SlidesCurrentMsg, TalkPdfFailedMsg, TalkPdfReadyMsg
+from scripts.resolve_gdrive_link import (
+    gdrive_view_url_to_presentation_export_url,
+    resolve_gdrive_file_url,
+)
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
