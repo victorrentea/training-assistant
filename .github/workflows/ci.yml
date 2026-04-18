@@ -102,7 +102,9 @@ jobs:
           pip install ruff pyright
           python -m venv .venv
           .venv/bin/pip install fastapi "uvicorn[standard]" websockets python-multipart httpx \
-                      anthropic pydantic prometheus-fastapi-instrumentator pypdf
+                      anthropic pydantic prometheus-fastapi-instrumentator pypdf \
+                      opentelemetry-api opentelemetry-sdk \
+                      opentelemetry-instrumentation-fastapi opentelemetry-instrumentation-urllib
 
       - name: Ruff — lint all Python
         run: ruff check .
