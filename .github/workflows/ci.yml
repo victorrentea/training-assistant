@@ -97,8 +97,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install lint tools
-        run: pip install ruff pyright
+      - name: Install lint tools and project deps
+        run: |
+          pip install ruff pyright
+          python -m venv .venv
+          .venv/bin/pip install fastapi "uvicorn[standard]" websockets python-multipart httpx \
+                      anthropic pydantic prometheus-fastapi-instrumentator pypdf
 
       - name: Ruff — lint all Python
         run: ruff check .

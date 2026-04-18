@@ -21,6 +21,7 @@ import re
 import sys
 import threading
 from datetime import datetime
+from typing import Literal
 
 _PID = os.getpid()
 _level_lock = threading.Lock()
@@ -62,9 +63,9 @@ def _colorize(line: str, level: str, stream) -> str:
     return line
 
 
-def get_level() -> str:
+def get_level() -> Literal["info", "debug"]:
     with _level_lock:
-        return _level
+        return _level  # type: ignore[return-value]
 
 
 def set_level(level: str) -> str:

@@ -146,7 +146,7 @@ async def get_summary():
 @participant_router.get("/slides-cache-status", response_model=SlidesCacheStatusResponse)
 async def get_slides_updated():
     """Get slides cache status."""
-    return SlidesCacheStatusResponse(slides_updated=misc_state.slides_updated)
+    return SlidesCacheStatusResponse.model_validate({"slides_updated": misc_state.slides_updated})
 
 
 @participant_router.get("/agenda", response_model=AgendaResponse)
@@ -171,7 +171,7 @@ host_router = APIRouter(prefix="/api/{session_id}/host", tags=["misc"])
 @host_router.get("/pastes", response_model=PastsResponse)
 async def get_pastes():
     """Return all pending paste entries grouped by participant uuid."""
-    return PastsResponse(pastes=misc_state.paste_texts)
+    return PastsResponse.model_validate({"pastes": misc_state.paste_texts})
 
 
 @host_router.get("/notes", response_model=NotesResponse)

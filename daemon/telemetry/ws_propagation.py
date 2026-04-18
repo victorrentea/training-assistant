@@ -5,24 +5,25 @@ Convention: trace context is carried in the `_traceparent` field
 by all existing message handlers.
 """
 from opentelemetry import propagate
+from opentelemetry.propagators.textmap import Getter, Setter
 
 _FIELD = "_traceparent"
 
 
-class _DictSetter:
-    def set(self, carrier, key, value):
+class _DictSetter(Setter[dict]):  # type: ignore[type-arg]
+    def set(self, carrier: dict, key: str, value: str) -> None:
         if key == "traceparent":
             carrier[_FIELD] = value
 
 
-class _DictGetter:
-    def get(self, carrier, key):
+class _DictGetter(Getter[dict]):  # type: ignore[type-arg]
+    def get(self, carrier: dict, key: str) -> list[str]:
         if key == "traceparent":
             val = carrier.get(_FIELD)
             return [val] if val else []
         return []
 
-    def keys(self, carrier):
+    def keys(self, carrier: dict) -> list[str]:
         return [_FIELD] if _FIELD in carrier else []
 
 

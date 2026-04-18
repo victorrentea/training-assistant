@@ -120,7 +120,7 @@ async def create_poll(body: CreatePollRequest):
 
     # Only notify host — participants see nothing until opened
     await notify_host(PollAiGeneratedMsg(poll=poll))
-    return CreatePollResponse(poll=poll)
+    return CreatePollResponse(poll=PollResponse.model_validate(poll))
 
 
 @host_router.post("/open", status_code=204)

@@ -6,6 +6,7 @@ a human-readable summary for the daemon startup log.
 """
 
 import re
+from collections.abc import Sequence
 from datetime import date, datetime
 from typing import Optional
 
@@ -99,7 +100,7 @@ def compute_active_windows(
 
 
 def count_lines_in_windows(
-    entries: list[tuple[Optional[datetime], str]],
+    entries: Sequence[tuple[Optional[datetime], str]],
     windows: list[tuple[datetime, datetime]],
 ) -> int:
     """Count transcript entries with non-empty content that fall within windows."""

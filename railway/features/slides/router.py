@@ -193,6 +193,8 @@ async def get_slides(request: Request):
         return {"slides": []}
     try:
         raw_body = response.body or b"{}"
+        if isinstance(raw_body, memoryview):
+            raw_body = bytes(raw_body)
         if isinstance(raw_body, str):
             raw_body = raw_body.encode("utf-8")
         payload = json.loads(raw_body.decode("utf-8"))

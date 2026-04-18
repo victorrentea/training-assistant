@@ -127,6 +127,8 @@ async def _fetch_latest_slides_from_daemon() -> list[dict] | None:
         return None
     try:
         raw_body = response.body or b"{}"
+        if isinstance(raw_body, memoryview):
+            raw_body = bytes(raw_body)
         if isinstance(raw_body, str):
             raw_body = raw_body.encode("utf-8")
         payload = json.loads(raw_body.decode("utf-8"))
@@ -146,7 +148,7 @@ def _cache_map_from_slides(slides: list[dict]) -> dict[str, dict]:
         slug = str(raw.get("slug", "")).strip()
         if not slug:
             continue
-        entry = {"status": str(raw.get("status", "not_cached") or "not_cached")}
+        entry: dict[str, object] = {"status": str(raw.get("status", "not_cached") or "not_cached")}
         if raw.get("size_bytes") is not None:
             entry["size_bytes"] = raw.get("size_bytes")
         if raw.get("downloaded_at"):

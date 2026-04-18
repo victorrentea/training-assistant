@@ -4,6 +4,7 @@ import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 from daemon import log
 from daemon.misc.state import misc_state
@@ -18,6 +19,7 @@ from daemon.slides.catalog import (
     refresh_pptx_mtimes,
     resolve_tracked_sources,
 )
+from daemon.slides.daemon import SlidesDaemonConfig
 from daemon.slides.router import _is_cached_on_railway
 
 _REDOWNLOAD_FIRST_DELAY_S = 10.0
@@ -78,7 +80,7 @@ class SlidesRunner:
 
     def __init__(self, main_config):
         self.main_config = main_config
-        self._slides_config = None
+        self._slides_config: SlidesDaemonConfig | None = None
         self._slides_state: dict = {}
 
     def start(self) -> None:
@@ -89,10 +91,11 @@ class SlidesRunner:
             return
 
         # Keep one auth/server source of truth from training_daemon config.
-        cfg = SimpleNamespace(**vars(cfg))
-        cfg.server_url = self.main_config.server_url
-        cfg.host_username = self.main_config.host_username
-        cfg.host_password = self.main_config.host_password
+        ns = SimpleNamespace(**vars(cfg))
+        ns.server_url = self.main_config.server_url
+        ns.host_username = self.main_config.host_username
+        ns.host_password = self.main_config.host_password
+        cfg = cast(SlidesDaemonConfig, ns)
 
         self._slides_config = cfg
         self._slides_state = slides_daemon.load_daemon_state(cfg.state_file)

@@ -43,6 +43,7 @@ class AppState:
         self.quiz_request: Optional[dict] = None
         self.quiz_refine_request: Optional[dict] = None
         self.quiz_status: Optional[dict] = None
+        self.quiz_md_content: str = ""
         self.slides: list[dict] = []
         self.daemon_last_seen: Optional[datetime] = None
         self.daemon_ws: Optional[WebSocket] = None

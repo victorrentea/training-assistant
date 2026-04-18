@@ -85,15 +85,18 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
         extra_headers["Authorization"] = auth
 
     # Skip SSL verification — daemon is a local trusted process, cert checks unnecessary
-    ws_kwargs = {"additional_headers": extra_headers}
+    ssl_ctx: ssl.SSLContext | None = None
     if url.startswith("wss://"):
         ssl_ctx = ssl.create_default_context()
         ssl_ctx.check_hostname = False
         ssl_ctx.verify_mode = ssl.CERT_NONE
-        ws_kwargs["ssl"] = ssl_ctx
 
     try:
-        async with websockets.connect(url, **ws_kwargs) as upstream:
+        async with websockets.connect(  # type: ignore[call-overload]
+            url,
+            additional_headers=extra_headers,
+            ssl=ssl_ctx,
+        ) as upstream:
             daemon_log.debug("railway", f"↕ open /ws/{path}")
 
             def _msg_name(raw: str) -> str:
@@ -119,7 +122,10 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
             async def upstream_to_client():
                 try:
                     async for message in upstream:
-                        await client_ws.send_text(message)
+                        if isinstance(message, bytes):
+                            await client_ws.send_bytes(message)
+                        else:
+                            await client_ws.send_text(message)
                 except ConnectionClosed:
                     pass
 

@@ -13,7 +13,7 @@ participant_router = APIRouter()
 _OTEL_ENABLED = bool(os.environ.get("OTEL_TRACES_FILE"))
 
 
-def _serve_html_with_otel(path: str, service_name: str = "Browser") -> HTMLResponse:
+def _serve_html_with_otel(path: str, service_name: str = "Browser") -> HTMLResponse | FileResponse:
     """Serve an HTML file, injecting OTel meta tags when telemetry is active."""
     if not _OTEL_ENABLED:
         return FileResponse(path)
