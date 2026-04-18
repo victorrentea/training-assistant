@@ -1,5 +1,7 @@
+import base64
+import hmac
 import json
-import os
+import time
 from unittest.mock import AsyncMock
 
 import pytest
@@ -13,7 +15,25 @@ app = FastAPI()
 app.include_router(router)
 client = TestClient(app)
 
-GOOD_SECRET = "test-secret-abc"
+# base64-encoded secret (as AgentMail/Svix provides it)
+GOOD_SECRET = "dGVzdC1zZWNyZXQta2V5LTE2Yg=="
+
+
+def _signed_request(body: dict, secret: str = GOOD_SECRET) -> tuple[bytes, dict]:
+    """Return (body_bytes, svix_headers) for a properly signed webhook request."""
+    body_bytes = json.dumps(body, separators=(",", ":")).encode()
+    msg_id = "msg_test123"
+    timestamp = str(int(time.time()))
+    key = base64.b64decode(secret)
+    signed = f"{msg_id}.{timestamp}.".encode() + body_bytes
+    sig = base64.b64encode(hmac.new(key, signed, "sha256").digest()).decode()
+    headers = {
+        "svix-id": msg_id,
+        "svix-timestamp": timestamp,
+        "svix-signature": f"v1,{sig}",
+        "content-type": "application/json",
+    }
+    return body_bytes, headers
 
 
 @pytest.fixture(autouse=True)
@@ -28,31 +48,25 @@ class TestWebhookAuth:
         resp = client.post("/webhook/agentmail", json={"event_type": "message.received"})
         assert resp.status_code == 403
 
-    def test_wrong_secret_returns_403(self):
-        resp = client.post(
-            "/webhook/agentmail",
-            json={"event_type": "message.received"},
-            headers={"x-webhook-secret": "wrong"},
-        )
+    def test_wrong_signature_returns_403(self):
+        body = {"event_type": "message.received"}
+        body_bytes, headers = _signed_request(body, secret=base64.b64encode(b"wrong-key-padding-x").decode())
+        resp = client.post("/webhook/agentmail", content=body_bytes, headers=headers)
         assert resp.status_code == 403
 
     def test_correct_secret_returns_200(self):
-        resp = client.post(
-            "/webhook/agentmail",
-            json={"event_type": "message.received"},
-            headers={"x-webhook-secret": GOOD_SECRET},
-        )
+        body = {"event_type": "message.received", "thread": {"senders": ["victorrentea@gmail.com"]}}
+        body_bytes, headers = _signed_request(body)
+        resp = client.post("/webhook/agentmail", content=body_bytes, headers=headers)
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
 
 
 class TestWebhookForwarding:
     def test_non_message_event_is_ignored(self):
-        resp = client.post(
-            "/webhook/agentmail",
-            json={"event_type": "message.sent"},
-            headers={"x-webhook-secret": GOOD_SECRET},
-        )
+        body = {"event_type": "message.sent"}
+        body_bytes, headers = _signed_request(body)
+        resp = client.post("/webhook/agentmail", content=body_bytes, headers=headers)
         assert resp.status_code == 200
         assert resp.json().get("ignored") is True
 
@@ -60,21 +74,17 @@ class TestWebhookForwarding:
         mock_ws = AsyncMock()
         state_module.state.claude_inbox_ws = mock_ws
 
-        resp = client.post(
-            "/webhook/agentmail",
-            json={"event_type": "message.received"},
-            headers={"x-webhook-secret": GOOD_SECRET},
-        )
+        body = {"event_type": "message.received", "thread": {"senders": ["victorrentea@gmail.com"]}}
+        body_bytes, headers = _signed_request(body)
+        resp = client.post("/webhook/agentmail", content=body_bytes, headers=headers)
         assert resp.status_code == 200
         mock_ws.send_text.assert_called_once_with(json.dumps({"type": "email_received"}))
 
     def test_no_listener_connected_still_returns_200(self):
         state_module.state.claude_inbox_ws = None
-        resp = client.post(
-            "/webhook/agentmail",
-            json={"event_type": "message.received"},
-            headers={"x-webhook-secret": GOOD_SECRET},
-        )
+        body = {"event_type": "message.received", "thread": {"senders": ["victorrentea@gmail.com"]}}
+        body_bytes, headers = _signed_request(body)
+        resp = client.post("/webhook/agentmail", content=body_bytes, headers=headers)
         assert resp.status_code == 200
 
     def test_clears_state_when_listener_send_fails(self):
@@ -82,10 +92,8 @@ class TestWebhookForwarding:
         mock_ws.send_text.side_effect = Exception("boom")
         state_module.state.claude_inbox_ws = mock_ws
 
-        resp = client.post(
-            "/webhook/agentmail",
-            json={"event_type": "message.received"},
-            headers={"x-webhook-secret": GOOD_SECRET},
-        )
+        body = {"event_type": "message.received", "thread": {"senders": ["victorrentea@gmail.com"]}}
+        body_bytes, headers = _signed_request(body)
+        resp = client.post("/webhook/agentmail", content=body_bytes, headers=headers)
         assert resp.status_code == 200
         assert state_module.state.claude_inbox_ws is None

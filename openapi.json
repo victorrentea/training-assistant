@@ -19,12 +19,28 @@
               }
             }
           }
-        }, 
+        },
         "security": [
           {
             "HTTPBasic": []
           }
         ]
+      }
+    },
+    "/webhook/agentmail": {
+      "post": {
+        "summary": "Agentmail Webhook",
+        "operationId": "agentmail_webhook_webhook_agentmail_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
       }
     },
     "/": {
@@ -329,7 +345,7 @@
     "/api/{session_id}/api/slides/invalidate/{slug}": {
       "post": {
         "summary": "Invalidate Slide",
-        "description": "Force Railway to re-download and cache-bust the PDF for slug.\n\nCalled by the slides upload daemon after it detects a PPTX was saved and\nGoogle Drive has the updated PDF. Railway deletes the old cached file,\nre-downloads from Drive, then broadcasts slides_cache_status with\nrefreshed_slugs so connected participants auto-reload the active slide.",
+        "description": "Force Railway to re-download and cache-bust the PDF for slug.\n\nCalled by the slides upload daemon after it detects a PPTX was saved and\nGoogle Drive has the updated PDF. Railway deletes the old cached file,\nre-downloads from Drive, then broadcasts slides_updated with\nrefreshed_slugs so connected participants auto-reload the active slide.",
         "operationId": "invalidate_slide_api__session_id__api_slides_invalidate__slug__post",
         "security": [
           {
