@@ -149,13 +149,13 @@ while true; do
     if [ -n "$DAEMON_PID" ] && ! kill -0 "$DAEMON_PID" 2>/dev/null; then
       wait "$DAEMON_PID" 2>/dev/null && DAEMON_EXIT=0 || DAEMON_EXIT=$?
       DAEMON_PID=""
-      if [ $DAEMON_EXIT -eq 0 ]; then
+      if [ "$DAEMON_EXIT" -eq 0 ]; then
         _log "start" "info" "🔴 daemon (clean exit) — restarting in 3s"
         afplay /System/Library/Sounds/Sosumi.aiff &
         sleep 3
         RESTART_REASON="daemon-clean-exit"
         break
-      elif [ $DAEMON_EXIT -eq 42 ]; then
+      elif [ "$DAEMON_EXIT" -eq 42 ]; then
         RESTART_REASON="daemon-version-change"
         break
       else
