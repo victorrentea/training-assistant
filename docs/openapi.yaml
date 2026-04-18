@@ -617,9 +617,9 @@ paths:
     get:
       tags:
       - misc
-      summary: Get Slides Cache Status
+      summary: Get Slides Updated
       description: Get slides cache status.
-      operationId: get_slides_updated_api_participant_slides_updated_get
+      operationId: get_slides_updated_api_participant_slides_cache_status_get
       responses:
         '200':
           description: Successful Response
@@ -2890,7 +2890,7 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/SlidesCacheStatusEntry'
           type: object
-          title: Slides Cache Status
+          title: Slides Updated
           default: {}
       type: object
       title: SlidesCacheStatusResponse

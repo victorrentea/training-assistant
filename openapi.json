@@ -19,7 +19,7 @@
               }
             }
           }
-        },
+        }, 
         "security": [
           {
             "HTTPBasic": []

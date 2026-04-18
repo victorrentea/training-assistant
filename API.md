@@ -107,7 +107,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Slides Cache Status, primarily for diagnostics;<br>UI cache invalidation is event-driven via slides_updated WS.<br>`GET /api/participant/slides-cache-status` | - | `slides_updated?: dict[str, SlidesCacheStatusEntry {`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
+| Get Slides Updated, get slides cache status;<br>primarily for diagnostics;<br>UI cache invalidation is event-driven via slides_updated WS.<br>`GET /api/participant/slides-cache-status` | - | `slides_updated?: dict[str, SlidesCacheStatusEntry {`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
 
 ### Participant WS
 | Message | Payload |
