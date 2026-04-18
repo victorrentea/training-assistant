@@ -1,0 +1,14 @@
+title = "gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for false positives"
+paths = [
+    "docs/superpowers/",
+]
+regexes = [
+    # Dummy base64 test secrets
+    "dGVzdC1zZWNyZXQta2V5LTE2Yg==",
+]
