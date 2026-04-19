@@ -167,6 +167,9 @@ def create_app(backend_url: str) -> FastAPI:
     from daemon.quiz.router import host_router as quiz_host_router
     app.include_router(quiz_host_router)          # /api/{session_id}/quiz-request, /quiz-preview, /quiz-refine
 
+    from daemon.quiz.queue_router import router as quiz_queue_router
+    app.include_router(quiz_queue_router)         # /api/{session_id}/host/quiz-queue
+
     from daemon.activity.router import host_router as activity_host_router
     from daemon.codereview.router import host_router as codereview_host_router
     from daemon.codereview.router import participant_router as codereview_participant_router

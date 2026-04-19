@@ -140,6 +140,22 @@ class QuizPreviewPayload(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
+class QuizQueueOption(BaseModel):
+    id: str
+    text: str
+
+
+class QuizQueueQuestion(BaseModel):
+    question: str
+    options: list[QuizQueueOption]
+    correct_ids: list[str]
+
+
+class QuizQueueStatus(BaseModel):
+    pending: int
+    current: QuizQueueQuestion | None
+
+
 class HostStateResponse(BaseModel):
     type: Literal["state"] = "state"
     mode: str
@@ -191,6 +207,7 @@ class HostStateResponse(BaseModel):
     transcript_total_lines: int
     transcript_latest_ts: str | None = None
     quiz_preview: QuizPreviewPayload | None = None
+    quiz_queue: QuizQueueStatus | None = None
 
 
 def _build_host_participants_list() -> list[dict]:
@@ -345,6 +362,16 @@ def _build_slides_log_fields() -> dict:
     }
 
 
+def _build_quiz_queue_status() -> dict:
+    """Build quiz queue status for host state — pending count and current question."""
+    from daemon.quiz.queue import quiz_queue
+    current = quiz_queue.current()
+    return {
+        "pending": quiz_queue.pending_count(),
+        "current": current,
+    }
+
+
 @router.get("/state", response_model=HostStateResponse)
 async def get_host_state(request: Request, session_id: str):
     """Return full state for host page load — replicates Railway build_for_host()."""
@@ -417,6 +444,8 @@ async def get_host_state(request: Request, session_id: str):
         "transcript_latest_ts": None,
         # Quiz preview
         "quiz_preview": None,
+        # Quiz queue
+        "quiz_queue": _build_quiz_queue_status(),
     }
 
     return JSONResponse(state_msg)
