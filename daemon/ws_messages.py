@@ -54,9 +54,8 @@ class ParticipantListUpdatedMsg(BaseModel):
 
 # ── Poll ──────────────────────────────────────────────────────────────────────
 
-class PollAiGeneratedMsg(BaseModel):
-    type: Literal["poll_ai_generated"] = "poll_ai_generated"
-    poll: dict[str, Any]  # {id, question, options[], multi}
+class PollQueueUpdatedMsg(BaseModel):
+    type: Literal["poll_queue_updated"] = "poll_queue_updated"
 
 
 class PollOpenedMsg(BaseModel):
@@ -302,7 +301,7 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
     "slides_updated": SlidesCacheStatusMsg,
     # Poll
-    "poll_ai_generated": PollAiGeneratedMsg,
+    "poll_queue_updated": PollQueueUpdatedMsg,
     "vote_update": VoteUpdateMsg,
     # Word Cloud
     "wordcloud_updated": WordcloudUpdatedMsg,
@@ -373,7 +372,7 @@ HOST_MESSAGE_FEATURES: dict[str, str] = {
     # Slides
     "slides_updated": "slides",
     # Poll
-    "poll_ai_generated": "poll",
+    "poll_queue_updated": "poll",
     "vote_update": "poll",
     # Word Cloud
     "wordcloud_updated": "wordcloud",

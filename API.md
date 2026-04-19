@@ -190,7 +190,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Host-only notification when a new poll is created (before opening)<br>`poll_ai_generated` | `poll: dict  # Poll data {id, question, options[], multi}` |
+| Poll queue changed — host should GET /poll/queue to refresh<br>`poll_queue_updated` | - |
 | Real-time vote tally while poll is open<br>Host-only event; participants do not receive live vote tallies.<br>Only total voted count is sent to avoid influencing participants.<br>`vote_update` | `voted_count: int  # total number of participants who have voted so far` |
 
 ## Feature: Word Cloud

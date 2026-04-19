@@ -10,7 +10,7 @@ from daemon.participant.state import participant_state
 from daemon.poll.state import poll_state
 from daemon.quiz.queue import quiz_queue
 from daemon.scores import scores
-from daemon.ws_messages import PollAiGeneratedMsg, PollOpenedMsg
+from daemon.ws_messages import PollOpenedMsg, PollQueueUpdatedMsg
 from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,7 @@ async def submit_questions(body: SubmitQuestionsRequest):
     questions = [q.model_dump() for q in body.questions]
     quiz_queue.submit(questions)
     daemon_log.info(_LOG, f"Queue submitted: {len(questions)} question(s)")
+    await notify_host(PollQueueUpdatedMsg())
     return Response(status_code=204)
 
 
@@ -87,10 +88,9 @@ async def submit_current():
     poll_state.open_poll(scores.snapshot_base)
 
     broadcast(PollOpenedMsg(poll=poll))
-    await notify_host(PollAiGeneratedMsg(poll=poll))
     await notify_host(PollOpenedMsg(poll=poll))
-
     quiz_queue.advance()
+    await notify_host(PollQueueUpdatedMsg())
     daemon_log.info(_LOG, f"Fired question: \"{current['question'][:60]}\" — {quiz_queue.pending_count()} remaining")
     return Response(status_code=204)
 
@@ -103,6 +103,7 @@ async def skip_current():
         return JSONResponse({"error": "Poll queue is empty"}, status_code=400)
 
     quiz_queue.advance()
+    await notify_host(PollQueueUpdatedMsg())
     daemon_log.info(_LOG, f"Skipped question: \"{current['question'][:60]}\" — {quiz_queue.pending_count()} remaining")
     return Response(status_code=204)
 
@@ -111,5 +112,6 @@ async def skip_current():
 async def clear_queue():
     """Clear the entire quiz queue."""
     quiz_queue.clear()
+    await notify_host(PollQueueUpdatedMsg())
     daemon_log.info(_LOG, "Queue cleared")
     return Response(status_code=204)

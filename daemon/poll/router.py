@@ -11,7 +11,6 @@ from daemon.poll.state import poll_state
 from daemon.scores import scores
 from daemon.ws_messages import (
     ActivityUpdatedMsg,
-    PollAiGeneratedMsg,
     PollClearedMsg,
     PollCorrectRevealedMsg,
     PollEndCountdownStartedMsg,
@@ -108,7 +107,6 @@ async def create_poll(body: CreatePollRequest):
     participant_state.current_activity = "poll"
     poll_state.open_poll(scores.snapshot_base)
 
-    await notify_host(PollAiGeneratedMsg(poll=poll))
     broadcast(PollOpenedMsg(poll=poll_state.poll))
     await notify_host(PollOpenedMsg(poll=poll_state.poll))
     return Response(status_code=204)

@@ -125,11 +125,7 @@ class TestHostCreatePoll:
         })
         assert resp.status_code == 204
         notify_types = [call[0][0].type for call in mock_notify_host.call_args_list]
-        assert "poll_ai_generated" in notify_types
         assert "poll_opened" in notify_types
-        ai_msg = next(c[0][0] for c in mock_notify_host.call_args_list if c[0][0].type == "poll_ai_generated")
-        assert ai_msg.poll["question"] == "Best framework?"
-        assert ai_msg.poll["options"] == _SAMPLE_OPTIONS
 
     def test_create_poll_activity_gate(self, host_client, mock_participant_state):
         mock_participant_state.current_activity = "debate"

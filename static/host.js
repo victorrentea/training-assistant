@@ -323,15 +323,8 @@
         window.location.href = msg.url;
         return;
       }
-      if (msg.type === 'poll_ai_generated') {
-        currentPoll = msg.poll;
-        pollActive = false;
-        voteCounts = [];
-        totalVotes = 0;
-        loadCorrectOpts(currentPoll.question);
-        recordPollInHistory(currentPoll, new Set());
-        updateCenterPanel('poll');
-        renderPollDisplay();
+      if (msg.type === 'poll_queue_updated') {
+        fetchPollQueue();
         return;
       }
       if (msg.type === 'poll_opened') {
@@ -1865,7 +1858,6 @@
   }
 
   // ── Poll Queue ──────────────────────────────────────────────────────────────
-  let _pollQueuePollTimer = null;
 
   async function pushDummyQueue() {
     const questions = [
@@ -1977,8 +1969,6 @@
 
   function startPollQueuePolling() {
     fetchPollQueue();
-    if (_pollQueuePollTimer) clearInterval(_pollQueuePollTimer);
-    _pollQueuePollTimer = setInterval(fetchPollQueue, 3000);
   }
 
   function toast(msg) {
