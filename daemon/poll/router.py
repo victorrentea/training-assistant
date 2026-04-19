@@ -61,7 +61,6 @@ class HostPollData(BaseModel):
 class HostPollStateResponse(BaseModel):
     poll: HostPollData | None = None
     poll_running: bool
-    vote_counts: list[int]
     votes: dict[str, HostPollVote]
 
 # ── Participant router (proxied via Railway) ──
@@ -141,7 +140,7 @@ async def reveal_correct(body: RevealCorrectRequest):
 
 @host_router.post("/end/timer", status_code=204)
 async def start_timer(body: StartTimerRequest):
-    """Host starts a countdown timer for the poll."""
+    """Host starts a countdown timer to end the poll."""
     if not poll_state.poll:
         return JSONResponse({"error": "No poll"}, status_code=400)
 
@@ -176,6 +175,5 @@ async def get_poll_state():
     return HostPollStateResponse(
         poll=poll,
         poll_running=ps.poll_active,
-        vote_counts=ps.vote_counts() if ps.poll else [],
         votes={pid: HostPollVote(**v) for pid, v in ps.votes.items()},
     )

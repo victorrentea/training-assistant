@@ -438,7 +438,7 @@ paths:
       tags:
       - poll
       summary: Start Timer
-      description: Host starts a countdown timer for the poll.
+      description: Host starts a countdown timer to end the poll.
       operationId: start_timer_api__session_id__host_poll_end_timer_post
       requestBody:
         content:
@@ -1847,11 +1847,6 @@ components:
         poll_running:
           type: boolean
           title: Poll Running
-        vote_counts:
-          items:
-            type: integer
-          type: array
-          title: Vote Counts
         votes:
           additionalProperties:
             $ref: '#/components/schemas/HostPollVote'
@@ -1860,7 +1855,6 @@ components:
       type: object
       required:
       - poll_running
-      - vote_counts
       - votes
       title: HostPollStateResponse
     HostPollVote:

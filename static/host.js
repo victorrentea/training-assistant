@@ -1705,8 +1705,11 @@
       _applyTimer(currentPoll.timer_seconds, currentPoll.timer_started_at);
     }
     if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
-    voteCounts = data.vote_counts || [];
-    totalVotes = voteCounts.reduce((a, b) => a + b, 0);
+    const n = currentPoll?.options?.length || 0;
+    voteCounts = Array(n).fill(0);
+    const allVotes = Object.values(data.votes || {});
+    for (const v of allVotes) for (const idx of v.option_indices) if (idx < n) voteCounts[idx]++;
+    totalVotes = allVotes.length;
     renderPollDisplay();
   }
 

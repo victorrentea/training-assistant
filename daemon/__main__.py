@@ -1306,9 +1306,6 @@ def run() -> None:
                     )
 
 
-                sf_name = config.session_folder.name if config.session_folder else None
-                sn_name = config.session_notes.name if config.session_notes else None
-
                 # ── Push session info when changed, on reconnect, or periodically ──
                 current_slides = load_slides_manifest(config.session_folder)
                 current_slides_hash = hashlib.sha256(
