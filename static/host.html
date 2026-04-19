@@ -91,19 +91,19 @@
     <!-- Poll tab content -->
     <div id="tab-content-poll" class="tab-content">
       <!-- Generate question (primary) -->
-      <div class="quiz-gen-row">
-        <div class="quiz-gen-controls" style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-start;">
+      <div class="poll-gen-row">
+        <div class="poll-gen-controls" style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-start;">
           <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
             from topic:
-            <input id="quiz-topic" type="text" maxlength="60" autocomplete="off"
+            <input id="poll-topic" type="text" maxlength="60" autocomplete="off"
                    placeholder="e.g. circuit breaker"
                    oninput="updateGenBtn()"
-                   onkeydown="if(event.key==='Enter')requestQuiz()"
+                   onkeydown="if(event.key==='Enter')requestPoll()"
                    style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:0 .5rem;font-size:.85rem;width:10rem;" />
           </div>
           <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
             from what we discussed the last
-            <select id="quiz-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:0 .4rem;font-size:.85rem;cursor:pointer;">
+            <select id="poll-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:0 .4rem;font-size:.85rem;cursor:pointer;">
               <option value="15">15 min</option>
               <option value="30" selected>30 min</option>
               <option value="60">1 hour</option>
@@ -111,21 +111,21 @@
               <option value="480">whole day</option>
             </select>
           </div>
-          <button class="btn btn-warn" id="gen-quiz-btn" onclick="requestQuiz()" style="align-self:flex-start;">Generate from transcript 🤖</button>
+          <button class="btn btn-warn" id="gen-poll-btn" onclick="requestPoll()" style="align-self:flex-start;">Generate from transcript 🤖</button>
         </div>
-        <span id="quiz-status"></span>
+        <span id="poll-status"></span>
       </div>
-      <!-- Quiz Queue panel (hidden when queue empty) -->
-      <div id="quiz-queue-panel" style="display:none; margin-top:.75rem; padding:.75rem; border:1px solid var(--border); border-radius:8px; background:var(--surface2);">
+      <!-- Poll Queue panel (hidden when queue empty) -->
+      <div id="poll-queue-panel" style="display:none; margin-top:.75rem; padding:.75rem; border:1px solid var(--border); border-radius:8px; background:var(--surface2);">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem;">
-          <span style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">Quiz Queue</span>
-          <span id="quiz-queue-counter" style="font-size:.8rem; color:var(--muted);"></span>
+          <span style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">Poll Queue</span>
+          <span id="poll-queue-counter" style="font-size:.8rem; color:var(--muted);"></span>
         </div>
-        <div id="quiz-queue-question" style="font-size:.95rem; color:var(--text); margin-bottom:.5rem; font-weight:600;"></div>
-        <div id="quiz-queue-options" style="display:flex; flex-direction:column; gap:.25rem; margin-bottom:.65rem;"></div>
+        <div id="poll-queue-question" style="font-size:.95rem; color:var(--text); margin-bottom:.5rem; font-weight:600;"></div>
+        <div id="poll-queue-options" style="display:flex; flex-direction:column; gap:.25rem; margin-bottom:.65rem;"></div>
         <div class="btn-row">
-          <button class="btn btn-success" id="quiz-queue-fire-btn" onclick="quizQueueFire()">&#9654; Fire</button>
-          <button class="btn" id="quiz-queue-skip-btn" onclick="quizQueueSkip()">&#9197; Skip</button>
+          <button class="btn btn-success" id="poll-queue-fire-btn" onclick="pollQueueFire()">&#9654; Fire</button>
+          <button class="btn" id="poll-queue-skip-btn" onclick="pollQueueSkip()">&#9197; Skip</button>
         </div>
       </div>
 

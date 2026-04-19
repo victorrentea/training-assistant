@@ -106,7 +106,7 @@ def _push_error_status(config: SlidesDaemonConfig, message: str) -> None:
     try:
         sid = get_active_session_id(config.server_url)
         _post_json(
-            session_api_url(config.server_url, sid, "/quiz-status"),
+            session_api_url(config.server_url, sid, "/poll-status"),
             payload,
             config.host_username,
             config.host_password,

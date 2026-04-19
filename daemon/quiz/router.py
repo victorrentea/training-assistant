@@ -1,4 +1,4 @@
-"""Daemon quiz router — host-only endpoints for quiz request/refine/preview."""
+"""Daemon quiz router — host-only endpoints for poll request/refine/preview."""
 import logging
 from typing import Optional
 
@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from daemon import quiz as _quiz_pkg  # noqa: F401 - ensure package is importable
 from daemon.config import DEFAULT_TRANSCRIPT_MINUTES
 from daemon.quiz import pending as quiz_pending
-from daemon.ws_messages import QuizPreviewMsg, QuizStatusMsg
+from daemon.ws_messages import PollPreviewMsg, PollStatusMsg
 from daemon.ws_publish import broadcast
 
 logger = logging.getLogger(__name__)
@@ -20,11 +20,11 @@ logger = logging.getLogger(__name__)
 class OkResponse(BaseModel):
     ok: bool = True
 
-class QuizRequestBody(BaseModel):
+class PollRequestBody(BaseModel):
     minutes: Optional[int] = None
     topic: Optional[str] = None
 
-class QuizPreviewPayload(BaseModel):
+class PollPreviewPayload(BaseModel):
     quiz: dict | None = None
     question: str | None = None
     options: list[str] | None = None
@@ -32,20 +32,20 @@ class QuizPreviewPayload(BaseModel):
     correct_indices: list[int] | None = None
 
 
-class QuizRefineRequest(BaseModel):
+class PollRefineRequest(BaseModel):
     target: str
-    preview: Optional[QuizPreviewPayload] = None
+    preview: Optional[PollPreviewPayload] = None
 
 
 # ── Host router (called directly on daemon localhost) ──
-# Host JS calls API('/quiz-request') which expands to /api/{session_id}/quiz-request.
+# Host JS calls API('/poll-request') which expands to /api/{session_id}/poll-request.
 
-host_router = APIRouter(prefix="/api/{session_id}/host", tags=["quiz"])
+host_router = APIRouter(prefix="/api/{session_id}/host", tags=["poll"])
 
 
-@host_router.post("/quiz-request", status_code=204)
-async def request_quiz(body: QuizRequestBody):
-    """Host requests a quiz — stores request for the orchestrator loop to pick up."""
+@host_router.post("/poll-request", status_code=204)
+async def request_poll(body: PollRequestBody):
+    """Host requests a poll — stores request for the orchestrator loop to pick up."""
     topic = body.topic
     minutes = body.minutes
 
@@ -66,32 +66,32 @@ async def request_quiz(body: QuizRequestBody):
         req = {"minutes": minutes, "topic": None}
         msg = f"Waiting for daemon (last {minutes} min)…"
 
-    quiz_pending.put("quiz_request", {"request": req})
+    quiz_pending.put("poll_request", {"request": req})
 
-    broadcast(QuizStatusMsg(status="requested", message=msg))
+    broadcast(PollStatusMsg(status="requested", message=msg))
 
     return Response(status_code=204)
 
 
-@host_router.delete("/quiz-preview", status_code=204)
-async def clear_quiz_preview():
-    """Host clears the current quiz preview."""
+@host_router.delete("/poll-preview", status_code=204)
+async def clear_poll_preview():
+    """Host clears the current poll preview."""
     from daemon.ws_publish import broadcast
-    broadcast(QuizPreviewMsg(quiz=None))
+    broadcast(PollPreviewMsg(poll=None))
     return Response(status_code=204)
 
 
-@host_router.post("/quiz-refine", status_code=204)
-async def request_quiz_refine(body: QuizRefineRequest):
+@host_router.post("/poll-refine", status_code=204)
+async def request_poll_refine(body: PollRefineRequest):
     """Host requests regeneration of a specific question or option."""
     if not body.target:
         return JSONResponse({"error": "Missing 'target'"}, status_code=400)
 
-    quiz_pending.put("quiz_refine", {"request": {"target": str(body.target)}, "preview": body.preview})
+    quiz_pending.put("poll_refine", {"request": {"target": str(body.target)}, "preview": body.preview})
 
     label = "question" if body.target == "question" else "option"
     msg = f"Regenerating {label}…"
 
-    broadcast(QuizStatusMsg(status="generating", message=msg))
+    broadcast(PollStatusMsg(status="generating", message=msg))
 
     return Response(status_code=204)

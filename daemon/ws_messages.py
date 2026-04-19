@@ -176,21 +176,21 @@ class LeaderboardHiddenMsg(BaseModel):
     type: Literal["leaderboard_hidden"] = "leaderboard_hidden"
 
 
-# ── Quiz ──────────────────────────────────────────────────────────────────────
+# ── Poll (Generation) ─────────────────────────────────────────────────────────
 
-class QuizStatusMsg(BaseModel):
+class PollStatusMsg(BaseModel):
     """Same structure for both participants and host."""
-    type: Literal["quiz_status"] = "quiz_status"
+    type: Literal["poll_status"] = "poll_status"
     status: str
     message: str
 
 
-class QuizPreviewMsg(BaseModel):
+class PollPreviewMsg(BaseModel):
     """Same structure for both participants and host.
     Normal: top-level question/options/multi/correct_indices.
-    Clear: quiz=None (all other fields absent)."""
-    type: Literal["quiz_preview"] = "quiz_preview"
-    quiz: Any | None = None
+    Clear: poll=None (all other fields absent)."""
+    type: Literal["poll_preview"] = "poll_preview"
+    poll: Any | None = None
     question: str | None = None
     options: list[Any] | None = None
     multi: bool | None = None
@@ -315,9 +315,9 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "debate_round_ended": DebateRoundEndedMsg,
     # Leaderboard
     "leaderboard_revealed": LeaderboardRevealedMsg,
-    # Quiz
-    "quiz_status": QuizStatusMsg,
-    "quiz_preview": QuizPreviewMsg,
+    # Poll (generation)
+    "poll_status": PollStatusMsg,
+    "poll_preview": PollPreviewMsg,
     # Notes & Summary
     "notes_updated": NotesUpdatedMsg,
     "summary_updated": SummaryUpdatedMsg,
@@ -341,9 +341,9 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     "codereview_selections_updated": CodereviewSelectionsUpdatedMsg,
     # Emoji
     "emoji_reaction": EmojiReactionMsg,
-    # Quiz
-    "quiz_status": QuizStatusMsg,
-    "quiz_preview": QuizPreviewMsg,
+    # Poll (generation)
+    "poll_status": PollStatusMsg,
+    "poll_preview": PollPreviewMsg,
     # Leaderboard
     "leaderboard_revealed": LeaderboardRevealedMsg,
     # Paste & Upload
@@ -394,9 +394,9 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "debate_updated": "debate",
     "debate_timer": "debate",
     "debate_round_ended": "debate",
-    # Quiz
-    "quiz_status": "quiz",
-    "quiz_preview": "quiz",
+    # Poll (generation)
+    "poll_status": "poll",
+    "poll_preview": "poll",
     # Notes & Summary
     "notes_updated": "notes_summary",
     "summary_updated": "notes_summary",
@@ -420,9 +420,9 @@ HOST_MESSAGE_FEATURES: dict[str, str] = {
     "codereview_selections_updated": "codereview",
     # Emoji
     "emoji_reaction": "emoji",
-    # Quiz
-    "quiz_status": "quiz",
-    "quiz_preview": "quiz",
+    # Poll (generation)
+    "poll_status": "poll",
+    "poll_preview": "poll",
     # Scores & Leaderboard
     "leaderboard_revealed": "scores_leaderboard",
     # Paste & Upload

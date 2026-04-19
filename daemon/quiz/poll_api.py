@@ -1,5 +1,5 @@
 """
-Helpers for posting quiz state to the workshop server via WebSocket.
+Helpers for posting poll state to the workshop server via WebSocket.
 Falls back to HTTP for read-only fetches (summary points).
 """
 
@@ -12,7 +12,7 @@ from daemon.http import _get_json
 from daemon.poll.state import poll_state
 from daemon.scores import scores
 from daemon.session_state import get_current_session_id
-from daemon.ws_messages import QuizStatusMsg
+from daemon.ws_messages import PollStatusMsg
 from daemon.ws_publish import broadcast
 
 
@@ -57,9 +57,9 @@ def post_status(status: str, message: str, config: Config,
                 session_notes: Optional[str] = None,
                 slides: Optional[list[dict]] = None) -> None:
     if session_folder is not None or session_notes is not None or slides is not None:
-        # Extended payload not covered by QuizStatusMsg — keep raw send
-        # TODO: no model yet — QuizStatusMsg doesn't support session_folder/session_notes/slides fields
-        event: dict = {"type": "quiz_status", "status": status, "message": message}
+        # Extended payload not covered by PollStatusMsg — keep raw send
+        # TODO: no model yet — PollStatusMsg doesn't support session_folder/session_notes/slides fields
+        event: dict = {"type": "poll_status", "status": status, "message": message}
         if session_folder is not None or session_notes is not None:
             event["session_folder"] = session_folder
             event["session_notes"] = session_notes
@@ -74,14 +74,14 @@ def post_status(status: str, message: str, config: Config,
             log.error("daemon", f"Could not post status: {e}")
     else:
         try:
-            broadcast(QuizStatusMsg(status=status, message=message))
+            broadcast(PollStatusMsg(status=status, message=message))
         except Exception as e:
             log.error("daemon", f"Could not post status: {e}")
 
 
 def fetch_quiz_history(config: Config) -> str:
     """Return accumulated closed polls as markdown."""
-    return poll_state.quiz_md_content.strip()
+    return poll_state.poll_md_content.strip()
 
 
 def fetch_summary_points(config: Config) -> list[dict]:

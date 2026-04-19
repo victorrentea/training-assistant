@@ -693,7 +693,7 @@ def run() -> None:
             _pending_requests[msg_type] = data
         return handler
 
-    # quiz_request and quiz_refine are now served via daemon REST endpoints (daemon/quiz/router.py)
+    # poll_request and poll_refine are now served via daemon REST endpoints (daemon/quiz/router.py)
     # and stored in daemon.quiz.pending — no longer via WS push from Railway
     # debate_ai_request handled directly by debate router (no longer via WS polling)
     ws_client.register_handler("summary_force", _ws_handler("summary_force"))
@@ -1328,9 +1328,9 @@ def run() -> None:
 
                 # notes_content send removed: notes are no longer pushed via WS
 
-                # ── Check for new quiz generation request (via daemon REST endpoint) ──
+                # ── Check for new poll generation request (via daemon REST endpoint) ──
                 from daemon.quiz.pending import pop as _quiz_pending_pop
-                quiz_data = _quiz_pending_pop("quiz_request")
+                quiz_data = _quiz_pending_pop("poll_request")
                 if quiz_data:
                     req = quiz_data.get("request")
                     if req:
@@ -1348,8 +1348,8 @@ def run() -> None:
                         else:
                             last_quiz, last_text = None, None
 
-                # ── Check for refine request (via daemon REST endpoint) ──
-                refine_data = _quiz_pending_pop("quiz_refine")
+                # ── Check for poll refine request (via daemon REST endpoint) ──
+                refine_data = _quiz_pending_pop("poll_refine")
                 if refine_data:
                     refine_req = refine_data.get("request")
                     if refine_req:

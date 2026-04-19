@@ -433,7 +433,7 @@
         daemonSessionFolder = msg.daemon_session_folder || null;
         if (msg.session_type !== undefined) daemonSessionType = msg.session_type || 'workshop';
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
-        renderPreview(msg.quiz_preview || null);
+        renderPreview(msg.poll_preview || null);
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
         updateCenterPanel(currentActivity);
@@ -520,10 +520,10 @@
           _lastDebateMsg.debate_round_timer_seconds = null;
           renderDebateHost(_lastDebateMsg);
         }
-      } else if (msg.type === 'quiz_status') {
-        renderQuizStatus(msg.status, msg.message);
-      } else if (msg.type === 'quiz_preview') {
-        renderPreview(msg.quiz || null);
+      } else if (msg.type === 'poll_status') {
+        renderPollStatus(msg.status, msg.message);
+      } else if (msg.type === 'poll_preview') {
+        renderPreview(msg.poll || null);
       } else if (msg.type === 'overlay_connected') {
         renderOverlayStatus(msg.overlay_connected);
       } else if (msg.type === 'emoji_reaction') {
@@ -1874,38 +1874,38 @@
     if (totalEl) totalEl.textContent = `${totalVotes} total vote${totalVotes!==1?'s':''}`;
   }
 
-  // ── Quiz generator ──
+  // ── Poll generator ──
   const GEN_LABEL_TRANSCRIPT = 'Generate from transcript 🤖';
   const GEN_LABEL_TOPIC = 'Generate on topic 🤖';
 
   function updateGenBtn() {
-    const topic = document.getElementById('quiz-topic').value.trim();
-    const btn = document.getElementById('gen-quiz-btn');
+    const topic = document.getElementById('poll-topic').value.trim();
+    const btn = document.getElementById('gen-poll-btn');
     btn.textContent = topic ? GEN_LABEL_TOPIC : GEN_LABEL_TRANSCRIPT;
   }
 
-  async function requestQuiz() {
-    const topic = document.getElementById('quiz-topic').value.trim();
-    const btn = document.getElementById('gen-quiz-btn');
+  async function requestPoll() {
+    const topic = document.getElementById('poll-topic').value.trim();
+    const btn = document.getElementById('gen-poll-btn');
     btn.disabled = true;
     let body, statusMsg;
     if (topic) {
       body = { topic };
       statusMsg = `Waiting… (topic: ${topic})`;
     } else {
-      const minutes = parseInt(document.getElementById('quiz-minutes').value, 10);
+      const minutes = parseInt(document.getElementById('poll-minutes').value, 10);
       body = { minutes };
       statusMsg = `Waiting… (${minutes}m)`;
     }
-    renderQuizStatus('requested', statusMsg);
+    renderPollStatus('requested', statusMsg);
     try {
-      await fetch(API('/quiz-request'), {
+      await fetch(API('/poll-request'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
     } catch (e) {
-      renderQuizStatus('error', 'Failed to reach server.');
+      renderPollStatus('error', 'Failed to reach server.');
     }
     setTimeout(() => { btn.disabled = false; }, 5000);
   }
@@ -1913,23 +1913,23 @@
   let pendingPreview = null;
   let refiningTarget = null; // 'question' | 'opt0' | null
 
-  function renderPreview(quiz) {
+  function renderPreview(pollPreview) {
     const oldPreview = pendingPreview;
-    pendingPreview = quiz;
+    pendingPreview = pollPreview;
     const card = document.getElementById('preview-card');
     const el = document.getElementById('preview-display');
-    if (!quiz) { card.style.display = 'none'; refiningTarget = null; return; }
+    if (!pollPreview) { card.style.display = 'none'; refiningTarget = null; return; }
     card.style.display = '';
-    const sourceRef = quiz.source
-      ? `<p class="poll-source-ref">📖 ${escHtml(quiz.source)}${quiz.page ? `, p. ${escHtml(quiz.page)}` : ''}</p>`
+    const sourceRef = pollPreview.source
+      ? `<p class="poll-source-ref">📖 ${escHtml(pollPreview.source)}${pollPreview.page ? `, p. ${escHtml(pollPreview.page)}` : ''}</p>`
       : '';
     el.innerHTML =
       `<div class="preview-question-row">` +
-      `<p class="poll-question" style="margin:0; flex:1;">${escHtml(quiz.question)}</p>` +
+      `<p class="poll-question" style="margin:0; flex:1;">${escHtml(pollPreview.question)}</p>` +
       `<button class="refresh-btn" title="Generate new question" onclick="refinePreview('question')">↻</button>` +
       `</div>` +
-      `<span class="mode-pill" style="margin-left:0; margin-bottom:.75rem;">${quiz.multi ? '☑ Multi-select' : '◉ Single-select'}</span>` +
-      quiz.options.map((o, i) =>
+      `<span class="mode-pill" style="margin-left:0; margin-bottom:.75rem;">${pollPreview.multi ? '☑ Multi-select' : '◉ Single-select'}</span>` +
+      pollPreview.options.map((o, i) =>
         `<div class="preview-option">` +
         `<span>${escHtml(o)}</span>` +
         `<button class="refresh-btn" title="Regenerate this option" onclick="refinePreview('opt${i}')">↻</button>` +
@@ -1941,7 +1941,7 @@
     if (oldPreview && refiningTarget) {
       const target = refiningTarget;
       refiningTarget = null;
-      requestAnimationFrame(() => _flashChanged(target, oldPreview, quiz));
+      requestAnimationFrame(() => _flashChanged(target, oldPreview, pollPreview));
     }
   }
 
@@ -1967,7 +1967,7 @@
     refiningTarget = target;
     _applyRefineGrayOut(target);
     try {
-      const res = await fetch(API('/quiz-refine'), {
+      const res = await fetch(API('/poll-refine'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target }),
@@ -2021,7 +2021,7 @@
         );
       }
       await setPollStatus(true);
-      await fetch(API('/quiz-preview'), { method: 'DELETE' });
+      await fetch(API('/poll-preview'), { method: 'DELETE' });
       toast('Poll fired ✓');
     } else {
       const err = await res.json();
@@ -2036,7 +2036,7 @@
   }
 
   async function dismissPreview() {
-    await fetch(API('/quiz-preview'), { method: 'DELETE' });
+    await fetch(API('/poll-preview'), { method: 'DELETE' });
   }
 
   async function resetScores() {
@@ -2051,8 +2051,8 @@
     toast(`${name}'s score reset ✓`);
   }
 
-  function renderQuizStatus(status, message) {
-    const el = document.getElementById('quiz-status');
+  function renderPollStatus(status, message) {
+    const el = document.getElementById('poll-status');
     if (!el) return;
     const colors = { requested: 'var(--muted)', generating: 'var(--warn)', done: 'var(--accent2)', error: 'var(--danger)' };
     const icons  = { requested: '⏳', generating: '⚙️', done: '', error: '❌' };
@@ -2061,32 +2061,32 @@
     el.title = message;
   }
 
-  // ── Quiz Queue ──────────────────────────────────────────────────────────────
-  let _quizQueuePollTimer = null;
+  // ── Poll Queue ──────────────────────────────────────────────────────────────
+  let _pollQueuePollTimer = null;
 
-  async function fetchQuizQueue() {
+  async function fetchPollQueue() {
     try {
-      const res = await fetch(API('/quiz-queue'));
-      if (!res.ok) { renderQuizQueuePanel(null); return; }
+      const res = await fetch(API('/poll-queue'));
+      if (!res.ok) { renderPollQueuePanel(null); return; }
       const data = await res.json();
-      renderQuizQueuePanel(data);
+      renderPollQueuePanel(data);
     } catch (e) {
-      renderQuizQueuePanel(null);
+      renderPollQueuePanel(null);
     }
   }
 
-  function renderQuizQueuePanel(data) {
-    const panel = document.getElementById('quiz-queue-panel');
+  function renderPollQueuePanel(data) {
+    const panel = document.getElementById('poll-queue-panel');
     if (!panel) return;
     if (!data || data.pending === 0) {
       panel.style.display = 'none';
       return;
     }
     panel.style.display = '';
-    document.getElementById('quiz-queue-counter').textContent = `${data.pending} remaining`;
+    document.getElementById('poll-queue-counter').textContent = `${data.pending} remaining`;
     const q = data.question;
-    document.getElementById('quiz-queue-question').textContent = q ? q.question : '';
-    const optsEl = document.getElementById('quiz-queue-options');
+    document.getElementById('poll-queue-question').textContent = q ? q.question : '';
+    const optsEl = document.getElementById('poll-queue-options');
     optsEl.innerHTML = '';
     if (q && q.options) {
       const correctSet = new Set(q.correct_indices || []);
@@ -2107,11 +2107,11 @@
     }
   }
 
-  async function quizQueueFire() {
-    const btn = document.getElementById('quiz-queue-fire-btn');
+  async function pollQueueFire() {
+    const btn = document.getElementById('poll-queue-fire-btn');
     btn.disabled = true;
     try {
-      const res = await fetch(API('/quiz-queue/fire'), { method: 'POST' });
+      const res = await fetch(API('/poll-queue/fire'), { method: 'POST' });
       if (res.ok) {
         toast('Question fired from queue \u2713');
       } else {
@@ -2122,15 +2122,15 @@
       toast('Failed to reach server');
     } finally {
       btn.disabled = false;
-      await fetchQuizQueue();
+      await fetchPollQueue();
     }
   }
 
-  async function quizQueueSkip() {
-    const btn = document.getElementById('quiz-queue-skip-btn');
+  async function pollQueueSkip() {
+    const btn = document.getElementById('poll-queue-skip-btn');
     btn.disabled = true;
     try {
-      const res = await fetch(API('/quiz-queue/skip'), { method: 'POST' });
+      const res = await fetch(API('/poll-queue/skip'), { method: 'POST' });
       if (res.ok) {
         toast('Question skipped');
       } else {
@@ -2141,14 +2141,14 @@
       toast('Failed to reach server');
     } finally {
       btn.disabled = false;
-      await fetchQuizQueue();
+      await fetchPollQueue();
     }
   }
 
-  function startQuizQueuePolling() {
-    fetchQuizQueue();
-    if (_quizQueuePollTimer) clearInterval(_quizQueuePollTimer);
-    _quizQueuePollTimer = setInterval(fetchQuizQueue, 3000);
+  function startPollQueuePolling() {
+    fetchPollQueue();
+    if (_pollQueuePollTimer) clearInterval(_pollQueuePollTimer);
+    _pollQueuePollTimer = setInterval(fetchPollQueue, 3000);
   }
 
   function toast(msg) {
@@ -2672,7 +2672,7 @@
 
   updateGenBtn();
   connectWS();
-  startQuizQueuePolling();
+  startPollQueuePolling();
 
   document.getElementById('wc-host-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') hostSubmitWord();

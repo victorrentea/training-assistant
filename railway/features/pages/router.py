@@ -70,9 +70,9 @@ async def notes_page():
     return FileResponse("static/notes.html")
 
 
-@participant_router.get("/quiz", response_class=HTMLResponse)
-async def quiz_history_page():
-    content = state.quiz_md_content.strip()
+@participant_router.get("/poll", response_class=HTMLResponse)
+async def poll_history_page():
+    content = state.poll_md_content.strip()
     if not content:
         body = "<p style='color:#888'>No questions have been asked yet in this session.</p>"
     else:
@@ -91,7 +91,7 @@ async def quiz_history_page():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quiz History</title>
+  <title>Poll History</title>
   <style>
     body {{ font-family: sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; background: #1a1a2e; color: #e0e0e0; }}
     h1 {{ color: #a0c4ff; }}
@@ -101,7 +101,7 @@ async def quiz_history_page():
   </style>
 </head>
 <body>
-  <h1>Quiz History</h1>
+  <h1>Poll History</h1>
   {body}
 </body>
 </html>""")

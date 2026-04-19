@@ -504,21 +504,21 @@ paths:
                 title: Response Set Poll Status Api  Session Id  Host Poll Status
                   Put
       x-feature: poll
-  /api/{session_id}/quiz-md:
+  /api/{session_id}/poll-md:
     get:
       tags:
-      - quiz
-      summary: Get Quiz Md
-      description: Return the accumulated quiz markdown history.
-      operationId: get_quiz_md_api__session_id__quiz_md_get
+      - poll
+      summary: Get Poll Md
+      description: Return the accumulated poll markdown history.
+      operationId: get_poll_md_api__session_id__poll_md_get
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QuizMdResponse'
-      x-feature: quiz
+                $ref: '#/components/schemas/PollMdResponse'
+      x-feature: poll
   /api/{session_id}/host/leaderboard/show:
     post:
       tags:
@@ -735,74 +735,74 @@ paths:
             application/json:
               schema: {}
       x-feature: misc
-  /api/{session_id}/host/quiz-request:
+  /api/{session_id}/host/poll-request:
     post:
       tags:
-      - quiz
-      summary: Request Quiz
-      description: Host requests a quiz — stores request for the orchestrator loop
+      - poll
+      summary: Request Poll
+      description: Host requests a poll — stores request for the orchestrator loop
         to pick up.
-      operationId: request_quiz_api__session_id__host_quiz_request_post
+      operationId: request_poll_api__session_id__host_poll_request_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QuizRequestBody'
+              $ref: '#/components/schemas/PollRequestBody'
         required: true
       responses:
         '204':
           description: Successful Response
-      x-feature: quiz
-  /api/{session_id}/host/quiz-preview:
+      x-feature: poll
+  /api/{session_id}/host/poll-preview:
     delete:
       tags:
-      - quiz
-      summary: Clear Quiz Preview
-      description: Host clears the current quiz preview.
-      operationId: clear_quiz_preview_api__session_id__host_quiz_preview_delete
+      - poll
+      summary: Clear Poll Preview
+      description: Host clears the current poll preview.
+      operationId: clear_poll_preview_api__session_id__host_poll_preview_delete
       responses:
         '204':
           description: Successful Response
-      x-feature: quiz
-  /api/{session_id}/host/quiz-refine:
+      x-feature: poll
+  /api/{session_id}/host/poll-refine:
     post:
       tags:
-      - quiz
-      summary: Request Quiz Refine
+      - poll
+      summary: Request Poll Refine
       description: Host requests regeneration of a specific question or option.
-      operationId: request_quiz_refine_api__session_id__host_quiz_refine_post
+      operationId: request_poll_refine_api__session_id__host_poll_refine_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/QuizRefineRequest'
+              $ref: '#/components/schemas/PollRefineRequest'
         required: true
       responses:
         '204':
           description: Successful Response
-      x-feature: quiz
-  /api/{session_id}/host/quiz-queue:
+      x-feature: poll
+  /api/{session_id}/host/poll-queue:
     get:
       tags:
-      - quiz-queue
+      - poll
       summary: Get Queue Status
       description: Return how many questions are pending and what the current question
         looks like.
-      operationId: get_queue_status_api__session_id__host_quiz_queue_get
+      operationId: get_queue_status_api__session_id__host_poll_queue_get
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QuizQueueStatusResponse'
-      x-feature: quiz-queue
+                $ref: '#/components/schemas/PollQueueStatusResponse'
+      x-feature: poll
     post:
       tags:
-      - quiz-queue
+      - poll
       summary: Submit Questions
-      description: Replace the entire quiz queue with the submitted questions.
-      operationId: submit_questions_api__session_id__host_quiz_queue_post
+      description: Replace the entire poll queue with the submitted questions.
+      operationId: submit_questions_api__session_id__host_poll_queue_post
       requestBody:
         content:
           application/json:
@@ -816,13 +816,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: quiz-queue
+      x-feature: poll
     delete:
       tags:
-      - quiz-queue
+      - poll
       summary: Clear Queue
-      description: Clear the entire quiz queue.
-      operationId: clear_queue_api__session_id__host_quiz_queue_delete
+      description: Clear the entire poll queue.
+      operationId: clear_queue_api__session_id__host_poll_queue_delete
       responses:
         '200':
           description: Successful Response
@@ -830,14 +830,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: quiz-queue
-  /api/{session_id}/host/quiz-queue/fire:
+      x-feature: poll
+  /api/{session_id}/host/poll-queue/fire:
     post:
       tags:
-      - quiz-queue
+      - poll
       summary: Fire Current
       description: Fire the current question as a poll and advance the queue.
-      operationId: fire_current_api__session_id__host_quiz_queue_fire_post
+      operationId: fire_current_api__session_id__host_poll_queue_fire_post
       responses:
         '200':
           description: Successful Response
@@ -845,14 +845,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: quiz-queue
-  /api/{session_id}/host/quiz-queue/skip:
+      x-feature: poll
+  /api/{session_id}/host/poll-queue/skip:
     post:
       tags:
-      - quiz-queue
+      - poll
       summary: Skip Current
       description: Skip the current question without firing it.
-      operationId: skip_current_api__session_id__host_quiz_queue_skip_post
+      operationId: skip_current_api__session_id__host_poll_queue_skip_post
       responses:
         '200':
           description: Successful Response
@@ -860,7 +860,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: quiz-queue
+      x-feature: poll
   /api/participant/codereview/selection:
     put:
       tags:
@@ -2202,13 +2202,13 @@ components:
           - type: string
           - type: 'null'
           title: Transcript Latest Ts
-        quiz_preview:
+        poll_preview:
           anyOf:
-          - $ref: '#/components/schemas/QuizPreviewPayload-Output'
+          - $ref: '#/components/schemas/PollPreviewPayload-Output'
           - type: 'null'
-        quiz_queue:
+        poll_queue:
           anyOf:
-          - $ref: '#/components/schemas/QuizQueueStatus'
+          - $ref: '#/components/schemas/PollQueueStatus'
           - type: 'null'
       type: object
       required:
@@ -2636,7 +2636,7 @@ components:
       - answered
       - timestamp
       title: QAQuestionRaw
-    QuizMdResponse:
+    PollMdResponse:
       properties:
         content:
           type: string
@@ -2644,15 +2644,15 @@ components:
       type: object
       required:
       - content
-      title: QuizMdResponse
-    QuizPreviewPayload-Input:
+      title: PollMdResponse
+    PollPreviewPayload-Input:
       properties:
-        quiz:
+        poll:
           anyOf:
           - additionalProperties: true
             type: object
           - type: 'null'
-          title: Quiz
+          title: Poll
         question:
           anyOf:
           - type: string
@@ -2678,8 +2678,8 @@ components:
           - type: 'null'
           title: Correct Indices
       type: object
-      title: QuizPreviewPayload
-    QuizPreviewPayload-Output:
+      title: PollPreviewPayload
+    PollPreviewPayload-Output:
       properties:
         question:
           anyOf:
@@ -2707,8 +2707,8 @@ components:
           title: Correct Indices
       additionalProperties: true
       type: object
-      title: QuizPreviewPayload
-    QuizQueueOption:
+      title: PollPreviewPayload
+    PollQueueOption:
       properties:
         id:
           type: string
@@ -2720,15 +2720,15 @@ components:
       required:
       - id
       - text
-      title: QuizQueueOption
-    QuizQueueQuestion:
+      title: PollQueueOption
+    PollQueueQuestion:
       properties:
         question:
           type: string
           title: Question
         options:
           items:
-            $ref: '#/components/schemas/QuizQueueOption'
+            $ref: '#/components/schemas/PollQueueOption'
           type: array
           title: Options
         correct_ids:
@@ -2741,49 +2741,49 @@ components:
       - question
       - options
       - correct_ids
-      title: QuizQueueQuestion
-    QuizQueueStatus:
+      title: PollQueueQuestion
+    PollQueueStatus:
       properties:
         pending:
           type: integer
           title: Pending
         current:
           anyOf:
-          - $ref: '#/components/schemas/QuizQueueQuestion'
+          - $ref: '#/components/schemas/PollQueueQuestion'
           - type: 'null'
       type: object
       required:
       - pending
       - current
-      title: QuizQueueStatus
-    QuizQueueStatusResponse:
+      title: PollQueueStatus
+    PollQueueStatusResponse:
       properties:
         pending:
           type: integer
           title: Pending
         current:
           anyOf:
-          - $ref: '#/components/schemas/QuizQueueQuestion'
+          - $ref: '#/components/schemas/PollQueueQuestion'
           - type: 'null'
       type: object
       required:
       - pending
       - current
-      title: QuizQueueStatusResponse
-    QuizRefineRequest:
+      title: PollQueueStatusResponse
+    PollRefineRequest:
       properties:
         target:
           type: string
           title: Target
         preview:
           anyOf:
-          - $ref: '#/components/schemas/QuizPreviewPayload-Input'
+          - $ref: '#/components/schemas/PollPreviewPayload-Input'
           - type: 'null'
       type: object
       required:
       - target
-      title: QuizRefineRequest
-    QuizRequestBody:
+      title: PollRefineRequest
+    PollRequestBody:
       properties:
         minutes:
           anyOf:
@@ -2796,7 +2796,7 @@ components:
           - type: 'null'
           title: Topic
       type: object
-      title: QuizRequestBody
+      title: PollRequestBody
     RegisterRequest:
       properties:
         name:
@@ -3121,7 +3121,7 @@ components:
       properties:
         questions:
           items:
-            $ref: '#/components/schemas/QuizQueueQuestion'
+            $ref: '#/components/schemas/PollQueueQuestion'
           type: array
           title: Questions
       type: object

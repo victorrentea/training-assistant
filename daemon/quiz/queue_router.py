@@ -1,4 +1,4 @@
-"""Quiz queue router — host-only endpoints for pre-submitted quiz questions."""
+"""Poll queue router — host-only endpoints for pre-submitted poll questions."""
 import logging
 
 from fastapi import APIRouter
@@ -20,24 +20,24 @@ _LOG = "qz-queue"
 
 # ── Pydantic models ──
 
-class QuizQueueOption(BaseModel):
+class PollQueueOption(BaseModel):
     id: str
     text: str
 
 
-class QuizQueueQuestion(BaseModel):
+class PollQueueQuestion(BaseModel):
     question: str
-    options: list[QuizQueueOption]
+    options: list[PollQueueOption]
     correct_ids: list[str]  # one or more correct option IDs
 
 
 class SubmitQuestionsRequest(BaseModel):
-    questions: list[QuizQueueQuestion]
+    questions: list[PollQueueQuestion]
 
 
-class QuizQueueStatusResponse(BaseModel):
+class PollQueueStatusResponse(BaseModel):
     pending: int
-    current: QuizQueueQuestion | None
+    current: PollQueueQuestion | None
 
 
 class OkResponse(BaseModel):
@@ -46,24 +46,24 @@ class OkResponse(BaseModel):
 
 # ── Router ──
 
-router = APIRouter(prefix="/api/{session_id}/host/quiz-queue", tags=["quiz-queue"])
+router = APIRouter(prefix="/api/{session_id}/host/poll-queue", tags=["poll-queue"])
 
 
 @router.post("", response_model=OkResponse)
 async def submit_questions(body: SubmitQuestionsRequest):
-    """Replace the entire quiz queue with the submitted questions."""
+    """Replace the entire poll queue with the submitted questions."""
     questions = [q.model_dump() for q in body.questions]
     quiz_queue.submit(questions)
     daemon_log.info(_LOG, f"Queue submitted: {len(questions)} question(s)")
     return OkResponse()
 
 
-@router.get("", response_model=QuizQueueStatusResponse)
+@router.get("", response_model=PollQueueStatusResponse)
 async def get_queue_status():
     """Return how many questions are pending and what the current question looks like."""
     current = quiz_queue.current()
-    current_model = QuizQueueQuestion.model_validate(current) if current else None
-    return QuizQueueStatusResponse(
+    current_model = PollQueueQuestion.model_validate(current) if current else None
+    return PollQueueStatusResponse(
         pending=quiz_queue.pending_count(),
         current=current_model,
     )
@@ -74,7 +74,7 @@ async def fire_current():
     """Fire the current question as a poll and advance the queue."""
     current = quiz_queue.current()
     if current is None:
-        return JSONResponse({"error": "Quiz queue is empty"}, status_code=400)
+        return JSONResponse({"error": "Poll queue is empty"}, status_code=400)
 
     # Activity gate — same pattern as poll router
     activity = participant_state.current_activity
@@ -109,7 +109,7 @@ async def skip_current():
     """Skip the current question without firing it."""
     current = quiz_queue.current()
     if current is None:
-        return JSONResponse({"error": "Quiz queue is empty"}, status_code=400)
+        return JSONResponse({"error": "Poll queue is empty"}, status_code=400)
 
     quiz_queue.advance()
     daemon_log.info(_LOG, f"Skipped question: \"{current['question'][:60]}\" — {quiz_queue.pending_count()} remaining")

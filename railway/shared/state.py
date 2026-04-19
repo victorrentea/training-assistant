@@ -40,10 +40,10 @@ class AppState:
         self.uploaded_files: dict[str, list[dict]] = {}  # uuid → [{id, filename, size, disk_path}]
         self.upload_next_id: int = 0
         self.locations: dict[str, str] = {}
-        self.quiz_request: Optional[dict] = None
-        self.quiz_refine_request: Optional[dict] = None
-        self.quiz_status: Optional[dict] = None
-        self.quiz_md_content: str = ""
+        self.poll_request: Optional[dict] = None
+        self.poll_refine_request: Optional[dict] = None
+        self.poll_status: Optional[dict] = None
+        self.poll_md_content: str = ""
         self.slides: list[dict] = []
         self.daemon_last_seen: Optional[datetime] = None
         self.daemon_ws: Optional[WebSocket] = None
@@ -57,7 +57,7 @@ class AppState:
         self.transcript_total_lines: int = 0
         self.transcript_latest_ts: Optional[str] = None
         self.transcript_last_content_at: Optional[datetime] = None
-        self.quiz_preview: Optional[dict] = None
+        self.poll_preview: Optional[dict] = None
         self.scores: dict[str, int] = {}
         self.base_scores: dict[str, int] = {}
         self.current_activity: ActivityType = ActivityType.NONE

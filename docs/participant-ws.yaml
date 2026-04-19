@@ -39,8 +39,8 @@ channels:
           - $ref: '#/components/messages/debate_timer'
           - $ref: '#/components/messages/debate_round_ended'
           - $ref: '#/components/messages/leaderboard_revealed'
-          - $ref: '#/components/messages/quiz_status'
-          - $ref: '#/components/messages/quiz_preview'
+          - $ref: '#/components/messages/poll_status'
+          - $ref: '#/components/messages/poll_preview'
           - $ref: '#/components/messages/notes_updated'
           - $ref: '#/components/messages/summary_updated'
           - $ref: '#/components/messages/reload'
@@ -414,35 +414,35 @@ components:
             items:
               $ref: '#/components/schemas/LeaderboardPosition'
 
-    # ── Quiz ─────────────────────────────────────────────────────────────────
+    # ── Poll ─────────────────────────────────────────────────────────────────
 
-    quiz_status:
-      summary: Quiz generation progress update
-      x-feature: quiz
+    poll_status:
+      summary: Poll generation progress update
+      x-feature: poll
       payload:
         type: object
         required: [type, status, message]
         properties:
           type:
             type: string
-            enum: [quiz_status]
+            enum: [poll_status]
           status:
             type: string
             description: '"generating"|"ready"|"error"'
           message:
             type: string
 
-    quiz_preview:
-      summary: Quiz preview for host review before publishing (quiz=null to clear)
-      x-feature: quiz
+    poll_preview:
+      summary: Poll preview for host review before publishing (poll=null to clear)
+      x-feature: poll
       payload:
         type: object
         required: [type]
         properties:
           type:
             type: string
-            enum: [quiz_preview]
-          quiz:
+            enum: [poll_preview]
+          poll:
             nullable: true
             description: Set to null to clear the preview
           question:

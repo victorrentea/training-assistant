@@ -92,7 +92,7 @@ class StartTimerRequest(BaseModel):
 class SetPollStatusRequest(BaseModel):
     open: bool
 
-class QuizMdResponse(BaseModel):
+class PollMdResponse(BaseModel):
     content: str
 
 
@@ -219,12 +219,12 @@ async def delete_poll():
     return Response(status_code=204)
 
 
-# ── Quiz history (public) ──
+# ── Poll history (public) ──
 
-quiz_md_router = APIRouter(tags=["quiz"])
+poll_md_router = APIRouter(tags=["poll"])
 
 
-@quiz_md_router.get("/api/{session_id}/quiz-md", response_model=QuizMdResponse)
-async def get_quiz_md():
-    """Return the accumulated quiz markdown history."""
-    return QuizMdResponse(content=poll_state.quiz_md_content)
+@poll_md_router.get("/api/{session_id}/poll-md", response_model=PollMdResponse)
+async def get_poll_md():
+    """Return the accumulated poll markdown history."""
+    return PollMdResponse(content=poll_state.poll_md_content)

@@ -1,4 +1,4 @@
-"""Shared pending-request state for quiz generation.
+"""Shared pending-request state for poll generation.
 
 The host REST router writes into this dict; the main orchestrator loop reads from it.
 """
@@ -6,7 +6,7 @@ import threading
 
 _lock = threading.Lock()
 
-# Keys: "quiz_request", "quiz_refine"  — mirrors the WS message types used previously
+# Keys: "poll_request", "poll_refine"  — internal keys consumed by the main orchestrator loop
 _pending: dict[str, dict] = {}
 
 

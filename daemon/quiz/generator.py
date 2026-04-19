@@ -1,5 +1,5 @@
 """
-Quiz generation and refinement via Claude API.
+Poll question generation and refinement via Claude API.
 """
 
 import json
@@ -106,23 +106,23 @@ def _parse_raw_response(raw: str) -> dict:
         raise
 
 
-def _quiz_error(msg: str, raw: str) -> None:
-    log.error("quiz", f"Invalid format: {msg}")
-    raise RuntimeError(f"Invalid quiz format: {msg}")
+def _poll_error(msg: str, raw: str) -> None:
+    log.error("poll", f"Invalid format: {msg}")
+    raise RuntimeError(f"Invalid poll format: {msg}")
 
 
-def _validate_quiz(quiz: dict, raw: str) -> None:
+def _validate_poll(quiz: dict, raw: str) -> None:
     if not isinstance(quiz.get("question"), str) or not quiz["question"].strip():
-        _quiz_error("Missing or empty 'question'", raw)
+        _poll_error("Missing or empty 'question'", raw)
     options = quiz.get("options")
     if not isinstance(options, list) or not (2 <= len(options) <= 8):
-        _quiz_error("'options' must be a list of 2-8 strings", raw)
+        _poll_error("'options' must be a list of 2-8 strings", raw)
         return  # unreachable but narrows type
     if not all(isinstance(o, str) and o.strip() for o in options):
-        _quiz_error("Each option must be a non-empty string", raw)
+        _poll_error("Each option must be a non-empty string", raw)
     ci = quiz.get("correct_indices")
     if not isinstance(ci, list) or len(ci) == 0 or not all(isinstance(i, int) and 0 <= i < len(options) for i in ci):
-        _quiz_error(f"'correct_indices' must be a non-empty list of ints in range 0-{len(options)-1}", raw)
+        _poll_error(f"'correct_indices' must be a non-empty list of ints in range 0-{len(options)-1}", raw)
 
 
 def _search_materials(query: str) -> list:
@@ -138,12 +138,12 @@ def _search_materials(query: str) -> list:
 # Public API
 # ---------------------------------------------------------------------------
 
-def generate_quiz(text: str, config: Config) -> dict:
+def generate_poll(text: str, config: Config) -> dict:
     prompt_content = text
     if config.topic:
         prompt_content = f"TOPIC: {config.topic}\n\n{text}" if text else f"TOPIC: {config.topic}"
 
-    log.info("quiz", f"Requesting: {config.topic or f'last {config.minutes} min'}")
+    log.info("poll", f"Requesting: {config.topic or f'last {config.minutes} min'}")
 
     tools = [
         {
@@ -187,7 +187,7 @@ def generate_quiz(text: str, config: Config) -> dict:
                 for tool_call in tool_use_blocks:
                     if tool_call.name == "search_materials":
                         _query = str(tool_call.input["query"])
-                        log.info("quiz", f"Claude searching: {_query}")
+                        log.info("poll", f"Claude searching: {_query}")
                         search_results = _search_materials(_query)
                         tool_results.append({
                             "type": "tool_result",
@@ -228,12 +228,12 @@ def generate_quiz(text: str, config: Config) -> dict:
         quiz = _parse_raw_response(raw)
     except json.JSONDecodeError as e:
         raise RuntimeError(f"Claude returned invalid JSON: {e}") from e
-    _validate_quiz(quiz, raw)
+    _validate_poll(quiz, raw)
     return quiz
 
 
-def refine_quiz(quiz: dict, target: str, original_text: str, config: Config) -> dict:
-    """Refine quiz using multi-turn conversation. target='question' or 'opt0'..'opt7'."""
+def refine_poll(quiz: dict, target: str, original_text: str, config: Config) -> dict:
+    """Refine poll using multi-turn conversation. target='question' or 'opt0'..'opt7'."""
     if target == "question":
         refine_prompt = _REFINE_QUESTION_PROMPT
     else:
@@ -271,19 +271,19 @@ def refine_quiz(quiz: dict, target: str, original_text: str, config: Config) -> 
         updated = _parse_raw_response(raw)
     except json.JSONDecodeError:
         return quiz
-    _validate_quiz(updated, raw)
+    _validate_poll(updated, raw)
     return updated
 
 
-def print_quiz(quiz: dict) -> None:
+def print_poll(quiz: dict) -> None:
     correct = set(quiz.get("correct_indices", []))
-    log.info("quiz", "=" * 50)
-    log.info("quiz", f"Q: {quiz['question']}")
+    log.info("poll", "=" * 50)
+    log.info("poll", f"Q: {quiz['question']}")
     for i, opt in enumerate(quiz["options"]):
         marker = " <--" if i in correct else ""
-        log.info("quiz", f"  {chr(65 + i)}. {opt}{marker}")
+        log.info("poll", f"  {chr(65 + i)}. {opt}{marker}")
     if len(correct) > 1:
-        log.info("quiz", f"  (multiple: {', '.join(chr(65+i) for i in sorted(correct))})")
+        log.info("poll", f"  (multiple: {', '.join(chr(65+i) for i in sorted(correct))})")
     if quiz.get("source"):
-        log.info("quiz", f"  source={quiz['source']} page={quiz.get('page', 'N/A')}")
-    log.info("quiz", "=" * 50)
+        log.info("poll", f"  source={quiz['source']} page={quiz.get('page', 'N/A')}")
+    log.info("poll", "=" * 50)

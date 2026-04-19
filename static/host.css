@@ -973,23 +973,23 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 #manual-poll-details > summary::-webkit-details-marker { display: none; }
 
-/* ── Quiz gen row inside Poll tab ── */
-.quiz-gen-row {
+/* ── Poll gen row inside Poll tab ── */
+.poll-gen-row {
   display: flex;
   flex-direction: column;
   gap: .4rem;
 }
-.quiz-gen-controls {
+.poll-gen-controls {
   display: flex;
   align-items: center;
   gap: .75rem;
 }
-.quiz-gen-controls input {
+.poll-gen-controls input {
   height: 34px;
   min-height: 34px;
   box-sizing: border-box;
 }
-#quiz-status {
+#poll-status {
   font-size: .82rem;
   color: var(--muted);
   overflow: hidden;

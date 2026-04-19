@@ -1,7 +1,7 @@
-"""In-memory quiz queue — stores pre-submitted questions for one-at-a-time firing."""
+"""In-memory poll queue — stores pre-submitted questions for one-at-a-time firing."""
 
 
-class QuizQueue:
+class PollQueue:
     def __init__(self):
         self._questions: list[dict] = []
         self._index: int = 0
@@ -31,4 +31,4 @@ class QuizQueue:
         self._index = 0
 
 
-quiz_queue = QuizQueue()
+quiz_queue = PollQueue()

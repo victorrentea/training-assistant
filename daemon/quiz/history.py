@@ -1,15 +1,15 @@
 """
-Auto-generate and auto-refine quiz flows used by the training daemon.
+Auto-generate and auto-refine poll flows used by the training daemon.
 """
 
 from typing import Optional
 
 from daemon import log
 from daemon.config import Config, read_session_notes
-from daemon.quiz.generator import generate_quiz, print_quiz, refine_quiz
+from daemon.quiz.generator import generate_poll, print_poll, refine_poll
 from daemon.quiz.poll_api import fetch_quiz_history, fetch_summary_points, post_status
 from daemon.transcript.loader import extract_last_n_minutes, load_transcription_files
-from daemon.ws_messages import QuizPreviewMsg
+from daemon.ws_messages import PollPreviewMsg
 from daemon.ws_publish import broadcast
 
 
@@ -75,15 +75,15 @@ def auto_generate(minutes: int, config: Config) -> Optional[tuple]:
     post_status("generating", f"Sending {status_detail}{notes_info} to Claude...", config)
 
     try:
-        quiz = generate_quiz(combined, config)
+        quiz = generate_poll(combined, config)
     except RuntimeError as e:
         post_status("error", str(e), config)
         return None
 
-    print_quiz(quiz)
+    print_poll(quiz)
 
     try:
-        broadcast(QuizPreviewMsg(
+        broadcast(PollPreviewMsg(
             question=quiz["question"],
             options=quiz["options"],
             multi=len(quiz.get("correct_indices", [])) > 1,
@@ -113,14 +113,14 @@ def auto_generate_topic(topic: str, config: Config) -> Optional[tuple]:
     from dataclasses import replace as dc_replace
     topic_config = dc_replace(config, topic=topic)
     try:
-        quiz = generate_quiz(notes_text + quiz_history_text, topic_config)
+        quiz = generate_poll(notes_text + quiz_history_text, topic_config)
     except RuntimeError as e:
         post_status("error", str(e), topic_config)
         return None
-    print_quiz(quiz)
+    print_poll(quiz)
     topic_context = f"TOPIC: {topic}"
     try:
-        broadcast(QuizPreviewMsg(
+        broadcast(PollPreviewMsg(
             question=quiz["question"],
             options=quiz["options"],
             multi=len(quiz.get("correct_indices", [])) > 1,
@@ -138,14 +138,14 @@ def auto_refine(target: str, current_quiz: dict, original_text: str, config: Con
     label = "question" if target == "question" else f"option {chr(65 + int(target[3:]))}"
     post_status("generating", f"Regenerating {label}...", config)
     try:
-        updated = refine_quiz(current_quiz, target, original_text, config)
+        updated = refine_poll(current_quiz, target, original_text, config)
     except RuntimeError as e:
         post_status("error", f"Claude API error: {e}", config)
         return None
 
-    print_quiz(updated)
+    print_poll(updated)
     try:
-        broadcast(QuizPreviewMsg(
+        broadcast(PollPreviewMsg(
             question=updated["question"],
             options=updated["options"],
             multi=len(updated.get("correct_indices", [])) > 1,

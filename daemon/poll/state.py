@@ -17,7 +17,7 @@ class PollState:
         self.poll_timer_started_at: datetime | None = None
         self._vote_counts_dirty: bool = True
         self._vote_counts_cache: dict | None = None
-        self.quiz_md_content: str = ""
+        self.poll_md_content: str = ""
 
     def create_poll(self, question: str, options: list[dict], multi: bool = False,
                     correct_count: int | None = None, source: str | None = None,
@@ -137,7 +137,7 @@ class PollState:
                 scores_obj.add_score(pid, pts)
 
         self.poll_correct_ids = list(correct_set)
-        self._append_to_quiz_md(correct_set)
+        self._append_to_poll_md(correct_set)
         return {
             "correct_ids": list(correct_set),
             "scores": scores_obj.snapshot(),
@@ -173,7 +173,7 @@ class PollState:
         self._vote_counts_dirty = False
         return counts
 
-    def _append_to_quiz_md(self, correct_set: set[str]):
+    def _append_to_poll_md(self, correct_set: set[str]):
         if not self.poll:
             return
         lines = [f"### {self.poll['question']}\n"]
@@ -181,7 +181,7 @@ class PollState:
             marker = "✓" if opt["id"] in correct_set else "✗"
             lines.append(f"- [{marker}] {opt['text']}")
         lines.append("")
-        self.quiz_md_content += "\n".join(lines) + "\n"
+        self.poll_md_content += "\n".join(lines) + "\n"
 
 
 poll_state = PollState()

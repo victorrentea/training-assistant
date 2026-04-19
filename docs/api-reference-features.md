@@ -15,7 +15,6 @@ Canonical `x-feature` IDs used for generated `API.md` grouping.
 - `debate`
 - `scores_leaderboard`
 - `emoji`
-- `quiz`
 - `paste_upload`
 - `notes_summary`
 - `feedback`

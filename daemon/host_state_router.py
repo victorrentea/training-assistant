@@ -132,7 +132,7 @@ class SlidesCurrentPayload(BaseModel):
     page: int | None = None
 
 
-class QuizPreviewPayload(BaseModel):
+class PollPreviewPayload(BaseModel):
     question: str | None = None
     options: list[str] | None = None
     multi: bool | None = None
@@ -140,20 +140,20 @@ class QuizPreviewPayload(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class QuizQueueOption(BaseModel):
+class PollQueueOption(BaseModel):
     id: str
     text: str
 
 
-class QuizQueueQuestion(BaseModel):
+class PollQueueQuestion(BaseModel):
     question: str
-    options: list[QuizQueueOption]
+    options: list[PollQueueOption]
     correct_ids: list[str]
 
 
-class QuizQueueStatus(BaseModel):
+class PollQueueStatus(BaseModel):
     pending: int
-    current: QuizQueueQuestion | None
+    current: PollQueueQuestion | None
 
 
 class HostStateResponse(BaseModel):
@@ -206,8 +206,8 @@ class HostStateResponse(BaseModel):
     transcript_line_count: int
     transcript_total_lines: int
     transcript_latest_ts: str | None = None
-    quiz_preview: QuizPreviewPayload | None = None
-    quiz_queue: QuizQueueStatus | None = None
+    poll_preview: PollPreviewPayload | None = None
+    poll_queue: PollQueueStatus | None = None
 
 
 def _build_host_participants_list() -> list[dict]:
@@ -362,8 +362,8 @@ def _build_slides_log_fields() -> dict:
     }
 
 
-def _build_quiz_queue_status() -> dict:
-    """Build quiz queue status for host state — pending count and current question."""
+def _build_poll_queue_status() -> dict:
+    """Build poll queue status for host state — pending count and current question."""
     from daemon.quiz.queue import quiz_queue
     current = quiz_queue.current()
     return {
@@ -442,10 +442,10 @@ async def get_host_state(request: Request, session_id: str):
         "transcript_line_count": 0,
         "transcript_total_lines": 0,
         "transcript_latest_ts": None,
-        # Quiz preview
-        "quiz_preview": None,
-        # Quiz queue
-        "quiz_queue": _build_quiz_queue_status(),
+        # Poll preview
+        "poll_preview": None,
+        # Poll queue
+        "poll_queue": _build_poll_queue_status(),
     }
 
     return JSONResponse(state_msg)
