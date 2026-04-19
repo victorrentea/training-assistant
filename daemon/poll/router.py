@@ -54,8 +54,8 @@ class HostPollData(BaseModel):
     options: list[str]
     multi: bool
     correct_count: int | None = None
-    timer_seconds: int | None = None
-    timer_started_at: str | None = None
+    end_timer_seconds: int | None = None
+    end_timer_started_at: str | None = None
     correct_indices: list[int] | None = None
 
 class HostPollStateResponse(BaseModel):
@@ -167,8 +167,8 @@ async def get_poll_state():
     ps = poll_state
     poll = dict(ps.poll) if ps.poll else None
     if poll is not None:
-        poll["timer_seconds"] = ps.poll_timer_seconds
-        poll["timer_started_at"] = (
+        poll["end_timer_seconds"] = ps.poll_timer_seconds
+        poll["end_timer_started_at"] = (
             ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None
         )
         poll["correct_indices"] = ps.poll_correct_indices

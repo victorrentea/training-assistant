@@ -1813,16 +1813,16 @@ components:
           - type: integer
           - type: 'null'
           title: Correct Count
-        timer_seconds:
+        end_timer_seconds:
           anyOf:
           - type: integer
           - type: 'null'
-          title: Timer Seconds
-        timer_started_at:
+          title: End Timer Seconds
+        end_timer_started_at:
           anyOf:
           - type: string
           - type: 'null'
-          title: Timer Started At
+          title: End Timer Started At
         correct_indices:
           anyOf:
           - items:
@@ -2375,16 +2375,16 @@ components:
           - type: integer
           - type: 'null'
           title: Correct Count
-        timer_seconds:
+        end_timer_seconds:
           anyOf:
           - type: integer
           - type: 'null'
-          title: Timer Seconds
-        timer_started_at:
+          title: End Timer Seconds
+        end_timer_started_at:
           anyOf:
           - type: string
           - type: 'null'
-          title: Timer Started At
+          title: End Timer Started At
         correct_indices:
           anyOf:
           - items:

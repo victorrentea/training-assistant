@@ -33,8 +33,8 @@ poll?: PersistedPollState{
   active?:bool
   correct_indices?:list[int]  # Option indices marked as correct answers
   opened_at?:string
-  timer_seconds?:int
-  timer_started_at?:string
+  end_timer_seconds?:int
+  end_timer_started_at?:string
   votes?:dict[str, any]  # participant_uuid → chosen option ID(s)
 }
 qa?: dict[str, any]

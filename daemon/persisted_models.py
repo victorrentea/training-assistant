@@ -41,8 +41,8 @@ class PersistedPollState(PersistedModel):
     active: bool | None = None
     correct_indices: list[int] = Field(default_factory=list, description="Option indices marked as correct answers")
     opened_at: str | None = None
-    timer_seconds: int | None = None
-    timer_started_at: str | None = None
+    end_timer_seconds: int | None = None
+    end_timer_started_at: str | None = None
     votes: dict[str, Any] = Field(default_factory=dict, description="participant_uuid → chosen option ID(s)")
 
 
@@ -223,8 +223,8 @@ class PersistedSessionState(PersistedModel):
                 "active",
                 "correct_indices",
                 "opened_at",
-                "timer_seconds",
-                "timer_started_at",
+                "end_timer_seconds",
+                "end_timer_started_at",
                 "votes",
             }
             if not any(key in poll for key in poll_keys):
@@ -247,9 +247,9 @@ class PersistedSessionState(PersistedModel):
         if "poll_opened_at" in data:
             poll.setdefault("opened_at", data["poll_opened_at"])
         if "poll_timer_seconds" in data:
-            poll.setdefault("timer_seconds", data["poll_timer_seconds"])
+            poll.setdefault("end_timer_seconds", data["poll_timer_seconds"])
         if "poll_timer_started_at" in data:
-            poll.setdefault("timer_started_at", data["poll_timer_started_at"])
+            poll.setdefault("end_timer_started_at", data["poll_timer_started_at"])
         if "votes" in data:
             poll.setdefault("votes", data["votes"])
         if any(key in data for key in legacy_poll_keys):

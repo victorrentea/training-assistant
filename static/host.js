@@ -1701,8 +1701,8 @@
     currentPoll = data.poll || null;
     if (!data.poll_running && prevPollActive) _clearTimer();
     pollActive = data.poll_running;
-    if (currentPoll?.timer_seconds && currentPoll?.timer_started_at) {
-      _applyTimer(currentPoll.timer_seconds, currentPoll.timer_started_at);
+    if (currentPoll?.end_timer_seconds && currentPoll?.end_timer_started_at) {
+      _applyTimer(currentPoll.end_timer_seconds, currentPoll.end_timer_started_at);
     }
     if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
     const n = currentPoll?.options?.length || 0;
