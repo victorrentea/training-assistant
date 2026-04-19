@@ -189,9 +189,9 @@
     const history = loadPollHistory();
     const entry = {
       question: poll.question,
-      options: poll.options.map(o => ({
-        text: o.text,
-        correct: correctIds.has(o.id),
+      options: poll.options.map((text, idx) => ({
+        text,
+        correct: correctIds.has(idx),
       })),
       multi: !!poll.multi,
       recorded_at: new Date().toISOString(),
