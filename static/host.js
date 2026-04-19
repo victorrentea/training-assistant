@@ -368,8 +368,9 @@
       }
       if (msg.type === 'scores_updated') {
         const updated = msg.scores || {};
+        const flashPids = new Set(Object.keys(updated).filter(pid => (updated[pid] || 0) > (scores[pid] || 0)));
         Object.assign(scores, updated);
-        renderParticipantList(cachedParticipantIds);
+        renderParticipantList(cachedParticipantIds, flashPids);
         updateLeaderboardButton();
         return;
       }
@@ -1261,7 +1262,7 @@
     closeModal('host-notes-overlay');
   }
 
-  function renderParticipantList(participantIds) {
+  function renderParticipantList(participantIds, flashPids) {
     cachedParticipantIds = participantIds;
     const sorted = Object.keys(scores).length > 0
       ? [...participantIds].sort((a, b) => {
@@ -1310,9 +1311,15 @@
         const copiedClass = (entry.copied || entry.seen_by_host) ? ' downloaded' : '';
         return `<span class="upload-icon${copiedClass}" title="${escHtml(entry.disk_path)}" data-uuid="${escHtml(pid)}" data-file-id="${escHtml(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
-      return `<li class="${online ? 'online' : 'offline'}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}</li>`;
+      return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}</li>`;
     }).join('');
 
+    if (flashPids && flashPids.size > 0) {
+      flashPids.forEach(pid => {
+        const li = ul.querySelector(`li[data-uuid="${pid}"]`);
+        if (li) { li.classList.remove('score-flash'); void li.offsetWidth; li.classList.add('score-flash'); }
+      });
+    }
   }
 
   // ── Participant map ──

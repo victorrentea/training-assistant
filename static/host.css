@@ -1116,6 +1116,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   min-width: 0;
 }
 .pax-list li:last-child { border-bottom: none; }
+@keyframes score-flash { 0% { background: #ffe06688; } 100% { background: transparent; } }
+.pax-list li.score-flash { animation: score-flash .8s ease-out forwards; }
 .pax-name {
   display: flex;
   align-items: center;
