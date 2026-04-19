@@ -9,7 +9,6 @@ from pydantic import BaseModel
 
 from daemon.codereview.state import codereview_state
 from daemon.debate.state import debate_state
-from daemon.leaderboard.state import leaderboard_state
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import GitRepoActivity, participant_state
@@ -105,23 +104,6 @@ class SlidesLogEntry(BaseModel):
     timestamp: str
 
 
-class LeaderboardEntry(BaseModel):
-    uuid: str
-    name: str
-    score: int
-
-
-class LeaderboardData(BaseModel):
-    entries: list[LeaderboardEntry]
-    total_participants: int
-
-
-class TokenUsage(BaseModel):
-    input_tokens: int
-    output_tokens: int
-    estimated_cost_usd: float
-
-
 class SlidesCurrentPayload(BaseModel):
     slug: str | None = None
     page: int | None = None
@@ -170,7 +152,6 @@ class HostStateResponse(BaseModel):
     debate_round_timer_started_at: str | None = None
     talk_presentation_name: str | None = None
     talk_presentation_slug: str | None = None
-    slides_current: SlidesCurrentPayload | None = None
     slides_log: list[SlidesLogEntry]
     slides_log_deep_count: int
     slides_log_topic: str | None = None
@@ -181,10 +162,8 @@ class HostStateResponse(BaseModel):
     daemon_session_folder: str | None = None
     daemon_session_notes: str | None = None
     session_type: str = "workshop"
-    leaderboard_data: LeaderboardData | None = None
     notes_updated_at: str | None = None
     summary_updated_at: str | None = None
-    token_usage: TokenUsage
     transcript_line_count: int
     transcript_total_lines: int
     transcript_latest_ts: str | None = None
@@ -402,7 +381,6 @@ async def get_host_state(request: Request, session_id: str):
         # Slides + session info (from misc state)
         "talk_presentation_name": misc_state.talk_presentation_name,
         "talk_presentation_slug": misc_state.talk_presentation_slug,
-        "slides_current": misc_state.slides_current,
         **_build_slides_log_fields(),
         "git_repos": [r.model_dump() for r in participant_state.git_repos],
         "git_repos_count": len(participant_state.git_repos),
@@ -412,13 +390,9 @@ async def get_host_state(request: Request, session_id: str):
         "daemon_session_folder": _get_session_name(),
         "daemon_session_notes": _get_session_notes_filename(),
         "session_type": participant_state.mode or "workshop",
-        # Leaderboard
-        "leaderboard_data": leaderboard_state.data,
         # Summary / notes (timestamps only — full content fetched on modal open)
         "notes_updated_at": notes_updated_at,
         "summary_updated_at": summary["updated_at"],
-        # Token usage
-        "token_usage": _get_token_usage(),
         # Transcript info
         "transcript_line_count": 0,
         "transcript_total_lines": 0,
@@ -454,10 +428,3 @@ def _get_overlay_connected() -> bool:
         return False
 
 
-def _get_token_usage() -> dict:
-    """Get token usage from LLM adapter if available."""
-    try:
-        from daemon.llm.adapter import get_usage
-        return get_usage().to_dict()
-    except Exception:
-        return {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0}

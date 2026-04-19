@@ -2018,10 +2018,6 @@ components:
           - type: string
           - type: 'null'
           title: Talk Presentation Slug
-        slides_current:
-          anyOf:
-          - $ref: '#/components/schemas/SlidesCurrentPayload'
-          - type: 'null'
         slides_log:
           items:
             $ref: '#/components/schemas/SlidesLogEntry'
@@ -2067,10 +2063,6 @@ components:
           type: string
           title: Session Type
           default: workshop
-        leaderboard_data:
-          anyOf:
-          - $ref: '#/components/schemas/LeaderboardData'
-          - type: 'null'
         notes_updated_at:
           anyOf:
           - type: string
@@ -2081,8 +2073,6 @@ components:
           - type: string
           - type: 'null'
           title: Summary Updated At
-        token_usage:
-          $ref: '#/components/schemas/TokenUsage'
         transcript_line_count:
           type: integer
           title: Transcript Line Count
@@ -2124,7 +2114,6 @@ components:
       - slides_log
       - slides_log_deep_count
       - join_base_url
-      - token_usage
       - transcript_line_count
       - transcript_total_lines
       title: HostStateResponse
@@ -2137,38 +2126,6 @@ components:
       required:
       - statement
       title: LaunchDebateRequest
-    LeaderboardData:
-      properties:
-        entries:
-          items:
-            $ref: '#/components/schemas/LeaderboardEntry'
-          type: array
-          title: Entries
-        total_participants:
-          type: integer
-          title: Total Participants
-      type: object
-      required:
-      - entries
-      - total_participants
-      title: LeaderboardData
-    LeaderboardEntry:
-      properties:
-        uuid:
-          type: string
-          title: Uuid
-        name:
-          type: string
-          title: Name
-        score:
-          type: integer
-          title: Score
-      type: object
-      required:
-      - uuid
-      - name
-      - score
-      title: LeaderboardEntry
     LeaderboardPosition:
       properties:
         rank:
@@ -2926,23 +2883,6 @@ components:
           default: false
       type: object
       title: ToggleAnsweredBody
-    TokenUsage:
-      properties:
-        input_tokens:
-          type: integer
-          title: Input Tokens
-        output_tokens:
-          type: integer
-          title: Output Tokens
-        estimated_cost_usd:
-          type: number
-          title: Estimated Cost Usd
-      type: object
-      required:
-      - input_tokens
-      - output_tokens
-      - estimated_cost_usd
-      title: TokenUsage
     UploadSeenRequest:
       properties:
         uuid:

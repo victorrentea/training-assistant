@@ -1343,7 +1343,6 @@ def run() -> None:
                             line_count = 0
                         if line_count != last_transcript_line_count:
                             last_transcript_line_count = line_count
-                        # transcript_status and token_usage sends removed — host.js does not handle them
                         pass
                     except SystemExit:
                         pass

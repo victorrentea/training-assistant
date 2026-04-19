@@ -48,7 +48,6 @@
     'notes-badge': 'Session notes',
     'summary-badge': 'Key points summary',
     'log-level-badge': 'Daemon log level (click to toggle)',
-    'token-cost': 'Token usage and cost',
     'git-repos-badge': 'Git repos activity',
     'slides-log-badge': 'Slides activity',
     'slides-catalog-icon': 'Slides catalog status',
@@ -406,7 +405,6 @@
         updateLeaderboardButton();
         document.getElementById('restore-banner').style.display =
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
-        updateTokenBadge(msg.token_usage);
         if (msg.slides_log_deep_count !== undefined || msg.slides_log_topic !== undefined) {
           const count = msg.slides_log_deep_count ?? 0;
           document.getElementById('slides-log-count').textContent = count;
@@ -852,18 +850,6 @@
     }
   }
 
-  function updateTokenBadge(usage) {
-    const el = document.getElementById('token-cost');
-    if (!el || !usage) return;
-    el.className = 'badge';
-    const cost = usage.estimated_cost_usd || 0;
-    el.textContent = '$' + cost.toFixed(2);
-    const inp = (usage.input_tokens || 0).toLocaleString();
-    const out = (usage.output_tokens || 0).toLocaleString();
-    _setFooterBadgeTooltip(el, 'Tokens: ' + inp + ' in / ' + out + ' out');
-    el.style.color = cost > 3 ? 'var(--danger)' : cost > 1 ? 'var(--warn)' : 'var(--muted)';
-  }
-
   function _buildSlidesCacheStatusMapFromSlides(slides) {
     const map = {};
     for (const slide of (Array.isArray(slides) ? slides : [])) {
@@ -1069,7 +1055,6 @@
     const grid = document.querySelector('.host-columns');
     const confQR = document.getElementById('conference-qr');
     const debateTab = document.getElementById('tab-debate');
-    const tokenCost = document.getElementById('token-cost');
     const notesBadge = document.getElementById('notes-badge');
     const centerQR = document.getElementById('center-qr');
     const slidesLeftQR = document.getElementById('slides-left-qr');
@@ -1089,7 +1074,6 @@
       if (pptxDrop) pptxDrop.style.display = 'inline-flex';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
-      if (tokenCost) tokenCost.style.display = 'none';
       if (notesBadge) notesBadge.style.display = 'none';
       // Make center QR bright for conference
       if (centerQR) centerQR.classList.add('conference-center-qr');
@@ -1104,7 +1088,6 @@
       if (pptxDrop) pptxDrop.style.display = 'none';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
-      if (tokenCost) tokenCost.style.display = '';
       if (notesBadge) notesBadge.style.display = '';
       // Restore muted center QR
       if (centerQR) centerQR.classList.remove('conference-center-qr');
