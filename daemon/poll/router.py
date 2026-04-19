@@ -36,7 +36,7 @@ class CreatePollRequest(BaseModel):
     multi: bool
     correct_count: Optional[int] = None
 
-class ClosePollResponse(BaseModel):
+class EndPollResponse(BaseModel):
     vote_counts: list[int]
 
 class RevealCorrectRequest(BaseModel):
@@ -44,9 +44,6 @@ class RevealCorrectRequest(BaseModel):
 
 class StartTimerRequest(BaseModel):
     seconds: int = 30
-
-class SetPollStatusRequest(BaseModel):
-    open: bool
 
 # ── Participant router (proxied via Railway) ──
 
@@ -77,7 +74,7 @@ host_router = APIRouter(prefix="/api/{session_id}/host/poll", tags=["poll"])
 
 @host_router.post("/manual/submit", status_code=204)
 async def create_poll(body: CreatePollRequest):
-    """Host manually creates a new poll."""
+    """Host manually creates and immediately opens a new poll."""
     activity = participant_state.current_activity
     if activity and activity not in ("none", "poll"):
         return JSONResponse({"error": f"Activity {activity} is active"}, status_code=409)
@@ -89,34 +86,25 @@ async def create_poll(body: CreatePollRequest):
         body.correct_count,
     )
     participant_state.current_activity = "poll"
+    poll_state.open_poll(scores.snapshot_base)
 
     await notify_host(PollAiGeneratedMsg(poll=poll))
-    return Response(status_code=204)
-
-
-@host_router.post("/open", status_code=204)
-async def open_poll():
-    """Host opens the poll for voting."""
-    if not poll_state.poll:
-        return JSONResponse({"error": "No poll"}, status_code=400)
-
-    poll_state.open_poll(scores.snapshot_base)
     broadcast(PollOpenedMsg(poll=poll_state.poll))
     await notify_host(PollOpenedMsg(poll=poll_state.poll))
     return Response(status_code=204)
 
 
-@host_router.post("/close", response_model=ClosePollResponse)
-async def close_poll():
-    """Host closes the poll."""
+@host_router.post("/end", response_model=EndPollResponse)
+async def end_poll():
+    """Host ends the poll."""
     if not poll_state.poll:
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     result = poll_state.close_poll()
-    closed_msg = PollEndedMsg(vote_counts=result["vote_counts"])
-    broadcast(closed_msg)
-    await notify_host(closed_msg)
-    return ClosePollResponse(**result)
+    ended_msg = PollEndedMsg(vote_counts=result["vote_counts"])
+    broadcast(ended_msg)
+    await notify_host(ended_msg)
+    return EndPollResponse(**result)
 
 
 @host_router.put("/correct", status_code=204)
@@ -143,15 +131,6 @@ async def start_timer(body: StartTimerRequest):
     broadcast(PollEndCountdownStartedMsg(seconds=result["seconds"]))
     await notify_host(PollEndCountdownStartedMsg(seconds=result["seconds"]))
     return Response(status_code=204)
-
-
-@host_router.put("/status", response_model=ClosePollResponse)
-async def set_poll_status(body: SetPollStatusRequest):
-    """Compatibility: {open: true} → open_poll, {open: false} → close_poll."""
-    if body.open:
-        return await open_poll()
-    else:
-        return await close_poll()
 
 
 @host_router.delete("", status_code=204)

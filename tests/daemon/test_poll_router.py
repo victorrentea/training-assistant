@@ -60,14 +60,13 @@ def host_client(fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host
     return TestClient(app)
 
 
-def _create_and_open_poll(client, fresh_poll_state, fresh_scores):
+def _create_poll(client, fresh_poll_state, fresh_scores):
     resp = client.post("/api/test-session/host/poll/manual/submit", json={
         "question": "Which option?",
         "options": _SAMPLE_OPTIONS,
         "multi": False,
     })
     assert resp.status_code == 204
-    client.post("/api/test-session/host/poll/open", json={})
 
 
 # ──────────────────────────────────────────────
@@ -125,11 +124,12 @@ class TestHostCreatePoll:
             "multi": False,
         })
         assert resp.status_code == 204
-        mock_notify_host.assert_called_once()
-        msg = mock_notify_host.call_args[0][0]
-        assert msg.type == "poll_ai_generated"
-        assert msg.poll["question"] == "Best framework?"
-        assert msg.poll["options"] == _SAMPLE_OPTIONS
+        notify_types = [call[0][0].type for call in mock_notify_host.call_args_list]
+        assert "poll_ai_generated" in notify_types
+        assert "poll_opened" in notify_types
+        ai_msg = next(c[0][0] for c in mock_notify_host.call_args_list if c[0][0].type == "poll_ai_generated")
+        assert ai_msg.poll["question"] == "Best framework?"
+        assert ai_msg.poll["options"] == _SAMPLE_OPTIONS
 
     def test_create_poll_activity_gate(self, host_client, mock_participant_state):
         mock_participant_state.current_activity = "debate"
@@ -150,46 +150,40 @@ class TestHostCreatePoll:
         assert resp.status_code == 204
 
 
-class TestHostOpenPoll:
-    def test_open_poll(self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host):
-        fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
-
-        resp = host_client.post("/api/test-session/host/poll/open", json={})
+class TestHostCreatePollOpensIt:
+    def test_manual_submit_broadcasts_poll_opened(self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host):
+        resp = host_client.post("/api/test-session/host/poll/manual/submit", json={
+            "question": "Q?",
+            "options": _SAMPLE_OPTIONS,
+            "multi": False,
+        })
         assert resp.status_code == 204
 
-        broadcast_msg = mock_broadcast.call_args_list[0][0][0]
-        assert broadcast_msg.type == "poll_opened"
-
-        host_msg = mock_notify_host.call_args[0][0]
-        assert host_msg.type == "poll_opened"
-
-    def test_open_poll_no_poll(self, host_client):
-        resp = host_client.post("/api/test-session/host/poll/open", json={})
-        assert resp.status_code == 400
+        broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
+        assert "poll_opened" in broadcast_types
 
 
-class TestHostClosePoll:
-    def test_close_poll(self, host_client, fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host):
-        _create_and_open_poll(host_client, fresh_poll_state, fresh_scores)
+class TestHostEndPoll:
+    def test_end_poll(self, host_client, fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host):
+        _create_poll(host_client, fresh_poll_state, fresh_scores)
 
-        resp = host_client.post("/api/test-session/host/poll/close", json={})
+        resp = host_client.post("/api/test-session/host/poll/end", json={})
         assert resp.status_code == 200
         data = resp.json()
-        assert data["ok"] is True
         assert isinstance(data["vote_counts"], list)
         assert "total_votes" not in data
 
         broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
         assert "poll_ended" in broadcast_types
 
-    def test_close_poll_no_poll(self, host_client):
-        resp = host_client.post("/api/test-session/host/poll/close", json={})
+    def test_end_poll_no_poll(self, host_client):
+        resp = host_client.post("/api/test-session/host/poll/end", json={})
         assert resp.status_code == 400
 
 
 class TestHostRevealCorrect:
     def test_reveal_correct(self, host_client, fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host):
-        _create_and_open_poll(host_client, fresh_poll_state, fresh_scores)
+        _create_poll(host_client, fresh_poll_state, fresh_scores)
 
         resp = host_client.put("/api/test-session/host/poll/correct", json={"correct_indices": [0]})
         assert resp.status_code == 204

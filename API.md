@@ -176,17 +176,15 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Host deletes the current poll.<br>`DELETE /api/{session_id}/host/poll` | - | - |
-| Host closes the poll.<br>`POST /api/{session_id}/host/poll/close` | - | `vote_counts: list[int]` |
 | Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `correct_indices?: list[int]` | - |
+| Host ends the poll.<br>`POST /api/{session_id}/host/poll/end` | - | `vote_counts: list[int]` |
 | Host starts a countdown timer for the poll.<br>`POST /api/{session_id}/host/poll/end/timer` | `seconds?: int` | - |
-| Create Poll, host manually creates a new poll.<br>`POST /api/{session_id}/host/poll/manual/submit` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`correct_count?: int` | - |
-| Host opens the poll for voting.<br>`POST /api/{session_id}/host/poll/open` | - | - |
+| Create Poll, host manually creates and immediately opens a new poll.<br>`POST /api/{session_id}/host/poll/manual/submit` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`correct_count?: int` | - |
 | Clear Queue<br>`DELETE /api/{session_id}/host/poll/queue` | - | - |
 | Get Queue Status, return how many questions are pending and what the current question looks like.<br>`GET /api/{session_id}/host/poll/queue` | - | `pending: int`<br>`current?: PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}` |
 | Submit Questions, replace the entire poll queue with the submitted questions; typically called by AI submitting generated questions.<br>`POST /api/{session_id}/host/poll/queue` | `questions: list[PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | - |
-| Fire Current<br>`POST /api/{session_id}/host/poll/queue/fire` | - | - |
 | Skip Current<br>`POST /api/{session_id}/host/poll/queue/skip` | - | - |
-| Set Poll Status, compatibility: {open: true} → open_poll, {open: false} → close_poll.<br>`PUT /api/{session_id}/host/poll/status` | `open: bool` | `vote_counts: list[int]` |
+| Submit Current<br>`POST /api/{session_id}/host/poll/queue/submit` | - | - |
 
 ### Host WS
 | Message | Payload |

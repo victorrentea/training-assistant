@@ -60,9 +60,9 @@ async def get_queue_status():
     )
 
 
-@router.post("/fire", status_code=204)
-async def fire_current():
-    """Fire the current question as a poll and advance the queue."""
+@router.post("/submit", status_code=204)
+async def submit_current():
+    """Submit (fire) the current queued question as a poll and advance the queue."""
     current = quiz_queue.current()
     if current is None:
         return JSONResponse({"error": "Poll queue is empty"}, status_code=400)

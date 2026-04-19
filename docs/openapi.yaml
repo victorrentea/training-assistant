@@ -393,7 +393,7 @@ paths:
       tags:
       - poll
       summary: Create Poll
-      description: Host manually creates a new poll.
+      description: Host manually creates and immediately opens a new poll.
       operationId: create_poll_api__session_id__host_poll_manual_submit_post
       requestBody:
         content:
@@ -405,31 +405,20 @@ paths:
         '204':
           description: Successful Response
       x-feature: poll
-  /api/{session_id}/host/poll/open:
+  /api/{session_id}/host/poll/end:
     post:
       tags:
       - poll
-      summary: Open Poll
-      description: Host opens the poll for voting.
-      operationId: open_poll_api__session_id__host_poll_open_post
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll/close:
-    post:
-      tags:
-      - poll
-      summary: Close Poll
-      description: Host closes the poll.
-      operationId: close_poll_api__session_id__host_poll_close_post
+      summary: End Poll
+      description: Host ends the poll.
+      operationId: end_poll_api__session_id__host_poll_end_post
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClosePollResponse'
+                $ref: '#/components/schemas/EndPollResponse'
       x-feature: poll
   /api/{session_id}/host/poll/correct:
     put:
@@ -464,27 +453,6 @@ paths:
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll/status:
-    put:
-      tags:
-      - poll
-      summary: Set Poll Status
-      description: 'Compatibility: {open: true} → open_poll, {open: false} → close_poll.'
-      operationId: set_poll_status_api__session_id__host_poll_status_put
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetPollStatusRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClosePollResponse'
       x-feature: poll
   /api/{session_id}/host/poll:
     delete:
@@ -750,13 +718,14 @@ paths:
         '204':
           description: Successful Response
       x-feature: poll
-  /api/{session_id}/host/poll/queue/fire:
+  /api/{session_id}/host/poll/queue/submit:
     post:
       tags:
       - poll
-      summary: Fire Current
-      description: Fire the current question as a poll and advance the queue.
-      operationId: fire_current_api__session_id__host_poll_queue_fire_post
+      summary: Submit Current
+      description: Submit (fire) the current queued question as a poll and advance
+        the queue.
+      operationId: submit_current_api__session_id__host_poll_queue_submit_post
       responses:
         '204':
           description: Successful Response
@@ -1344,17 +1313,6 @@ components:
       required:
       - avatar
       title: AvatarResponse
-    ClosePollResponse:
-      properties:
-        vote_counts:
-          items:
-            type: integer
-          type: array
-          title: Vote Counts
-      type: object
-      required:
-      - vote_counts
-      title: ClosePollResponse
     CodeReviewParticipantState:
       properties:
         snippet:
@@ -1675,6 +1633,17 @@ components:
       required:
       - emoji
       title: EmojiReactionRequest
+    EndPollResponse:
+      properties:
+        vote_counts:
+          items:
+            type: integer
+          type: array
+          title: Vote Counts
+      type: object
+      required:
+      - vote_counts
+      title: EndPollResponse
     FeedbackRequest:
       properties:
         text:
@@ -2646,15 +2615,6 @@ components:
       required:
       - level
       title: SetLogLevelRequest
-    SetPollStatusRequest:
-      properties:
-        open:
-          type: boolean
-          title: Open
-      type: object
-      required:
-      - open
-      title: SetPollStatusRequest
     SetTopicBody:
       properties:
         topic:

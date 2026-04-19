@@ -1656,7 +1656,6 @@
       localStorage.removeItem('host_correct_' + question);
       localStorage.removeItem('host_llm_hints_' + question);
       correctOptIds = new Set();
-      await setPollStatus(true);
       toast('Poll created & opened ✓');
       pollInput.innerHTML = '<div><br></div>';
       document.getElementById('multi-check').checked = false;
@@ -1701,16 +1700,14 @@
       el.textContent = `⏱ Closing in ${Math.ceil(remaining)}s`;
       if (remaining <= 0) {
         _clearTimer();
-        setPollStatus(false);
+        endPoll();
       }
     }, 200);
   }
 
-  // ── Open / close / clear ──
-  async function setPollStatus(open) {
-    await fetch(API(open ? '/poll/open' : '/poll/close'), {
-      method: 'POST',
-    });
+  // ── End / clear ──
+  async function endPoll() {
+    await fetch(API('/poll/end'), { method: 'POST' });
   }
 
   async function clearPoll() {
@@ -1794,9 +1791,7 @@
       ${currentPoll.source ? `<p class="poll-source-ref">📖 ${escHtml(currentPoll.source)}${currentPoll.page ? `, p. ${escHtml(currentPoll.page)}` : ''}</p>` : ''}
       <div class="btn-row">
         <span class="badge status-pill ${statusLabel}">${statusText}</span>
-        ${!pollActive
-          ? `<button class="btn btn-success" onclick="setPollStatus(true)">${totalVotes > 0 ? '↺ Re-open' : '▶ Open voting'}</button>`
-          : !activeTimer ? `<button class="btn btn-warn" onclick="setPollStatus(false)">⏹ Close voting</button>` : ''}
+        ${pollActive && !activeTimer ? `<button class="btn btn-warn" onclick="endPoll()">⏹ End voting</button>` : ''}
         ${pollActive && activeTimer ? `<div class="countdown-display" id="host-countdown"></div>` : ''}
         ${timerBtns}
         <span style="flex:1"></span>
@@ -1940,7 +1935,7 @@
     const btn = document.getElementById('poll-queue-fire-btn');
     btn.disabled = true;
     try {
-      const res = await fetch(API('/poll/queue/fire'), { method: 'POST' });
+      const res = await fetch(API('/poll/queue/submit'), { method: 'POST' });
       if (res.ok) {
         toast('Question fired from queue \u2713');
       } else {
