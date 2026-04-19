@@ -144,22 +144,17 @@ class QAQuestionRaw(BaseModel):
     timestamp: float
 
 
-class PollOption(BaseModel):
-    id: str
-    text: str
-
-
 class PollData(BaseModel):
     id: str
     question: str
-    options: list[PollOption]
+    options: list[str]
     multi: bool
     correct_count: int | None = None
     source: str | None = None
     page: str | None = None
     timer_seconds: int | None = None
     timer_started_at: str | None = None
-    correct_ids: list[str] | None = None
+    correct_indices: list[int] | None = None
 
 
 class CodeReviewParticipantState(BaseModel):
@@ -220,8 +215,8 @@ class ParticipantStateResponse(BaseModel):
     qa_questions: list[QAQuestionRaw]
     poll: PollData | None = None
     poll_active: bool
-    vote_counts: dict[str, int]
-    my_voted_ids: list[str] | None = None
+    vote_counts: list[int]
+    my_voted_indices: list[int] | None = None
     codereview: CodeReviewParticipantState
     debate: DebateData
     slides_current: SlidesCurrentPayload | None = None
@@ -310,21 +305,18 @@ def _build_poll_for_participant(pid: str) -> dict:
         poll["timer_started_at"] = (
             ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None
         )
-        poll["correct_ids"] = ps.poll_correct_ids
+        poll["correct_indices"] = ps.poll_correct_indices
 
     result: dict = {
         "poll": poll,
         "poll_active": ps.poll_active,
-        "vote_counts": ps.vote_counts() if ps.poll else {},
+        "vote_counts": ps.vote_counts() if ps.poll else [],
     }
-    # Personalise vote
     my_vote_entry = ps.votes.get(pid)
     if my_vote_entry is not None:
-        option_ids = my_vote_entry["option_ids"]
-        result["my_voted_ids"] = option_ids
+        result["my_voted_indices"] = my_vote_entry["option_indices"]
     else:
-        result["my_vote"] = None
-        result["my_voted_ids"] = None
+        result["my_voted_indices"] = None
     return result
 
 async def _notify_host_participant_list():
