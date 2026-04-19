@@ -66,13 +66,12 @@ class PollOpenedMsg(BaseModel):
 
 class PollClosedMsg(BaseModel):
     type: Literal["poll_closed"] = "poll_closed"
-    vote_counts: dict[str, int]
-    total_votes: int
+    vote_counts: list[int]
 
 
 class PollCorrectRevealedMsg(BaseModel):
     type: Literal["poll_correct_revealed"] = "poll_correct_revealed"
-    correct_ids: list[str]
+    correct_indices: list[int]
 
 
 class PollClearedMsg(BaseModel):
@@ -180,7 +179,7 @@ class LeaderboardHiddenMsg(BaseModel):
 
 class VoteUpdateMsg(BaseModel):
     type: Literal["vote_update"] = "vote_update"
-    votes: dict[str, int]  # option_id → count
+    vote_counts: list[int]
 
 
 # ── Host-only: Emoji ──────────────────────────────────────────────────────────
