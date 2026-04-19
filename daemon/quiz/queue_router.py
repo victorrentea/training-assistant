@@ -20,15 +20,10 @@ _LOG = "qz-queue"
 
 # ── Pydantic models ──
 
-class PollQueueOption(BaseModel):
-    id: str
-    text: str
-
-
 class PollQueueQuestion(BaseModel):
     question: str
-    options: list[PollQueueOption]
-    correct_ids: list[str]  # one or more correct option IDs
+    options: list[str]
+    correct_indices: list[int]
 
 
 class SubmitQuestionsRequest(BaseModel):
@@ -81,8 +76,8 @@ async def fire_current():
     if activity and activity not in ("none", "poll"):
         return JSONResponse({"error": f"Activity {activity} is active"}, status_code=409)
 
-    options = [{"id": opt["id"], "text": opt["text"]} for opt in current["options"]]
-    correct_count = len(current["correct_ids"])
+    options = current["options"]  # already list[str]
+    correct_count = len(current["correct_indices"])
     multi = correct_count > 1
 
     poll = poll_state.create_poll(
