@@ -62,6 +62,8 @@ class PollState:
             return False
         if option_indices is None or not isinstance(option_indices, list):
             return False
+        if not option_indices:
+            return False
         n = len(self.poll["options"])
         is_multi = self.poll.get("multi", False)
         if is_multi:
@@ -160,6 +162,7 @@ class PollState:
         self.poll_timer_seconds = None
         self.poll_timer_started_at = None
         self._vote_counts_dirty = True
+        self._vote_counts_cache = None
 
     def vote_counts(self) -> list[int]:
         if not self._vote_counts_dirty and self._vote_counts_cache is not None:
