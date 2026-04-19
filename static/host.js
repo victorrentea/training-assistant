@@ -385,17 +385,7 @@
       }
       if (msg.type === 'state') {
         versionReloadGuard && versionReloadGuard.check(msg.backend_version);
-        const prevQuestion = currentPoll?.question;
-        currentPoll = msg.poll;
-        if (!msg.poll_active && pollActive) _clearTimer(); // poll just closed
-        pollActive = msg.poll_active;
-        // Restore poll timer from server state (survives refresh)
-        if (msg.poll_timer_seconds && msg.poll_timer_started_at) {
-          _applyTimer(msg.poll_timer_seconds, msg.poll_timer_started_at);
-        }
-        if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
-        voteCounts = msg.vote_counts || [];
-        totalVotes = voteCounts.reduce((a, b) => a + b, 0);
+        fetchPollState();
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
         ingestParticipants(msg.participants || []);
         totalParticipants = (msg.participants || []).length;
@@ -428,7 +418,6 @@
         daemonSessionFolder = msg.daemon_session_folder || null;
         if (msg.session_type !== undefined) daemonSessionType = msg.session_type || 'workshop';
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
-        renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
         updateCenterPanel(currentActivity);
         renderDebateHost(msg);
@@ -1713,6 +1702,24 @@
     await fetch(API('/poll'), { method: 'DELETE' });
   }
 
+  async function fetchPollState() {
+    const resp = await fetch(API('/poll'));
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const prevQuestion = currentPoll?.question;
+    const prevPollActive = pollActive;
+    currentPoll = data.poll || null;
+    if (!data.poll_active && prevPollActive) _clearTimer();
+    pollActive = data.poll_active;
+    if (currentPoll?.timer_seconds && currentPoll?.timer_started_at) {
+      _applyTimer(currentPoll.timer_seconds, currentPoll.timer_started_at);
+    }
+    if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
+    voteCounts = data.vote_counts || [];
+    totalVotes = voteCounts.reduce((a, b) => a + b, 0);
+    renderPollDisplay();
+  }
+
   // ── Render ──
   function renderPollDisplay() {
     const el = document.getElementById('poll-display');
@@ -1984,6 +1991,7 @@
 
   async function switchTab(tab) {
     updateCenterPanel(tab);
+    if (tab === 'poll') fetchPollState();
     await fetch(API('/activity'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

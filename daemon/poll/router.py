@@ -45,6 +45,26 @@ class RevealCorrectRequest(BaseModel):
 class StartTimerRequest(BaseModel):
     seconds: int = 30
 
+class HostPollVote(BaseModel):
+    option_indices: list[int]
+    voted_at: str
+
+class HostPollData(BaseModel):
+    id: str
+    question: str
+    options: list[str]
+    multi: bool
+    correct_count: int | None = None
+    timer_seconds: int | None = None
+    timer_started_at: str | None = None
+    correct_indices: list[int] | None = None
+
+class HostPollStateResponse(BaseModel):
+    poll: HostPollData | None = None
+    poll_active: bool
+    vote_counts: list[int]
+    votes: dict[str, HostPollVote]
+
 # ── Participant router (proxied via Railway) ──
 
 participant_router = APIRouter(prefix="/api/participant/poll", tags=["poll"])
@@ -142,3 +162,22 @@ async def delete_poll():
     broadcast(ActivityUpdatedMsg(current_activity="none"))
     await notify_host(PollClearedMsg())
     return Response(status_code=204)
+
+
+@host_router.get("", response_model=HostPollStateResponse)
+async def get_poll_state():
+    """Return full poll state for host poll tab."""
+    ps = poll_state
+    poll = dict(ps.poll) if ps.poll else None
+    if poll is not None:
+        poll["timer_seconds"] = ps.poll_timer_seconds
+        poll["timer_started_at"] = (
+            ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None
+        )
+        poll["correct_indices"] = ps.poll_correct_indices
+    return HostPollStateResponse(
+        poll=poll,
+        poll_active=ps.poll_active,
+        vote_counts=ps.vote_counts() if ps.poll else [],
+        votes={pid: HostPollVote(**v) for pid, v in ps.votes.items()},
+    )

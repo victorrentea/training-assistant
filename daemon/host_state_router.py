@@ -12,7 +12,6 @@ from daemon.debate.state import debate_state
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import GitRepoActivity, participant_state
-from daemon.poll.state import poll_state
 from daemon.qa.state import qa_state
 from daemon.session import state as session_shared_state
 from daemon.wordcloud.state import wordcloud_state
@@ -57,22 +56,6 @@ class HostQAQuestion(BaseModel):
     upvoters: list[str]
     answered: bool
     timestamp: float
-
-
-class HostPollVote(BaseModel):
-    option_indices: list[int]
-    voted_at: str
-
-
-class PollData(BaseModel):
-    id: str
-    question: str
-    options: list[str]
-    multi: bool
-    correct_count: int | None = None
-    timer_seconds: int | None = None
-    timer_started_at: str | None = None
-    correct_indices: list[int] | None = None
 
 
 class HostCodeReviewState(BaseModel):
@@ -132,10 +115,6 @@ class HostStateResponse(BaseModel):
     wordcloud_word_order: list[str]
     wordcloud_topic: str
     qa_questions: list[HostQAQuestion]
-    poll: PollData | None = None
-    poll_active: bool
-    vote_counts: list[int]
-    votes: dict[str, HostPollVote]
     codereview: HostCodeReviewState
     debate_statement: str | None = None
     debate_phase: str | None = None
@@ -258,25 +237,6 @@ def _build_debate_for_host() -> dict:
     return snap
 
 
-def _build_poll_for_host() -> dict:
-    """Build full poll state for host — includes all votes."""
-    ps = poll_state
-    poll = dict(ps.poll) if ps.poll else None
-    if poll is not None:
-        poll["timer_seconds"] = ps.poll_timer_seconds
-        poll["timer_started_at"] = (
-            ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None
-        )
-        poll["correct_indices"] = ps.poll_correct_indices
-
-    return {
-        "poll": poll,
-        "poll_active": ps.poll_active,
-        "vote_counts": ps.vote_counts() if ps.poll else [],
-        "votes": dict(ps.votes),
-    }
-
-
 def _get_current_session_id() -> str | None:
     return session_shared_state.get_active_session_id()
 
@@ -337,7 +297,6 @@ async def get_host_state(request: Request, session_id: str):
     participant_count = len([p for p in ps.participant_names if not p.startswith("__")])
 
     wc = wordcloud_state
-    poll_data = _build_poll_for_host()
     cr = _build_codereview_for_host()
     debate = _build_debate_for_host()
     summary = read_summary_payload()
@@ -360,8 +319,6 @@ async def get_host_state(request: Request, session_id: str):
         "wordcloud_topic": wc.topic,
         # QA
         "qa_questions": _build_qa_for_host(),
-        # Poll
-        **poll_data,
         # Codereview
         "codereview": cr,
         # Debate (flattened)
