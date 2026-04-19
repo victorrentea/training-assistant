@@ -1801,7 +1801,7 @@
         ${pollActive && activeTimer ? `<div class="countdown-display" id="host-countdown"></div>` : ''}
         ${timerBtns}
         <span style="flex:1"></span>
-        <button class="btn btn-danger" onclick="clearPoll()">✕ Remove question</button>
+        <button class="btn btn-danger" onclick="clearPoll()">✕ Remove</button>
       </div>`;
 
     if (pollActive && activeTimer) _startHostCountdown();
