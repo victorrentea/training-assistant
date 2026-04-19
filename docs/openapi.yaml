@@ -448,13 +448,13 @@ paths:
         '204':
           description: Successful Response
       x-feature: poll
-  /api/{session_id}/host/poll/timer:
+  /api/{session_id}/host/poll/end/timer:
     post:
       tags:
       - poll
       summary: Start Timer
       description: Host starts a countdown timer for the poll.
-      operationId: start_timer_api__session_id__host_poll_timer_post
+      operationId: start_timer_api__session_id__host_poll_end_timer_post
       requestBody:
         content:
           application/json:

@@ -179,10 +179,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Host deletes the current poll.<br>`DELETE /api/{session_id}/host/poll` | - | - |
 | Host closes the poll.<br>`POST /api/{session_id}/host/poll/close` | - | `ok?: bool`<br>`vote_counts: list[int]` |
 | Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `correct_indices?: list[int]` | - |
+| Host starts a countdown timer for the poll.<br>`POST /api/{session_id}/host/poll/end/timer` | `seconds?: int` | - |
 | Create Poll, host manually creates a new poll.<br>`POST /api/{session_id}/host/poll/manual/submit` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`correct_count?: int` | - |
 | Host opens the poll for voting.<br>`POST /api/{session_id}/host/poll/open` | - | - |
 | Set Poll Status, compatibility: {open: true} → open_poll, {open: false} → close_poll.<br>`PUT /api/{session_id}/host/poll/status` | `open: bool` | `OkResponse{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`ok?:bool`<br>`} \| ClosePollResponse{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`ok?:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`vote_counts:list[int]`<br>`}` |
-| Host starts a countdown timer for the poll.<br>`POST /api/{session_id}/host/poll/timer` | `seconds?: int` | - |
 
 ### Host WS
 | Message | Payload |

@@ -210,7 +210,7 @@ class TestHostStartTimer:
     def test_start_timer(self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host):
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
-        resp = host_client.post("/api/test-session/host/poll/timer", json={"seconds": 45})
+        resp = host_client.post("/api/test-session/host/poll/end/timer", json={"seconds": 45})
         assert resp.status_code == 204
 
         broadcast_msg = mock_broadcast.call_args_list[0][0][0]
@@ -218,7 +218,7 @@ class TestHostStartTimer:
         assert broadcast_msg.seconds == 45
 
     def test_start_timer_no_poll(self, host_client):
-        resp = host_client.post("/api/test-session/host/poll/timer", json={"seconds": 30})
+        resp = host_client.post("/api/test-session/host/poll/end/timer", json={"seconds": 30})
         assert resp.status_code == 400
 
 

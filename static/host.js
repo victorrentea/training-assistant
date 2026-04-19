@@ -1693,7 +1693,7 @@
   let _timerInterval = null;
 
   async function startTimer(seconds) {
-    const res = await fetch(API('/poll/timer'), {
+    const res = await fetch(API('/poll/end/timer'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ seconds }),

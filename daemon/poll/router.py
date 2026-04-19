@@ -137,7 +137,7 @@ async def reveal_correct(body: RevealCorrectRequest):
     return Response(status_code=204)
 
 
-@host_router.post("/timer", status_code=204)
+@host_router.post("/end/timer", status_code=204)
 async def start_timer(body: StartTimerRequest):
     """Host starts a countdown timer for the poll."""
     if not poll_state.poll:
