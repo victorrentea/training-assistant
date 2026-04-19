@@ -284,6 +284,10 @@ body{visibility:hidden}
 <span class="material-symbols-outlined">upload</span>
 <span class="text-base">Upload / Paste</span>
 </a>
+<a id="share-location-nav" onclick="requestParticipantLocation()" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
+<span class="material-symbols-outlined">location_on</span>
+<span class="text-base">Share my location</span>
+</a>
 </nav>
 <hr class="-mx-4 border-outline-variant"/>
 <div id="profile-card" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer group" style="margin-bottom:0.5rem">
@@ -319,14 +323,6 @@ body{visibility:hidden}
     <div class="text-center">
       <p class="text-base text-on-surface-variant mt-2">The host is about to start an activity — stay tuned!</p>
     </div>
-  </div>
-  <div id="activity-location-section" style="display:none" class="flex flex-col items-center gap-3 mt-2">
-    <p class="text-sm text-on-surface-variant text-center" style="max-width:18rem">Mind sharing where you're joining from? The host loves knowing who's in the room.</p>
-    <button id="activity-location-btn" onclick="requestParticipantLocation()"
-      class="flex items-center gap-2 px-5 py-2 rounded-full bg-surface-container-high text-on-surface text-sm font-medium hover:bg-surface-container-highest transition-colors cursor-pointer">
-      <span class="material-symbols-outlined" style="font-size:1rem">location_on</span>
-      <span id="activity-location-btn-text">Share my location</span>
-    </button>
   </div>
   <div id="activity-poll-section" style="display:none"></div>
 </div>
@@ -1482,43 +1478,45 @@ function initActivityView() {
     waiting.style.display = 'none';
     LS.setActivitySeen();
   }
+}
+function initLocationMenuEntry() {
   if (_activityLocationSent) return;
   if (!navigator.geolocation) return;
-  var section = document.getElementById('activity-location-section');
+  var entry = document.getElementById('share-location-nav');
+  if (!entry) return;
   if (navigator.permissions) {
     navigator.permissions.query({name: 'geolocation'}).then(function(result) {
       if (result.state === 'granted') {
         navigator.geolocation.getCurrentPosition(function(pos) {
           _sendParticipantLocation(pos.coords.latitude, pos.coords.longitude);
         });
-      } else if (result.state === 'prompt') {
-        section.style.display = '';
+      } else {
+        entry.style.display = '';
       }
-    }).catch(function() { section.style.display = ''; });
+    }).catch(function() { entry.style.display = ''; });
   } else {
-    section.style.display = '';
+    entry.style.display = '';
   }
 }
 function requestParticipantLocation() {
-  document.getElementById('activity-location-btn').disabled = true;
-  document.getElementById('activity-location-btn-text').textContent = 'Getting location…';
+  if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(
-    function(pos) {
-      _sendParticipantLocation(pos.coords.latitude, pos.coords.longitude);
-      document.getElementById('activity-location-section').style.display = 'none';
-    },
-    function() {
-      document.getElementById('activity-location-section').style.display = 'none';
-    }
+    function(pos) { _sendParticipantLocation(pos.coords.latitude, pos.coords.longitude); },
+    function() {}
   );
 }
 function _sendParticipantLocation(lat, lon) {
   if (_activityLocationSent || !_sessionId) return;
-  _activityLocationSent = true;
   fetch('/' + _sessionId + '/api/participant/location', {
     method: 'PUT',
     headers: {'Content-Type': 'application/json', 'X-Participant-ID': _myUUID},
     body: JSON.stringify({location: lat + ',' + lon})
+  }).then(function(resp) {
+    if (resp.ok) {
+      _activityLocationSent = true;
+      var entry = document.getElementById('share-location-nav');
+      if (entry) entry.style.display = 'none';
+    }
   }).catch(function() {});
 }
 function resetStatePrompt() {
@@ -1926,6 +1924,7 @@ async function _refreshParticipantState() {
     _applyState(state);
     document.getElementById('loading-screen').style.display = 'none';
     if (_shouldShowOnboarding()) _showOnboarding();
+    initLocationMenuEntry();
 
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
     document.querySelector('[data-nav="notes"]').style.display = state.notes_updated_at ? '' : 'none';
