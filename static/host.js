@@ -324,10 +324,6 @@
         window.location.href = msg.url;
         return;
       }
-      if (msg.type === 'leaderboard' || msg.type === 'leaderboard_revealed') {
-        renderLeaderboard(msg);
-        return;
-      }
       if (msg.type === 'poll_ai_generated') {
         currentPoll = msg.poll;
         pollActive = false;
@@ -3004,7 +3000,11 @@ async function toggleLeaderboard() {
             return;
         }
         try {
-            await fetch(API('/leaderboard/show'), { method: 'POST' });
+            const res = await fetch(API('/leaderboard/show'), { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                renderLeaderboard(data);
+            }
         } catch (e) {
             console.error('Leaderboard show failed:', e);
         }

@@ -312,8 +312,6 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     "codereview_selections_updated": CodereviewSelectionsUpdatedMsg,
     # Emoji
     "emoji_reaction": EmojiReactionMsg,
-    # Leaderboard
-    "leaderboard_revealed": LeaderboardRevealedMsg,
     # Paste & Upload
     "paste_received": PasteReceivedMsg,
     "file_uploaded": FileUploadedMsg,
@@ -385,8 +383,6 @@ HOST_MESSAGE_FEATURES: dict[str, str] = {
     "codereview_selections_updated": "codereview",
     # Emoji
     "emoji_reaction": "emoji",
-    # Scores & Leaderboard
-    "leaderboard_revealed": "scores_leaderboard",
     # Paste & Upload
     "paste_received": "paste_upload",
     "file_uploaded": "paste_upload",

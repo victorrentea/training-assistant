@@ -28,7 +28,6 @@ channels:
           - $ref: '#/components/messages/qa_updated'
           - $ref: '#/components/messages/codereview_selections_updated'
           - $ref: '#/components/messages/emoji_reaction'
-          - $ref: '#/components/messages/leaderboard_revealed'
           - $ref: '#/components/messages/paste_received'
           - $ref: '#/components/messages/file_uploaded'
           - $ref: '#/components/messages/participant_list_updated'
@@ -82,15 +81,15 @@ components:
         - Host-only event; participants do not receive live vote tallies.
       payload:
         type: object
-        required: [type, votes]
+        required: [type, vote_counts]
         properties:
           type:
             type: string
             enum: [vote_update]
-          votes:
-            type: object
-            description: option_id → vote count
-            additionalProperties:
+          vote_counts:
+            type: array
+            description: vote count per option, indexed by option position
+            items:
               type: integer
 
     # ── Word Cloud ────────────────────────────────────────────────────────────
@@ -168,23 +167,6 @@ components:
           emoji:
             type: string
             maxLength: 4
-
-    # ── Leaderboard ───────────────────────────────────────────────────────────
-
-    leaderboard_revealed:
-      summary: Leaderboard revealed (same payload as participant)
-      x-feature: scores_leaderboard
-      payload:
-        type: object
-        required: [type, positions]
-        properties:
-          type:
-            type: string
-            enum: [leaderboard_revealed]
-          positions:
-            type: array
-            items:
-              $ref: '#/components/schemas/LeaderboardPosition'
 
     # ── Paste & File Upload ───────────────────────────────────────────────────
 

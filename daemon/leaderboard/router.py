@@ -9,14 +9,20 @@ from daemon.ws_messages import LeaderboardRevealedMsg, ScoresUpdatedMsg
 from daemon.ws_publish import broadcast, notify_host
 
 
-class OkResponse(BaseModel):
-    ok: bool = True
+class LeaderboardPosition(BaseModel):
+    rank: int
+    name: str
+    score: int
+
+
+class ShowLeaderboardResponse(BaseModel):
+    entries: list[LeaderboardPosition]
 
 
 router = APIRouter(prefix="/api/{session_id}/host", tags=["leaderboard"])
 
 
-@router.post("/leaderboard/show", status_code=204)
+@router.post("/leaderboard/show", response_model=ShowLeaderboardResponse)
 async def show_leaderboard():
     all_scores = scores.snapshot()
     raw_entries = [
@@ -30,14 +36,12 @@ async def show_leaderboard():
     ][:5]
     total = len([s for s in all_scores.values() if s > 0])
     leaderboard_state.show(raw_entries, total)
-    positions = [
-        {"rank": i + 1, "name": e["name"], "score": e["score"]}
+    entries = [
+        LeaderboardPosition(rank=i + 1, name=e["name"], score=e["score"])
         for i, e in enumerate(raw_entries)
     ]
-    msg = LeaderboardRevealedMsg(positions=positions)
-    broadcast(msg)
-    await notify_host(msg)
-    return Response(status_code=204)
+    broadcast(LeaderboardRevealedMsg(positions=[e.model_dump() for e in entries]))
+    return ShowLeaderboardResponse(entries=entries)
 
 
 @router.delete("/scores", status_code=204)

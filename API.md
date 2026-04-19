@@ -192,7 +192,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Host-only notification when a new poll is created (before opening)<br>`poll_ai_generated` | `poll: dict  # Poll data {id, question, options[], multi}` |
-| Real-time vote tally while poll is open<br>Host-only event; participants do not receive live vote tallies.<br>`vote_update` | `votes: dict[str, int]  # option_id → vote count` |
+| Real-time vote tally while poll is open<br>Host-only event; participants do not receive live vote tallies.<br>`vote_update` | `vote_counts: list[int]  # vote count per option, indexed by option position` |
 
 ## Feature: Word Cloud
 
@@ -315,13 +315,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | - | - |
+| Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | - | `entries: list[LeaderboardPosition{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`rank:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`score:int`<br>`}]` |
 | Reset Scores<br>`DELETE /api/{session_id}/host/scores` | - | - |
-
-### Host WS
-| Message | Payload |
-| --- | --- |
-| Leaderboard revealed (same payload as participant)<br>`leaderboard_revealed` | `positions: list[LeaderboardPosition{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`rank:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`score:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`avatar:string`<br>`}]` |
 
 ## Feature: Emoji Reactions
 
