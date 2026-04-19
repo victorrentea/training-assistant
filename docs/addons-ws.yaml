@@ -34,6 +34,7 @@ channels:
         oneOf:
           - $ref: '#/components/messages/slide_presenting_now'
           - $ref: '#/components/messages/slides_viewed'
+          - $ref: '#/components/messages/git_file_opened'
 
 components:
   schemas:
@@ -129,3 +130,26 @@ components:
             description: Delta viewing durations since last send
             items:
               $ref: '#/components/schemas/SlideViewDelta'
+
+    git_file_opened:
+      summary: Currently open file in IntelliJ changed
+      x-feature: intellij
+      payload:
+        type: object
+        required: [type, url, branch, file]
+        properties:
+          type:
+            type: string
+            enum: [git_file_opened]
+          url:
+            type: string
+            description: Git remote URL of the project
+          branch:
+            type: string
+            description: Current git branch
+          file:
+            type: string
+            description: Filename of the open file
+          file_url:
+            type: string
+            description: Full GitHub/GitLab URL to the file (omitted when filename is ambiguous)

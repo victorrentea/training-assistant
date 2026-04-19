@@ -248,6 +248,7 @@ class GitFileOpenedMsg(BaseModel):
     url: str
     branch: str
     file: str
+    file_url: str | None = None
 
 
 # ── Cross-cutting ────────────────────────────────────────────────────────────

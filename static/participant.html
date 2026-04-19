@@ -1019,7 +1019,7 @@ function openRepos() {
         var fileUrls = repo.file_urls || {};
         var files = repo.files.map(function(f) {
           var label = fileUrls[f]
-            ? '<a href="' + fileUrls[f] + '" target="_blank" class="truncate hover:underline">' + f + '</a>'
+            ? '<a href="' + fileUrls[f] + '" target="_blank" class="truncate hover:underline" style="color:var(--action)">' + f + '</a>'
             : '<span class="truncate">' + f + '</span>';
           return '<li class="flex items-center gap-1 min-w-0 py-0.5" style="margin-left:22px">'
             + '<span class="flex-shrink-0">•</span>'
