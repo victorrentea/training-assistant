@@ -157,10 +157,6 @@ body{visibility:hidden}
 <!-- Navigation Cluster -->
 <hr class="-mx-4 border-outline-variant"/>
 <nav class="flex flex-col space-y-2 flex-1 overflow-y-hidden min-h-0" style="row-gap:0.189rem;" onmouseenter="clearTimeout(_menuCollapseTimer)" onmouseleave="_startMenuCollapseTimer()">
-<a data-nav="activity" onclick="showView('activity')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
-<span class="text-base">Activity</span>
-</a>
 <div>
 <a data-nav="slides" onclick="toggleSlidesMenu()" class="nav-item rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
@@ -191,6 +187,10 @@ body{visibility:hidden}
 </a>
 <div id="slide-history-list" class="mx-2 mt-1 rounded-xl overflow-hidden" style="display:none"></div>
 </div>
+<a data-nav="activity" onclick="showView('activity')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="text-base">Activity</span>
+</a>
 <a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">event_note</span>
 <span class="text-base">Agenda</span>
@@ -528,7 +528,7 @@ var LS = {
   setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
   getScroll: function(view) { return localStorage.getItem(LS.scrollKey(view)); },
   setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
-  getView:   function()     { return localStorage.getItem(LS.VIEW) || 'activity'; },
+  getView:   function()     { return localStorage.getItem(LS.VIEW) || 'slides'; },
   setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
   getFollow: function()     { var v = localStorage.getItem(LS.FOLLOW); return v === null ? true : v === '1'; },
   setFollow: function(val)  { localStorage.setItem(LS.FOLLOW, val ? '1' : '0'); },
