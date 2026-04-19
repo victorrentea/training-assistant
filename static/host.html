@@ -115,6 +115,20 @@
         </div>
         <span id="quiz-status"></span>
       </div>
+      <!-- Quiz Queue panel (hidden when queue empty) -->
+      <div id="quiz-queue-panel" style="display:none; margin-top:.75rem; padding:.75rem; border:1px solid var(--border); border-radius:8px; background:var(--surface2);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem;">
+          <span style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">Quiz Queue</span>
+          <span id="quiz-queue-counter" style="font-size:.8rem; color:var(--muted);"></span>
+        </div>
+        <div id="quiz-queue-question" style="font-size:.95rem; color:var(--text); margin-bottom:.5rem; font-weight:600;"></div>
+        <div id="quiz-queue-options" style="display:flex; flex-direction:column; gap:.25rem; margin-bottom:.65rem;"></div>
+        <div class="btn-row">
+          <button class="btn btn-success" id="quiz-queue-fire-btn" onclick="quizQueueFire()">&#9654; Fire</button>
+          <button class="btn" id="quiz-queue-skip-btn" onclick="quizQueueSkip()">&#9197; Skip</button>
+        </div>
+      </div>
+
       <div id="preview-card" style="display:none; margin-top:.75rem;">
         <h3 style="margin:0 0 .5rem; font-size:.95rem; color:var(--accent);">🤖 Generated Question</h3>
         <div id="preview-display"></div>

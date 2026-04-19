@@ -2061,6 +2061,96 @@
     el.title = message;
   }
 
+  // ── Quiz Queue ──────────────────────────────────────────────────────────────
+  let _quizQueuePollTimer = null;
+
+  async function fetchQuizQueue() {
+    try {
+      const res = await fetch(API('/quiz-queue'));
+      if (!res.ok) { renderQuizQueuePanel(null); return; }
+      const data = await res.json();
+      renderQuizQueuePanel(data);
+    } catch (e) {
+      renderQuizQueuePanel(null);
+    }
+  }
+
+  function renderQuizQueuePanel(data) {
+    const panel = document.getElementById('quiz-queue-panel');
+    if (!panel) return;
+    if (!data || data.pending === 0) {
+      panel.style.display = 'none';
+      return;
+    }
+    panel.style.display = '';
+    document.getElementById('quiz-queue-counter').textContent = `${data.pending} remaining`;
+    const q = data.question;
+    document.getElementById('quiz-queue-question').textContent = q ? q.question : '';
+    const optsEl = document.getElementById('quiz-queue-options');
+    optsEl.innerHTML = '';
+    if (q && q.options) {
+      const correctSet = new Set(q.correct_indices || []);
+      q.options.forEach((opt, i) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'font-size:.85rem; padding:.15rem .35rem; border-radius:4px;';
+        const isCorrect = correctSet.has(i);
+        if (isCorrect) {
+          div.style.color = 'var(--action)';
+          div.style.fontWeight = '600';
+          div.textContent = '\u2713 ' + opt;
+        } else {
+          div.style.color = 'var(--muted)';
+          div.textContent = opt;
+        }
+        optsEl.appendChild(div);
+      });
+    }
+  }
+
+  async function quizQueueFire() {
+    const btn = document.getElementById('quiz-queue-fire-btn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(API('/quiz-queue/fire'), { method: 'POST' });
+      if (res.ok) {
+        toast('Question fired from queue \u2713');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast(err.detail || 'Failed to fire question');
+      }
+    } catch (e) {
+      toast('Failed to reach server');
+    } finally {
+      btn.disabled = false;
+      await fetchQuizQueue();
+    }
+  }
+
+  async function quizQueueSkip() {
+    const btn = document.getElementById('quiz-queue-skip-btn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(API('/quiz-queue/skip'), { method: 'POST' });
+      if (res.ok) {
+        toast('Question skipped');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast(err.detail || 'Failed to skip question');
+      }
+    } catch (e) {
+      toast('Failed to reach server');
+    } finally {
+      btn.disabled = false;
+      await fetchQuizQueue();
+    }
+  }
+
+  function startQuizQueuePolling() {
+    fetchQuizQueue();
+    if (_quizQueuePollTimer) clearInterval(_quizQueuePollTimer);
+    _quizQueuePollTimer = setInterval(fetchQuizQueue, 3000);
+  }
+
   function toast(msg) {
     const el = document.getElementById('toast');
     el.textContent = msg;
@@ -2590,6 +2680,7 @@
 
   updateGenBtn();
   connectWS();
+  startQuizQueuePolling();
 
   document.getElementById('wc-host-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') hostSubmitWord();
