@@ -164,10 +164,7 @@ class TestHostEndPoll:
         _create_poll(host_client, fresh_poll_state, fresh_scores)
 
         resp = host_client.post("/api/test-session/host/poll/end", json={})
-        assert resp.status_code == 200
-        data = resp.json()
-        assert isinstance(data["vote_counts"], list)
-        assert "total_votes" not in data
+        assert resp.status_code == 204
 
         broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
         assert "poll_ended" in broadcast_types

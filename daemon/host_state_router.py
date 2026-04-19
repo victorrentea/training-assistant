@@ -90,17 +90,6 @@ class SlidesCurrentPayload(BaseModel):
     page: int | None = None
 
 
-class PollQueueQuestion(BaseModel):
-    question: str
-    options: list[str]
-    correct_indices: list[int]
-
-
-class PollQueueStatus(BaseModel):
-    pending: int
-    current: PollQueueQuestion | None
-
-
 class HostStateResponse(BaseModel):
     type: Literal["state"] = "state"
     mode: str
@@ -144,7 +133,6 @@ class HostStateResponse(BaseModel):
     transcript_line_count: int
     transcript_total_lines: int
     transcript_latest_ts: str | None = None
-    poll_queue: PollQueueStatus | None = None
 
 
 def _build_host_participants_list() -> list[dict]:
@@ -280,16 +268,6 @@ def _build_slides_log_fields() -> dict:
     }
 
 
-def _build_poll_queue_status() -> dict:
-    """Build poll queue status for host state — pending count and current question."""
-    from daemon.quiz.queue import quiz_queue
-    current = quiz_queue.current()
-    return {
-        "pending": quiz_queue.pending_count(),
-        "current": current,
-    }
-
-
 @router.get("/state", response_model=HostStateResponse)
 async def get_host_state(request: Request, session_id: str):
     """Return full state for host page load — replicates Railway build_for_host()."""
@@ -352,8 +330,6 @@ async def get_host_state(request: Request, session_id: str):
         "transcript_line_count": 0,
         "transcript_total_lines": 0,
         "transcript_latest_ts": None,
-        # Poll queue
-        "poll_queue": _build_poll_queue_status(),
     }
 
     return JSONResponse(state_msg)

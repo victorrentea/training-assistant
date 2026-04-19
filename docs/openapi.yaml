@@ -413,12 +413,8 @@ paths:
       description: Host ends the poll.
       operationId: end_poll_api__session_id__host_poll_end_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EndPollResponse'
       x-feature: poll
   /api/{session_id}/host/poll/correct:
     put:
@@ -1647,17 +1643,6 @@ components:
       required:
       - emoji
       title: EmojiReactionRequest
-    EndPollResponse:
-      properties:
-        vote_counts:
-          items:
-            type: integer
-          type: array
-          title: Vote Counts
-      type: object
-      required:
-      - vote_counts
-      title: EndPollResponse
     FeedbackRequest:
       properties:
         text:
@@ -1859,9 +1844,9 @@ components:
           anyOf:
           - $ref: '#/components/schemas/HostPollData'
           - type: 'null'
-        poll_active:
+        poll_running:
           type: boolean
-          title: Poll Active
+          title: Poll Running
         vote_counts:
           items:
             type: integer
@@ -1874,7 +1859,7 @@ components:
           title: Votes
       type: object
       required:
-      - poll_active
+      - poll_running
       - vote_counts
       - votes
       title: HostPollStateResponse
@@ -2120,10 +2105,6 @@ components:
           - type: string
           - type: 'null'
           title: Transcript Latest Ts
-        poll_queue:
-          anyOf:
-          - $ref: '#/components/schemas/PollQueueStatus'
-          - type: 'null'
       type: object
       required:
       - mode
@@ -2446,20 +2427,6 @@ components:
       - options
       - correct_indices
       title: PollQueueQuestion
-    PollQueueStatus:
-      properties:
-        pending:
-          type: integer
-          title: Pending
-        current:
-          anyOf:
-          - $ref: '#/components/schemas/PollQueueQuestion'
-          - type: 'null'
-      type: object
-      required:
-      - pending
-      - current
-      title: PollQueueStatus
     PollQueueStatusResponse:
       properties:
         pending:

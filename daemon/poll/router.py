@@ -60,7 +60,7 @@ class HostPollData(BaseModel):
 
 class HostPollStateResponse(BaseModel):
     poll: HostPollData | None = None
-    poll_active: bool
+    poll_running: bool
     vote_counts: list[int]
     votes: dict[str, HostPollVote]
 
@@ -112,7 +112,7 @@ async def create_poll(body: CreatePollRequest):
     return Response(status_code=204)
 
 
-@host_router.post("/end", response_model=EndPollResponse)
+@host_router.post("/end", status_code=204)
 async def end_poll():
     """Host ends the poll."""
     if not poll_state.poll:
@@ -122,7 +122,7 @@ async def end_poll():
     ended_msg = PollEndedMsg(vote_counts=result["vote_counts"])
     broadcast(ended_msg)
     await notify_host(ended_msg)
-    return EndPollResponse(**result)
+    return Response(status_code=204)
 
 
 @host_router.put("/correct", status_code=204)
@@ -175,7 +175,7 @@ async def get_poll_state():
         poll["correct_indices"] = ps.poll_correct_indices
     return HostPollStateResponse(
         poll=poll,
-        poll_active=ps.poll_active,
+        poll_running=ps.poll_active,
         vote_counts=ps.vote_counts() if ps.poll else [],
         votes={pid: HostPollVote(**v) for pid, v in ps.votes.items()},
     )

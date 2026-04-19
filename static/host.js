@@ -337,12 +337,8 @@
         return;
       }
       if (msg.type === 'poll_ended') {
-        pollActive = false;
         _clearTimer();
-        voteCounts = msg.vote_counts || [];
-        totalVotes = voteCounts.reduce((a, b) => a + b, 0);
-        renderPollDisplay();
-        renderBars();
+        fetchPollState();
         return;
       }
       if (msg.type === 'poll_correct_revealed') {
@@ -1688,7 +1684,8 @@
 
   // ── End / clear ──
   async function endPoll() {
-    await fetch(API('/poll/end'), { method: 'POST' });
+    const res = await fetch(API('/poll/end'), { method: 'POST' });
+    if (res.ok) fetchPollState();
   }
 
   async function clearPoll() {
@@ -1702,8 +1699,8 @@
     const prevQuestion = currentPoll?.question;
     const prevPollActive = pollActive;
     currentPoll = data.poll || null;
-    if (!data.poll_active && prevPollActive) _clearTimer();
-    pollActive = data.poll_active;
+    if (!data.poll_running && prevPollActive) _clearTimer();
+    pollActive = data.poll_running;
     if (currentPoll?.timer_seconds && currentPoll?.timer_started_at) {
       _applyTimer(currentPoll.timer_seconds, currentPoll.timer_started_at);
     }
