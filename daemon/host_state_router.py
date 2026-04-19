@@ -5,7 +5,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from daemon.codereview.state import codereview_state
 from daemon.debate.state import debate_state
@@ -132,14 +132,6 @@ class SlidesCurrentPayload(BaseModel):
     page: int | None = None
 
 
-class PollPreviewPayload(BaseModel):
-    question: str | None = None
-    options: list[str] | None = None
-    multi: bool | None = None
-    correct_indices: list[int] | None = None
-    model_config = ConfigDict(extra="allow")
-
-
 class PollQueueOption(BaseModel):
     id: str
     text: str
@@ -206,7 +198,6 @@ class HostStateResponse(BaseModel):
     transcript_line_count: int
     transcript_total_lines: int
     transcript_latest_ts: str | None = None
-    poll_preview: PollPreviewPayload | None = None
     poll_queue: PollQueueStatus | None = None
 
 
@@ -442,8 +433,6 @@ async def get_host_state(request: Request, session_id: str):
         "transcript_line_count": 0,
         "transcript_total_lines": 0,
         "transcript_latest_ts": None,
-        # Poll preview
-        "poll_preview": None,
         # Poll queue
         "poll_queue": _build_poll_queue_status(),
     }

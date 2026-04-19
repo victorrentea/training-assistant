@@ -28,8 +28,6 @@ channels:
           - $ref: '#/components/messages/qa_updated'
           - $ref: '#/components/messages/codereview_selections_updated'
           - $ref: '#/components/messages/emoji_reaction'
-          - $ref: '#/components/messages/poll_status'
-          - $ref: '#/components/messages/poll_preview'
           - $ref: '#/components/messages/leaderboard_revealed'
           - $ref: '#/components/messages/paste_received'
           - $ref: '#/components/messages/file_uploaded'
@@ -170,56 +168,6 @@ components:
           emoji:
             type: string
             maxLength: 4
-
-    # ── Poll Generation ───────────────────────────────────────────────────────
-
-    poll_status:
-      summary: Poll generation progress update
-      x-feature: poll
-      payload:
-        type: object
-        required: [type, status]
-        properties:
-          type:
-            type: string
-            enum: [poll_status]
-          status:
-            type: string
-            description: '"generating" | "ready" | "error"'
-          message:
-            type: string
-
-    poll_preview:
-      summary: Generated poll ready for host review (poll=null to clear)
-      x-feature: poll
-      payload:
-        type: object
-        required: [type]
-        properties:
-          type:
-            type: string
-            enum: [poll_preview]
-          poll:
-            nullable: true
-            description: Set to null to clear the preview
-          question:
-            type: string
-          options:
-            type: array
-            items:
-              type: object
-              required: [id, text]
-              properties:
-                id:
-                  type: string
-                text:
-                  type: string
-          multi:
-            type: boolean
-          correct_indices:
-            type: array
-            items:
-              type: integer
 
     # ── Leaderboard ───────────────────────────────────────────────────────────
 

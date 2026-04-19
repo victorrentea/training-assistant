@@ -90,31 +90,6 @@
 
     <!-- Poll tab content -->
     <div id="tab-content-poll" class="tab-content">
-      <!-- Generate question (primary) -->
-      <div class="poll-gen-row">
-        <div class="poll-gen-controls" style="display:flex;flex-direction:column;gap:.35rem;align-items:flex-start;">
-          <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
-            from topic:
-            <input id="poll-topic" type="text" maxlength="60" autocomplete="off"
-                   placeholder="e.g. circuit breaker"
-                   oninput="updateGenBtn()"
-                   onkeydown="if(event.key==='Enter')requestPoll()"
-                   style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:0 .5rem;font-size:.85rem;width:10rem;" />
-          </div>
-          <div style="font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;">
-            from what we discussed the last
-            <select id="poll-minutes" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:0 .4rem;font-size:.85rem;cursor:pointer;">
-              <option value="15">15 min</option>
-              <option value="30" selected>30 min</option>
-              <option value="60">1 hour</option>
-              <option value="90">1.5 hours</option>
-              <option value="480">whole day</option>
-            </select>
-          </div>
-          <button class="btn btn-warn" id="gen-poll-btn" onclick="requestPoll()" style="align-self:flex-start;">Generate from transcript 🤖</button>
-        </div>
-        <span id="poll-status"></span>
-      </div>
       <!-- Poll Queue panel (hidden when queue empty) -->
       <div id="poll-queue-panel" style="display:none; margin-top:.75rem; padding:.75rem; border:1px solid var(--border); border-radius:8px; background:var(--surface2);">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem;">
@@ -126,14 +101,6 @@
         <div class="btn-row">
           <button class="btn btn-success" id="poll-queue-fire-btn" onclick="pollQueueFire()">&#9654; Fire</button>
           <button class="btn" id="poll-queue-skip-btn" onclick="pollQueueSkip()">&#9197; Skip</button>
-        </div>
-      </div>
-
-      <div id="preview-card" style="display:none; margin-top:.75rem;">
-        <h3 style="margin:0 0 .5rem; font-size:.95rem; color:var(--accent);">🤖 Generated Question</h3>
-        <div id="preview-display"></div>
-        <div class="btn-row" style="margin-top:.5rem;">
-          <button class="btn btn-success" onclick="firePreview()">Send</button>
         </div>
       </div>
 

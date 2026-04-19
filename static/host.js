@@ -433,7 +433,6 @@
         daemonSessionFolder = msg.daemon_session_folder || null;
         if (msg.session_type !== undefined) daemonSessionType = msg.session_type || 'workshop';
         renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
-        renderPreview(msg.poll_preview || null);
         renderPollDisplay();
         const currentActivity = msg.current_activity || 'none';
         updateCenterPanel(currentActivity);
@@ -520,10 +519,6 @@
           _lastDebateMsg.debate_round_timer_seconds = null;
           renderDebateHost(_lastDebateMsg);
         }
-      } else if (msg.type === 'poll_status') {
-        renderPollStatus(msg.status, msg.message);
-      } else if (msg.type === 'poll_preview') {
-        renderPreview(msg.poll || null);
       } else if (msg.type === 'overlay_connected') {
         renderOverlayStatus(msg.overlay_connected);
       } else if (msg.type === 'emoji_reaction') {
@@ -1874,169 +1869,10 @@
     if (totalEl) totalEl.textContent = `${totalVotes} total vote${totalVotes!==1?'s':''}`;
   }
 
-  // ── Poll generator ──
-  const GEN_LABEL_TRANSCRIPT = 'Generate from transcript 🤖';
-  const GEN_LABEL_TOPIC = 'Generate on topic 🤖';
-
-  function updateGenBtn() {
-    const topic = document.getElementById('poll-topic').value.trim();
-    const btn = document.getElementById('gen-poll-btn');
-    btn.textContent = topic ? GEN_LABEL_TOPIC : GEN_LABEL_TRANSCRIPT;
-  }
-
-  async function requestPoll() {
-    const topic = document.getElementById('poll-topic').value.trim();
-    const btn = document.getElementById('gen-poll-btn');
-    btn.disabled = true;
-    let body, statusMsg;
-    if (topic) {
-      body = { topic };
-      statusMsg = `Waiting… (topic: ${topic})`;
-    } else {
-      const minutes = parseInt(document.getElementById('poll-minutes').value, 10);
-      body = { minutes };
-      statusMsg = `Waiting… (${minutes}m)`;
-    }
-    renderPollStatus('requested', statusMsg);
-    try {
-      await fetch(API('/poll-request'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-    } catch (e) {
-      renderPollStatus('error', 'Failed to reach server.');
-    }
-    setTimeout(() => { btn.disabled = false; }, 5000);
-  }
-
-  let pendingPreview = null;
-  let refiningTarget = null; // 'question' | 'opt0' | null
-
-  function renderPreview(pollPreview) {
-    const oldPreview = pendingPreview;
-    pendingPreview = pollPreview;
-    const card = document.getElementById('preview-card');
-    const el = document.getElementById('preview-display');
-    if (!pollPreview) { card.style.display = 'none'; refiningTarget = null; return; }
-    card.style.display = '';
-    const sourceRef = pollPreview.source
-      ? `<p class="poll-source-ref">📖 ${escHtml(pollPreview.source)}${pollPreview.page ? `, p. ${escHtml(pollPreview.page)}` : ''}</p>`
-      : '';
-    el.innerHTML =
-      `<div class="preview-question-row">` +
-      `<p class="poll-question" style="margin:0; flex:1;">${escHtml(pollPreview.question)}</p>` +
-      `<button class="refresh-btn" title="Generate new question" onclick="refinePreview('question')">↻</button>` +
-      `</div>` +
-      `<span class="mode-pill" style="margin-left:0; margin-bottom:.75rem;">${pollPreview.multi ? '☑ Multi-select' : '◉ Single-select'}</span>` +
-      pollPreview.options.map((o, i) =>
-        `<div class="preview-option">` +
-        `<span>${escHtml(o)}</span>` +
-        `<button class="refresh-btn" title="Regenerate this option" onclick="refinePreview('opt${i}')">↻</button>` +
-        `</div>`
-      ).join('') +
-      sourceRef;
-
-    // Flash changed element after DOM update
-    if (oldPreview && refiningTarget) {
-      const target = refiningTarget;
-      refiningTarget = null;
-      requestAnimationFrame(() => _flashChanged(target, oldPreview, pollPreview));
-    }
-  }
-
-  function _flashChanged(target, oldQuiz, newQuiz) {
-    let el = null;
-    if (target === 'question') {
-      if (oldQuiz.question !== newQuiz.question) {
-        el = document.querySelector('#preview-display .poll-question');
-      }
-    } else {
-      const idx = parseInt(target.slice(3));
-      if ((oldQuiz.options[idx] || '') !== (newQuiz.options[idx] || '')) {
-        const opts = document.querySelectorAll('#preview-display .preview-option span');
-        el = opts[idx] || null;
-      }
-    }
-    if (!el) return;
-    el.classList.add('preview-flash');
-    setTimeout(() => el.classList.remove('preview-flash'), 1200);
-  }
-
-  async function refinePreview(target) {
-    refiningTarget = target;
-    _applyRefineGrayOut(target);
-    try {
-      const res = await fetch(API('/poll-refine'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target }),
-      });
-      if (!res.ok) {
-        refiningTarget = null;
-        const err = await res.json();
-        toast(err.detail || 'Error requesting refine');
-      }
-    } catch (e) {
-      refiningTarget = null;
-      toast('Failed to reach server');
-    }
-  }
-
-  function _applyRefineGrayOut(target) {
-    // Gray out the specific element being regenerated
-    if (target === 'question') {
-      const q = document.querySelector('#preview-display .poll-question');
-      if (q) q.style.opacity = '.35';
-    } else {
-      const idx = parseInt(target.slice(3));
-      const opts = document.querySelectorAll('#preview-display .preview-option');
-      const span = opts[idx]?.querySelector('span');
-      if (span) span.style.opacity = '.35';
-    }
-    // Disable ALL refresh buttons while in-flight
-    document.querySelectorAll('#preview-display .refresh-btn').forEach(btn => {
-      btn.disabled = true;
-      btn.style.opacity = '.35';
-    });
-  }
-
-  async function firePreview() {
-    if (!pendingPreview) return;
-    const payload = { ...pendingPreview };
-    if (payload.multi && payload.correct_indices?.length) {
-      payload.correct_count = payload.correct_indices.length;
-    }
-    const res = await fetch(API('/poll'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      // Store LLM's correct_indices hint keyed by question for post-close display
-      if (pendingPreview.correct_indices?.length) {
-        localStorage.setItem(
-          'host_llm_hints_' + pendingPreview.question,
-          JSON.stringify(pendingPreview.correct_indices)
-        );
-      }
-      await setPollStatus(true);
-      await fetch(API('/poll-preview'), { method: 'DELETE' });
-      toast('Poll fired ✓');
-    } else {
-      const err = await res.json();
-      toast(err.detail || 'Error firing poll');
-    }
-  }
-
   function getLlmHints(question) {
     try {
       return JSON.parse(localStorage.getItem('host_llm_hints_' + question) || 'null');
     } catch { return null; }
-  }
-
-  async function dismissPreview() {
-    await fetch(API('/poll-preview'), { method: 'DELETE' });
   }
 
   async function resetScores() {
@@ -2049,16 +1885,6 @@
     if (!confirm(`Reset ${name}'s score (${pts} pts) to zero?`)) return;
     await fetch(API(`/scores/${uuid}`), { method: 'DELETE' });
     toast(`${name}'s score reset ✓`);
-  }
-
-  function renderPollStatus(status, message) {
-    const el = document.getElementById('poll-status');
-    if (!el) return;
-    const colors = { requested: 'var(--muted)', generating: 'var(--warn)', done: 'var(--accent2)', error: 'var(--danger)' };
-    const icons  = { requested: '⏳', generating: '⚙️', done: '', error: '❌' };
-    el.style.color = colors[status] || 'var(--muted)';
-    el.textContent = `${icons[status] || ''} ${message}`;
-    el.title = message;
   }
 
   // ── Poll Queue ──────────────────────────────────────────────────────────────
@@ -2670,7 +2496,6 @@
     document.getElementById('codereview-snippet').value = '';
   }
 
-  updateGenBtn();
   connectWS();
   startPollQueuePolling();
 

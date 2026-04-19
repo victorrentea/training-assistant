@@ -735,52 +735,6 @@ paths:
             application/json:
               schema: {}
       x-feature: misc
-  /api/{session_id}/host/poll-request:
-    post:
-      tags:
-      - poll
-      summary: Request Poll
-      description: Host requests a poll — stores request for the orchestrator loop
-        to pick up.
-      operationId: request_poll_api__session_id__host_poll_request_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PollRequestBody'
-        required: true
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll-preview:
-    delete:
-      tags:
-      - poll
-      summary: Clear Poll Preview
-      description: Host clears the current poll preview.
-      operationId: clear_poll_preview_api__session_id__host_poll_preview_delete
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll-refine:
-    post:
-      tags:
-      - poll
-      summary: Request Poll Refine
-      description: Host requests regeneration of a specific question or option.
-      operationId: request_poll_refine_api__session_id__host_poll_refine_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PollRefineRequest'
-        required: true
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: poll
   /api/{session_id}/host/poll-queue:
     get:
       tags:
@@ -2202,10 +2156,6 @@ components:
           - type: string
           - type: 'null'
           title: Transcript Latest Ts
-        poll_preview:
-          anyOf:
-          - $ref: '#/components/schemas/PollPreviewPayload-Output'
-          - type: 'null'
         poll_queue:
           anyOf:
           - $ref: '#/components/schemas/PollQueueStatus'
@@ -2645,69 +2595,6 @@ components:
       required:
       - content
       title: PollMdResponse
-    PollPreviewPayload-Input:
-      properties:
-        poll:
-          anyOf:
-          - additionalProperties: true
-            type: object
-          - type: 'null'
-          title: Poll
-        question:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Question
-        options:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Options
-        multi:
-          anyOf:
-          - type: boolean
-          - type: 'null'
-          title: Multi
-        correct_indices:
-          anyOf:
-          - items:
-              type: integer
-            type: array
-          - type: 'null'
-          title: Correct Indices
-      type: object
-      title: PollPreviewPayload
-    PollPreviewPayload-Output:
-      properties:
-        question:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Question
-        options:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Options
-        multi:
-          anyOf:
-          - type: boolean
-          - type: 'null'
-          title: Multi
-        correct_indices:
-          anyOf:
-          - items:
-              type: integer
-            type: array
-          - type: 'null'
-          title: Correct Indices
-      additionalProperties: true
-      type: object
-      title: PollPreviewPayload
     PollQueueOption:
       properties:
         id:
@@ -2770,33 +2657,6 @@ components:
       - pending
       - current
       title: PollQueueStatusResponse
-    PollRefineRequest:
-      properties:
-        target:
-          type: string
-          title: Target
-        preview:
-          anyOf:
-          - $ref: '#/components/schemas/PollPreviewPayload-Input'
-          - type: 'null'
-      type: object
-      required:
-      - target
-      title: PollRefineRequest
-    PollRequestBody:
-      properties:
-        minutes:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Minutes
-        topic:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Topic
-      type: object
-      title: PollRequestBody
     RegisterRequest:
       properties:
         name:

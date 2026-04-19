@@ -28,8 +28,6 @@ from daemon.lock import (
     install_signal_handlers,
     write_lock,
 )
-from daemon.quiz.history import auto_generate, auto_generate_topic, auto_refine
-from daemon.quiz.poll_api import post_status
 from daemon.session import pending as session_pending
 from daemon.session import state as session_shared_state
 from daemon.session_state import (
@@ -905,9 +903,6 @@ def run() -> None:
     _bridge.set_on_connection_change(_on_addon_connection_change)
     _bridge.start()
 
-    # Session state: the transcript text used to generate the current preview
-    last_text: str | None = None
-    last_quiz: dict | None = None
     server_disconnected = False
     last_detected_date: date | None = None
     last_heartbeat_at = 0.0
@@ -1265,7 +1260,7 @@ def run() -> None:
 
                 # ── Re-detect session folder on date change or if notes not yet found (every 5s) ──
                 today = date.today()
-                config, last_detected_date, last_session_check_at, _session_status_pending = (
+                config, last_detected_date, last_session_check_at, _ = (
                     _refresh_session_folder_binding(
                         config=config,
                         sessions_root=sessions_root,
@@ -1321,48 +1316,10 @@ def run() -> None:
                 ).hexdigest()
                 slides_changed = current_slides_hash != last_slides_payload_hash
 
-                if _session_status_pending or slides_changed:
-                    post_status("ready", "Agent ready.", config,
-                                session_folder=sf_name, session_notes=sn_name, slides=current_slides)
+                if slides_changed:
                     last_slides_payload_hash = current_slides_hash
 
                 # notes_content send removed: notes are no longer pushed via WS
-
-                # ── Check for new poll generation request (via daemon REST endpoint) ──
-                from daemon.quiz.pending import pop as _quiz_pending_pop
-                quiz_data = _quiz_pending_pop("poll_request")
-                if quiz_data:
-                    req = quiz_data.get("request")
-                    if req:
-                        topic = req.get("topic")
-                        minutes = req.get("minutes")
-                        if topic:
-                            log.info("daemon", f"Topic request: '{topic}'")
-                            result = auto_generate_topic(topic, config)
-                        else:
-                            minutes = minutes or config.minutes
-                            log.info("daemon", f"Transcript request: last {minutes} min")
-                            result = auto_generate(minutes, config)
-                        if result:
-                            last_quiz, last_text = result
-                        else:
-                            last_quiz, last_text = None, None
-
-                # ── Check for poll refine request (via daemon REST endpoint) ──
-                refine_data = _quiz_pending_pop("poll_refine")
-                if refine_data:
-                    refine_req = refine_data.get("request")
-                    if refine_req:
-                        target = refine_req.get("target", "question")
-                        # Use server-side preview as current quiz (in case host re-opened page)
-                        current_quiz = refine_data.get("preview") or last_quiz
-                        if current_quiz and last_text:
-                            log.info("daemon", f"Refine request: target={target}")
-                            updated = auto_refine(target, current_quiz, last_text, config)
-                            if updated:
-                                last_quiz = updated
-                        else:
-                            post_status("error", "No conversation context — please generate a question first.", config)
 
                 # ── Scan PPTX mtimes every 10s — detect slide updates quickly ──
                 if slides_runner and now - last_slides_mtime_scan_at >= 10.0:

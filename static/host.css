@@ -973,30 +973,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 #manual-poll-details > summary::-webkit-details-marker { display: none; }
 
-/* ── Poll gen row inside Poll tab ── */
-.poll-gen-row {
-  display: flex;
-  flex-direction: column;
-  gap: .4rem;
-}
-.poll-gen-controls {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-}
-.poll-gen-controls input {
-  height: 34px;
-  min-height: 34px;
-  box-sizing: border-box;
-}
-#poll-status {
-  font-size: .82rem;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 
 .btn-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
 .timer-slider-wrap { display: flex; align-items: center; gap: .5rem; }
