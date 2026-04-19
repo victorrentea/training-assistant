@@ -118,7 +118,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Invalidation signal — host must call GET /api/slides to refresh<br>Host should refetch slides list; payload intentionally carries no cache map.<br>`slides_updated` | `refreshed_slugs?: list[string]` |
+| Slide cache status changed — contains full cache map to avoid polling<br>`slides_updated` | `refreshed_slugs?: list[string]`<br>`slides_updated?: dict[str, dict]` |
 | PDF was successfully downloaded to Railway and is ready to serve<br>`talk_pdf_ready` | `slug: string` |
 | PDF download from Google Drive failed — host should be notified<br>`talk_pdf_failed` | - |
 
