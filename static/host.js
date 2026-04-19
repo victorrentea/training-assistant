@@ -1869,7 +1869,7 @@
   function updatePopButton(queue) {
     const pending = queue?.pending || 0;
     const popBtn = document.getElementById('pop-queue-btn');
-    if (popBtn) { popBtn.disabled = pending === 0; popBtn.textContent = `⬇ Pop (${pending})`; }
+    if (popBtn) { popBtn.disabled = pending === 0; popBtn.textContent = `⬆ Pop (${pending})`; }
     const skipBtn = document.getElementById('backstage-skip-btn');
     if (skipBtn) skipBtn.disabled = pending === 0;
   }
@@ -1877,10 +1877,10 @@
   async function popFromQueue() {
     const btn = document.getElementById('pop-queue-btn');
     if (!btn || btn.disabled) return;
-    const res = await fetch(API('/poll/queue'));
+    const res = await fetch(API('/poll'));
     if (!res.ok) return;
     const data = await res.json();
-    const q = data.current;
+    const q = data.queue?.current;
     if (!q) return;
     const text = q.question + '\n\n' + q.options.join('\n');
     initComposer(text);
