@@ -147,8 +147,9 @@ async def start_timer(body: StartTimerRequest):
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     result = poll_state.start_timer(body.seconds)
-    broadcast(PollEndCountdownStartedMsg(seconds=result["seconds"]))
-    await notify_host(PollEndCountdownStartedMsg(seconds=result["seconds"]))
+    msg = PollEndCountdownStartedMsg(seconds=result["seconds"], started_at=result["started_at"])
+    broadcast(msg)
+    await notify_host(msg)
     return Response(status_code=204)
 
 

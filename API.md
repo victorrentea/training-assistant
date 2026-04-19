@@ -170,7 +170,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Voting closed by host<br>Participants can see how others voted via vote_counts.<br>`poll_ended` | `vote_counts: list[int]  # Vote count per option, indexed by option position` |
 | Host revealed correct answers<br>Participants use correct_indices (0-based) to highlight correct options in the UI.<br>`poll_correct_revealed` | `correct_indices: list[int]  # 0-based indices of correct options` |
 | Poll removed by host<br>`poll_cleared` | - |
-| Host started a countdown timer for the poll<br>`poll_end_countdown_started` | `seconds: int` |
+| Host started a countdown timer for the poll<br>`poll_end_countdown_started` | `seconds: int`<br>`started_at: string` |
 
 ### Host REST
 | Endpoint | Request | Response |

@@ -80,6 +80,7 @@ class PollClearedMsg(BaseModel):
 class PollEndCountdownStartedMsg(BaseModel):
     type: Literal["poll_end_countdown_started"] = "poll_end_countdown_started"
     seconds: int
+    started_at: str
 
 
 # ── Scores ────────────────────────────────────────────────────────────────────

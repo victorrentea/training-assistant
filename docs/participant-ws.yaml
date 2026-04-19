@@ -197,13 +197,16 @@ components:
       x-feature: poll
       payload:
         type: object
-        required: [type, seconds]
+        required: [type, seconds, started_at]
         properties:
           type:
             type: string
             enum: [poll_end_countdown_started]
           seconds:
             type: integer
+          started_at:
+            type: string
+            format: date-time
 
     # ── Scores ────────────────────────────────────────────────────────────────
 
