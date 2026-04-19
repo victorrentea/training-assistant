@@ -24,10 +24,10 @@ channels:
           - $ref: '#/components/messages/active_participants_count_updated'
           - $ref: '#/components/messages/slides_history_count_updated'
           - $ref: '#/components/messages/poll_opened'
-          - $ref: '#/components/messages/poll_closed'
+          - $ref: '#/components/messages/poll_ended'
           - $ref: '#/components/messages/poll_correct_revealed'
           - $ref: '#/components/messages/poll_cleared'
-          - $ref: '#/components/messages/poll_timer_started'
+          - $ref: '#/components/messages/poll_end_countdown_started'
           - $ref: '#/components/messages/scores_updated'
           - $ref: '#/components/messages/wordcloud_updated'
           - $ref: '#/components/messages/qa_updated'
@@ -145,7 +145,7 @@ components:
           poll:
             $ref: '#/components/schemas/Poll'
 
-    poll_closed:
+    poll_ended:
       summary: Voting closed by host
       x-feature: poll
       x-doc-notes:
@@ -156,7 +156,7 @@ components:
         properties:
           type:
             type: string
-            enum: [poll_closed]
+            enum: [poll_ended]
           vote_counts:
             type: array
             items:
@@ -192,7 +192,7 @@ components:
             type: string
             enum: [poll_cleared]
 
-    poll_timer_started:
+    poll_end_countdown_started:
       summary: Host started a countdown timer for the poll
       x-feature: poll
       payload:
@@ -201,7 +201,7 @@ components:
         properties:
           type:
             type: string
-            enum: [poll_timer_started]
+            enum: [poll_end_countdown_started]
           seconds:
             type: integer
 

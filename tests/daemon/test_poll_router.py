@@ -180,7 +180,7 @@ class TestHostClosePoll:
         assert "total_votes" not in data
 
         broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
-        assert "poll_closed" in broadcast_types
+        assert "poll_ended" in broadcast_types
 
     def test_close_poll_no_poll(self, host_client):
         resp = host_client.post("/api/test-session/host/poll/close", json={})
@@ -214,7 +214,7 @@ class TestHostStartTimer:
         assert resp.status_code == 204
 
         broadcast_msg = mock_broadcast.call_args_list[0][0][0]
-        assert broadcast_msg.type == "poll_timer_started"
+        assert broadcast_msg.type == "poll_end_countdown_started"
         assert broadcast_msg.seconds == 45
 
     def test_start_timer_no_poll(self, host_client):

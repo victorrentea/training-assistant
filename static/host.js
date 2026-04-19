@@ -343,7 +343,7 @@
         renderPollDisplay();
         return;
       }
-      if (msg.type === 'poll_closed') {
+      if (msg.type === 'poll_ended') {
         pollActive = false;
         _clearTimer();
         voteCounts = msg.vote_counts || [];
@@ -371,7 +371,7 @@
         renderPollDisplay();
         return;
       }
-      if (msg.type === 'poll_timer_started') {
+      if (msg.type === 'poll_end_countdown_started') {
         _applyTimer(msg.seconds, msg.started_at);
         _startHostCountdown();
         return;

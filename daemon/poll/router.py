@@ -13,10 +13,10 @@ from daemon.ws_messages import (
     ActivityUpdatedMsg,
     PollAiGeneratedMsg,
     PollClearedMsg,
-    PollClosedMsg,
+    PollEndedMsg,
     PollCorrectRevealedMsg,
     PollOpenedMsg,
-    PollTimerStartedMsg,
+    PollEndCountdownStartedMsg,
     ScoresUpdatedMsg,
     VoteUpdateMsg,
 )
@@ -113,7 +113,7 @@ async def close_poll():
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     result = poll_state.close_poll()
-    closed_msg = PollClosedMsg(vote_counts=result["vote_counts"])
+    closed_msg = PollEndedMsg(vote_counts=result["vote_counts"])
     broadcast(closed_msg)
     await notify_host(closed_msg)
     return ClosePollResponse(**result)
@@ -140,8 +140,8 @@ async def start_timer(body: StartTimerRequest):
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     result = poll_state.start_timer(body.seconds)
-    broadcast(PollTimerStartedMsg(seconds=result["seconds"]))
-    await notify_host(PollTimerStartedMsg(seconds=result["seconds"]))
+    broadcast(PollEndCountdownStartedMsg(seconds=result["seconds"]))
+    await notify_host(PollEndCountdownStartedMsg(seconds=result["seconds"]))
     return Response(status_code=204)
 
 

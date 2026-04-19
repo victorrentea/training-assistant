@@ -64,8 +64,8 @@ class PollOpenedMsg(BaseModel):
     poll: dict[str, Any]  # {id, question, options[], multi}
 
 
-class PollClosedMsg(BaseModel):
-    type: Literal["poll_closed"] = "poll_closed"
+class PollEndedMsg(BaseModel):
+    type: Literal["poll_ended"] = "poll_ended"
     vote_counts: list[int]
 
 
@@ -78,8 +78,8 @@ class PollClearedMsg(BaseModel):
     type: Literal["poll_cleared"] = "poll_cleared"
 
 
-class PollTimerStartedMsg(BaseModel):
-    type: Literal["poll_timer_started"] = "poll_timer_started"
+class PollEndCountdownStartedMsg(BaseModel):
+    type: Literal["poll_end_countdown_started"] = "poll_end_countdown_started"
     seconds: int
 
 
@@ -268,10 +268,10 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "slides_history_count_updated": SlidesHistoryCountUpdatedMsg,
     # Poll
     "poll_opened": PollOpenedMsg,
-    "poll_closed": PollClosedMsg,
+    "poll_ended": PollEndedMsg,
     "poll_correct_revealed": PollCorrectRevealedMsg,
     "poll_cleared": PollClearedMsg,
-    "poll_timer_started": PollTimerStartedMsg,
+    "poll_end_countdown_started": PollEndCountdownStartedMsg,
     # Scores
     "scores_updated": ScoresUpdatedMsg,
     # Word Cloud
@@ -340,10 +340,10 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "slides_history_count_updated": "slides",
     # Poll
     "poll_opened": "poll",
-    "poll_closed": "poll",
+    "poll_ended": "poll",
     "poll_correct_revealed": "poll",
     "poll_cleared": "poll",
-    "poll_timer_started": "poll",
+    "poll_end_countdown_started": "poll",
     # Scores & Leaderboard
     "scores_updated": "scores_leaderboard",
     "leaderboard_revealed": "scores_leaderboard",

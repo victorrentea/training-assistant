@@ -2285,7 +2285,7 @@ function _handleWsMessage(msg) {
       _applyPollState(msg);
       _renderActivityPoll();
       break;
-    case 'poll_closed':
+    case 'poll_ended':
       _pollActive = false;
       if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || [];
       _renderActivityPoll();
