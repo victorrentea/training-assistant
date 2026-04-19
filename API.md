@@ -167,9 +167,9 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| Poll opened for voting<br>Participants can vote only while poll is open.<br>`poll_opened` | `poll: Poll{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[PollOption{`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`text:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`}]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>`}` |
-| Voting closed by host<br>`poll_closed` | `vote_counts: dict[str, int]  # option_id → vote count`<br>`total_votes: int` |
-| Host revealed correct answers<br>`poll_correct_revealed` | `correct_ids: list[string]` |
+| Poll opened for voting<br>Participants can vote only while poll is open.<br>`poll_opened` | `poll: Poll{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]  # Poll options as plain text strings`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>`}` |
+| Voting closed by host<br>Participants can see how others voted via vote_counts.<br>`poll_closed` | `vote_counts: list[int]  # Vote count per option, indexed by option position` |
+| Host revealed correct answers<br>`poll_correct_revealed` | `correct_indices: list[int]  # 0-based indices of correct options` |
 | Poll removed by host<br>`poll_cleared` | - |
 | Host started a countdown timer for the poll<br>`poll_timer_started` | `seconds: int` |
 

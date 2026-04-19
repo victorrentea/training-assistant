@@ -136,7 +136,7 @@ def test_generator_pretty_prints_multi_field_shapes_one_per_line():
 
     poll_closed_row = re.search(r"^\| .*`poll_closed`.*\|$", output, re.MULTILINE)
     assert poll_closed_row, "Missing WS table row for poll_closed"
-    assert "`vote_counts: dict[str, int]  # option_id → vote count`<br>`total_votes: int`" in poll_closed_row.group(0)
+    assert "`vote_counts: list[int]  # Vote count per option, indexed by option position`" in poll_closed_row.group(0)
 
 
 def test_generator_expands_referenced_response_types():
@@ -144,7 +144,7 @@ def test_generator_expands_referenced_response_types():
 
     slides_cache_row = re.search(r"^\| .*`GET /api/participant/slides-cache-status`.*\|$", output, re.MULTILINE)
     assert slides_cache_row, "Missing table row for GET /api/participant/slides-cache-status"
-    assert "`slides_updated?: dict[str, SlidesCacheStatusEntry {`" in slides_cache_row.group(0)
+    assert "`slides_updated?: dict[str, SlidesCacheStatusEntry{`" in slides_cache_row.group(0)
     assert "&nbsp;&nbsp;&nbsp;&nbsp;`status:string`" in slides_cache_row.group(0)
 
 
@@ -153,8 +153,8 @@ def test_generator_expands_nested_referenced_types():
 
     create_poll_row = re.search(r"^\| .*`POST /api/\{session_id\}/host/poll`.*\|$", output, re.MULTILINE)
     assert create_poll_row, "Missing table row for POST /api/{session_id}/host/poll"
-    assert "`poll: PollResponse {`" in create_poll_row.group(0)
-    assert "`options?: list[PollOptionRequest {`" in create_poll_row.group(0)
+    assert "`poll: PollResponse{`" in create_poll_row.group(0)
+    assert "`options:list[string]`" in create_poll_row.group(0)
 
 
 def test_rest_rows_have_no_any_in_request_or_response_cells():

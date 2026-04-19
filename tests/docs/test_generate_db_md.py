@@ -49,13 +49,13 @@ def test_generator_renders_list_and_dict_shapes():
     )
     assert session_block, "Missing PersistedSessionState section"
     body = session_block.group("body")
-    assert "participants?: dict[str, PersistedParticipant {" in body
+    assert "participants?: dict[str, PersistedParticipant{" in body
     assert "  name?:string" in body
-    assert "poll?: PersistedPollState {" in body
-    assert "  correct_ids?:list[string]" in body
-    assert "wordcloud?: PersistedWordCloudState {" in body
-    assert "codereview?: PersistedCodeReviewState {" in body
-    assert "debate?: PersistedDebateState {" in body
+    assert "poll?: PersistedPollState{" in body
+    assert "  correct_indices?:list[int]" in body
+    assert "wordcloud?: PersistedWordCloudState{" in body
+    assert "codereview?: PersistedCodeReviewState{" in body
+    assert "debate?: PersistedDebateState{" in body
 
 
 def test_generator_does_not_use_markdown_tables():

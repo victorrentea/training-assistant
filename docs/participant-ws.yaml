@@ -148,35 +148,36 @@ components:
     poll_closed:
       summary: Voting closed by host
       x-feature: poll
+      x-doc-notes:
+        - Participants can see how others voted via vote_counts.
       payload:
         type: object
-        required: [type, vote_counts, total_votes]
+        required: [type, vote_counts]
         properties:
           type:
             type: string
             enum: [poll_closed]
           vote_counts:
-            type: object
-            additionalProperties:
+            type: array
+            items:
               type: integer
-            description: option_id → vote count
-          total_votes:
-            type: integer
+            description: Vote count per option, indexed by option position
 
     poll_correct_revealed:
       summary: Host revealed correct answers
       x-feature: poll
       payload:
         type: object
-        required: [type, correct_ids]
+        required: [type, correct_indices]
         properties:
           type:
             type: string
             enum: [poll_correct_revealed]
-          correct_ids:
+          correct_indices:
             type: array
             items:
-              type: string
+              type: integer
+            description: 0-based indices of correct options
 
     poll_cleared:
       summary: Poll removed by host
@@ -538,15 +539,6 @@ components:
           type: integer
           nullable: true
 
-    PollOption:
-      type: object
-      required: [id, text]
-      properties:
-        id:
-          type: string
-        text:
-          type: string
-
     Poll:
       type: object
       required: [id, question, options, multi]
@@ -558,7 +550,8 @@ components:
         options:
           type: array
           items:
-            $ref: '#/components/schemas/PollOption'
+            type: string
+          description: Poll options as plain text strings
         multi:
           type: boolean
 
