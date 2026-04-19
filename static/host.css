@@ -886,7 +886,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 /* ── Poll composer (contenteditable) ── */
 .poll-composer {
   width: 100%;
-  padding: .9rem 1rem 2.8rem;
+  padding: .9rem 1rem;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;

@@ -1717,6 +1717,7 @@
     totalVotes = allVotes.length;
     renderPollDisplay();
     renderPollQueuePanel(data.queue);
+    updatePopButton(data.queue);
   }
 
   // ── Render ──
@@ -1864,6 +1865,28 @@
   }
 
   // ── Poll Queue ──────────────────────────────────────────────────────────────
+
+  function updatePopButton(queue) {
+    const btn = document.getElementById('pop-queue-btn');
+    if (!btn) return;
+    const pending = queue?.pending || 0;
+    btn.disabled = pending === 0;
+    btn.textContent = `Pop (${pending})`;
+  }
+
+  async function popFromQueue() {
+    const btn = document.getElementById('pop-queue-btn');
+    if (!btn || btn.disabled) return;
+    const res = await fetch(API('/poll/queue'));
+    if (!res.ok) return;
+    const data = await res.json();
+    const q = data.current;
+    if (!q) return;
+    const text = q.question + '\n\n' + q.options.join('\n');
+    initComposer(text);
+    pollInput.focus();
+    await fetch(API('/poll/queue/skip'), { method: 'POST' });
+  }
 
   async function pushDummyQueue() {
     const questions = [

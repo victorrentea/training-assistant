@@ -108,12 +108,11 @@
       <!-- Backstage manual entry -->
       <div style="margin-top:.75rem; border-top:1px solid var(--border); padding-top:.65rem;">
         <div style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.5rem;">Backstage</div>
-        <div style="position:relative;">
-          <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
-               data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
-          <button class="btn btn-success" id="create-btn" style="position:absolute; bottom:.45rem; right:.45rem;">Send</button>
-        </div>
+        <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
+             data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
         <div class="btn-row" style="align-items:center;">
+          <button class="btn btn-success" id="create-btn">Send</button>
+          <button class="btn" id="pop-queue-btn" onclick="popFromQueue()" disabled>Pop (0)</button>
           <button class="btn" id="random-poll-btn" title="Generate random trivia question" style="font-size:1.1rem;">🎲</button>
           <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
             <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
