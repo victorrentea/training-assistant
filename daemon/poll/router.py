@@ -97,7 +97,7 @@ async def create_poll(body: CreatePollRequest):
     if activity and activity not in ("none", "poll"):
         return JSONResponse({"error": f"Activity {activity} is active"}, status_code=409)
 
-    poll = poll_state.create_poll(
+    poll_state.create_poll(
         body.question,
         body.options,
         body.multi,

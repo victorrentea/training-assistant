@@ -52,7 +52,7 @@ async def submit_questions(body: SubmitQuestionsRequest):
 
 @router.get("", response_model=PollQueueStatusResponse)
 async def get_queue_status():
-    """Return how many questions are pending and what the current question looks like."""
+    """Get queue contents — pending count and current question."""
     current = quiz_queue.current()
     current_model = PollQueueQuestion.model_validate(current) if current else None
     return PollQueueStatusResponse(
@@ -63,7 +63,7 @@ async def get_queue_status():
 
 @router.post("/submit", status_code=204)
 async def submit_current():
-    """Submit (fire) the current queued question as a poll and advance the queue."""
+    """Submit current queued question as a poll to participants and advance the queue."""
     current = quiz_queue.current()
     if current is None:
         return JSONResponse({"error": "Poll queue is empty"}, status_code=400)

@@ -690,8 +690,7 @@ paths:
       tags:
       - poll
       summary: Get Queue Status
-      description: Return how many questions are pending and what the current question
-        looks like.
+      description: Get queue contents — pending count and current question.
       operationId: get_queue_status_api__session_id__host_poll_queue_get
       responses:
         '200':
@@ -733,7 +732,7 @@ paths:
       tags:
       - poll
       summary: Submit Current
-      description: Submit (fire) the current queued question as a poll and advance
+      description: Submit current queued question as a poll to participants and advance
         the queue.
       operationId: submit_current_api__session_id__host_poll_queue_submit_post
       responses:
