@@ -163,7 +163,7 @@ session_participant = APIRouter(
     prefix="/{session_id}",
     dependencies=[Depends(require_valid_session)],
 )
-session_participant.include_router(participant_router)       # /, /notes, /poll
+session_participant.include_router(participant_router)       # /, /notes
 session_participant.include_router(slides.public_router)     # /api/slides, /api/slides/file/{slug}, /api/slides/current
 session_participant.include_router(session_public_router)    # /api/summary, /api/notes
 session_participant.include_router(upload_public_router)     # /api/upload (participant file upload)
