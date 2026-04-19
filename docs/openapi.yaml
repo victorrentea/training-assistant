@@ -781,6 +781,86 @@ paths:
         '204':
           description: Successful Response
       x-feature: quiz
+  /api/{session_id}/host/quiz-queue:
+    get:
+      tags:
+      - quiz-queue
+      summary: Get Queue Status
+      description: Return how many questions are pending and what the current question
+        looks like.
+      operationId: get_queue_status_api__session_id__host_quiz_queue_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizQueueStatusResponse'
+      x-feature: quiz-queue
+    post:
+      tags:
+      - quiz-queue
+      summary: Submit Questions
+      description: Replace the entire quiz queue with the submitted questions.
+      operationId: submit_questions_api__session_id__host_quiz_queue_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitQuestionsRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+      x-feature: quiz-queue
+    delete:
+      tags:
+      - quiz-queue
+      summary: Clear Queue
+      description: Clear the entire quiz queue.
+      operationId: clear_queue_api__session_id__host_quiz_queue_delete
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+      x-feature: quiz-queue
+  /api/{session_id}/host/quiz-queue/fire:
+    post:
+      tags:
+      - quiz-queue
+      summary: Fire Current
+      description: Fire the current question as a poll and advance the queue.
+      operationId: fire_current_api__session_id__host_quiz_queue_fire_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+      x-feature: quiz-queue
+  /api/{session_id}/host/quiz-queue/skip:
+    post:
+      tags:
+      - quiz-queue
+      summary: Skip Current
+      description: Skip the current question without firing it.
+      operationId: skip_current_api__session_id__host_quiz_queue_skip_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponse'
+      x-feature: quiz-queue
   /api/participant/codereview/selection:
     put:
       tags:
@@ -2126,6 +2206,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/QuizPreviewPayload-Output'
           - type: 'null'
+        quiz_queue:
+          anyOf:
+          - $ref: '#/components/schemas/QuizQueueStatus'
+          - type: 'null'
       type: object
       required:
       - mode
@@ -2624,6 +2708,68 @@ components:
       additionalProperties: true
       type: object
       title: QuizPreviewPayload
+    QuizQueueOption:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+      type: object
+      required:
+      - id
+      - text
+      title: QuizQueueOption
+    QuizQueueQuestion:
+      properties:
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            $ref: '#/components/schemas/QuizQueueOption'
+          type: array
+          title: Options
+        correct_ids:
+          items:
+            type: string
+          type: array
+          title: Correct Ids
+      type: object
+      required:
+      - question
+      - options
+      - correct_ids
+      title: QuizQueueQuestion
+    QuizQueueStatus:
+      properties:
+        pending:
+          type: integer
+          title: Pending
+        current:
+          anyOf:
+          - $ref: '#/components/schemas/QuizQueueQuestion'
+          - type: 'null'
+      type: object
+      required:
+      - pending
+      - current
+      title: QuizQueueStatus
+    QuizQueueStatusResponse:
+      properties:
+        pending:
+          type: integer
+          title: Pending
+        current:
+          anyOf:
+          - $ref: '#/components/schemas/QuizQueueQuestion'
+          - type: 'null'
+      type: object
+      required:
+      - pending
+      - current
+      title: QuizQueueStatusResponse
     QuizRefineRequest:
       properties:
         target:
@@ -2971,6 +3117,17 @@ components:
       required:
       - text
       title: SubmitQuestionBody
+    SubmitQuestionsRequest:
+      properties:
+        questions:
+          items:
+            $ref: '#/components/schemas/QuizQueueQuestion'
+          type: array
+          title: Questions
+      type: object
+      required:
+      - questions
+      title: SubmitQuestionsRequest
     SubmitWordBody:
       properties:
         word:
