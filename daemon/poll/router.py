@@ -27,9 +27,6 @@ logger = logging.getLogger(__name__)
 
 # ── Pydantic models ──
 
-class OkResponse(BaseModel):
-    ok: bool = True
-
 class VoteRequest(BaseModel):
     options: list[int]
 
@@ -40,7 +37,6 @@ class CreatePollRequest(BaseModel):
     correct_count: Optional[int] = None
 
 class ClosePollResponse(BaseModel):
-    ok: bool = True
     vote_counts: list[int]
 
 class RevealCorrectRequest(BaseModel):
@@ -149,7 +145,7 @@ async def start_timer(body: StartTimerRequest):
     return Response(status_code=204)
 
 
-@host_router.put("/status", response_model=OkResponse | ClosePollResponse)
+@host_router.put("/status", response_model=ClosePollResponse)
 async def set_poll_status(body: SetPollStatusRequest):
     """Compatibility: {open: true} → open_poll, {open: false} → close_poll."""
     if body.open:

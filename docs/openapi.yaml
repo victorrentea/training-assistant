@@ -484,11 +484,7 @@ paths:
           content:
             application/json:
               schema:
-                anyOf:
-                - $ref: '#/components/schemas/OkResponse'
-                - $ref: '#/components/schemas/ClosePollResponse'
-                title: Response Set Poll Status Api  Session Id  Host Poll Status
-                  Put
+                $ref: '#/components/schemas/ClosePollResponse'
       x-feature: poll
   /api/{session_id}/host/poll:
     delete:
@@ -737,12 +733,8 @@ paths:
               $ref: '#/components/schemas/SubmitQuestionsRequest'
         required: true
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
     delete:
       tags:
@@ -751,12 +743,8 @@ paths:
       description: Clear the entire quiz queue.
       operationId: clear_queue_api__session_id__host_poll_queue_delete
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/queue/fire:
     post:
@@ -766,12 +754,8 @@ paths:
       description: Fire the current question as a poll and advance the queue.
       operationId: fire_current_api__session_id__host_poll_queue_fire_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/{session_id}/host/poll/queue/skip:
     post:
@@ -781,12 +765,8 @@ paths:
       description: Skip the current question without firing it.
       operationId: skip_current_api__session_id__host_poll_queue_skip_post
       responses:
-        '200':
+        '204':
           description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OkResponse'
       x-feature: poll
   /api/participant/codereview/selection:
     put:
@@ -1362,10 +1342,6 @@ components:
       title: AvatarResponse
     ClosePollResponse:
       properties:
-        ok:
-          type: boolean
-          title: Ok
-          default: true
         vote_counts:
           items:
             type: integer
@@ -2232,14 +2208,6 @@ components:
       required:
       - phase
       title: OkPhaseResponse
-    OkResponse:
-      properties:
-        ok:
-          type: boolean
-          title: Ok
-          default: true
-      type: object
-      title: OkResponse
     OkWithPhaseResponse:
       properties:
         ok:

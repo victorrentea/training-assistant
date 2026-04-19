@@ -2,7 +2,7 @@
 import logging
 
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
@@ -35,22 +35,18 @@ class PollQueueStatusResponse(BaseModel):
     current: PollQueueQuestion | None
 
 
-class OkResponse(BaseModel):
-    ok: bool = True
-
-
 # ── Router ──
 
 router = APIRouter(prefix="/api/{session_id}/host/poll/queue", tags=["poll"])
 
 
-@router.post("", response_model=OkResponse)
+@router.post("", status_code=204)
 async def submit_questions(body: SubmitQuestionsRequest):
     """Replace the entire poll queue with the submitted questions. Typically called by AI submitting generated questions."""
     questions = [q.model_dump() for q in body.questions]
     quiz_queue.submit(questions)
     daemon_log.info(_LOG, f"Queue submitted: {len(questions)} question(s)")
-    return OkResponse()
+    return Response(status_code=204)
 
 
 @router.get("", response_model=PollQueueStatusResponse)
@@ -64,7 +60,7 @@ async def get_queue_status():
     )
 
 
-@router.post("/fire", response_model=OkResponse)
+@router.post("/fire", status_code=204)
 async def fire_current():
     """Fire the current question as a poll and advance the queue."""
     current = quiz_queue.current()
@@ -96,10 +92,10 @@ async def fire_current():
 
     quiz_queue.advance()
     daemon_log.info(_LOG, f"Fired question: \"{current['question'][:60]}\" — {quiz_queue.pending_count()} remaining")
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@router.post("/skip", response_model=OkResponse)
+@router.post("/skip", status_code=204)
 async def skip_current():
     """Skip the current question without firing it."""
     current = quiz_queue.current()
@@ -108,12 +104,12 @@ async def skip_current():
 
     quiz_queue.advance()
     daemon_log.info(_LOG, f"Skipped question: \"{current['question'][:60]}\" — {quiz_queue.pending_count()} remaining")
-    return OkResponse()
+    return Response(status_code=204)
 
 
-@router.delete("", response_model=OkResponse)
+@router.delete("", status_code=204)
 async def clear_queue():
     """Clear the entire quiz queue."""
     quiz_queue.clear()
     daemon_log.info(_LOG, "Queue cleared")
-    return OkResponse()
+    return Response(status_code=204)
