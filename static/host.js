@@ -1782,7 +1782,7 @@
         <div class="vote-progress-fill" id="vote-progress-fill" style="width:${votePct}%"></div>
         <span class="vote-progress-label" id="vote-progress-label">${totalVotes} of ${totalParticipants} voted</span>
       </div>
-      <p class="vote-anon-msg">🔒 Votes are anonymous — no wrong answers, just deeper understanding</p>` : '';
+` : '';
 
     const mainContent = pollActive
       ? `<div class="options-plain">${currentPoll.options.map(text =>

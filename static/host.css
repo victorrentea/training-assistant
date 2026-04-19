@@ -896,7 +896,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   font-family: inherit;
   font-size: .95rem;
   line-height: 1.6;
-  min-height: 65px;
+  min-height: 300px;
   box-sizing: border-box;
   white-space: pre-wrap;
   word-break: break-word;
