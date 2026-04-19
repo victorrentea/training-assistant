@@ -1861,11 +1861,11 @@
   // ── Poll Queue ──────────────────────────────────────────────────────────────
 
   function updatePopButton(queue) {
-    const btn = document.getElementById('pop-queue-btn');
-    if (!btn) return;
     const pending = queue?.pending || 0;
-    btn.disabled = pending === 0;
-    btn.textContent = `Pop (${pending})`;
+    const popBtn = document.getElementById('pop-queue-btn');
+    if (popBtn) { popBtn.disabled = pending === 0; popBtn.textContent = `Pop (${pending})`; }
+    const skipBtn = document.getElementById('backstage-skip-btn');
+    if (skipBtn) skipBtn.disabled = pending === 0;
   }
 
   async function popFromQueue() {
