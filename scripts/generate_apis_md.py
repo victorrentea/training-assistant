@@ -932,7 +932,7 @@ def _render_shape_cell(shape: str, root: dict[str, Any]) -> str:
 def _render_rest(items: list[RestOp], root: dict[str, Any]) -> list[str]:
     lines: list[str] = ["| Endpoint | Request | Response |", "| --- | --- | --- |"]
     for op in sorted(items, key=lambda i: (i.path, i.method)):
-        endpoint_desc = _wrap_endpoint_text(_compose_rest_endpoint_text(op))
+        endpoint_desc = _compose_rest_endpoint_text(op)
         endpoint_parts = [endpoint_desc, f"`{op.method} {op.path}`"]
         endpoint = _escape_md_cell("<br>".join(endpoint_parts))
         request = _escape_md_cell(_render_shape_cell(op.request_shape, root))
