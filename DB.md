@@ -31,7 +31,7 @@ participants?: dict[str, PersistedParticipant{
 poll?: PersistedPollState{
   definition?:dict[str, any]  # Poll question and options as shown to participants
   active?:bool
-  correct_ids?:list[string]  # Option IDs marked as correct answers
+  correct_indices?:list[int]  # Option indices marked as correct answers
   opened_at?:string
   timer_seconds?:int
   timer_started_at?:string

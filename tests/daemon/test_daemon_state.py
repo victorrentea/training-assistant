@@ -534,7 +534,7 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     participant_state.participant_universes["u1"] = "Star Wars"
     poll_state.poll = {"id": "p1", "question": "Q", "options": [], "multi": False}
     poll_state.poll_active = True
-    poll_state.poll_correct_ids = ["a1"]
+    poll_state.poll_correct_indices = [0]
     poll_state.votes = {"u1": {"option_ids": ["a1"], "voted_at": "2026-04-09T00:00:00+00:00"}}
     wordcloud_state.words = {"python": 2}
     wordcloud_state.word_order = ["python"]
@@ -584,7 +584,7 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     assert "codereview_snippet" not in snapshot
     assert "debate_statement" not in snapshot
     assert snapshot["poll"]["active"] is True
-    assert snapshot["poll"]["correct_ids"] == ["a1"]
+    assert snapshot["poll"]["correct_indices"] == [0]
     assert snapshot["wordcloud"]["words"] == {"python": 2}
     assert snapshot["codereview"]["snippet"] == "print('x')"
     assert snapshot["debate"]["statement"] == "Tabs vs spaces"

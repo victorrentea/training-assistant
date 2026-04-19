@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class PersistedModel(BaseModel):
@@ -39,16 +39,11 @@ class PersistedPollState(PersistedModel):
 
     definition: dict[str, Any] | None = Field(default=None, description="Poll question and options as shown to participants")
     active: bool | None = None
-    correct_ids: list[str] = Field(default_factory=list, description="Option IDs marked as correct answers")
+    correct_indices: list[int] = Field(default_factory=list, description="Option indices marked as correct answers")
     opened_at: str | None = None
     timer_seconds: int | None = None
     timer_started_at: str | None = None
     votes: dict[str, Any] = Field(default_factory=dict, description="participant_uuid → chosen option ID(s)")
-
-    @field_validator("correct_ids", mode="before")
-    @classmethod
-    def _normalize_correct_ids(_cls, value):
-        return [] if value is None else value
 
 
 class PersistedWordCloudState(PersistedModel):
@@ -118,7 +113,7 @@ class PersistedSessionState(PersistedModel):
     poll: PersistedPollState | None = None
     # Legacy flat poll fields: accepted on read, omitted on write.
     poll_active: bool | None = Field(default=None, exclude=True)
-    poll_correct_ids: list[str] = Field(default_factory=list, exclude=True)
+    poll_correct_indices: list[int] = Field(default_factory=list, exclude=True)
     poll_opened_at: str | None = Field(default=None, exclude=True)
     poll_timer_seconds: int | None = Field(default=None, exclude=True)
     poll_timer_started_at: str | None = Field(default=None, exclude=True)
@@ -226,7 +221,7 @@ class PersistedSessionState(PersistedModel):
             poll_keys = {
                 "definition",
                 "active",
-                "correct_ids",
+                "correct_indices",
                 "opened_at",
                 "timer_seconds",
                 "timer_started_at",
@@ -237,7 +232,7 @@ class PersistedSessionState(PersistedModel):
         legacy_poll_keys = (
             "poll",
             "poll_active",
-            "poll_correct_ids",
+            "poll_correct_indices",
             "poll_opened_at",
             "poll_timer_seconds",
             "poll_timer_started_at",
@@ -245,9 +240,10 @@ class PersistedSessionState(PersistedModel):
         )
         if "poll_active" in data:
             poll.setdefault("active", data["poll_active"])
-        if "poll_correct_ids" in data:
-            legacy_correct_ids = data["poll_correct_ids"]
-            poll.setdefault("correct_ids", [] if legacy_correct_ids is None else legacy_correct_ids)
+        if "poll_correct_indices" in data:
+            legacy_correct_indices = data["poll_correct_indices"]
+            data["poll_correct_indices"] = [] if legacy_correct_indices is None else legacy_correct_indices
+            poll.setdefault("correct_indices", data["poll_correct_indices"])
         if "poll_opened_at" in data:
             poll.setdefault("opened_at", data["poll_opened_at"])
         if "poll_timer_seconds" in data:
@@ -351,7 +347,3 @@ class PersistedSessionState(PersistedModel):
 
         return data
 
-    @field_validator("poll_correct_ids", mode="before")
-    @classmethod
-    def _normalize_poll_correct_ids(_cls, value):
-        return [] if value is None else value
