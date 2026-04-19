@@ -2096,16 +2096,20 @@ function _renderActivityPoll() {
   var section = document.getElementById('activity-poll-section');
   if (!section) return;
 
+  var welcome = document.getElementById('activity-welcome-section');
+  var waiting = document.getElementById('activity-waiting-section');
+
   if (!_currentPoll) {
     section.style.display = 'none';
+    // Restore welcome/waiting sections (same logic as initActivityView)
+    if (welcome) welcome.style.display = LS.isActivitySeen() ? 'none' : '';
+    if (waiting) waiting.style.display = LS.isActivitySeen() ? '' : 'none';
     return;
   }
 
   section.style.display = '';
 
   // Hide welcome/waiting sections when poll is active
-  var welcome = document.getElementById('activity-welcome-section');
-  var waiting = document.getElementById('activity-waiting-section');
   if (welcome) welcome.style.display = 'none';
   if (waiting) waiting.style.display = 'none';
 
