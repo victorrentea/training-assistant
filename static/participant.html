@@ -2285,6 +2285,7 @@ function _handleWsMessage(msg) {
       break;
     }
     case 'poll_opened':
+      _pollActive = true;
       _applyPollState(msg);
       _renderActivityPoll();
       break;
