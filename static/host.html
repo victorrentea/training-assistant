@@ -110,20 +110,26 @@
         <div style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.5rem;">Backstage</div>
         <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
              data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
-        <div class="btn-row" style="align-items:center;">
-          <button class="btn" id="pop-queue-btn" onclick="popFromQueue()" disabled>Pop (0)</button>
-          <button class="btn" onclick="pushDummyQueue()" title="Push 2 test questions to queue (simulate AI)">TestPushQ</button>
-          <button class="btn" id="random-poll-btn" title="Generate random trivia question" style="font-size:1.1rem;">🎲</button>
-          <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
-            <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
-            Multi-select
-          </label>
-          <label id="correct-count-label" style="display:none; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); margin:0;">
-            <input type="number" id="correct-count" min="1" max="8" value="2"
-                   style="width:3.2rem; height:34px; box-sizing:border-box; text-align:center; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.9rem;" />
-            correct
-          </label>
-          <button class="btn btn-success" id="create-btn" style="margin-left:auto;">Send</button>
+        <div style="display:flex; flex-direction:column; gap:.4rem; margin-top:.4rem;">
+          <div class="btn-row" style="align-items:center;">
+            <button class="btn" id="pop-queue-btn" onclick="popFromQueue()" disabled>Pop (0)</button>
+            <div style="display:flex; align-items:center; gap:.5rem; margin-left:.25rem;">
+              <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); cursor:pointer; margin:0;">
+                <input type="checkbox" id="multi-check" style="width:1rem; height:1rem; cursor:pointer;" />
+                Multi
+              </label>
+              <label id="correct-count-label" style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); margin:0;">
+                <input type="number" id="correct-count" min="1" max="8" value="2"
+                       style="width:3.2rem; height:34px; box-sizing:border-box; text-align:center; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.9rem;" />
+                correct
+              </label>
+            </div>
+            <button class="btn btn-success" id="create-btn" style="margin-left:auto;">Send</button>
+          </div>
+          <div class="btn-row" style="align-items:center;">
+            <button class="btn" onclick="pushDummyQueue()" title="Push 2 test questions to queue (simulate AI)">TestPushQ</button>
+            <button class="btn" id="random-poll-btn" title="Generate random trivia question" style="font-size:1.1rem;">🎲</button>
+          </div>
         </div>
       </div>
     </div>

@@ -1608,11 +1608,6 @@
     }
   });
 
-  // ── Multi-check: show/hide correct-count spinner ──
-  document.getElementById('multi-check').addEventListener('change', function () {
-    document.getElementById('correct-count-label').style.display = this.checked ? 'flex' : 'none';
-  });
-
   // ── Create poll ──
   document.getElementById('create-btn').addEventListener('click', async () => {
     const { question, options } = parsePollInput();
@@ -1636,7 +1631,6 @@
       toast('Poll created & opened ✓');
       pollInput.innerHTML = '<div><br></div>';
       document.getElementById('multi-check').checked = false;
-      document.getElementById('correct-count-label').style.display = 'none';
     } else {
       const data = await res.json().catch(() => ({}));
       toast(data.detail || data.error || 'Error');
