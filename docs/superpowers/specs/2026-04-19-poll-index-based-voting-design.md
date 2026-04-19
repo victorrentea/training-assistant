@@ -93,6 +93,22 @@ correct_indices: list[int]
 ```
 `options` is now `list[str]`. The `normalize_options` validator is simplified to only handle string items. `PollOptionRequest` model is removed.
 
+### `POST /api/{session_id}/host/poll-queue` (SubmitQuestionsRequest)
+
+**Before:**
+```json
+{ "questions": [{ "question": "...", "options": [{"id": "A", "text": "..."}], "correct_ids": ["A"] }] }
+```
+**After:**
+```json
+{ "questions": [{ "question": "...", "options": ["..."], "correct_indices": [0] }] }
+```
+`PollQueueOption` model removed. `PollQueueQuestion.options` becomes `list[str]`, `correct_ids` renamed to `correct_indices: list[int]`.
+
+### `GET /api/{session_id}/host/poll-queue` (PollQueueStatusResponse)
+
+`current.options` becomes `list[str]`, `current.correct_indices: list[int]`.
+
 ### Participant State (`GET /api/participant/state`)
 
 | Before | After |
@@ -120,6 +136,7 @@ correct_indices: list[int]
 |---|---|
 | `daemon/poll/state.py` | Full index-based rewrite of votes, vote_counts, cast_vote, reveal_correct, _append_to_poll_md |
 | `daemon/poll/router.py` | VoteRequest, RevealCorrectRequest, CreatePollRequest, PollOptionRequest removed, PollResponse updated |
+| `daemon/quiz/queue_router.py` | PollQueueOption removed, PollQueueQuestion.options→list[str], correct_ids→correct_indices:list[int]; fire_current() updated |
 | `daemon/ws_messages.py` | PollClosedMsg (remove total_votes, list vote_counts), PollCorrectRevealedMsg (correct_indices), PollOpenedMsg poll field type |
 | `daemon/participant/router.py` | State snapshot: my_voted_indices, poll_correct_indices, vote_counts as list |
 | `docs/participant-ws.yaml` | Poll schema, poll_closed, poll_correct_revealed |
@@ -127,6 +144,7 @@ correct_indices: list[int]
 | `docs/openapi.yaml` | VoteRequest, RevealCorrectRequest, CreatePollRequest, remove PollOption schema |
 | `static/participant.html` | castVote uses index, rendering uses list[str] options, vote_counts by index, correct_indices |
 | `static/host.js` | correctOptIds as Set<int>, toggleCorrect(idx), voteCounts[idx], correct_indices in reveal call, render by index |
+| `daemon/persisted_models.py` | correct_ids→correct_indices:list[int], poll_correct_ids→poll_correct_indices:list[int]; remove legacy migration for old id-based format |
 | `tests/daemon/test_poll_router.py` | Update payloads to index-based |
 | `tests/daemon/test_poll_state.py` | Update cast_vote/reveal_correct calls |
 | `API.md` | Regenerate via script |
@@ -135,6 +153,4 @@ correct_indices: list[int]
 
 ## Out of Scope
 
-- No change to poll creation flow beyond simplifying `options` to `list[str]`.
-- No change to host-only fields like `poll_queue` option representation (update separately if needed).
 - No change to scoring algorithm — only the input type changes (indices instead of IDs).
