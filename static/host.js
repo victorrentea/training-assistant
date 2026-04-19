@@ -474,8 +474,7 @@
       } else if (msg.type === 'slides_updated') {
         _refreshHostSlidesCatalog();
       } else if (msg.type === 'vote_update') {
-        voteCounts = msg.vote_counts || [];
-        totalVotes = voteCounts.reduce((a, b) => a + b, 0);
+        totalVotes = msg.voted_count || 0;
         renderBars();
       } else if (msg.type === 'participant_list_updated') {
         ingestParticipants(msg.participants || []);

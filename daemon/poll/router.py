@@ -61,7 +61,7 @@ async def cast_vote(request: Request, body: VoteRequest):
     if not accepted:
         return JSONResponse({"error": "Vote rejected"}, status_code=409)
 
-    vote_msg = VoteUpdateMsg(vote_counts=poll_state.vote_counts())
+    vote_msg = VoteUpdateMsg(voted_count=len(poll_state.votes))
     request.state.write_back_events = [broadcast_event(vote_msg)]
     await notify_host(vote_msg)
     return Response(status_code=204)

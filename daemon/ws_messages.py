@@ -175,7 +175,7 @@ class LeaderboardRevealedMsg(BaseModel):
 
 class VoteUpdateMsg(BaseModel):
     type: Literal["vote_update"] = "vote_update"
-    vote_counts: list[int]
+    voted_count: int
 
 
 # ── Host-only: Emoji ──────────────────────────────────────────────────────────

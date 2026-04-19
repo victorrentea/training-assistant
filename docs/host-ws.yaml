@@ -79,18 +79,17 @@ components:
       x-feature: poll
       x-doc-notes:
         - Host-only event; participants do not receive live vote tallies.
+        - Only total voted count is sent to avoid influencing participants.
       payload:
         type: object
-        required: [type, vote_counts]
+        required: [type, voted_count]
         properties:
           type:
             type: string
             enum: [vote_update]
-          vote_counts:
-            type: array
-            description: vote count per option, indexed by option position
-            items:
-              type: integer
+          voted_count:
+            type: integer
+            description: total number of participants who have voted so far
 
     # ── Word Cloud ────────────────────────────────────────────────────────────
 
