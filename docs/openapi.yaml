@@ -686,20 +686,6 @@ paths:
               schema: {}
       x-feature: misc
   /api/{session_id}/host/poll/queue:
-    get:
-      tags:
-      - poll
-      summary: Get Queue Status
-      description: Get queue contents — pending count and current question.
-      operationId: get_queue_status_api__session_id__host_poll_queue_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PollQueueStatusResponse'
-      x-feature: poll
     post:
       tags:
       - poll
@@ -1846,10 +1832,13 @@ components:
             $ref: '#/components/schemas/HostPollVote'
           type: object
           title: Votes
+        queue:
+          $ref: '#/components/schemas/PollQueueStatus'
       type: object
       required:
       - poll_running
       - votes
+      - queue
       title: HostPollStateResponse
     HostPollVote:
       properties:
@@ -2415,20 +2404,21 @@ components:
       - options
       - correct_indices
       title: PollQueueQuestion
-    PollQueueStatusResponse:
+    PollQueueStatus:
       properties:
         pending:
           type: integer
           title: Pending
         current:
           anyOf:
-          - $ref: '#/components/schemas/PollQueueQuestion'
+          - additionalProperties: true
+            type: object
           - type: 'null'
+          title: Current
       type: object
       required:
       - pending
-      - current
-      title: PollQueueStatusResponse
+      title: PollQueueStatus
     QAQuestionRaw:
       properties:
         id:

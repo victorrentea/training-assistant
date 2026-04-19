@@ -324,7 +324,7 @@
         return;
       }
       if (msg.type === 'poll_queue_updated') {
-        fetchPollQueue();
+        fetchPollState();
         return;
       }
       if (msg.type === 'poll_opened') {
@@ -1716,6 +1716,7 @@
     for (const v of allVotes) for (const idx of v.option_indices) if (idx < n) voteCounts[idx]++;
     totalVotes = allVotes.length;
     renderPollDisplay();
+    renderPollQueuePanel(data.queue);
   }
 
   // ── Render ──
@@ -1884,21 +1885,10 @@
     });
     if (res.ok) {
       toast('Dummy queue pushed \u2713');
-      await fetchPollQueue();
+      await fetchPollState();
     } else {
       const err = await res.json().catch(() => ({}));
       toast(err.detail || 'Failed to push queue');
-    }
-  }
-
-  async function fetchPollQueue() {
-    try {
-      const res = await fetch(API('/poll/queue'));
-      if (!res.ok) { renderPollQueuePanel(null); return; }
-      const data = await res.json();
-      renderPollQueuePanel(data);
-    } catch (e) {
-      renderPollQueuePanel(null);
     }
   }
 
@@ -1911,7 +1901,7 @@
     }
     panel.style.display = '';
     document.getElementById('poll-queue-counter').textContent = `${data.pending} remaining`;
-    const q = data.question;
+    const q = data.current;
     document.getElementById('poll-queue-question').textContent = q ? q.question : '';
     const optsEl = document.getElementById('poll-queue-options');
     optsEl.innerHTML = '';
@@ -1949,7 +1939,7 @@
       toast('Failed to reach server');
     } finally {
       btn.disabled = false;
-      await fetchPollQueue();
+      await fetchPollState();
     }
   }
 
@@ -1968,12 +1958,12 @@
       toast('Failed to reach server');
     } finally {
       btn.disabled = false;
-      await fetchPollQueue();
+      await fetchPollState();
     }
   }
 
   function startPollQueuePolling() {
-    fetchPollQueue();
+    fetchPollState();
   }
 
   function toast(msg) {

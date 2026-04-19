@@ -176,13 +176,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Host deletes the current poll.<br>`DELETE /api/{session_id}/host/poll` | - | - |
-| Get Poll State, return full poll state for host poll tab.<br>`GET /api/{session_id}/host/poll` | - | `id?: string`<br>`question?: string`<br>`options?: list[string]`<br>`multi?: bool`<br>`correct_count?: int`<br>`end_timer_seconds?: int`<br>`end_timer_started_at?: string`<br>`correct_indices?: list[int]`<br>`poll_running: bool`<br>`votes: dict[str, HostPollVote{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`option_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`voted_at:string`<br>`}]` |
+| Get Poll State, return full poll state for host poll tab.<br>`GET /api/{session_id}/host/poll` | - | `id?: string`<br>`question?: string`<br>`options?: list[string]`<br>`multi?: bool`<br>`correct_count?: int`<br>`end_timer_seconds?: int`<br>`end_timer_started_at?: string`<br>`correct_indices?: list[int]`<br>`poll_running: bool`<br>`votes: dict[str, HostPollVote{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`option_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`voted_at:string`<br>`}]`<br>`queue: PollQueueStatus{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`pending:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`current?:dict[str, any]`<br>`}` |
 | Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `correct_indices: list[int]` | - |
 | Host ends the poll.<br>`POST /api/{session_id}/host/poll/end` | - | - |
 | Host starts a countdown timer to end the poll.<br>`POST /api/{session_id}/host/poll/end/timer` | `seconds?: int` | - |
 | Create Poll, host manually creates and immediately opens a new poll.<br>`POST /api/{session_id}/host/poll/manual/submit` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`correct_count?: int` | - |
 | Clear Queue<br>`DELETE /api/{session_id}/host/poll/queue` | - | - |
-| Get Queue Status, get queue contents — pending count and current question.<br>`GET /api/{session_id}/host/poll/queue` | - | `pending: int`<br>`current?: PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}` |
 | Submit Questions, replace the entire poll queue with the submitted questions; typically called by AI submitting generated questions.<br>`POST /api/{session_id}/host/poll/queue` | `questions: list[PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | - |
 | Skip Current<br>`POST /api/{session_id}/host/poll/queue/skip` | - | - |
 | Submit Current<br>`POST /api/{session_id}/host/poll/queue/submit` | - | - |

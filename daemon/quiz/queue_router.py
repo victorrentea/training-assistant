@@ -30,11 +30,6 @@ class SubmitQuestionsRequest(BaseModel):
     questions: list[PollQueueQuestion]
 
 
-class PollQueueStatusResponse(BaseModel):
-    pending: int
-    current: PollQueueQuestion | None
-
-
 # ── Router ──
 
 router = APIRouter(prefix="/api/{session_id}/host/poll/queue", tags=["poll"])
@@ -48,17 +43,6 @@ async def submit_questions(body: SubmitQuestionsRequest):
     daemon_log.info(_LOG, f"Queue submitted: {len(questions)} question(s)")
     await notify_host(PollQueueUpdatedMsg())
     return Response(status_code=204)
-
-
-@router.get("", response_model=PollQueueStatusResponse)
-async def get_queue_status():
-    """Get queue contents — pending count and current question."""
-    current = quiz_queue.current()
-    current_model = PollQueueQuestion.model_validate(current) if current else None
-    return PollQueueStatusResponse(
-        pending=quiz_queue.pending_count(),
-        current=current_model,
-    )
 
 
 @router.post("/submit", status_code=204)

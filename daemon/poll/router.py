@@ -48,6 +48,10 @@ class HostPollVote(BaseModel):
     option_indices: list[int]
     voted_at: str
 
+class PollQueueStatus(BaseModel):
+    pending: int
+    current: dict | None = None
+
 class HostPollStateResponse(BaseModel):
     id: str | None = None
     question: str | None = None
@@ -59,6 +63,7 @@ class HostPollStateResponse(BaseModel):
     correct_indices: list[int] | None = None
     poll_running: bool
     votes: dict[str, HostPollVote]
+    queue: PollQueueStatus
 
 # ── Participant router (proxied via Railway) ──
 
@@ -161,6 +166,7 @@ async def delete_poll():
 @host_router.get("", response_model=HostPollStateResponse)
 async def get_poll_state():
     """Return full poll state for host poll tab."""
+    from daemon.quiz.queue import quiz_queue
     ps = poll_state
     p = ps.poll
     return HostPollStateResponse(
@@ -174,4 +180,5 @@ async def get_poll_state():
         correct_indices=ps.poll_correct_indices,
         poll_running=ps.poll_active,
         votes={pid: HostPollVote(**v) for pid, v in ps.votes.items()},
+        queue=PollQueueStatus(pending=quiz_queue.pending_count(), current=quiz_queue.current()),
     )
