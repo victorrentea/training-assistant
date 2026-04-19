@@ -216,7 +216,7 @@ def _build_runtime_session_snapshot(
         "poll": {
             "definition": poll_state.poll,
             "active": poll_state.poll_active,
-            "correct_indices": poll_state.poll_correct_indices,
+            "correct_indices": poll_state.poll_correct_indices or [],
             "opened_at": poll_opened_at,
             "timer_seconds": poll_state.poll_timer_seconds,
             "timer_started_at": poll_timer_started_at,
