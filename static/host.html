@@ -92,7 +92,11 @@
     <div id="tab-content-poll" class="tab-content">
       <!-- Backstage manual entry -->
       <div style="margin-top:.75rem;">
-        <div style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.5rem;">Backstage</div>
+        <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:.5rem;">
+          <span style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">Backstage</span>
+          <a href="#" onclick="event.preventDefault(); testOnePoll();" style="font-size:.8rem; color:var(--accent); text-decoration:none;">test one</a>
+          <a href="#" onclick="event.preventDefault(); pushDummyQueue();" style="font-size:.8rem; color:var(--accent); text-decoration:none;">test queue</a>
+        </div>
         <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
              data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
         <div style="display:flex; flex-direction:column; gap:.4rem; margin-top:.4rem;">
@@ -105,10 +109,6 @@
               correct
             </label>
             <button class="btn btn-success" id="create-btn" style="margin-left:auto;">▶ Send</button>
-          </div>
-          <div class="btn-row" style="align-items:center;">
-            <button class="btn" onclick="pushDummyQueue()" title="Push 2 test questions to queue (simulate AI)">Q</button>
-            <button class="btn" id="random-poll-btn" title="Generate random trivia question" style="font-size:1.1rem;">🎲</button>
           </div>
         </div>
       </div>

@@ -1584,12 +1584,14 @@
 
   initComposer('Which is the primary benefit of the Circuit Breaker pattern?\n\nPrevents cascading failures across services\nImproves response time under normal load\nReduces the number of network calls\nEnables automatic service discovery');
 
-  document.getElementById('random-poll-btn').addEventListener('click', () => {
+  window.testOnePoll = () => {
     let idx;
     do { idx = Math.floor(Math.random() * RANDOM_POLLS.length); } while (idx === _lastRandomIndex && RANDOM_POLLS.length > 1);
     _lastRandomIndex = idx;
     initComposer(RANDOM_POLLS[idx]);
-  });
+    const cc = document.getElementById('correct-count');
+    cc.value = 1; cc.disabled = false;
+  };
 
   pollInput.addEventListener('input', () => {
     reclassifyLines();
