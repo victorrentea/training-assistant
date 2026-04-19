@@ -22,6 +22,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
 - [Infrastructure](#feature-infrastructure)
 - [Misc](#feature-misc)
+- [Intellij](#feature-intellij)
 
 ## Feature: Session
 
@@ -441,3 +442,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Slides Compilation, compile all viewed slide pages into one PDF and return as a download; long-running: may trigger Railway to download PDFs from Google Drive first; progress is logged to the daemon log.<br>`GET /api/{session_id}/host/slides-compilation` | - | `any` |
+
+## Feature: Intellij
+
+### Addons WS
+| Message | Payload |
+| --- | --- |
+| Currently open file in IntelliJ changed<br>`git_file_opened` | `url: string  # Git remote URL of the project`<br>`branch: string  # Current git branch`<br>`file: string  # Filename of the open file`<br>`file_url?: string  # Full GitHub/GitLab URL to the file (omitted when filename is ambiguous)` |

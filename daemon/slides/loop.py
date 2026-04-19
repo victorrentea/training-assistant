@@ -211,7 +211,10 @@ class SlidesRunner:
                                 continue
                             _active_redownload_slugs.add(slug)
                         log.info("slides", f"PPTX updated for slug={slug} — starting redownload poller")
-                        from daemon.slides.router import _broadcast_slides_updated, _mark_cache_status
+                        from daemon.slides.router import (
+                            _broadcast_slides_updated,
+                            _mark_cache_status,
+                        )
                         _mark_cache_status(slug, "downloading")
                         _broadcast_slides_updated()
                         t = threading.Thread(
