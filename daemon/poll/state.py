@@ -17,7 +17,6 @@ class PollState:
         self.poll_timer_started_at: datetime | None = None
         self._vote_counts_dirty: bool = True
         self._vote_counts_cache: list[int] | None = None
-        self.poll_md_content: str = ""
 
     def create_poll(self, question: str, options: list[str], multi: bool = False,
                     correct_count: int | None = None, source: str | None = None,
@@ -185,7 +184,14 @@ class PollState:
             marker = "✓" if i in correct_set else "✗"
             lines.append(f"- [{marker}] {text}")
         lines.append("")
-        self.poll_md_content += "\n".join(lines) + "\n"
+        entry = "\n".join(lines) + "\n"
+        try:
+            from daemon.misc.content_files import get_active_session_folder
+            folder = get_active_session_folder()
+            if folder is not None:
+                (folder / "ai-quiz.md").open("a", encoding="utf-8").write(entry)
+        except Exception:
+            pass
 
 
 poll_state = PollState()

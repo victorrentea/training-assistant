@@ -153,10 +153,8 @@ def create_app(backend_url: str) -> FastAPI:
     from daemon.leaderboard.router import router as leaderboard_router
     from daemon.poll.router import host_router as poll_host_router
     from daemon.poll.router import participant_router as poll_participant_router
-    from daemon.poll.router import poll_md_router
     app.include_router(poll_participant_router)   # /api/participant/poll/*
     app.include_router(poll_host_router)          # /api/{session_id}/poll/*
-    app.include_router(poll_md_router)            # /api/{session_id}/poll-md
     app.include_router(leaderboard_router)        # /api/{session_id}/leaderboard/*
 
     from daemon.misc.router import host_router as misc_host_router

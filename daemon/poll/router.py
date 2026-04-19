@@ -52,10 +52,6 @@ class StartTimerRequest(BaseModel):
 class SetPollStatusRequest(BaseModel):
     open: bool
 
-class PollMdResponse(BaseModel):
-    content: str
-
-
 # ── Participant router (proxied via Railway) ──
 
 participant_router = APIRouter(prefix="/api/participant/poll", tags=["poll"])
@@ -171,14 +167,3 @@ async def delete_poll():
     broadcast(ActivityUpdatedMsg(current_activity="none"))
     await notify_host(PollClearedMsg())
     return Response(status_code=204)
-
-
-# ── Poll history (public) ──
-
-poll_md_router = APIRouter(tags=["poll"])
-
-
-@poll_md_router.get("/api/{session_id}/poll-md", response_model=PollMdResponse)
-async def get_poll_md():
-    """Return the accumulated poll markdown history."""
-    return PollMdResponse(content=poll_state.poll_md_content)

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from daemon.leaderboard.state import leaderboard_state
 from daemon.participant.state import participant_state
 from daemon.scores import scores
-from daemon.ws_messages import LeaderboardHiddenMsg, LeaderboardRevealedMsg, ScoresUpdatedMsg
+from daemon.ws_messages import LeaderboardRevealedMsg, ScoresUpdatedMsg
 from daemon.ws_publish import broadcast, notify_host
 
 
@@ -35,15 +35,6 @@ async def show_leaderboard():
         for i, e in enumerate(raw_entries)
     ]
     msg = LeaderboardRevealedMsg(positions=positions)
-    broadcast(msg)
-    await notify_host(msg)
-    return Response(status_code=204)
-
-
-@router.post("/leaderboard/hide", status_code=204)
-async def hide_leaderboard():
-    leaderboard_state.reset()
-    msg = LeaderboardHiddenMsg()
     broadcast(msg)
     await notify_host(msg)
     return Response(status_code=204)

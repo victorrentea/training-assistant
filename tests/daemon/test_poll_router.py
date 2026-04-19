@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from daemon.poll.state import PollState
 from daemon.scores import Scores
-from daemon.poll.router import participant_router, host_router, poll_md_router
+from daemon.poll.router import participant_router, host_router
 from daemon.participant.state import ParticipantState
 
 _SAMPLE_OPTIONS = ["Option A", "Option B", "Option C"]
@@ -57,7 +57,6 @@ def participant_client(fresh_poll_state, fresh_scores):
 def host_client(fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host, mock_participant_state):
     app = FastAPI()
     app.include_router(host_router)
-    app.include_router(poll_md_router)
     return TestClient(app)
 
 
@@ -237,17 +236,3 @@ class TestHostDeletePoll:
         assert "activity_updated" in broadcast_types
 
 
-class TestGetPollMd:
-    def test_get_poll_md(self, host_client, fresh_poll_state):
-        fresh_poll_state.poll_md_content = "### Some quiz\n- [✓] A\n"
-
-        resp = host_client.get("/api/test-session/poll-md")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "content" in data
-        assert "Some quiz" in data["content"]
-
-    def test_get_poll_md_empty(self, host_client, fresh_poll_state):
-        resp = host_client.get("/api/test-session/poll-md")
-        assert resp.status_code == 200
-        assert resp.json()["content"] == ""

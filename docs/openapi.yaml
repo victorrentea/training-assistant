@@ -501,37 +501,12 @@ paths:
         '204':
           description: Successful Response
       x-feature: poll
-  /api/{session_id}/poll-md:
-    get:
-      tags:
-      - poll
-      summary: Get Poll Md
-      description: Return the accumulated poll markdown history.
-      operationId: get_poll_md_api__session_id__poll_md_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PollMdResponse'
-      x-feature: poll
   /api/{session_id}/host/leaderboard/show:
     post:
       tags:
       - leaderboard
       summary: Show Leaderboard
       operationId: show_leaderboard_api__session_id__host_leaderboard_show_post
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: scores_leaderboard
-  /api/{session_id}/host/leaderboard/hide:
-    post:
-      tags:
-      - leaderboard
-      summary: Hide Leaderboard
-      operationId: hide_leaderboard_api__session_id__host_leaderboard_hide_post
       responses:
         '204':
           description: Successful Response
@@ -752,7 +727,8 @@ paths:
       tags:
       - poll-queue
       summary: Submit Questions
-      description: Replace the entire poll queue with the submitted questions.
+      description: Replace the entire poll queue with the submitted questions. Typically
+        called by AI submitting generated questions.
       operationId: submit_questions_api__session_id__host_poll_queue_post
       requestBody:
         content:
@@ -2480,15 +2456,6 @@ components:
       - options
       - multi
       title: PollData
-    PollMdResponse:
-      properties:
-        content:
-          type: string
-          title: Content
-      type: object
-      required:
-      - content
-      title: PollMdResponse
     PollQueueQuestion:
       properties:
         question:

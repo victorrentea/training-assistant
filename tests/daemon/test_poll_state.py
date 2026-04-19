@@ -1,6 +1,7 @@
 """Tests for daemon/poll/state.py — PollState singleton."""
 import pytest
 from datetime import datetime, timezone, timedelta
+from unittest.mock import patch
 
 from daemon.poll.state import PollState, _MAX_POINTS, _MIN_POINTS, _SLOWEST_MULTIPLIER
 
@@ -229,12 +230,17 @@ def test_vote_counts_dirty_flag():
     assert ps._vote_counts_dirty is False
 
 
-def test_append_to_poll_md():
+def test_append_to_poll_md(tmp_path):
     ps = PollState()
     _make_poll(ps)
     ps.cast_vote("pid1", option_indices=[0])
-    ps.reveal_correct([0], MockScores())
-    md = ps.poll_md_content
+
+    with patch("daemon.misc.content_files.get_active_session_folder", return_value=tmp_path):
+        ps.reveal_correct([0], MockScores())
+
+    quiz_file = tmp_path / "ai-quiz.md"
+    assert quiz_file.exists()
+    md = quiz_file.read_text()
     assert "### Test?" in md
     assert "- [✓] A" in md
     assert "- [✗] B" in md

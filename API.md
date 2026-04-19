@@ -183,7 +183,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Host opens the poll for voting.<br>`POST /api/{session_id}/host/poll/open` | - | - |
 | Set Poll Status, compatibility: {open: true} → open_poll, {open: false} → close_poll.<br>`PUT /api/{session_id}/host/poll/status` | `open: bool` | `OkResponse{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`ok?:bool`<br>`} \| ClosePollResponse{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`ok?:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`vote_counts:list[int]`<br>`}` |
 | Host starts a countdown timer for the poll.<br>`POST /api/{session_id}/host/poll/timer` | `seconds?: int` | - |
-| Get Poll Md, return the accumulated poll markdown history.<br>`GET /api/{session_id}/poll-md` | - | `content: string` |
 
 ### Host WS
 | Message | Payload |
@@ -312,7 +311,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Hide Leaderboard<br>`POST /api/{session_id}/host/leaderboard/hide` | - | - |
 | Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | - | - |
 | Reset Scores<br>`DELETE /api/{session_id}/host/scores` | - | - |
 
@@ -454,6 +452,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- | --- |
 | Clear Queue<br>`DELETE /api/{session_id}/host/poll-queue` | - | `ok?: bool` |
 | Get Queue Status, return how many questions are pending and what the current question looks like.<br>`GET /api/{session_id}/host/poll-queue` | - | `pending: int`<br>`current?: PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}` |
-| Submit Questions, replace the entire poll queue with the submitted questions.<br>`POST /api/{session_id}/host/poll-queue` | `questions: list[PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | `ok?: bool` |
+| Submit Questions, replace the entire poll queue with the submitted questions; typically called by AI submitting generated questions.<br>`POST /api/{session_id}/host/poll-queue` | `questions: list[PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | `ok?: bool` |
 | Fire Current<br>`POST /api/{session_id}/host/poll-queue/fire` | - | `ok?: bool` |
 | Skip Current<br>`POST /api/{session_id}/host/poll-queue/skip` | - | `ok?: bool` |

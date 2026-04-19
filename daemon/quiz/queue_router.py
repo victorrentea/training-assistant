@@ -46,7 +46,7 @@ router = APIRouter(prefix="/api/{session_id}/host/poll-queue", tags=["poll-queue
 
 @router.post("", response_model=OkResponse)
 async def submit_questions(body: SubmitQuestionsRequest):
-    """Replace the entire poll queue with the submitted questions."""
+    """Replace the entire poll queue with the submitted questions. Typically called by AI submitting generated questions."""
     questions = [q.model_dump() for q in body.questions]
     quiz_queue.submit(questions)
     daemon_log.info(_LOG, f"Queue submitted: {len(questions)} question(s)")
