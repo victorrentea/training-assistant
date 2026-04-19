@@ -241,32 +241,16 @@ class TestPollTimer:
 @pytest.mark.usefixtures("clean_scores", "clean_qa")
 class TestLeaderboard:
 
-    def test_leaderboard_show_and_hide(self, server_url, host: HostPage, pax: ParticipantPage):
-        """Host triggers leaderboard, participant sees overlay. Then hide it."""
+    def test_leaderboard_show(self, server_url, host: HostPage, pax: ParticipantPage):
+        """Host triggers leaderboard show; it auto-hides after 7s."""
         pax.join("LeaderTest")
         host.open_qa_tab()
         pax.submit_question("Score me up")
         pax._page.wait_for_timeout(1000)
         assert pax.get_score() == 100
 
-        # Show leaderboard
         resp = sapi(server_url, "post", "/leaderboard/show")
-        assert resp.status_code == 200
-
-        # Participant should see leaderboard overlay (display changes from none to flex)
-        pax._page.wait_for_function(
-            "() => document.getElementById('leaderboard-overlay')?.style.display === 'flex'",
-            timeout=8000
-        )
-
-        # Hide leaderboard
-        resp = sapi(server_url, "post", "/leaderboard/hide")
-        assert resp.status_code == 200
-
-        pax._page.wait_for_function(
-            "() => document.getElementById('leaderboard-overlay')?.style.display === 'none'",
-            timeout=5000
-        )
+        assert resp.status_code == 204
 
     def test_leaderboard_shows_personal_rank(self, server_url, playwright):
         """Participant sees their own rank in the leaderboard."""
@@ -311,7 +295,6 @@ class TestLeaderboard:
             rank_text = p1_rank.inner_text()
             assert len(rank_text) > 0, "Personal rank should be displayed"
 
-            sapi(server_url, "post", "/leaderboard/hide")
         finally:
             for ctx in (ctx_host, ctx1, ctx2):
                 ctx.close()
@@ -606,8 +589,6 @@ class TestAdditionalEdgeCases:
             # Leaderboard
             sapi(server_url, "post", "/leaderboard/show")
             p1_page.wait_for_timeout(2000)
-            sapi(server_url, "post", "/leaderboard/hide")
-            p1_page.wait_for_timeout(500)
 
             assert js_errors == [], f"JS errors during full lifecycle: {js_errors}"
         finally:

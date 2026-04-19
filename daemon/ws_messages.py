@@ -171,10 +171,6 @@ class LeaderboardRevealedMsg(BaseModel):
     positions: list[dict[str, Any]]
 
 
-class LeaderboardHiddenMsg(BaseModel):
-    type: Literal["leaderboard_hidden"] = "leaderboard_hidden"
-
-
 # ── Host-only: Poll vote tally ────────────────────────────────────────────────
 
 class VoteUpdateMsg(BaseModel):
