@@ -738,7 +738,7 @@ paths:
   /api/{session_id}/host/poll-queue:
     get:
       tags:
-      - poll
+      - poll-queue
       summary: Get Queue Status
       description: Return how many questions are pending and what the current question
         looks like.
@@ -750,10 +750,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PollQueueStatusResponse'
-      x-feature: poll
+      x-feature: poll-queue
     post:
       tags:
-      - poll
+      - poll-queue
       summary: Submit Questions
       description: Replace the entire poll queue with the submitted questions.
       operationId: submit_questions_api__session_id__host_poll_queue_post
@@ -770,12 +770,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: poll
+      x-feature: poll-queue
     delete:
       tags:
-      - poll
+      - poll-queue
       summary: Clear Queue
-      description: Clear the entire poll queue.
+      description: Clear the entire quiz queue.
       operationId: clear_queue_api__session_id__host_poll_queue_delete
       responses:
         '200':
@@ -784,11 +784,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: poll
+      x-feature: poll-queue
   /api/{session_id}/host/poll-queue/fire:
     post:
       tags:
-      - poll
+      - poll-queue
       summary: Fire Current
       description: Fire the current question as a poll and advance the queue.
       operationId: fire_current_api__session_id__host_poll_queue_fire_post
@@ -799,11 +799,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: poll
+      x-feature: poll-queue
   /api/{session_id}/host/poll-queue/skip:
     post:
       tags:
-      - poll
+      - poll-queue
       summary: Skip Current
       description: Skip the current question without firing it.
       operationId: skip_current_api__session_id__host_poll_queue_skip_post
@@ -814,7 +814,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: poll
+      x-feature: poll-queue
   /api/participant/codereview/selection:
     put:
       tags:
@@ -1394,17 +1394,13 @@ components:
           title: Ok
           default: true
         vote_counts:
-          additionalProperties:
+          items:
             type: integer
-          type: object
+          type: array
           title: Vote Counts
-        total_votes:
-          type: integer
-          title: Total Votes
       type: object
       required:
       - vote_counts
-      - total_votes
       title: ClosePollResponse
     CodeReviewParticipantState:
       properties:
@@ -1492,7 +1488,7 @@ components:
           default: ''
         options:
           items:
-            $ref: '#/components/schemas/PollOptionRequest'
+            type: string
           type: array
           title: Options
           default: []
@@ -1998,15 +1994,15 @@ components:
           title: Qa Questions
         poll:
           anyOf:
-          - $ref: '#/components/schemas/PollData'
+          - $ref: '#/components/schemas/daemon__host_state_router__PollData'
           - type: 'null'
         poll_active:
           type: boolean
           title: Poll Active
         vote_counts:
-          additionalProperties:
+          items:
             type: integer
-          type: object
+          type: array
           title: Vote Counts
         votes:
           additionalProperties:
@@ -2326,7 +2322,7 @@ components:
           title: Qa Questions
         poll:
           anyOf:
-          - $ref: '#/components/schemas/PollData'
+          - $ref: '#/components/schemas/daemon__participant__router__PollData'
           - type: 'null'
         poll_active:
           type: boolean
@@ -2436,61 +2432,15 @@ components:
       required:
       - side
       title: PickSideRequest
-    PollData:
+    PollMdResponse:
       properties:
-        id:
+        content:
           type: string
-          title: Id
-        question:
-          type: string
-          title: Question
-        options:
-          items:
-            $ref: '#/components/schemas/PollOption'
-          type: array
-          title: Options
-        multi:
-          type: boolean
-          title: Multi
-        correct_count:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Correct Count
-        source:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Source
-        page:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Page
-        timer_seconds:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Timer Seconds
-        timer_started_at:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Timer Started At
-        correct_ids:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Correct Ids
+          title: Content
       type: object
       required:
-      - id
-      - question
-      - options
-      - multi
-      title: PollData
+      - content
+      title: PollMdResponse
     PollOption:
       properties:
         id:
@@ -2504,7 +2454,7 @@ components:
       - id
       - text
       title: PollOption
-    PollOptionRequest:
+    PollQueueOption:
       properties:
         id:
           type: string
@@ -2516,7 +2466,56 @@ components:
       required:
       - id
       - text
-      title: PollOptionRequest
+      title: PollQueueOption
+    PollQueueQuestion-Input:
+      properties:
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            $ref: '#/components/schemas/PollQueueOption'
+          type: array
+          title: Options
+        correct_ids:
+          items:
+            type: string
+          type: array
+          title: Correct Ids
+      type: object
+      required:
+      - question
+      - options
+      - correct_ids
+      title: PollQueueQuestion
+    PollQueueStatus:
+      properties:
+        pending:
+          type: integer
+          title: Pending
+        current:
+          anyOf:
+          - $ref: '#/components/schemas/daemon__host_state_router__PollQueueQuestion'
+          - type: 'null'
+      type: object
+      required:
+      - pending
+      - current
+      title: PollQueueStatus
+    PollQueueStatusResponse:
+      properties:
+        pending:
+          type: integer
+          title: Pending
+        current:
+          anyOf:
+          - $ref: '#/components/schemas/daemon__quiz__queue_router__PollQueueQuestion'
+          - type: 'null'
+      type: object
+      required:
+      - pending
+      - current
+      title: PollQueueStatusResponse
     PollResponse:
       properties:
         id:
@@ -2527,7 +2526,7 @@ components:
           title: Question
         options:
           items:
-            $ref: '#/components/schemas/PollOptionRequest'
+            type: string
           type: array
           title: Options
         multi:
@@ -2586,77 +2585,6 @@ components:
       - answered
       - timestamp
       title: QAQuestionRaw
-    PollMdResponse:
-      properties:
-        content:
-          type: string
-          title: Content
-      type: object
-      required:
-      - content
-      title: PollMdResponse
-    PollQueueOption:
-      properties:
-        id:
-          type: string
-          title: Id
-        text:
-          type: string
-          title: Text
-      type: object
-      required:
-      - id
-      - text
-      title: PollQueueOption
-    PollQueueQuestion:
-      properties:
-        question:
-          type: string
-          title: Question
-        options:
-          items:
-            $ref: '#/components/schemas/PollQueueOption'
-          type: array
-          title: Options
-        correct_ids:
-          items:
-            type: string
-          type: array
-          title: Correct Ids
-      type: object
-      required:
-      - question
-      - options
-      - correct_ids
-      title: PollQueueQuestion
-    PollQueueStatus:
-      properties:
-        pending:
-          type: integer
-          title: Pending
-        current:
-          anyOf:
-          - $ref: '#/components/schemas/PollQueueQuestion'
-          - type: 'null'
-      type: object
-      required:
-      - pending
-      - current
-      title: PollQueueStatus
-    PollQueueStatusResponse:
-      properties:
-        pending:
-          type: integer
-          title: Pending
-        current:
-          anyOf:
-          - $ref: '#/components/schemas/PollQueueQuestion'
-          - type: 'null'
-      type: object
-      required:
-      - pending
-      - current
-      title: PollQueueStatusResponse
     RegisterRequest:
       properties:
         name:
@@ -2704,11 +2632,11 @@ components:
       title: ResumeSessionRequest
     RevealCorrectRequest:
       properties:
-        correct_ids:
+        correct_indices:
           items:
-            type: string
+            type: integer
           type: array
-          title: Correct Ids
+          title: Correct Indices
           default: []
       type: object
       title: RevealCorrectRequest
@@ -2981,7 +2909,7 @@ components:
       properties:
         questions:
           items:
-            $ref: '#/components/schemas/PollQueueQuestion'
+            $ref: '#/components/schemas/PollQueueQuestion-Input'
           type: array
           title: Questions
       type: object
@@ -3122,14 +3050,14 @@ components:
       title: UpvoteRequest
     VoteRequest:
       properties:
-        option_ids:
+        options:
           items:
-            type: string
+            type: integer
           type: array
-          title: Option Ids
+          title: Options
       type: object
       required:
-      - option_ids
+      - options
       title: VoteRequest
     WordcloudData:
       properties:
@@ -3152,3 +3080,155 @@ components:
       - word_order
       - topic
       title: WordcloudData
+    daemon__host_state_router__PollData:
+      properties:
+        id:
+          type: string
+          title: Id
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            type: string
+          type: array
+          title: Options
+        multi:
+          type: boolean
+          title: Multi
+        correct_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Correct Count
+        source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source
+        page:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Page
+        timer_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Timer Seconds
+        timer_started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Timer Started At
+        correct_indices:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Correct Indices
+      type: object
+      required:
+      - id
+      - question
+      - options
+      - multi
+      title: PollData
+    daemon__host_state_router__PollQueueQuestion:
+      properties:
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            type: string
+          type: array
+          title: Options
+        correct_indices:
+          items:
+            type: integer
+          type: array
+          title: Correct Indices
+      type: object
+      required:
+      - question
+      - options
+      - correct_indices
+      title: PollQueueQuestion
+    daemon__participant__router__PollData:
+      properties:
+        id:
+          type: string
+          title: Id
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            $ref: '#/components/schemas/PollOption'
+          type: array
+          title: Options
+        multi:
+          type: boolean
+          title: Multi
+        correct_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Correct Count
+        source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source
+        page:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Page
+        timer_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Timer Seconds
+        timer_started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Timer Started At
+        correct_ids:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Correct Ids
+      type: object
+      required:
+      - id
+      - question
+      - options
+      - multi
+      title: PollData
+    daemon__quiz__queue_router__PollQueueQuestion:
+      properties:
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            $ref: '#/components/schemas/PollQueueOption'
+          type: array
+          title: Options
+        correct_ids:
+          items:
+            type: string
+          type: array
+          title: Correct Ids
+      type: object
+      required:
+      - question
+      - options
+      - correct_ids
+      title: PollQueueQuestion

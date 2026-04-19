@@ -65,22 +65,17 @@ class HostPollVote(BaseModel):
     voted_at: str
 
 
-class PollOption(BaseModel):
-    id: str
-    text: str
-
-
 class PollData(BaseModel):
     id: str
     question: str
-    options: list[PollOption]
+    options: list[str]
     multi: bool
     correct_count: int | None = None
     source: str | None = None
     page: str | None = None
     timer_seconds: int | None = None
     timer_started_at: str | None = None
-    correct_ids: list[str] | None = None
+    correct_indices: list[int] | None = None
 
 
 class HostCodeReviewState(BaseModel):
@@ -132,15 +127,10 @@ class SlidesCurrentPayload(BaseModel):
     page: int | None = None
 
 
-class PollQueueOption(BaseModel):
-    id: str
-    text: str
-
-
 class PollQueueQuestion(BaseModel):
     question: str
-    options: list[PollQueueOption]
-    correct_ids: list[str]
+    options: list[str]
+    correct_indices: list[int]
 
 
 class PollQueueStatus(BaseModel):
@@ -164,7 +154,7 @@ class HostStateResponse(BaseModel):
     qa_questions: list[HostQAQuestion]
     poll: PollData | None = None
     poll_active: bool
-    vote_counts: dict[str, int]
+    vote_counts: list[int]
     votes: dict[str, HostPollVote]
     codereview: HostCodeReviewState
     debate_statement: str | None = None
@@ -300,12 +290,12 @@ def _build_poll_for_host() -> dict:
         poll["timer_started_at"] = (
             ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None
         )
-        poll["correct_ids"] = ps.poll_correct_ids
+        poll["correct_indices"] = ps.poll_correct_indices
 
     return {
         "poll": poll,
         "poll_active": ps.poll_active,
-        "vote_counts": ps.vote_counts() if ps.poll else {},
+        "vote_counts": ps.vote_counts() if ps.poll else [],
         "votes": dict(ps.votes),
     }
 
