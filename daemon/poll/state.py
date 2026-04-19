@@ -10,16 +10,16 @@ class PollState:
     def __init__(self):
         self.poll: dict | None = None
         self.poll_active: bool = False
-        self.votes: dict[str, dict] = {}  # uuid → {"option_ids": list[str], "voted_at": str ISO}
+        self.votes: dict[str, dict] = {}  # uuid → {"option_indices": list[int], "voted_at": str ISO}
         self.poll_opened_at: datetime | None = None
-        self.poll_correct_ids: list[str] | None = None
+        self.poll_correct_indices: list[int] | None = None
         self.poll_timer_seconds: int | None = None
         self.poll_timer_started_at: datetime | None = None
         self._vote_counts_dirty: bool = True
-        self._vote_counts_cache: dict | None = None
+        self._vote_counts_cache: list[int] | None = None
         self.poll_md_content: str = ""
 
-    def create_poll(self, question: str, options: list[dict], multi: bool = False,
+    def create_poll(self, question: str, options: list[str], multi: bool = False,
                     correct_count: int | None = None, source: str | None = None,
                     page: str | None = None) -> dict:
         import uuid as _uuid
@@ -37,7 +37,7 @@ class PollState:
             self.poll["page"] = page
         self.poll_active = False
         self.votes.clear()
-        self.poll_correct_ids = None
+        self.poll_correct_indices = None
         self.poll_timer_seconds = None
         self.poll_timer_started_at = None
         self._vote_counts_dirty = True
@@ -53,45 +53,44 @@ class PollState:
     def close_poll(self) -> dict:
         self.poll_active = False
         counts = self.vote_counts()
-        total = len(self.votes)
-        return {"vote_counts": counts, "total_votes": total}
+        return {"vote_counts": counts}
 
-    def cast_vote(self, pid: str, option_ids: list[str] | None = None) -> bool:
+    def cast_vote(self, pid: str, option_indices: list[int] | None = None) -> bool:
         if not self.poll or not self.poll_active:
             return False
         if pid in self.votes:
-            return False  # votes are final
-        if option_ids is None or not isinstance(option_ids, list):
             return False
-        valid_ids = [o["id"] for o in self.poll["options"]]
+        if option_indices is None or not isinstance(option_indices, list):
+            return False
+        n = len(self.poll["options"])
         is_multi = self.poll.get("multi", False)
         if is_multi:
             correct_count = self.poll.get("correct_count")
-            max_allowed = correct_count if correct_count else len(valid_ids)
-            if (len(option_ids) > max_allowed
-                or len(set(option_ids)) != len(option_ids)
-                or not all(oid in valid_ids for oid in option_ids)):
+            max_allowed = correct_count if correct_count else n
+            if (len(option_indices) > max_allowed
+                    or len(set(option_indices)) != len(option_indices)
+                    or not all(0 <= i < n for i in option_indices)):
                 return False
         else:
-            if len(option_ids) != 1 or option_ids[0] not in valid_ids:
+            if len(option_indices) != 1 or not (0 <= option_indices[0] < n):
                 return False
         voted_at = datetime.now(timezone.utc).isoformat()
-        self.votes[pid] = {"option_ids": option_ids, "voted_at": voted_at}
+        self.votes[pid] = {"option_indices": option_indices, "voted_at": voted_at}
         self._vote_counts_dirty = True
         return True
 
-    def reveal_correct(self, correct_ids: list[str], scores_obj) -> dict:
-        correct_set = set(correct_ids)
+    def reveal_correct(self, correct_indices: list[int], scores_obj) -> dict:
+        correct_set = set(correct_indices)
+        n = len(self.poll["options"]) if self.poll else 0
+        all_indices = set(range(n))
+        wrong_set = all_indices - correct_set
+        multi = self.poll.get("multi", False) if self.poll else False
         now = datetime.now(timezone.utc)
         opened_at = self.poll_opened_at or now
-        poll = self.poll or {}
-        all_option_ids = {opt["id"] for opt in poll.get("options", [])}
-        wrong_set = all_option_ids - correct_set
-        multi = poll.get("multi", False)
 
         correct_voters = set()
         for pid, vote in self.votes.items():
-            voted = set(vote["option_ids"])
+            voted = set(vote["option_indices"])
             if multi and correct_set:
                 R = len(voted & correct_set)
                 W = len(voted & wrong_set)
@@ -113,7 +112,7 @@ class PollState:
         min_time = min(elapsed_times) if elapsed_times else 0.0
 
         for pid, vote in self.votes.items():
-            voted = set(vote["option_ids"])
+            voted = set(vote["option_indices"])
             if multi and correct_set:
                 R = len(voted & correct_set)
                 W = len(voted & wrong_set)
@@ -136,12 +135,12 @@ class PollState:
             if pts > 0:
                 scores_obj.add_score(pid, pts)
 
-        self.poll_correct_ids = list(correct_set)
+        self.poll_correct_indices = list(correct_set)
         self._append_to_poll_md(correct_set)
         return {
-            "correct_ids": list(correct_set),
+            "correct_indices": list(correct_set),
             "scores": scores_obj.snapshot(),
-            "votes": {pid: v["option_ids"] for pid, v in self.votes.items()},
+            "votes": {pid: v["option_indices"] for pid, v in self.votes.items()},
         }
 
     def start_timer(self, seconds: int) -> dict:
@@ -157,29 +156,31 @@ class PollState:
         self.poll_active = False
         self.votes.clear()
         self.poll_opened_at = None
-        self.poll_correct_ids = None
+        self.poll_correct_indices = None
         self.poll_timer_seconds = None
         self.poll_timer_started_at = None
         self._vote_counts_dirty = True
 
-    def vote_counts(self) -> dict:
+    def vote_counts(self) -> list[int]:
         if not self._vote_counts_dirty and self._vote_counts_cache is not None:
             return self._vote_counts_cache
-        counts: dict[str, int] = {}
+        n = len(self.poll["options"]) if self.poll else 0
+        counts = [0] * n
         for vote in self.votes.values():
-            for oid in vote["option_ids"]:
-                counts[oid] = counts.get(oid, 0) + 1
+            for idx in vote["option_indices"]:
+                if 0 <= idx < n:
+                    counts[idx] += 1
         self._vote_counts_cache = counts
         self._vote_counts_dirty = False
         return counts
 
-    def _append_to_poll_md(self, correct_set: set[str]):
+    def _append_to_poll_md(self, correct_set: set[int]):
         if not self.poll:
             return
         lines = [f"### {self.poll['question']}\n"]
-        for opt in self.poll["options"]:
-            marker = "✓" if opt["id"] in correct_set else "✗"
-            lines.append(f"- [{marker}] {opt['text']}")
+        for i, text in enumerate(self.poll["options"]):
+            marker = "✓" if i in correct_set else "✗"
+            lines.append(f"- [{marker}] {text}")
         lines.append("")
         self.poll_md_content += "\n".join(lines) + "\n"
 
