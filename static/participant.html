@@ -134,7 +134,7 @@ body{visibility:hidden}
     </style>
 <style>
 /* ── Poll card styles ── */
-#activity-poll-section { width: 100%; max-width: 32rem; }
+#activity-poll-section { width: 100%; max-width: 41.6rem; }
 .poll-card {
   background: var(--color-surface-container-low, #f0f4f7);
   border: 1px solid var(--color-outline-variant, #a9b4b9);
@@ -1470,7 +1470,10 @@ var _activityLocationSent = false;
 function initActivityView() {
   var welcome = document.getElementById('activity-welcome-section');
   var waiting = document.getElementById('activity-waiting-section');
-  if (LS.isActivitySeen()) {
+  if (_currentPoll) {
+    welcome.style.display = 'none';
+    waiting.style.display = 'none';
+  } else if (LS.isActivitySeen()) {
     welcome.style.display = 'none';
     waiting.style.display = '';
   } else {
