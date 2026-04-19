@@ -1591,7 +1591,11 @@
     initComposer(RANDOM_POLLS[idx]);
   });
 
-  pollInput.addEventListener('input', reclassifyLines);
+  pollInput.addEventListener('input', () => {
+    reclassifyLines();
+    const cc = document.getElementById('correct-count');
+    if (cc && cc.disabled) cc.disabled = false;
+  });
 
   // Intercept paste: always insert as plain text to avoid rich-HTML corruption
   pollInput.addEventListener('paste', e => {
@@ -1615,9 +1619,10 @@
     if (!question) { toast('Enter a question'); return; }
     if (options.length < 2) { toast('Add at least 2 options'); return; }
 
-    const multi = document.getElementById('multi-check').checked;
     const correctCountEl = document.getElementById('correct-count');
-    const correct_count = multi ? (parseInt(correctCountEl.value) || null) : null;
+    const correct_count_val = parseInt(correctCountEl.value) || 1;
+    const multi = correct_count_val > 1;
+    const correct_count = multi ? correct_count_val : null;
     const res = await fetch(API('/poll/manual/submit'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1630,7 +1635,8 @@
       correctOptIds = new Set();
       toast('Poll created & opened ✓');
       pollInput.innerHTML = '<div><br></div>';
-      document.getElementById('multi-check').checked = false;
+      const cc = document.getElementById('correct-count');
+      cc.value = 1; cc.disabled = false;
     } else {
       const data = await res.json().catch(() => ({}));
       toast(data.detail || data.error || 'Error');
@@ -1878,6 +1884,9 @@
     if (!q) return;
     const text = q.question + '\n\n' + q.options.join('\n');
     initComposer(text);
+    const cc = document.getElementById('correct-count');
+    cc.value = (q.correct_indices || []).length || 1;
+    cc.disabled = true;
     pollInput.focus();
     await fetch(API('/poll/queue/skip'), { method: 'POST' });
   }
@@ -1909,36 +1918,8 @@
     }
   }
 
-  function renderPollQueuePanel(data) {
-    const panel = document.getElementById('poll-queue-panel');
-    if (!panel) return;
-    if (!data || data.pending === 0) {
-      panel.style.display = 'none';
-      return;
-    }
-    panel.style.display = '';
-    document.getElementById('poll-queue-counter').textContent = `${data.pending} remaining`;
-    const q = data.current;
-    document.getElementById('poll-queue-question').textContent = q ? q.question : '';
-    const optsEl = document.getElementById('poll-queue-options');
-    optsEl.innerHTML = '';
-    if (q && q.options) {
-      const correctSet = new Set(q.correct_indices || []);
-      q.options.forEach((opt, i) => {
-        const div = document.createElement('div');
-        div.style.cssText = 'font-size:.85rem; padding:.15rem .35rem; border-radius:4px;';
-        const isCorrect = correctSet.has(i);
-        if (isCorrect) {
-          div.style.color = 'var(--action)';
-          div.style.fontWeight = '600';
-          div.textContent = '\u2713 ' + opt;
-        } else {
-          div.style.color = 'var(--muted)';
-          div.textContent = opt;
-        }
-        optsEl.appendChild(div);
-      });
-    }
+  function renderPollQueuePanel(_data) {
+    // Queue panel removed from UI; Pop button state handled by updatePopButton
   }
 
   async function pollQueueFire() {
