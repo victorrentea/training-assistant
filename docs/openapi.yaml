@@ -1681,6 +1681,12 @@ components:
           type: array
           title: Files
           default: []
+        file_urls:
+          additionalProperties:
+            type: string
+          type: object
+          title: File Urls
+          default: {}
       type: object
       required:
       - url
