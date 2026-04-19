@@ -1792,21 +1792,29 @@ components:
       - location
       - avatar
       title: HostParticipant
-    HostPollData:
+    HostPollStateResponse:
       properties:
         id:
-          type: string
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Id
         question:
-          type: string
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Question
         options:
-          items:
-            type: string
-          type: array
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
           title: Options
         multi:
-          type: boolean
+          anyOf:
+          - type: boolean
+          - type: 'null'
           title: Multi
         correct_count:
           anyOf:
@@ -1830,19 +1838,6 @@ components:
             type: array
           - type: 'null'
           title: Correct Indices
-      type: object
-      required:
-      - id
-      - question
-      - options
-      - multi
-      title: HostPollData
-    HostPollStateResponse:
-      properties:
-        poll:
-          anyOf:
-          - $ref: '#/components/schemas/HostPollData'
-          - type: 'null'
         poll_running:
           type: boolean
           title: Poll Running

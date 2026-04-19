@@ -48,18 +48,15 @@ class HostPollVote(BaseModel):
     option_indices: list[int]
     voted_at: str
 
-class HostPollData(BaseModel):
-    id: str
-    question: str
-    options: list[str]
-    multi: bool
+class HostPollStateResponse(BaseModel):
+    id: str | None = None
+    question: str | None = None
+    options: list[str] | None = None
+    multi: bool | None = None
     correct_count: int | None = None
     end_timer_seconds: int | None = None
     end_timer_started_at: str | None = None
     correct_indices: list[int] | None = None
-
-class HostPollStateResponse(BaseModel):
-    poll: HostPollData | None = None
     poll_running: bool
     votes: dict[str, HostPollVote]
 
@@ -165,15 +162,16 @@ async def delete_poll():
 async def get_poll_state():
     """Return full poll state for host poll tab."""
     ps = poll_state
-    poll = dict(ps.poll) if ps.poll else None
-    if poll is not None:
-        poll["end_timer_seconds"] = ps.poll_timer_seconds
-        poll["end_timer_started_at"] = (
-            ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None
-        )
-        poll["correct_indices"] = ps.poll_correct_indices
+    p = ps.poll
     return HostPollStateResponse(
-        poll=poll,
+        id=p["id"] if p else None,
+        question=p["question"] if p else None,
+        options=p["options"] if p else None,
+        multi=p.get("multi") if p else None,
+        correct_count=p.get("correct_count") if p else None,
+        end_timer_seconds=ps.poll_timer_seconds,
+        end_timer_started_at=ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None,
+        correct_indices=ps.poll_correct_indices,
         poll_running=ps.poll_active,
         votes={pid: HostPollVote(**v) for pid, v in ps.votes.items()},
     )

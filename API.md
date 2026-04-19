@@ -176,7 +176,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Host deletes the current poll.<br>`DELETE /api/{session_id}/host/poll` | - | - |
-| Get Poll State, return full poll state for host poll tab.<br>`GET /api/{session_id}/host/poll` | - | `poll?: HostPollData{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_count?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`end_timer_seconds?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`end_timer_started_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices?:list[int]`<br>`}`<br>`poll_running: bool`<br>`votes: dict[str, HostPollVote{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`option_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`voted_at:string`<br>`}]` |
+| Get Poll State, return full poll state for host poll tab.<br>`GET /api/{session_id}/host/poll` | - | `id?: string`<br>`question?: string`<br>`options?: list[string]`<br>`multi?: bool`<br>`correct_count?: int`<br>`end_timer_seconds?: int`<br>`end_timer_started_at?: string`<br>`correct_indices?: list[int]`<br>`poll_running: bool`<br>`votes: dict[str, HostPollVote{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`option_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`voted_at:string`<br>`}]` |
 | Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `correct_indices: list[int]` | - |
 | Host ends the poll.<br>`POST /api/{session_id}/host/poll/end` | - | - |
 | Host starts a countdown timer to end the poll.<br>`POST /api/{session_id}/host/poll/end/timer` | `seconds?: int` | - |

@@ -1698,11 +1698,16 @@
     const data = await resp.json();
     const prevQuestion = currentPoll?.question;
     const prevPollActive = pollActive;
-    currentPoll = data.poll || null;
+    currentPoll = data.id ? {
+      id: data.id, question: data.question, options: data.options,
+      multi: data.multi, correct_count: data.correct_count,
+      end_timer_seconds: data.end_timer_seconds, end_timer_started_at: data.end_timer_started_at,
+      correct_indices: data.correct_indices,
+    } : null;
     if (!data.poll_running && prevPollActive) _clearTimer();
     pollActive = data.poll_running;
-    if (currentPoll?.end_timer_seconds && currentPoll?.end_timer_started_at) {
-      _applyTimer(currentPoll.end_timer_seconds, currentPoll.end_timer_started_at);
+    if (data.end_timer_seconds && data.end_timer_started_at) {
+      _applyTimer(data.end_timer_seconds, data.end_timer_started_at);
     }
     if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
     const n = currentPoll?.options?.length || 0;
