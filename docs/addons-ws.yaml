@@ -36,6 +36,21 @@ channels:
           - $ref: '#/components/messages/slides_viewed'
 
 components:
+  schemas:
+    SlideViewDelta:
+      type: object
+      required: [fileName, page, seconds]
+      properties:
+        fileName:
+          type: string
+          description: PowerPoint file name
+        page:
+          type: integer
+          description: 1-based slide number
+        seconds:
+          type: integer
+          description: Seconds viewed since last report (delta)
+
   messages:
     display_emoji:
       summary: Relay emoji reaction to desktop overlay for animation
@@ -113,15 +128,4 @@ components:
             type: array
             description: Delta viewing durations since last send
             items:
-              type: object
-              required: [fileName, page, seconds]
-              properties:
-                fileName:
-                  type: string
-                  description: PowerPoint file name
-                page:
-                  type: integer
-                  description: 1-based slide number
-                seconds:
-                  type: integer
-                  description: Seconds viewed since last report (delta)
+              $ref: '#/components/schemas/SlideViewDelta'

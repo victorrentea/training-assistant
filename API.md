@@ -136,7 +136,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Current PowerPoint slide changed<br>`slide_presenting_now` | `deck: string  # PowerPoint file name`<br>`slide: int  # 1-based slide number`<br>`presenting: bool  # Whether slideshow mode is active` |
-| Periodic delta of per-slide viewing durations (sent every 60s)<br>`slides_viewed` | `slides: list[object]  # Delta viewing durations since last send` |
+| Periodic delta of per-slide viewing durations (sent every 60s)<br>`slides_viewed` | `slides: list[SlideViewDelta{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`fileName:string  # PowerPoint file name`<br>&nbsp;&nbsp;&nbsp;&nbsp;`page:int  # 1-based slide number`<br>&nbsp;&nbsp;&nbsp;&nbsp;`seconds:int  # Seconds viewed since last report (delta)`<br>`}]  # Delta viewing durations since last send` |
 
 ## Feature: Activity
 
@@ -166,7 +166,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| Poll opened for voting<br>Participants can vote only while poll is open.<br>`poll_opened` | `poll: Poll{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[object]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>`}` |
+| Poll opened for voting<br>Participants can vote only while poll is open.<br>`poll_opened` | `poll: Poll{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[PollOption{`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`text:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`}]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>`}` |
 | Voting closed by host<br>`poll_closed` | `vote_counts: dict[str, int]  # option_id → vote count`<br>`total_votes: int` |
 | Host revealed correct answers<br>`poll_correct_revealed` | `correct_ids: list[string]` |
 | Poll removed by host<br>`poll_cleared` | - |
