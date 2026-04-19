@@ -1,13 +1,14 @@
 """Tests for daemon poll router — participant + host endpoints."""
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from daemon.participant.state import ParticipantState
+from daemon.poll.router import host_router, participant_router
 from daemon.poll.state import PollState
 from daemon.scores import Scores
-from daemon.poll.router import participant_router, host_router
-from daemon.participant.state import ParticipantState
 
 _SAMPLE_OPTIONS = ["Option A", "Option B", "Option C"]
 
