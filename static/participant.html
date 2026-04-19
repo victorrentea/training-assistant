@@ -1555,8 +1555,8 @@ var _onboardingStep = 0;
 var _currentPoll = null;
 var _pollActive = false;
 var _myVote = null;       // string (single) or Set (multi)
-var _pollResult = null;   // {correct_ids: Set, voted_ids: Set} after reveal
-var _voteCounts = {};
+var _pollResult = null;   // {correct_indices: Set, voted_indices: Set} after reveal
+var _voteCounts = [];
 var _multiWarnShown = false;
 var _activeTimer = null;
 
@@ -2062,20 +2062,20 @@ function _applyPollState(msg) {
     _currentPoll = msg.poll;
   }
   if (msg.poll_active !== undefined) _pollActive = !!msg.poll_active;
-  if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || {};
+  if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || [];
 
   // Restore vote from server state (authoritative)
-  if (msg.my_voted_ids != null) {
+  if (msg.my_voted_indices != null) {
     _myVote = (_currentPoll && _currentPoll.multi)
-      ? new Set(msg.my_voted_ids)
-      : (msg.my_voted_ids[0] != null ? msg.my_voted_ids[0] : null);
+      ? new Set(msg.my_voted_indices)
+      : (msg.my_voted_indices[0] != null ? msg.my_voted_indices[0] : null);
   }
 
   // Restore poll result after reveal
-  if (msg.poll_correct_ids != null && msg.my_voted_ids != null) {
+  if (msg.poll_correct_indices != null && msg.my_voted_indices != null) {
     _pollResult = {
-      correct_ids: new Set(msg.poll_correct_ids),
-      voted_ids: new Set(msg.my_voted_ids)
+      correct_indices: new Set(msg.poll_correct_indices),
+      voted_indices: new Set(msg.my_voted_indices)
     };
   }
 
@@ -2113,31 +2113,31 @@ function _renderActivityPoll() {
   if (waiting) waiting.style.display = 'none';
 
   var multi = !!_currentPoll.multi;
-  var totalVotes = Object.values(_voteCounts || {}).reduce(function(a, b) { return a + b; }, 0);
+  var totalVotes = (_voteCounts || []).reduce(function(a, b) { return a + b; }, 0);
   var hasVoted = multi ? (_myVote instanceof Set && _myVote.size > 0) : _myVote !== null;
   var showResults = !_pollActive;
 
-  var pcts = _largestRemainder(_currentPoll.options.map(function(opt) {
-    return totalVotes > 0 ? ((_voteCounts || {})[opt.id] || 0) / totalVotes * 100 : 0;
+  var pcts = _largestRemainder(_currentPoll.options.map(function(opt, idx) {
+    return totalVotes > 0 ? ((_voteCounts || [])[idx] || 0) / totalVotes * 100 : 0;
   }));
 
-  var optionsHTML = _currentPoll.options.map(function(opt, idx) {
+  var optionsHTML = _currentPoll.options.map(function(text, idx) {
     var pct = pcts[idx];
-    var isSelected = multi ? (_myVote instanceof Set && _myVote.has(opt.id)) : (_myVote === opt.id);
+    var isSelected = multi ? (_myVote instanceof Set && _myVote.has(idx)) : (_myVote === idx);
     var selected = isSelected ? 'selected' : '';
     var atLimit = multi && _currentPoll.correct_count && _myVote instanceof Set && _myVote.size >= _currentPoll.correct_count;
     var disabled = (!_pollActive || (atLimit && !isSelected)) ? 'disabled' : '';
     var resultIcon = '';
     if (_pollResult) {
-      var wasVoted = _pollResult.voted_ids.has(opt.id);
-      var isCorrect = _pollResult.correct_ids.has(opt.id);
+      var wasVoted = _pollResult.voted_indices.has(idx);
+      var isCorrect = _pollResult.correct_indices.has(idx);
       if (isCorrect) resultIcon = '<span class="result-icon">&#x2705;</span>';
       else if (wasVoted) resultIcon = '<span class="result-icon">&#x274C;</span>';
     }
     var checkbox = multi ? '<span class="multi-check">' + (isSelected ? '\u2611' : '\u2610') + '</span> ' : '';
-    return '<button class="option-btn ' + selected + '" ' + disabled + ' onclick="castVote(\'' + opt.id + '\')">' +
+    return '<button class="option-btn ' + selected + '" ' + disabled + ' onclick="castVote(' + idx + ')">' +
       '<div class="bar" style="width:' + (showResults ? pct : 0) + '%"></div>' +
-      '<span>' + checkbox + _escHtml(opt.text) + '</span>' +
+      '<span>' + checkbox + _escHtml(text) + '</span>' +
       resultIcon +
       (showResults ? '<span class="pct">' + pct + '%</span>' : '') +
       '</button>';
@@ -2184,30 +2184,30 @@ function _renderActivityPoll() {
     '</div>';
 }
 
-function castVote(optionId) {
+function castVote(optionIdx) {
   if (!_pollActive || !_currentPoll || !_sessionId) return;
 
   if (_currentPoll.multi) {
     if (!(_myVote instanceof Set)) _myVote = new Set();
-    if (_myVote.has(optionId)) {
-      _myVote.delete(optionId);
+    if (_myVote.has(optionIdx)) {
+      _myVote.delete(optionIdx);
     } else {
       var limit = _currentPoll.correct_count;
       if (limit && _myVote.size >= limit) return;
-      _myVote.add(optionId);
+      _myVote.add(optionIdx);
     }
     fetch('/' + _sessionId + '/api/participant/poll/vote', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
-      body: JSON.stringify({ option_ids: Array.from(_myVote) })
+      body: JSON.stringify({ options: Array.from(_myVote) })
     }).catch(function() {});
   } else {
-    if (_myVote === optionId) return;
-    _myVote = optionId;
+    if (_myVote === optionIdx) return;
+    _myVote = optionIdx;
     fetch('/' + _sessionId + '/api/participant/poll/vote', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
-      body: JSON.stringify({ option_ids: [optionId] })
+      body: JSON.stringify({ options: [optionIdx] })
     }).catch(function() {});
   }
   _renderActivityPoll();
@@ -2287,7 +2287,19 @@ function _handleWsMessage(msg) {
       break;
     case 'poll_closed':
       _pollActive = false;
-      if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || {};
+      if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || [];
+      _renderActivityPoll();
+      break;
+    case 'poll_correct_revealed':
+      _pollResult = {
+        correct_indices: new Set(msg.correct_indices || []),
+        voted_indices: new Set()
+      };
+      if (_myVote instanceof Set) {
+        _myVote.forEach(function(idx) { _pollResult.voted_indices.add(idx); });
+      } else if (_myVote != null) {
+        _pollResult.voted_indices.add(_myVote);
+      }
       _renderActivityPoll();
       break;
   }
