@@ -11,6 +11,9 @@
 <style>
 body{visibility:hidden}
 .badge-new{margin-left:auto;font-size:calc(.6rem + 1pt);font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
+#activity-score-badge{background:#fde047;color:#000}
+@keyframes badge-blink{0%,100%{opacity:1}50%{opacity:0}}
+.badge-blink{animation:badge-blink 0.35s ease-in-out 3}
 #past-slides-badge{background:#9ca3af;transition:background-color 3s ease}
 #notes-badge,#summary-badge{background:#9ca3af}
 .badge-alert{background:#ef4444!important}
@@ -30,6 +33,7 @@ body{visibility:hidden}
 </style>
 <script>document.fonts.ready.then(function(){document.body.style.visibility='visible'})</script>
 <script src="/static/emoji-float.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 <link rel="stylesheet" href="/static/vendor/tailwind.css"/>
@@ -246,6 +250,7 @@ body{visibility:hidden}
 <a data-nav="activity" onclick="showView('activity')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
 <span class="text-base">Activity</span>
+<span id="activity-score-badge" class="badge-new" style="display:none"></span>
 </a>
 <a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">event_note</span>
@@ -1538,6 +1543,18 @@ function resetOnboardingForTest() {
 <script>
 let _sessionId = null;
 var _isHostTab = document.cookie.indexOf('is_host=1') >= 0;
+var _myScore = 0;
+function _updateScoreBadge(score, earned) {
+  var badge = document.getElementById('activity-score-badge');
+  if (!badge) return;
+  if (score > 0) { badge.textContent = '⭐ ' + score + ' pts'; badge.style.display = ''; }
+  else { badge.style.display = 'none'; }
+  if (earned) {
+    if (typeof confetti === 'function') confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+    badge.classList.remove('badge-blink'); void badge.offsetWidth; badge.classList.add('badge-blink');
+  }
+}
+
 var _uuidStore = _isHostTab ? sessionStorage : localStorage;
 var _myUUID = (function() {
   var key = 'workshop_participant_uuid';
@@ -2031,6 +2048,8 @@ function _applyState(msg) {
   if (msg.my_avatar) {
     _applyAvatar(msg.my_avatar);
   }
+  // Sync score
+  if (msg.my_score != null) { _myScore = msg.my_score; _updateScoreBadge(_myScore, false); }
   // Sync poll state
   if (msg.poll !== undefined || msg.poll_active !== undefined) {
     _applyPollState(msg);
@@ -2294,6 +2313,11 @@ function _handleWsMessage(msg) {
       if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || [];
       _renderActivityPoll();
       break;
+    case 'scores_updated': {
+      var newScore = msg.scores && msg.scores[_myUUID] != null ? msg.scores[_myUUID] : null;
+      if (newScore != null) { var earned = newScore > _myScore; _myScore = newScore; _updateScoreBadge(_myScore, earned); }
+      break;
+    }
     case 'poll_correct_revealed':
       _pollResult = {
         correct_indices: new Set(msg.correct_indices || []),
