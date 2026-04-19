@@ -1554,7 +1554,7 @@ var _onboardingStep = 0;
 // ── Poll state ──
 var _currentPoll = null;
 var _pollActive = false;
-var _myVote = null;       // string (single) or Set (multi)
+var _myVote = null;       // integer index (single) or Set<int> (multi)
 var _pollResult = null;   // {correct_indices: Set, voted_indices: Set} after reveal
 var _voteCounts = [];
 var _multiWarnShown = false;
