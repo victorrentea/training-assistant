@@ -1547,6 +1547,10 @@
       if (!questionSeen) { el.className = 'q-line'; questionSeen = true; }
       else el.className = 'opt-line';
     });
+
+    const { question, options } = parsePollInput();
+    const sendBtn = document.getElementById('create-btn');
+    if (sendBtn) sendBtn.disabled = !(question && options.length >= 2);
   }
 
   // Init with default content using divs (contenteditable line model)
@@ -1640,6 +1644,7 @@
       correctOptIds = new Set();
       toast('Poll created & opened ✓');
       pollInput.innerHTML = '<div><br></div>';
+      reclassifyLines();
       const cc = document.getElementById('correct-count');
       cc.value = 1; cc.disabled = false;
     } else {
