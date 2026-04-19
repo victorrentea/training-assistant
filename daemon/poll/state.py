@@ -19,8 +19,7 @@ class PollState:
         self._vote_counts_cache: list[int] | None = None
 
     def create_poll(self, question: str, options: list[str], multi: bool = False,
-                    correct_count: int | None = None, source: str | None = None,
-                    page: str | None = None) -> dict:
+                    correct_count: int | None = None) -> dict:
         import uuid as _uuid
         self.poll = {
             "id": _uuid.uuid4().hex[:8],
@@ -30,10 +29,6 @@ class PollState:
         }
         if correct_count is not None:
             self.poll["correct_count"] = correct_count
-        if source:
-            self.poll["source"] = source
-        if page:
-            self.poll["page"] = page
         self.poll_active = False
         self.votes.clear()
         self.poll_correct_indices = None

@@ -150,8 +150,6 @@ class PollData(BaseModel):
     options: list[str]
     multi: bool
     correct_count: int | None = None
-    source: str | None = None
-    page: str | None = None
     timer_seconds: int | None = None
     timer_started_at: str | None = None
     correct_indices: list[int] | None = None

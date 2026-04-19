@@ -2337,16 +2337,6 @@ components:
           - type: integer
           - type: 'null'
           title: Correct Count
-        source:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Source
-        page:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Page
         timer_seconds:
           anyOf:
           - type: integer
