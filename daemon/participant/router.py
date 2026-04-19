@@ -217,6 +217,7 @@ class ParticipantStateResponse(BaseModel):
     poll_active: bool
     vote_counts: list[int]
     my_voted_indices: list[int] | None = None
+    poll_correct_indices: list[int] | None = None
     codereview: CodeReviewParticipantState
     debate: DebateData
     slides_current: SlidesCurrentPayload | None = None
@@ -317,6 +318,7 @@ def _build_poll_for_participant(pid: str) -> dict:
         result["my_voted_indices"] = my_vote_entry["option_indices"]
     else:
         result["my_voted_indices"] = None
+    result["poll_correct_indices"] = ps.poll_correct_indices
     return result
 
 async def _notify_host_participant_list():
