@@ -22,7 +22,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
 - [Infrastructure](#feature-infrastructure)
 - [Misc](#feature-misc)
-- [Poll-Queue](#feature-poll-queue)
 
 ## Feature: Session
 
@@ -182,6 +181,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Host starts a countdown timer for the poll.<br>`POST /api/{session_id}/host/poll/end/timer` | `seconds?: int` | - |
 | Create Poll, host manually creates a new poll.<br>`POST /api/{session_id}/host/poll/manual/submit` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`correct_count?: int` | - |
 | Host opens the poll for voting.<br>`POST /api/{session_id}/host/poll/open` | - | - |
+| Clear Queue<br>`DELETE /api/{session_id}/host/poll/queue` | - | `ok?: bool` |
+| Get Queue Status, return how many questions are pending and what the current question looks like.<br>`GET /api/{session_id}/host/poll/queue` | - | `pending: int`<br>`current?: PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}` |
+| Submit Questions, replace the entire poll queue with the submitted questions; typically called by AI submitting generated questions.<br>`POST /api/{session_id}/host/poll/queue` | `questions: list[PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | `ok?: bool` |
+| Fire Current<br>`POST /api/{session_id}/host/poll/queue/fire` | - | `ok?: bool` |
+| Skip Current<br>`POST /api/{session_id}/host/poll/queue/skip` | - | `ok?: bool` |
 | Set Poll Status, compatibility: {open: true} → open_poll, {open: false} → close_poll.<br>`PUT /api/{session_id}/host/poll/status` | `open: bool` | `OkResponse{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`ok?:bool`<br>`} \| ClosePollResponse{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`ok?:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`vote_counts:list[int]`<br>`}` |
 
 ### Host WS
@@ -444,14 +448,3 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Slides Compilation, compile all viewed slide pages into one PDF and return as a download; long-running: may trigger Railway to download PDFs from Google Drive first; progress is logged to the daemon log.<br>`GET /api/{session_id}/host/slides-compilation` | - | `any` |
-
-## Feature: Poll-Queue
-
-### Host REST
-| Endpoint | Request | Response |
-| --- | --- | --- |
-| Clear Queue<br>`DELETE /api/{session_id}/host/poll-queue` | - | `ok?: bool` |
-| Get Queue Status, return how many questions are pending and what the current question looks like.<br>`GET /api/{session_id}/host/poll-queue` | - | `pending: int`<br>`current?: PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}` |
-| Submit Questions, replace the entire poll queue with the submitted questions; typically called by AI submitting generated questions.<br>`POST /api/{session_id}/host/poll-queue` | `questions: list[PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | `ok?: bool` |
-| Fire Current<br>`POST /api/{session_id}/host/poll-queue/fire` | - | `ok?: bool` |
-| Skip Current<br>`POST /api/{session_id}/host/poll-queue/skip` | - | `ok?: bool` |

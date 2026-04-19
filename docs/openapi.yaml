@@ -707,10 +707,10 @@ paths:
             application/json:
               schema: {}
       x-feature: misc
-  /api/{session_id}/host/poll-queue:
+  /api/{session_id}/host/poll/queue:
     get:
       tags:
-      - poll-queue
+      - poll
       summary: Get Queue Status
       description: Return how many questions are pending and what the current question
         looks like.
@@ -722,10 +722,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PollQueueStatusResponse'
-      x-feature: poll-queue
+      x-feature: poll
     post:
       tags:
-      - poll-queue
+      - poll
       summary: Submit Questions
       description: Replace the entire poll queue with the submitted questions. Typically
         called by AI submitting generated questions.
@@ -743,10 +743,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: poll-queue
+      x-feature: poll
     delete:
       tags:
-      - poll-queue
+      - poll
       summary: Clear Queue
       description: Clear the entire quiz queue.
       operationId: clear_queue_api__session_id__host_poll_queue_delete
@@ -757,11 +757,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: poll-queue
-  /api/{session_id}/host/poll-queue/fire:
+      x-feature: poll
+  /api/{session_id}/host/poll/queue/fire:
     post:
       tags:
-      - poll-queue
+      - poll
       summary: Fire Current
       description: Fire the current question as a poll and advance the queue.
       operationId: fire_current_api__session_id__host_poll_queue_fire_post
@@ -772,11 +772,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: poll-queue
-  /api/{session_id}/host/poll-queue/skip:
+      x-feature: poll
+  /api/{session_id}/host/poll/queue/skip:
     post:
       tags:
-      - poll-queue
+      - poll
       summary: Skip Current
       description: Skip the current question without firing it.
       operationId: skip_current_api__session_id__host_poll_queue_skip_post
@@ -787,7 +787,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OkResponse'
-      x-feature: poll-queue
+      x-feature: poll
   /api/participant/codereview/selection:
     put:
       tags:

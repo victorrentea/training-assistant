@@ -1900,7 +1900,7 @@
         correct_indices: [0, 2, 3],
       },
     ];
-    const res = await fetch(API('/poll-queue'), {
+    const res = await fetch(API('/poll/queue'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questions }),
@@ -1916,7 +1916,7 @@
 
   async function fetchPollQueue() {
     try {
-      const res = await fetch(API('/poll-queue'));
+      const res = await fetch(API('/poll/queue'));
       if (!res.ok) { renderPollQueuePanel(null); return; }
       const data = await res.json();
       renderPollQueuePanel(data);
@@ -1961,7 +1961,7 @@
     const btn = document.getElementById('poll-queue-fire-btn');
     btn.disabled = true;
     try {
-      const res = await fetch(API('/poll-queue/fire'), { method: 'POST' });
+      const res = await fetch(API('/poll/queue/fire'), { method: 'POST' });
       if (res.ok) {
         toast('Question fired from queue \u2713');
       } else {
@@ -1980,7 +1980,7 @@
     const btn = document.getElementById('poll-queue-skip-btn');
     btn.disabled = true;
     try {
-      const res = await fetch(API('/poll-queue/skip'), { method: 'POST' });
+      const res = await fetch(API('/poll/queue/skip'), { method: 'POST' });
       if (res.ok) {
         toast('Question skipped');
       } else {

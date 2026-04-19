@@ -41,7 +41,7 @@ class OkResponse(BaseModel):
 
 # ── Router ──
 
-router = APIRouter(prefix="/api/{session_id}/host/poll-queue", tags=["poll-queue"])
+router = APIRouter(prefix="/api/{session_id}/host/poll/queue", tags=["poll"])
 
 
 @router.post("", response_model=OkResponse)
