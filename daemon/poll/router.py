@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from daemon.participant.state import participant_state
 from daemon.poll.state import poll_state
@@ -42,6 +42,28 @@ class CreatePollRequest(BaseModel):
     options: list[PollOptionRequest] = []
     multi: bool = False
     correct_count: Optional[int] = None
+
+    @field_validator("options", mode="before")
+    @classmethod
+    def normalize_options(cls, raw_options):
+        """Accept either string options (Host UI) or dict options (internal callers)."""
+        if not isinstance(raw_options, list):
+            return raw_options
+
+        normalized = []
+        for i, opt in enumerate(raw_options):
+            if isinstance(opt, dict):
+                text = str(opt.get("text", "")).strip()
+                if not text:
+                    continue
+                oid = str(opt.get("id") or chr(65 + i))
+                normalized.append({"id": oid, "text": text})
+                continue
+
+            text = str(opt).strip()
+            if text:
+                normalized.append({"id": chr(65 + i), "text": text})
+        return normalized
 
 class PollResponse(BaseModel):
     id: str

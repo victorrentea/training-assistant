@@ -170,6 +170,20 @@ class TestHostCreatePoll:
         })
         assert resp.status_code == 409
 
+    def test_create_poll_accepts_string_options(self, host_client):
+        """Host UI sends string options; API must normalize them to {id,text}."""
+        resp = host_client.post("/api/test-session/host/poll", json={
+            "question": "Manual poll?",
+            "options": ["Alpha", "Beta", "Gamma"],
+        })
+        assert resp.status_code == 200
+        poll = resp.json()["poll"]
+        assert poll["options"] == [
+            {"id": "A", "text": "Alpha"},
+            {"id": "B", "text": "Beta"},
+            {"id": "C", "text": "Gamma"},
+        ]
+
 
 class TestHostOpenPoll:
     def test_open_poll(self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host):
