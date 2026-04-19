@@ -933,6 +933,14 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   font-size: .9rem;
   color: var(--muted);
   line-height: 1.7;
+  padding-left: 1.1rem;
+  position: relative;
+}
+.poll-composer .opt-line::before {
+  content: '•';
+  position: absolute;
+  left: .15rem;
+  color: var(--muted);
 }
 
 /* ── "or" divider ── */
