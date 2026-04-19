@@ -477,27 +477,45 @@
 
     // ── Local daemon polling (ON_HOST_MACHINE background) ──
     let localDaemonInterval = null;
+    let localDaemonPollInFlight = false;
 
-    function pollLocalDaemonOnce() {
+    async function pollLocalDaemonOnce() {
       if (!hasOnHostMachineCookie()) return;
-      fetch('http://localhost:1234/api/session/active', { signal: AbortSignal.timeout(800) })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          const code = normalizeCode(data && data.session_id);
-          if (!isCompleteCode(code)) {
-            lastLocalRetryAt = Date.now();
-            lastLocalRetryState = 'no_active_session';
-            renderHostMachineStatus();
-            return;
-          }
-          // Found an active session on the local daemon — redirect to participant page
-          window.location.href = '/' + code + '/';
-        })
-        .catch(() => {
+      if (localDaemonPollInFlight) return;
+      localDaemonPollInFlight = true;
+      try {
+        let code;
+        try {
+          const r = await fetch('http://localhost:1234/api/session/active', { signal: AbortSignal.timeout(800) });
+          const data = r.ok ? await r.json() : null;
+          code = normalizeCode(data && data.session_id);
+        } catch {
           lastLocalRetryAt = Date.now();
           lastLocalRetryState = 'daemon_offline';
           renderHostMachineStatus();
-        });
+          return;
+        }
+        if (!isCompleteCode(code)) {
+          lastLocalRetryAt = Date.now();
+          lastLocalRetryState = 'no_active_session';
+          renderHostMachineStatus();
+          return;
+        }
+        // Verify backend knows this session_id before navigating. Without this check,
+        // a daemon-reported session unknown to the backend causes /{code}/ to redirect
+        // to /?error=invalid (session_guard → InvalidSessionRedirect), which restarts
+        // the poll and loops on the host machine until the tab is closed.
+        const backendKnowsSession = await validateSessionCode(code);
+        if (!backendKnowsSession) {
+          lastLocalRetryAt = Date.now();
+          lastLocalRetryState = 'no_active_session';
+          renderHostMachineStatus();
+          return;
+        }
+        window.location.href = '/' + code + '/';
+      } finally {
+        localDaemonPollInFlight = false;
+      }
     }
 
     function startLocalDaemonPolling() {
