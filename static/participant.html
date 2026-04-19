@@ -132,6 +132,62 @@ body{visibility:hidden}
         body.onboarding-active .absolute.bottom-6.right-6 { z-index: 50; }
         body.onboarding-phase2 #profile-card { position: relative; z-index: 50; }
     </style>
+<style>
+/* ── Poll card styles ── */
+#activity-poll-section { width: 100%; max-width: 32rem; }
+.poll-card {
+  background: var(--color-surface-container-low, #f0f4f7);
+  border: 1px solid var(--color-outline-variant, #a9b4b9);
+  border-radius: 1rem;
+  padding: 1.8rem;
+}
+@media (prefers-color-scheme: dark) {
+  .poll-card { background: var(--color-surface-container-low, #16171e); }
+}
+.poll-card h2 { font-size: 1.15rem; line-height: 1.4; margin-bottom: 1.5rem; font-weight: 700; color: var(--color-on-surface, #2a3439); }
+@media (prefers-color-scheme: dark) {
+  .poll-card h2 { color: var(--color-on-surface, #dce4e9); }
+}
+.option-btn {
+  display: block; width: 100%; margin-bottom: .75rem;
+  padding: .85rem 1.1rem; min-height: 48px;
+  background: var(--color-surface, #f7f9fb);
+  border: 1.5px solid var(--color-outline-variant, #a9b4b9);
+  border-radius: 8px;
+  color: var(--color-on-surface, #2a3439);
+  font-size: .95rem; text-align: left; cursor: pointer;
+  position: relative; overflow: hidden;
+  transition: border-color .2s, transform .1s;
+  font-family: inherit;
+}
+@media (prefers-color-scheme: dark) {
+  .option-btn { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); }
+}
+.option-btn:hover:not(:disabled) { border-color: var(--color-primary, #4555ba); transform: translateX(3px); }
+.option-btn:disabled { cursor: default; opacity: 0.7; }
+.option-btn.selected { border-color: var(--color-primary, #4555ba); background: rgba(69,85,186,0.09); }
+.option-btn .bar {
+  position: absolute; top: 0; left: 0; height: 100%;
+  background: rgba(72,207,173,0.12);
+  width: 0%; transition: width .5s ease; border-radius: 6px;
+}
+.option-btn span { position: relative; z-index: 1; }
+.option-btn .pct { position: relative; z-index: 1; float: right; color: #48cfad; font-size: .85rem; font-weight: 600; }
+.result-icon { position: relative; z-index: 1; margin-left: .4rem; font-size: .9rem; flex-shrink: 0; }
+.multi-check { font-size: 1.05em; margin-right: .15em; }
+.vote-msg { margin-top: 1rem; text-align: center; font-size: .85rem; color: #48cfad; }
+.vote-anon-hint { margin-top: .75rem; text-align: center; font-size: .78rem; color: var(--color-on-surface-variant, #566166); letter-spacing: .01em; }
+.multi-hint { color: #f0a500; font-size: .85em; opacity: .8; }
+.multi-warning { margin-top: .5rem; text-align: center; font-size: .9rem; font-weight: 700; color: #f0a500; }
+@keyframes poll-warn-blink { 0%, 100% { opacity: 1; } 40% { opacity: 0; } }
+.blink { animation: poll-warn-blink .6s ease-in-out 3; }
+.pax-countdown { text-align: center; font-size: 1.6rem; font-weight: 700; margin-top: .75rem; min-height: 2rem; letter-spacing: .02em; }
+.closed-banner {
+  margin-top: 1rem; padding: .6rem 1rem;
+  background: rgba(255,107,107,0.09); border: 1px solid #ff6b6b;
+  border-radius: 8px; text-align: center; font-size: .85rem; color: #ff6b6b;
+}
+</style>
 <link rel="stylesheet" href="/static/participant-theme.css"/>
 </head>
 <body class="bg-surface text-on-surface overflow-hidden">
@@ -272,6 +328,7 @@ body{visibility:hidden}
       <span id="activity-location-btn-text">Share my location</span>
     </button>
   </div>
+  <div id="activity-poll-section" style="display:none"></div>
 </div>
 <!-- AI Summary View -->
 <div id="notes-view" style="display:none" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('notes',this)">
@@ -1496,6 +1553,15 @@ var LS_ONBOARDING_KEY = 'workshop_onboarding_seen';
 
 var _onboardingStep = 0;
 
+// ── Poll state ──
+var _currentPoll = null;
+var _pollActive = false;
+var _myVote = null;       // string (single) or Set (multi)
+var _pollResult = null;   // {correct_ids: Set, voted_ids: Set} after reveal
+var _voteCounts = {};
+var _multiWarnShown = false;
+var _activeTimer = null;
+
 function _shouldShowOnboarding() {
   if (_isHostTab) return false;
   return !localStorage.getItem(LS_ONBOARDING_KEY);
@@ -1963,6 +2029,185 @@ function _applyState(msg) {
   if (msg.my_avatar) {
     _applyAvatar(msg.my_avatar);
   }
+  // Sync poll state
+  if (msg.poll !== undefined || msg.poll_active !== undefined) {
+    _applyPollState(msg);
+  }
+}
+
+// ── Poll helpers ──
+function _escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function _largestRemainder(floats) {
+  var total = floats.reduce(function(a, b) { return a + b; }, 0);
+  if (total === 0) return floats.map(function() { return 0; });
+  var floors = floats.map(Math.floor);
+  var remainder = 100 - floors.reduce(function(a, b) { return a + b; }, 0);
+  var order = floats.map(function(v, i) { return [v - Math.floor(v), i]; })
+    .sort(function(a, b) { return b[0] - a[0]; });
+  for (var i = 0; i < Math.min(remainder, order.length); i++) floors[order[i][1]]++;
+  return floors;
+}
+
+function _applyPollState(msg) {
+  if (msg.poll !== undefined) {
+    if (!_currentPoll || _currentPoll.id !== (msg.poll && msg.poll.id)) {
+      // New or cleared poll — reset vote state
+      _myVote = msg.poll && msg.poll.multi ? new Set() : null;
+      _pollResult = null;
+      _activeTimer = null;
+      _multiWarnShown = false;
+    }
+    _currentPoll = msg.poll;
+  }
+  if (msg.poll_active !== undefined) _pollActive = !!msg.poll_active;
+  if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || {};
+
+  // Restore vote from server state (authoritative)
+  if (msg.my_voted_ids != null) {
+    _myVote = (_currentPoll && _currentPoll.multi)
+      ? new Set(msg.my_voted_ids)
+      : (msg.my_voted_ids[0] != null ? msg.my_voted_ids[0] : null);
+  }
+
+  // Restore poll result after reveal
+  if (msg.poll_correct_ids != null && msg.my_voted_ids != null) {
+    _pollResult = {
+      correct_ids: new Set(msg.poll_correct_ids),
+      voted_ids: new Set(msg.my_voted_ids)
+    };
+  }
+
+  // Auto-switch to activity tab when poll arrives (if not on a specific view already)
+  if (_currentPoll && document.getElementById('activity-view').style.display === 'none') {
+    var currentView = document.querySelector('[data-nav].nav-active');
+    var currentViewName = currentView ? currentView.getAttribute('data-nav') : null;
+    if (!currentViewName || currentViewName === 'slides') {
+      showView('activity');
+    }
+  }
+
+  _renderActivityPoll();
+}
+
+function _renderActivityPoll() {
+  var section = document.getElementById('activity-poll-section');
+  if (!section) return;
+
+  if (!_currentPoll) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = '';
+
+  // Hide welcome/waiting sections when poll is active
+  var welcome = document.getElementById('activity-welcome-section');
+  var waiting = document.getElementById('activity-waiting-section');
+  if (welcome) welcome.style.display = 'none';
+  if (waiting) waiting.style.display = 'none';
+
+  var multi = !!_currentPoll.multi;
+  var totalVotes = Object.values(_voteCounts || {}).reduce(function(a, b) { return a + b; }, 0);
+  var hasVoted = multi ? (_myVote instanceof Set && _myVote.size > 0) : _myVote !== null;
+  var showResults = !_pollActive;
+
+  var pcts = _largestRemainder(_currentPoll.options.map(function(opt) {
+    return totalVotes > 0 ? ((_voteCounts || {})[opt.id] || 0) / totalVotes * 100 : 0;
+  }));
+
+  var optionsHTML = _currentPoll.options.map(function(opt, idx) {
+    var pct = pcts[idx];
+    var isSelected = multi ? (_myVote instanceof Set && _myVote.has(opt.id)) : (_myVote === opt.id);
+    var selected = isSelected ? 'selected' : '';
+    var atLimit = multi && _currentPoll.correct_count && _myVote instanceof Set && _myVote.size >= _currentPoll.correct_count;
+    var disabled = (!_pollActive || (atLimit && !isSelected)) ? 'disabled' : '';
+    var resultIcon = '';
+    if (_pollResult) {
+      var wasVoted = _pollResult.voted_ids.has(opt.id);
+      var isCorrect = _pollResult.correct_ids.has(opt.id);
+      if (isCorrect) resultIcon = '<span class="result-icon">&#x2705;</span>';
+      else if (wasVoted) resultIcon = '<span class="result-icon">&#x274C;</span>';
+    }
+    var checkbox = multi ? '<span class="multi-check">' + (isSelected ? '\u2611' : '\u2610') + '</span> ' : '';
+    return '<button class="option-btn ' + selected + '" ' + disabled + ' onclick="castVote(\'' + opt.id + '\')">' +
+      '<div class="bar" style="width:' + (showResults ? pct : 0) + '%"></div>' +
+      '<span>' + checkbox + _escHtml(opt.text) + '</span>' +
+      resultIcon +
+      (showResults ? '<span class="pct">' + pct + '%</span>' : '') +
+      '</button>';
+  }).join('');
+
+  var anonMsg = _pollActive
+    ? '<div class="vote-anon-hint">&#x1F512; Your vote is anonymous &mdash; no wrong answers, just deeper understanding</div>'
+    : '';
+
+  var footer = '';
+  if (!_pollActive) {
+    footer = '<div class="closed-banner">Voting is closed &mdash; final results shown above</div>';
+  } else if (multi) {
+    var selCount = _myVote instanceof Set ? _myVote.size : 0;
+    var correctCount = _currentPoll.correct_count;
+    var multiHint = correctCount
+      ? 'Select exactly ' + correctCount + ' answer' + (correctCount > 1 ? 's' : '')
+      : 'Multiple answers may be correct';
+    var atLimitNow = correctCount && selCount >= correctCount;
+    var warning = '';
+    if (selCount > 0 && !atLimitNow) {
+      var blink = !_multiWarnShown ? ' blink' : '';
+      if (!_multiWarnShown) _multiWarnShown = true;
+      warning = '<div class="multi-warning' + blink + '">&#x26A0;&#xFE0F; ' + multiHint + '!</div>';
+    }
+    var selMsg = selCount > 0
+      ? (atLimitNow
+          ? '&#x2705; ' + selCount + ' of ' + correctCount + ' selected &mdash; click to deselect.'
+          : '&#x2705; ' + selCount + ' of ' + (correctCount != null ? correctCount : '?') + ' selected &mdash; click to toggle.')
+      : '<span class="multi-hint">&#x26A0;&#xFE0F; ' + multiHint + '.</span>';
+    footer = '<div class="vote-msg">' + selMsg + '</div>' + (atLimitNow ? '' : warning);
+  } else if (hasVoted) {
+    footer = '<div class="vote-msg">&#x2705; Vote registered! Click another option to change it.</div>';
+  } else {
+    footer = '<div class="vote-msg">Choose an option to vote.</div>';
+  }
+
+  section.innerHTML =
+    '<div class="poll-card">' +
+      '<h2>' + _escHtml(_currentPoll.question) + '</h2>' +
+      optionsHTML +
+      footer +
+      anonMsg +
+    '</div>';
+}
+
+function castVote(optionId) {
+  if (!_pollActive || !_currentPoll || !_sessionId) return;
+
+  if (_currentPoll.multi) {
+    if (!(_myVote instanceof Set)) _myVote = new Set();
+    if (_myVote.has(optionId)) {
+      _myVote.delete(optionId);
+    } else {
+      var limit = _currentPoll.correct_count;
+      if (limit && _myVote.size >= limit) return;
+      _myVote.add(optionId);
+    }
+    fetch('/' + _sessionId + '/api/participant/poll/vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+      body: JSON.stringify({ option_ids: Array.from(_myVote) })
+    }).catch(function() {});
+  } else {
+    if (_myVote === optionId) return;
+    _myVote = optionId;
+    fetch('/' + _sessionId + '/api/participant/poll/vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+      body: JSON.stringify({ option_ids: [optionId] })
+    }).catch(function() {});
+  }
+  _renderActivityPoll();
 }
 
 function _handleWsMessage(msg) {
