@@ -8,6 +8,7 @@
   let voteCounts = [];
   let totalVotes = 0;
   let totalParticipants = 0;
+  let activeParticipants = 0;
   let participantDataById = {};     // uuid -> participant payload
   let participantDebateSides = {};  // uuid -> "for"|"against"|undefined
   let _debateActive = false;
@@ -378,6 +379,7 @@
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
         ingestParticipants(msg.participants || []);
         totalParticipants = (msg.participants || []).length;
+        activeParticipants = (msg.participants || []).filter(p => p && p.online === true).length;
         updateParticipantCountDisplay(msg.participants || []);
         updatePaxBadge(msg.participant_count);
         renderParticipantList(cachedParticipantIds);
@@ -457,6 +459,7 @@
       } else if (msg.type === 'participant_list_updated') {
         ingestParticipants(msg.participants || []);
         totalParticipants = (msg.participants || []).length;
+        activeParticipants = (msg.participants || []).filter(p => p && p.online === true).length;
         updateParticipantCountDisplay(msg.participants || []);
         updatePaxBadge(totalParticipants);
         renderParticipantList(cachedParticipantIds);
@@ -1778,11 +1781,11 @@
 
     el.className = pollActive ? 'voting-active' : '';
 
-    const votePct = totalParticipants > 0 ? Math.round((totalVotes / totalParticipants) * 100) : 0;
+    const votePct = activeParticipants > 0 ? Math.round((totalVotes / activeParticipants) * 100) : 0;
     const voteProgressSection = pollActive ? `
       <div class="vote-progress-overlay">
         <div class="vote-progress-fill" id="vote-progress-fill" style="width:${votePct}%"></div>
-        <span class="vote-progress-label" id="vote-progress-label">${totalVotes} of ${totalParticipants} voted</span>
+        <span class="vote-progress-label" id="vote-progress-label">${totalVotes} of ${activeParticipants} voted</span>
       </div>
 ` : '';
 
@@ -1815,9 +1818,9 @@
       // During voting: update vote progress overlay only (results hidden)
       const fill = document.getElementById('vote-progress-fill');
       const label = document.getElementById('vote-progress-label');
-      const pct = totalParticipants > 0 ? Math.round((totalVotes / totalParticipants) * 100) : 0;
+      const pct = activeParticipants > 0 ? Math.round((totalVotes / activeParticipants) * 100) : 0;
       if (fill) fill.style.width = `${pct}%`;
-      if (label) label.textContent = `${totalVotes} of ${totalParticipants} voted`;
+      if (label) label.textContent = `${totalVotes} of ${activeParticipants} voted`;
       return;
     }
     const maxCount = Math.max(...voteCounts, 0);
