@@ -165,6 +165,8 @@ components:
 
     poll_correct_revealed:
       summary: Host revealed correct answers
+      x-doc-notes:
+        - Participants use correct_indices (0-based) to highlight correct options in the UI.
       x-feature: poll
       payload:
         type: object

@@ -1885,17 +1885,17 @@ components:
       title: HostParticipant
     HostPollVote:
       properties:
-        option_ids:
+        option_indices:
           items:
-            type: string
+            type: integer
           type: array
-          title: Option Ids
+          title: Option Indices
         voted_at:
           type: string
           title: Voted At
       type: object
       required:
-      - option_ids
+      - option_indices
       - voted_at
       title: HostPollVote
     HostQAQuestion:

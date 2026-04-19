@@ -61,7 +61,7 @@ class HostQAQuestion(BaseModel):
 
 
 class HostPollVote(BaseModel):
-    option_ids: list[str]
+    option_indices: list[int]
     voted_at: str
 
 
