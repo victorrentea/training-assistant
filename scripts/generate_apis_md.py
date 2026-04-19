@@ -484,7 +484,7 @@ def _inline_named_schema(
         return f"{name}: {fallback}"
 
     required = set(schema.get("required", []))
-    lines = [f"{name} {{"]
+    lines = [f"{name}{{"]
     for field_name, child in properties.items():
         if not isinstance(child, dict):
             continue
@@ -887,7 +887,7 @@ def _schema_definition_lines(schema_name: str, root: dict[str, Any]) -> list[str
         return [f"{schema_name}: {fallback}"]
 
     required = set(schema.get("required", []))
-    lines = [f"{schema_name} {{"]
+    lines = [f"{schema_name}{{"]
     for field_name, child in properties.items():
         if not isinstance(child, dict):
             continue

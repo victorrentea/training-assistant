@@ -22,13 +22,13 @@ session_id?: string  # 6-char alphanumeric join code
 saved_at?: string  # ISO timestamp of last snapshot write
 mode?: string  # workshop | talk
 current_activity?: string  # none | poll | wordcloud | qa | codereview | debate
-participants?: dict[str, PersistedParticipant {
+participants?: dict[str, PersistedParticipant{
   name?:string
   avatar?:string
   score?:int | number
   location?:string
 }]  # participant_uuid → identity/score
-poll?: PersistedPollState {
+poll?: PersistedPollState{
   definition?:dict[str, any]  # Poll question and options as shown to participants
   active?:bool
   correct_ids?:list[string]  # Option IDs marked as correct answers
@@ -39,19 +39,19 @@ poll?: PersistedPollState {
 }
 qa?: dict[str, any]
 qa_questions?: dict[str, dict[str, any]]  # question_id → {text, author, upvoters, answered}
-wordcloud?: PersistedWordCloudState {
+wordcloud?: PersistedWordCloudState{
   words?:dict[str, int]  # word → submission count
   word_order?:list[string]  # Words in submission order
   topic?:string
 }
-codereview?: PersistedCodeReviewState {
+codereview?: PersistedCodeReviewState{
   snippet?:string
   language?:string
   phase?:string  # reviewing | revealed
   selections?:dict[str, list[int]]  # participant_uuid → selected line indices
   confirmed?:list[int]  # Host-confirmed bug line indices
 }
-debate?: PersistedDebateState {
+debate?: PersistedDebateState{
   statement?:string
   phase?:string  # side_selection | arguments | ai_cleanup | prep | live_debate | ended
   sides?:dict[str, string]  # participant_uuid → for | against
@@ -67,12 +67,12 @@ talk_presentation_name?: string  # Display name of the last PPTX dropped in talk
 talk_presentation_url?: string  # PDF export URL for talk PPTX (docs.google.com/presentation/d/.../export/pdf)
 talk_presentation_slug?: string  # Railway slug under which the talk PPTX PDF is cached
 slides_current?: dict[str, any]  # {presentation_name, current_page}
-slides_viewed?: list[ViewedSlide {
+slides_viewed?: list[ViewedSlide{
   file_name:string  # PowerPoint file name, e.g. 'AI Coding.pptx'
   page:int  # 1-based slide number
   seconds?:int  # Cumulative seconds viewed
 }]  # Accumulated per-slide viewing durations from addons
-git_repos?: list[PersistedGitRepoActivity {
+git_repos?: list[PersistedGitRepoActivity{
   url?:string
   branch?:string
   files?:list[string]  # File paths opened in this repo+branch
