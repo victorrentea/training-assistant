@@ -2503,8 +2503,9 @@ components:
             type: integer
           type: array
           title: Correct Indices
-          default: []
       type: object
+      required:
+      - correct_indices
       title: RevealCorrectRequest
     RoundTimerRequest:
       properties:

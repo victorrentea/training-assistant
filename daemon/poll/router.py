@@ -40,7 +40,7 @@ class EndPollResponse(BaseModel):
     vote_counts: list[int]
 
 class RevealCorrectRequest(BaseModel):
-    correct_indices: list[int] = []
+    correct_indices: list[int]
 
 class StartTimerRequest(BaseModel):
     seconds: int = 30

@@ -176,7 +176,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Host deletes the current poll.<br>`DELETE /api/{session_id}/host/poll` | - | - |
-| Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `correct_indices?: list[int]` | - |
+| Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `correct_indices: list[int]` | - |
 | Host ends the poll.<br>`POST /api/{session_id}/host/poll/end` | - | `vote_counts: list[int]` |
 | Host starts a countdown timer for the poll.<br>`POST /api/{session_id}/host/poll/end/timer` | `seconds?: int` | - |
 | Create Poll, host manually creates and immediately opens a new poll.<br>`POST /api/{session_id}/host/poll/manual/submit` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`correct_count?: int` | - |
