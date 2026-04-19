@@ -5,7 +5,7 @@
   let ws = null;
   let currentPoll = null;
   let pollActive = false;
-  let voteCounts = {};
+  let voteCounts = [];
   let totalVotes = 0;
   let totalParticipants = 0;
   let participantDataById = {};     // uuid -> participant payload
@@ -243,7 +243,7 @@
     const resp = await fetch(API('/poll/correct'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ correct_ids: [...correctOptIds] }),
+      body: JSON.stringify({ correct_indices: [...correctOptIds] }),
     });
     if (!resp.ok) toast('Failed to save correct options');
   }
@@ -331,7 +331,7 @@
       if (msg.type === 'poll_ai_generated') {
         currentPoll = msg.poll;
         pollActive = false;
-        voteCounts = {};
+        voteCounts = [];
         totalVotes = 0;
         loadCorrectOpts(currentPoll.question);
         updateCenterPanel('poll');
@@ -341,7 +341,7 @@
       if (msg.type === 'poll_opened') {
         currentPoll = msg.poll || currentPoll;
         pollActive = true;
-        voteCounts = {};
+        voteCounts = [];
         totalVotes = 0;
         updateCenterPanel('poll');
         renderPollDisplay();
@@ -350,14 +350,14 @@
       if (msg.type === 'poll_closed') {
         pollActive = false;
         _clearTimer();
-        voteCounts = msg.vote_counts || {};
-        totalVotes = msg.total_votes || 0;
+        voteCounts = msg.vote_counts || [];
+        totalVotes = voteCounts.reduce((a, b) => a + b, 0);
         renderPollDisplay();
         renderBars();
         return;
       }
       if (msg.type === 'poll_correct_revealed') {
-        correctOptIds = new Set(msg.correct_ids || []);
+        correctOptIds = new Set(msg.correct_indices || []);
         if (currentPoll) {
           saveCorrectOpts(currentPoll.question);
           recordPollInHistory(currentPoll, correctOptIds);
@@ -369,7 +369,7 @@
         currentPoll = null;
         pollActive = false;
         _clearTimer();
-        voteCounts = {};
+        voteCounts = [];
         totalVotes = 0;
         correctOptIds = new Set();
         renderPollDisplay();
@@ -398,8 +398,8 @@
           _applyTimer(msg.poll_timer_seconds, msg.poll_timer_started_at);
         }
         if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
-        voteCounts = msg.vote_counts || {};
-        totalVotes = Object.values(voteCounts).reduce((a,b)=>a+b,0);
+        voteCounts = msg.vote_counts || [];
+        totalVotes = voteCounts.reduce((a, b) => a + b, 0);
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
         ingestParticipants(msg.participants || []);
         totalParticipants = (msg.participants || []).length;
@@ -479,10 +479,8 @@
       } else if (msg.type === 'slides_updated') {
         _refreshHostSlidesCatalog();
       } else if (msg.type === 'vote_update') {
-        voteCounts = msg.vote_counts || msg.votes || {};
-        totalVotes = (msg.total_votes !== undefined && msg.total_votes !== null)
-          ? msg.total_votes
-          : Object.values(voteCounts).reduce((a, b) => a + (Number(b) || 0), 0);
+        voteCounts = msg.vote_counts || [];
+        totalVotes = voteCounts.reduce((a, b) => a + b, 0);
         renderBars();
       } else if (msg.type === 'participant_list_updated') {
         ingestParticipants(msg.participants || []);
@@ -1756,19 +1754,19 @@
 
     const canMark = !pollActive && totalVotes > 0;
     const llmHints = canMark ? getLlmHints(currentPoll.question) : null;
-    const bars = currentPoll.options.map((opt, i) => {
-      const count = voteCounts[opt.id] || 0;
+    const bars = currentPoll.options.map((text, idx) => {
+      const count = voteCounts[idx] || 0;
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-      const maxCount = Math.max(...Object.values(voteCounts));
+      const maxCount = Math.max(...voteCounts, 0);
       const leading = count === maxCount && count > 0 ? 'leading' : '';
-      const isCorrect = canMark && correctOptIds.has(opt.id);
+      const isCorrect = canMark && correctOptIds.has(idx);
       const correct = isCorrect ? 'correct' : '';
-      const llmHint = llmHints && llmHints.includes(i) && !isCorrect;
-      const clickable = canMark ? `onclick="toggleCorrect('${opt.id}')" title="Click to mark as correct"` : '';
+      const llmHint = llmHints && llmHints.includes(idx) && !isCorrect;
+      const clickable = canMark ? `onclick="toggleCorrect(${idx})" title="Click to mark as correct"` : '';
       return `
-        <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${opt.id}" ${clickable}>
+        <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${idx}" ${clickable}>
           <div class="result-label">
-            <span>${escHtml(opt.text)}${isCorrect ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
+            <span>${escHtml(text)}${isCorrect ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
             <span class="pct">${count} vote${count!==1?'s':''} · ${pct}%</span>
           </div>
           <div class="bar-track">
@@ -1806,8 +1804,8 @@
       <p class="vote-anon-msg">🔒 Votes are anonymous — no wrong answers, just deeper understanding</p>` : '';
 
     const mainContent = pollActive
-      ? `<div class="options-plain">${currentPoll.options.map(opt =>
-          `<div class="option-text-only">${escHtml(opt.text)}</div>`).join('')}</div>
+      ? `<div class="options-plain">${currentPoll.options.map(text =>
+          `<div class="option-text-only">${escHtml(text)}</div>`).join('')}</div>
          ${voteProgressSection}`
       : `<div class="bars-container"><div class="bars-wrapper">${bars}</div></div>
          <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}`;
@@ -1841,22 +1839,22 @@
       if (label) label.textContent = `${totalVotes} of ${totalParticipants} voted`;
       return;
     }
-    const maxCount = Math.max(...Object.values(voteCounts), 0);
-    currentPoll.options.forEach(opt => {
-      const row = document.querySelector(`.result-row[data-id="${opt.id}"]`);
+    const maxCount = Math.max(...voteCounts, 0);
+    currentPoll.options.forEach((text, idx) => {
+      const row = document.querySelector(`.result-row[data-id="${idx}"]`);
       if (!row) return;
-      const count = voteCounts[opt.id] || 0;
+      const count = voteCounts[idx] || 0;
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
       const fill = row.querySelector('.bar-fill');
       const pctEl = row.querySelector('.pct');
       const canMarkNow = !pollActive && totalVotes > 0;
-      const isCorrect = canMarkNow && correctOptIds.has(opt.id);
+      const isCorrect = canMarkNow && correctOptIds.has(idx);
       row.className = `result-row${isCorrect ? ' correct' : ''}${canMarkNow ? ' markable' : ''}`;
       const labelSpan = row.querySelector('.result-label span:first-child');
       if (labelSpan) {
         const hints = canMarkNow ? getLlmHints(currentPoll.question) : null;
-        const llmHint = hints && hints.includes(currentPoll.options.indexOf(opt)) && !isCorrect;
-        labelSpan.innerHTML = escHtml(opt.text) + (isCorrect ? ' ✅' : '') +
+        const llmHint = hints && hints.includes(idx) && !isCorrect;
+        labelSpan.innerHTML = escHtml(text) + (isCorrect ? ' ✅' : '') +
           (llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : '');
       }
       if (fill) {
