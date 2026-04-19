@@ -1745,6 +1745,7 @@
 
     const canMark = !pollActive && totalVotes > 0;
     const llmHints = canMark ? getLlmHints(currentPoll.question) : null;
+    const queueHints = canMark ? getQueueHints(currentPoll.question) : null;
     const bars = currentPoll.options.map((text, idx) => {
       const count = voteCounts[idx] || 0;
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
@@ -1753,11 +1754,12 @@
       const isCorrect = canMark && correctOptIds.has(idx);
       const correct = isCorrect ? 'correct' : '';
       const llmHint = llmHints && llmHints.includes(idx) && !isCorrect;
+      const queueHint = queueHints && queueHints.includes(idx) && !isCorrect;
       const clickable = canMark ? `onclick="toggleCorrect(${idx})" title="Click to mark as correct"` : '';
       return `
         <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${idx}" ${clickable}>
           <div class="result-label">
-            <span>${escHtml(text)}${isCorrect ? ' ✅' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
+            <span>${escHtml(text)}${isCorrect ? ' ✅' : ''}${queueHint ? ' <span class="queue-hint-check">✓</span>' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
             <span class="pct">${count} vote${count!==1?'s':''} · ${pct}%</span>
           </div>
           <div class="bar-track">
@@ -1842,8 +1844,11 @@
       const labelSpan = row.querySelector('.result-label span:first-child');
       if (labelSpan) {
         const hints = canMarkNow ? getLlmHints(currentPoll.question) : null;
+        const qHints = canMarkNow ? getQueueHints(currentPoll.question) : null;
         const llmHint = hints && hints.includes(idx) && !isCorrect;
+        const queueHint = qHints && qHints.includes(idx) && !isCorrect;
         labelSpan.innerHTML = escHtml(text) + (isCorrect ? ' ✅' : '') +
+          (queueHint ? ' <span class="queue-hint-check">✓</span>' : '') +
           (llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : '');
       }
       if (fill) {
@@ -1859,6 +1864,11 @@
   function getLlmHints(question) {
     try {
       return JSON.parse(localStorage.getItem('host_llm_hints_' + question) || 'null');
+    } catch { return null; }
+  }
+  function getQueueHints(question) {
+    try {
+      return JSON.parse(localStorage.getItem('host_queue_hints_' + question) || 'null');
     } catch { return null; }
   }
 
@@ -1897,6 +1907,9 @@
     const cc = document.getElementById('correct-count');
     cc.value = (q.correct_indices || []).length || 1;
     cc.disabled = true;
+    if (q.correct_indices && q.correct_indices.length > 0) {
+      localStorage.setItem('host_queue_hints_' + q.question, JSON.stringify(q.correct_indices));
+    }
     pollInput.focus();
     await fetch(API('/poll/queue/skip'), { method: 'POST' });
   }

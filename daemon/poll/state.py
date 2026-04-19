@@ -77,6 +77,7 @@ class PollState:
 
     def reveal_correct(self, correct_indices: list[int], scores_obj) -> dict:
         correct_set = set(correct_indices)
+        already_revealed = self.poll_correct_indices is not None
         n = len(self.poll["options"]) if self.poll else 0
         all_indices = set(range(n))
         wrong_set = all_indices - correct_set
@@ -128,7 +129,7 @@ class PollState:
                 decay = 0.0
             speed_pts = round(_MAX_POINTS - (_MAX_POINTS - _MIN_POINTS) * decay)
             pts = round(speed_pts * ratio)
-            if pts > 0:
+            if pts > 0 and not already_revealed:
                 scores_obj.add_score(pid, pts)
 
         self.poll_correct_indices = list(correct_set)
