@@ -2278,6 +2278,15 @@ function _handleWsMessage(msg) {
       paxDisplay.style.display = '';
       break;
     }
+    case 'poll_opened':
+      _applyPollState(msg);
+      _renderActivityPoll();
+      break;
+    case 'poll_closed':
+      _pollActive = false;
+      if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || {};
+      _renderActivityPoll();
+      break;
   }
 }
 

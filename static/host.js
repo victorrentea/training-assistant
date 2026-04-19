@@ -2160,15 +2160,7 @@
 
 
   async function switchTab(tab) {
-    _currentActivity = tab;
-    _resetInactivityTimer();
-    const slidesTab = document.getElementById('tab-slides');
-    if (slidesTab) slidesTab.classList.toggle('active', tab === 'none');
-    ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
-      document.getElementById('tab-' + t).classList.toggle('active', tab === t);
-      const contentEl = document.getElementById('tab-content-' + t);
-      contentEl.style.display = tab === t ? (t === 'codereview' ? 'flex' : '') : 'none';
-    });
+    updateCenterPanel(tab);
     await fetch(API('/activity'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
