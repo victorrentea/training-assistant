@@ -34,23 +34,10 @@ class VoteRequest(BaseModel):
     options: list[int]
 
 class CreatePollRequest(BaseModel):
-    question: str = ""
-    options: list[str] = []
-    multi: bool = False
-    correct_count: Optional[int] = None
-
-class PollResponse(BaseModel):
-    id: str
     question: str
     options: list[str]
     multi: bool
-    correct_count: int | None = None
-    source: str | None = None
-    page: str | None = None
-
-class CreatePollResponse(BaseModel):
-    ok: bool = True
-    poll: PollResponse
+    correct_count: Optional[int] = None
 
 class ClosePollResponse(BaseModel):
     ok: bool = True
@@ -96,9 +83,9 @@ async def cast_vote(request: Request, body: VoteRequest):
 host_router = APIRouter(prefix="/api/{session_id}/host/poll", tags=["poll"])
 
 
-@host_router.post("", response_model=CreatePollResponse)
+@host_router.post("/manual/submit", status_code=204)
 async def create_poll(body: CreatePollRequest):
-    """Host creates a new poll."""
+    """Host manually creates a new poll."""
     activity = participant_state.current_activity
     if activity and activity not in ("none", "poll"):
         return JSONResponse({"error": f"Activity {activity} is active"}, status_code=409)
@@ -112,7 +99,7 @@ async def create_poll(body: CreatePollRequest):
     participant_state.current_activity = "poll"
 
     await notify_host(PollAiGeneratedMsg(poll=poll))
-    return CreatePollResponse(poll=PollResponse.model_validate(poll))
+    return Response(status_code=204)
 
 
 @host_router.post("/open", status_code=204)

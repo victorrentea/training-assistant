@@ -334,6 +334,7 @@
         voteCounts = [];
         totalVotes = 0;
         loadCorrectOpts(currentPoll.question);
+        recordPollInHistory(currentPoll, new Set());
         updateCenterPanel('poll');
         renderPollDisplay();
         return;
@@ -1666,12 +1667,11 @@
     const multi = document.getElementById('multi-check').checked;
     const correctCountEl = document.getElementById('correct-count');
     const correct_count = multi ? (parseInt(correctCountEl.value) || null) : null;
-    const res = await fetch(API('/poll'), {
+    const res = await fetch(API('/poll/manual/submit'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, options, multi, correct_count }),
     });
-    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       // Erase stale correct-opts and LLM hints for this question
       localStorage.removeItem('host_correct_' + question);
@@ -1682,10 +1682,9 @@
       pollInput.innerHTML = '<div><br></div>';
       document.getElementById('multi-check').checked = false;
       document.getElementById('correct-count-label').style.display = 'none';
-      // Record poll in history (correct answers will be updated later via toggleCorrect)
-      if (data.poll) recordPollInHistory(data.poll, new Set());
     } else {
-      toast(data.detail || 'Error');
+      const data = await res.json().catch(() => ({}));
+      toast(data.detail || data.error || 'Error');
     }
   });
 
@@ -1887,6 +1886,33 @@
 
   // ── Poll Queue ──────────────────────────────────────────────────────────────
   let _pollQueuePollTimer = null;
+
+  async function pushDummyQueue() {
+    const questions = [
+      {
+        question: 'What is 2 + 2?',
+        options: ['3', '4', '5', '6'],
+        correct_indices: [1],
+      },
+      {
+        question: 'Which of these are Java features?',
+        options: ['Garbage Collection', 'Manual memory management', 'Object-oriented', 'Static typing'],
+        correct_indices: [0, 2, 3],
+      },
+    ];
+    const res = await fetch(API('/poll-queue'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questions }),
+    });
+    if (res.ok) {
+      toast('Dummy queue pushed \u2713');
+      await fetchPollQueue();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast(err.detail || 'Failed to push queue');
+    }
+  }
 
   async function fetchPollQueue() {
     try {

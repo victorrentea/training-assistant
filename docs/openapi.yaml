@@ -388,33 +388,19 @@ paths:
       x-feature: poll
       x-doc-notes:
       - Votes are final once submitted; re-vote is rejected.
-  /api/{session_id}/host/poll:
+  /api/{session_id}/host/poll/manual/submit:
     post:
       tags:
       - poll
       summary: Create Poll
-      description: Host creates a new poll.
-      operationId: create_poll_api__session_id__host_poll_post
+      description: Host manually creates a new poll.
+      operationId: create_poll_api__session_id__host_poll_manual_submit_post
       requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/CreatePollRequest'
         required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreatePollResponse'
-      x-feature: poll
-    delete:
-      tags:
-      - poll
-      summary: Delete Poll
-      description: Host deletes the current poll.
-      operationId: delete_poll_api__session_id__host_poll_delete
       responses:
         '204':
           description: Successful Response
@@ -503,6 +489,17 @@ paths:
                 - $ref: '#/components/schemas/ClosePollResponse'
                 title: Response Set Poll Status Api  Session Id  Host Poll Status
                   Put
+      x-feature: poll
+  /api/{session_id}/host/poll:
+    delete:
+      tags:
+      - poll
+      summary: Delete Poll
+      description: Host deletes the current poll.
+      operationId: delete_poll_api__session_id__host_poll_delete
+      responses:
+        '204':
+          description: Successful Response
       x-feature: poll
   /api/{session_id}/poll-md:
     get:
@@ -1485,36 +1482,25 @@ components:
         question:
           type: string
           title: Question
-          default: ''
         options:
           items:
             type: string
           type: array
           title: Options
-          default: []
         multi:
           type: boolean
           title: Multi
-          default: false
         correct_count:
           anyOf:
           - type: integer
           - type: 'null'
           title: Correct Count
       type: object
-      title: CreatePollRequest
-    CreatePollResponse:
-      properties:
-        ok:
-          type: boolean
-          title: Ok
-          default: true
-        poll:
-          $ref: '#/components/schemas/PollResponse'
-      type: object
       required:
-      - poll
-      title: CreatePollResponse
+      - question
+      - options
+      - multi
+      title: CreatePollRequest
     DaemonStatusResponse:
       properties:
         code_timestamp:
@@ -2339,6 +2325,13 @@ components:
             type: array
           - type: 'null'
           title: My Voted Indices
+        poll_correct_indices:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Poll Correct Indices
         codereview:
           $ref: '#/components/schemas/CodeReviewParticipantState'
         debate:
@@ -2545,44 +2538,6 @@ components:
       - pending
       - current
       title: PollQueueStatusResponse
-    PollResponse:
-      properties:
-        id:
-          type: string
-          title: Id
-        question:
-          type: string
-          title: Question
-        options:
-          items:
-            type: string
-          type: array
-          title: Options
-        multi:
-          type: boolean
-          title: Multi
-        correct_count:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Correct Count
-        source:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Source
-        page:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Page
-      type: object
-      required:
-      - id
-      - question
-      - options
-      - multi
-      title: PollResponse
     QAQuestionRaw:
       properties:
         id:

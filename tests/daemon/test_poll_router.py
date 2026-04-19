@@ -62,12 +62,12 @@ def host_client(fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host
 
 
 def _create_and_open_poll(client, fresh_poll_state, fresh_scores):
-    resp = client.post("/api/test-session/host/poll", json={
+    resp = client.post("/api/test-session/host/poll/manual/submit", json={
         "question": "Which option?",
         "options": _SAMPLE_OPTIONS,
         "multi": False,
     })
-    assert resp.status_code == 200
+    assert resp.status_code == 204
     client.post("/api/test-session/host/poll/open", json={})
 
 
@@ -120,36 +120,35 @@ class TestParticipantVote:
 
 class TestHostCreatePoll:
     def test_create_poll(self, host_client, fresh_poll_state, mock_notify_host):
-        resp = host_client.post("/api/test-session/host/poll", json={
+        resp = host_client.post("/api/test-session/host/poll/manual/submit", json={
             "question": "Best framework?",
             "options": _SAMPLE_OPTIONS,
+            "multi": False,
         })
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["ok"] is True
-        assert data["poll"]["question"] == "Best framework?"
-        assert data["poll"]["options"] == _SAMPLE_OPTIONS
+        assert resp.status_code == 204
         mock_notify_host.assert_called_once()
         msg = mock_notify_host.call_args[0][0]
         assert msg.type == "poll_ai_generated"
+        assert msg.poll["question"] == "Best framework?"
+        assert msg.poll["options"] == _SAMPLE_OPTIONS
 
     def test_create_poll_activity_gate(self, host_client, mock_participant_state):
         mock_participant_state.current_activity = "debate"
-        resp = host_client.post("/api/test-session/host/poll", json={
+        resp = host_client.post("/api/test-session/host/poll/manual/submit", json={
             "question": "Q?",
             "options": _SAMPLE_OPTIONS,
+            "multi": False,
         })
         assert resp.status_code == 409
 
     def test_create_poll_string_options(self, host_client):
-        """Options are always strings — sent and returned as-is."""
-        resp = host_client.post("/api/test-session/host/poll", json={
+        """Options are always strings — sent and received via WS as-is."""
+        resp = host_client.post("/api/test-session/host/poll/manual/submit", json={
             "question": "Manual poll?",
             "options": ["Alpha", "Beta", "Gamma"],
+            "multi": False,
         })
-        assert resp.status_code == 200
-        poll = resp.json()["poll"]
-        assert poll["options"] == ["Alpha", "Beta", "Gamma"]
+        assert resp.status_code == 204
 
 
 class TestHostOpenPoll:
