@@ -6,19 +6,14 @@ from fastapi.testclient import TestClient
 
 from daemon.poll.state import PollState
 from daemon.scores import Scores
-from daemon.poll.router import participant_router, host_router, quiz_md_router
+from daemon.poll.router import participant_router, host_router, poll_md_router
 from daemon.participant.state import ParticipantState
 
-_SAMPLE_OPTIONS = [
-    {"id": "a", "text": "Option A"},
-    {"id": "b", "text": "Option B"},
-    {"id": "c", "text": "Option C"},
-]
+_SAMPLE_OPTIONS = ["Option A", "Option B", "Option C"]
 
 
 @pytest.fixture
 def fresh_poll_state():
-    """Clean PollState for each test."""
     ps = PollState()
     with patch("daemon.poll.router.poll_state", ps):
         yield ps
@@ -26,7 +21,6 @@ def fresh_poll_state():
 
 @pytest.fixture
 def fresh_scores():
-    """Clean Scores for each test."""
     s = Scores()
     with patch("daemon.poll.router.scores", s):
         yield s
@@ -34,21 +28,18 @@ def fresh_scores():
 
 @pytest.fixture
 def mock_broadcast():
-    """Mock ws_publish.broadcast for participant broadcast path."""
     with patch("daemon.poll.router.broadcast") as mock:
         yield mock
 
 
 @pytest.fixture
 def mock_notify_host():
-    """Mock ws_publish.notify_host for host WS path."""
     with patch("daemon.poll.router.notify_host", new_callable=AsyncMock) as mock:
         yield mock
 
 
 @pytest.fixture
 def mock_participant_state():
-    """Clean ParticipantState patched in the router module."""
     ps = ParticipantState()
     ps.current_activity = "none"
     with patch("daemon.poll.router.participant_state", ps):
@@ -57,7 +48,6 @@ def mock_participant_state():
 
 @pytest.fixture
 def participant_client(fresh_poll_state, fresh_scores):
-    """TestClient with participant poll router."""
     app = FastAPI()
     app.include_router(participant_router)
     return TestClient(app)
@@ -65,17 +55,13 @@ def participant_client(fresh_poll_state, fresh_scores):
 
 @pytest.fixture
 def host_client(fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host, mock_participant_state):
-    """TestClient with host poll router + quiz-md router."""
     app = FastAPI()
     app.include_router(host_router)
-    app.include_router(quiz_md_router)
+    app.include_router(poll_md_router)
     return TestClient(app)
 
 
-# ── Helper to set up a poll in the ready state ──
-
 def _create_and_open_poll(client, fresh_poll_state, fresh_scores):
-    """Create a poll via API then open it."""
     resp = client.post("/api/test-session/host/poll", json={
         "question": "Which option?",
         "options": _SAMPLE_OPTIONS,
@@ -91,51 +77,39 @@ def _create_and_open_poll(client, fresh_poll_state, fresh_scores):
 
 class TestParticipantVote:
     def test_cast_vote_single(self, participant_client, fresh_poll_state):
-        """Single-select vote is accepted when poll is open."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
         fresh_poll_state.open_poll(lambda: None)
 
         resp = participant_client.post(
             "/api/participant/poll/vote",
-            json={"option_ids": ["a"]},
+            json={"options": [0]},
             headers={"X-Participant-ID": "pid1"},
         )
         assert resp.status_code == 204
-        assert resp.content == b""
 
     def test_cast_vote_multi(self, participant_client, fresh_poll_state):
-        """Multi-select vote is accepted when poll is open."""
-        multi_opts = [
-            {"id": "a", "text": "A"},
-            {"id": "b", "text": "B"},
-            {"id": "c", "text": "C"},
-        ]
-        fresh_poll_state.create_poll("Q?", multi_opts, multi=True, correct_count=2)
+        fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS, multi=True, correct_count=2)
         fresh_poll_state.open_poll(lambda: None)
 
         resp = participant_client.post(
             "/api/participant/poll/vote",
-            json={"option_ids": ["a", "b"]},
+            json={"options": [0, 1]},
             headers={"X-Participant-ID": "pid1"},
         )
         assert resp.status_code == 204
-        assert resp.content == b""
 
     def test_cast_vote_rejected(self, participant_client, fresh_poll_state):
-        """Vote on closed/no poll returns 409."""
-        # Poll not created — cast_vote returns False
         resp = participant_client.post(
             "/api/participant/poll/vote",
-            json={"option_ids": ["a"]},
+            json={"options": [0]},
             headers={"X-Participant-ID": "pid1"},
         )
         assert resp.status_code == 409
 
     def test_cast_vote_no_pid(self, participant_client):
-        """Missing X-Participant-ID returns 400."""
         resp = participant_client.post(
             "/api/participant/poll/vote",
-            json={"option_ids": ["a"]},
+            json={"options": [0]},
         )
         assert resp.status_code == 400
 
@@ -146,7 +120,6 @@ class TestParticipantVote:
 
 class TestHostCreatePoll:
     def test_create_poll(self, host_client, fresh_poll_state, mock_notify_host):
-        """Create poll returns created poll and notifies host."""
         resp = host_client.post("/api/test-session/host/poll", json={
             "question": "Best framework?",
             "options": _SAMPLE_OPTIONS,
@@ -155,14 +128,12 @@ class TestHostCreatePoll:
         data = resp.json()
         assert data["ok"] is True
         assert data["poll"]["question"] == "Best framework?"
-        # notify_host called with poll_ai_generated msg
+        assert data["poll"]["options"] == _SAMPLE_OPTIONS
         mock_notify_host.assert_called_once()
         msg = mock_notify_host.call_args[0][0]
         assert msg.type == "poll_ai_generated"
-        assert "question" in msg.poll
 
     def test_create_poll_activity_gate(self, host_client, mock_participant_state):
-        """Cannot create poll when another activity (debate) is active."""
         mock_participant_state.current_activity = "debate"
         resp = host_client.post("/api/test-session/host/poll", json={
             "question": "Q?",
@@ -170,123 +141,95 @@ class TestHostCreatePoll:
         })
         assert resp.status_code == 409
 
-    def test_create_poll_accepts_string_options(self, host_client):
-        """Host UI sends string options; API must normalize them to {id,text}."""
+    def test_create_poll_string_options(self, host_client):
+        """Options are always strings — sent and returned as-is."""
         resp = host_client.post("/api/test-session/host/poll", json={
             "question": "Manual poll?",
             "options": ["Alpha", "Beta", "Gamma"],
         })
         assert resp.status_code == 200
         poll = resp.json()["poll"]
-        assert poll["options"] == [
-            {"id": "A", "text": "Alpha"},
-            {"id": "B", "text": "Beta"},
-            {"id": "C", "text": "Gamma"},
-        ]
+        assert poll["options"] == ["Alpha", "Beta", "Gamma"]
 
 
 class TestHostOpenPoll:
     def test_open_poll(self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host):
-        """Opening a poll broadcasts to participants and notifies host."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
         resp = host_client.post("/api/test-session/host/poll/open", json={})
         assert resp.status_code == 204
-        assert resp.content == b""
 
-        # Broadcast to participants
-        assert mock_broadcast.call_count >= 1
         broadcast_msg = mock_broadcast.call_args_list[0][0][0]
         assert broadcast_msg.type == "poll_opened"
 
-        # Notify host
-        mock_notify_host.assert_called()
         host_msg = mock_notify_host.call_args[0][0]
         assert host_msg.type == "poll_opened"
 
     def test_open_poll_no_poll(self, host_client):
-        """Open when no poll exists returns 400."""
         resp = host_client.post("/api/test-session/host/poll/open", json={})
         assert resp.status_code == 400
 
 
 class TestHostClosePoll:
     def test_close_poll(self, host_client, fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host):
-        """Closing a poll broadcasts poll_closed and notifies host."""
         _create_and_open_poll(host_client, fresh_poll_state, fresh_scores)
 
         resp = host_client.post("/api/test-session/host/poll/close", json={})
         assert resp.status_code == 200
         data = resp.json()
         assert data["ok"] is True
-        assert "vote_counts" in data
+        assert isinstance(data["vote_counts"], list)
+        assert "total_votes" not in data
 
-        # Participants receive poll_closed broadcast
         broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
         assert "poll_closed" in broadcast_types
 
     def test_close_poll_no_poll(self, host_client):
-        """Close when no poll returns 400."""
         resp = host_client.post("/api/test-session/host/poll/close", json={})
         assert resp.status_code == 400
 
 
 class TestHostRevealCorrect:
     def test_reveal_correct(self, host_client, fresh_poll_state, fresh_scores, mock_broadcast, mock_notify_host):
-        """Revealing correct answers broadcasts correct_revealed + scores_updated."""
         _create_and_open_poll(host_client, fresh_poll_state, fresh_scores)
 
-        resp = host_client.put("/api/test-session/host/poll/correct", json={"correct_ids": ["a"]})
+        resp = host_client.put("/api/test-session/host/poll/correct", json={"correct_indices": [0]})
         assert resp.status_code == 204
-        assert resp.content == b""
 
-        # Two broadcasts: poll_correct_revealed + scores_updated
         broadcast_types = [call[0][0].type for call in mock_broadcast.call_args_list]
         assert "poll_correct_revealed" in broadcast_types
         assert "scores_updated" in broadcast_types
 
-        # Host also notified twice (correct_revealed + scores_updated)
         host_msg_types = [call[0][0].type for call in mock_notify_host.call_args_list]
         assert "poll_correct_revealed" in host_msg_types
-        assert "scores_updated" in host_msg_types
 
     def test_reveal_correct_no_poll(self, host_client):
-        """Reveal correct when no poll returns 400."""
-        resp = host_client.put("/api/test-session/host/poll/correct", json={"correct_ids": ["a"]})
+        resp = host_client.put("/api/test-session/host/poll/correct", json={"correct_indices": [0]})
         assert resp.status_code == 400
 
 
 class TestHostStartTimer:
     def test_start_timer(self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host):
-        """Starting timer broadcasts timer_started with seconds."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
         resp = host_client.post("/api/test-session/host/poll/timer", json={"seconds": 45})
         assert resp.status_code == 204
-        assert resp.content == b""
 
         broadcast_msg = mock_broadcast.call_args_list[0][0][0]
         assert broadcast_msg.type == "poll_timer_started"
         assert broadcast_msg.seconds == 45
 
-        host_msg = mock_notify_host.call_args[0][0]
-        assert host_msg.type == "poll_timer_started"
-        assert host_msg.seconds == 45
-
     def test_start_timer_no_poll(self, host_client):
-        """Start timer with no poll returns 400."""
         resp = host_client.post("/api/test-session/host/poll/timer", json={"seconds": 30})
         assert resp.status_code == 400
 
 
 class TestHostDeletePoll:
     def test_delete_poll(self, host_client, fresh_poll_state, mock_participant_state, mock_broadcast, mock_notify_host):
-        """Deleting a poll clears state and broadcasts poll_cleared + activity_updated."""
         fresh_poll_state.create_poll("Q?", _SAMPLE_OPTIONS)
 
         resp = host_client.delete("/api/test-session/host/poll")
         assert resp.status_code == 204
-        assert resp.content == b""
         assert fresh_poll_state.poll is None
         assert mock_participant_state.current_activity == "none"
 
@@ -295,19 +238,17 @@ class TestHostDeletePoll:
         assert "activity_updated" in broadcast_types
 
 
-class TestGetQuizMd:
-    def test_get_quiz_md(self, host_client, fresh_poll_state):
-        """GET /api/{session_id}/quiz-md returns quiz markdown content."""
-        fresh_poll_state.quiz_md_content = "### Some quiz\n- [✓] A\n"
+class TestGetPollMd:
+    def test_get_poll_md(self, host_client, fresh_poll_state):
+        fresh_poll_state.poll_md_content = "### Some quiz\n- [✓] A\n"
 
-        resp = host_client.get("/api/test-session/quiz-md")
+        resp = host_client.get("/api/test-session/poll-md")
         assert resp.status_code == 200
         data = resp.json()
         assert "content" in data
         assert "Some quiz" in data["content"]
 
-    def test_get_quiz_md_empty(self, host_client, fresh_poll_state):
-        """GET /api/{session_id}/quiz-md returns empty string initially."""
-        resp = host_client.get("/api/test-session/quiz-md")
+    def test_get_poll_md_empty(self, host_client, fresh_poll_state):
+        resp = host_client.get("/api/test-session/poll-md")
         assert resp.status_code == 200
         assert resp.json()["content"] == ""

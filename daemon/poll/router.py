@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel
 
 from daemon.participant.state import participant_state
 from daemon.poll.state import poll_state
@@ -31,44 +31,18 @@ class OkResponse(BaseModel):
     ok: bool = True
 
 class VoteRequest(BaseModel):
-    option_ids: list[str]
-
-class PollOptionRequest(BaseModel):
-    id: str
-    text: str
+    options: list[int]
 
 class CreatePollRequest(BaseModel):
     question: str = ""
-    options: list[PollOptionRequest] = []
+    options: list[str] = []
     multi: bool = False
     correct_count: Optional[int] = None
-
-    @field_validator("options", mode="before")
-    @classmethod
-    def normalize_options(cls, raw_options):
-        """Accept either string options (Host UI) or dict options (internal callers)."""
-        if not isinstance(raw_options, list):
-            return raw_options
-
-        normalized = []
-        for i, opt in enumerate(raw_options):
-            if isinstance(opt, dict):
-                text = str(opt.get("text", "")).strip()
-                if not text:
-                    continue
-                oid = str(opt.get("id") or chr(65 + i))
-                normalized.append({"id": oid, "text": text})
-                continue
-
-            text = str(opt).strip()
-            if text:
-                normalized.append({"id": chr(65 + i), "text": text})
-        return normalized
 
 class PollResponse(BaseModel):
     id: str
     question: str
-    options: list[PollOptionRequest]
+    options: list[str]
     multi: bool
     correct_count: int | None = None
     source: str | None = None
@@ -80,11 +54,10 @@ class CreatePollResponse(BaseModel):
 
 class ClosePollResponse(BaseModel):
     ok: bool = True
-    vote_counts: dict[str, int]
-    total_votes: int
+    vote_counts: list[int]
 
 class RevealCorrectRequest(BaseModel):
-    correct_ids: list[str] = []
+    correct_indices: list[int] = []
 
 class StartTimerRequest(BaseModel):
     seconds: int = 30
@@ -108,18 +81,17 @@ async def cast_vote(request: Request, body: VoteRequest):
     if not pid:
         return JSONResponse({"error": "Missing participant ID"}, status_code=400)
 
-    accepted = poll_state.cast_vote(pid, option_ids=body.option_ids)
+    accepted = poll_state.cast_vote(pid, option_indices=body.options)
     if not accepted:
         return JSONResponse({"error": "Vote rejected"}, status_code=409)
 
-    vote_msg = VoteUpdateMsg(votes=poll_state.vote_counts())
+    vote_msg = VoteUpdateMsg(vote_counts=poll_state.vote_counts())
     request.state.write_back_events = [broadcast_event(vote_msg)]
     await notify_host(vote_msg)
     return Response(status_code=204)
 
 
 # ── Host router (called directly on daemon localhost) ──
-# Host JS calls API('/poll') which expands to /api/{session_id}/poll.
 
 host_router = APIRouter(prefix="/api/{session_id}/host/poll", tags=["poll"])
 
@@ -127,20 +99,18 @@ host_router = APIRouter(prefix="/api/{session_id}/host/poll", tags=["poll"])
 @host_router.post("", response_model=CreatePollResponse)
 async def create_poll(body: CreatePollRequest):
     """Host creates a new poll."""
-    # Activity gate
     activity = participant_state.current_activity
     if activity and activity not in ("none", "poll"):
         return JSONResponse({"error": f"Activity {activity} is active"}, status_code=409)
 
     poll = poll_state.create_poll(
         body.question,
-        [option.model_dump() for option in body.options],
+        body.options,
         body.multi,
         body.correct_count,
     )
     participant_state.current_activity = "poll"
 
-    # Only notify host — participants see nothing until opened
     await notify_host(PollAiGeneratedMsg(poll=poll))
     return CreatePollResponse(poll=PollResponse.model_validate(poll))
 
@@ -164,10 +134,7 @@ async def close_poll():
         return JSONResponse({"error": "No poll"}, status_code=400)
 
     result = poll_state.close_poll()
-    closed_msg = PollClosedMsg(
-        vote_counts=result["vote_counts"],
-        total_votes=result["total_votes"],
-    )
+    closed_msg = PollClosedMsg(vote_counts=result["vote_counts"])
     broadcast(closed_msg)
     await notify_host(closed_msg)
     return ClosePollResponse(**result)
@@ -179,10 +146,10 @@ async def reveal_correct(body: RevealCorrectRequest):
     if not poll_state.poll:
         return JSONResponse({"error": "No poll"}, status_code=400)
 
-    result = poll_state.reveal_correct(body.correct_ids, scores)
-    broadcast(PollCorrectRevealedMsg(correct_ids=result["correct_ids"]))
+    result = poll_state.reveal_correct(body.correct_indices, scores)
+    broadcast(PollCorrectRevealedMsg(correct_indices=result["correct_indices"]))
     broadcast(ScoresUpdatedMsg(scores=result["scores"]))
-    await notify_host(PollCorrectRevealedMsg(correct_ids=result["correct_ids"]))
+    await notify_host(PollCorrectRevealedMsg(correct_indices=result["correct_indices"]))
     await notify_host(ScoresUpdatedMsg(scores=result["scores"]))
     return Response(status_code=204)
 
