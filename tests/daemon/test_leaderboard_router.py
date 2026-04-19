@@ -1,12 +1,13 @@
 """Tests for daemon leaderboard router."""
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from daemon.scores import Scores
-from daemon.participant.state import ParticipantState
 from daemon.leaderboard.router import router
+from daemon.participant.state import ParticipantState
+from daemon.scores import Scores
 
 
 @pytest.fixture
