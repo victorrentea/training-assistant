@@ -1863,7 +1863,7 @@
   function updatePopButton(queue) {
     const pending = queue?.pending || 0;
     const popBtn = document.getElementById('pop-queue-btn');
-    if (popBtn) { popBtn.disabled = pending === 0; popBtn.textContent = `Pop (${pending})`; }
+    if (popBtn) { popBtn.disabled = pending === 0; popBtn.textContent = `⬇ Pop (${pending})`; }
     const skipBtn = document.getElementById('backstage-skip-btn');
     if (skipBtn) skipBtn.disabled = pending === 0;
   }
