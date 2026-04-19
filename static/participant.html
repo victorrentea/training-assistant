@@ -396,6 +396,11 @@ body{visibility:hidden}
   <div style="width:36px;height:36px;border:3px solid var(--color-outline-variant,#ccc);border-top-color:var(--color-primary,#4555ba);border-radius:50%;animation:spin 0.8s linear infinite"></div>
   <span style="font-size:0.9rem;color:var(--color-outline,#888)">Loading slides&hellip;</span>
 </div>
+<!-- Slide Refreshing Overlay (Top Left) -->
+<div id="slide-refresh-overlay" style="display:none" class="absolute top-6 left-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
+  <div style="width:18px;height:18px;border:2px solid var(--color-outline-variant,#ccc);border-top-color:var(--color-primary,#4555ba);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+  <span style="font-size:0.85rem;color:var(--color-on-surface-variant,#5e6b70);white-space:nowrap;padding-right:0.25rem">Slide Refreshing…</span>
+</div>
 <!-- PDF Viewer Toolbar (Minimalist) -->
 <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
 <a id="pdf-download" href="#" download class="p-2 rounded-full text-on-surface-variant transition-all flex hover-green">
@@ -620,6 +625,7 @@ var LS = {
 // ─────────────────────────────────────────────────────────────────────────────
 var _slidesCatalog = [];
 var _activeSlideId = null;
+var _slidesCacheStatus = {};
 var _activeSlideSlug = null;
 var _historySelectedRowEl = null;
 var _hostSlidesCurrent = null;
@@ -2271,14 +2277,22 @@ function _handleWsMessage(msg) {
       break;
     }
     case 'slides_updated':
-      (function(refreshedSlugs) {
+      (function(refreshedSlugs, inlineCacheStatus) {
+        // Update local cache status from inline payload (avoids hitting daemon).
+        if (inlineCacheStatus && typeof inlineCacheStatus === 'object') {
+          _slidesCacheStatus = inlineCacheStatus;
+        }
         // Capture active slug before catalog reload clears the DOM.
-        // Prefer _activeSlideId (set after loadPdf completes), fall back to
-        // topic-active class (set synchronously on click, before async ops).
         var activeSlug = _activeSlideId ? (_activeSlideId.split('|')[0] || null) : null;
         if (!activeSlug) {
           var _activeEl = document.querySelector('.topic-item.topic-active');
           if (_activeEl) { activeSlug = (_activeEl.getAttribute('data-slide-id') || '').split('|')[0] || null; }
+        }
+        // Show/hide refreshing overlay for the active slide.
+        var refreshOverlay = document.getElementById('slide-refresh-overlay');
+        if (refreshOverlay && activeSlug) {
+          var activeStatus = (_slidesCacheStatus[activeSlug] || {}).status;
+          refreshOverlay.style.display = activeStatus === 'downloading' ? '' : 'none';
         }
         loadSlidesCatalog().then(function() {
           _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
@@ -2288,12 +2302,13 @@ function _handleWsMessage(msg) {
               if (activeSlide) {
                 window.loadPdf(activeSlide.url + (activeSlide.url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + Date.now()).then(function() {
                   _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+                  if (refreshOverlay) refreshOverlay.style.display = 'none';
                 });
               }
             }
           }
         }).catch(function() {});
-      })(msg.refreshed_slugs);
+      })(msg.refreshed_slugs, msg.slides_updated);
       break;
     case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
     case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;

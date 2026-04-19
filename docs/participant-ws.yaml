@@ -65,10 +65,8 @@ components:
             description: null means no active slide
 
     slides_updated:
-      summary: Invalidation signal — participant must call GET /api/slides to refresh
+      summary: Slide cache status changed — contains full cache map to avoid polling
       x-feature: slides
-      x-doc-notes:
-        - Client must refetch slide list; payload intentionally carries no cache map.
       payload:
         type: object
         required: [type]
@@ -81,6 +79,11 @@ components:
             items:
               type: string
             default: []
+          slides_updated:
+            type: object
+            additionalProperties:
+              type: object
+            default: {}
 
     # ── Activity ──────────────────────────────────────────────────────────────
 

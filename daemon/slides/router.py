@@ -165,7 +165,10 @@ def _uploaded_slide_meta(slug: str) -> tuple[str, str | None]:
 def _broadcast_slides_updated(refreshed_slugs: list[str] | None = None) -> None:
     from daemon.ws_messages import SlidesCacheStatusMsg
     from daemon.ws_publish import broadcast
-    broadcast(SlidesCacheStatusMsg(refreshed_slugs=refreshed_slugs or []))
+    broadcast(SlidesCacheStatusMsg(
+        refreshed_slugs=refreshed_slugs or [],
+        slides_updated=dict(misc_state.slides_updated),
+    ))
 
 
 # ── Participant router ──

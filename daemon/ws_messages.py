@@ -23,6 +23,7 @@ class SlidesCurrentMsg(BaseModel):
 class SlidesCacheStatusMsg(BaseModel):
     type: Literal["slides_updated"] = "slides_updated"
     refreshed_slugs: list[str] = []
+    slides_updated: dict[str, Any] = {}
 
 
 # ── Activity ──────────────────────────────────────────────────────────────────

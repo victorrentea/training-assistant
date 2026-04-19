@@ -112,7 +112,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Host navigated to a new slide<br>`slides_current` | `slides_current?: SlidesCurrent{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`url?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`presentation_name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`current_page?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`updated_at?:string`<br>`}  # null means no active slide` |
-| Invalidation signal — participant must call GET /api/slides to refresh<br>Client must refetch slide list; payload intentionally carries no cache map.<br>`slides_updated` | `refreshed_slugs?: list[string]` |
+| Slide cache status changed — contains full cache map to avoid polling<br>`slides_updated` | `refreshed_slugs?: list[string]`<br>`slides_updated?: dict[str, dict]` |
 | Participant slide history count changed<br>`slides_history_count_updated` | `count: int` |
 
 ### Host WS
