@@ -349,7 +349,7 @@ def test_run_once_pushes_slides_list_only_when_payload_changes(tmp_path, monkeyp
     changed = _slides_upload.run_once(cfg, state)
     assert changed is True
     assert len(posted) == 1
-    assert posted[0][0].endswith("/api/quiz-status")
+    assert posted[0][0].endswith("/api/poll-status")
     assert posted[0][1]["status"] == "ready"
     assert len(posted[0][1]["slides"]) == 1
     assert posted[0][1]["slides"][0]["name"] == "Intro"
