@@ -1016,10 +1016,14 @@ function openRepos() {
         var base = repo.url.replace(/\.git$/, '');
         var name = base.split('/').pop() + '.git';
         var branchUrl = base + '/tree/' + repo.branch;
+        var fileUrls = repo.file_urls || {};
         var files = repo.files.map(function(f) {
+          var label = fileUrls[f]
+            ? '<a href="' + fileUrls[f] + '" target="_blank" class="truncate hover:underline">' + f + '</a>'
+            : '<span class="truncate">' + f + '</span>';
           return '<li class="flex items-center gap-1 min-w-0 py-0.5" style="margin-left:22px">'
             + '<span class="flex-shrink-0">•</span>'
-            + '<span class="truncate">' + f + '</span>'
+            + label
             + '</li>';
         }).join('');
         return '<div class="text-sm">'

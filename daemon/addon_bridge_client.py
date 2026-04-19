@@ -168,8 +168,9 @@ class AddonBridgeClient:
                     url = data.get("url", "")
                     branch = data.get("branch", "")
                     file = data.get("file", "")
+                    file_url = data.get("file_url") or None
                     if url and branch and file:
-                        participant_state.accumulate_git_file(url, branch, file)
+                        participant_state.accumulate_git_file(url, branch, file, file_url)
                         log.debug(_NAME, f"← git {url.split('/')[-1]}:{branch} {file}")
                 if _ctx and _token:
                     context.detach(_token)

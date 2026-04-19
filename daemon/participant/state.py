@@ -13,6 +13,7 @@ class GitRepoActivity(BaseModel):
     url: str
     branch: str
     files: list[str] = []
+    file_urls: dict[str, str] = {}
 
 
 def _sync_score_to_daemon(pid: str, score: int):
@@ -52,14 +53,17 @@ class ParticipantState:
         self.git_repos: list[GitRepoActivity] = []
         self.emoji_counters: dict[str, int] = {}
 
-    def accumulate_git_file(self, url: str, branch: str, file: str) -> None:
+    def accumulate_git_file(self, url: str, branch: str, file: str, file_url: str | None = None) -> None:
         """Add a git file-open event to the session's accumulated git activity."""
         for entry in self.git_repos:
             if entry.url == url and entry.branch == branch:
                 if file not in entry.files:
                     entry.files.append(file)
+                if file_url:
+                    entry.file_urls[file] = file_url
                 return
-        self.git_repos.append(GitRepoActivity(url=url, branch=branch, files=[file]))
+        urls = {file: file_url} if file_url else {}
+        self.git_repos.append(GitRepoActivity(url=url, branch=branch, files=[file], file_urls=urls))
 
     def sync_from_restore(self, data: dict):
         """Update cache from state_restore or session_sync data.
