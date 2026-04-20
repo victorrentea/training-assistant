@@ -26,8 +26,8 @@ _REDOWNLOAD_FIRST_DELAY_S = 10.0
 _REDOWNLOAD_RETRY_INTERVAL_S = 5.0
 _REDOWNLOAD_MAX_RETRIES = 5
 
-# Track which slugs have an active redownload poller to avoid duplicates.
 _active_redownload_slugs: set[str] = set()
+_pending_redownload_slugs: set[str] = set()  # PPTX changed while download was in-flight
 _active_redownload_lock = threading.Lock()
 
 
@@ -73,6 +73,25 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
     finally:
         with _active_redownload_lock:
             _active_redownload_slugs.discard(slug)
+            should_retry = slug in _pending_redownload_slugs
+            _pending_redownload_slugs.discard(slug)
+
+        if should_retry:
+            drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
+            if drive_url:
+                log.info("slides", f"Starting queued redownload for slug={slug}")
+                with _active_redownload_lock:
+                    _active_redownload_slugs.add(slug)
+                from daemon.slides.router import _mark_cache_status, _broadcast_slides_updated
+                _mark_cache_status(slug, "downloading")
+                _broadcast_slides_updated()
+                t = threading.Thread(
+                    target=_run_redownload_poller,
+                    args=(slug, drive_url),
+                    daemon=True,
+                    name=f"redownload-{slug}",
+                )
+                t.start()
 
 
 class SlidesRunner:
@@ -207,7 +226,8 @@ class SlidesRunner:
                     if drive_url:
                         with _active_redownload_lock:
                             if slug in _active_redownload_slugs:
-                                log.info("slides", f"PPTX updated for slug={slug} — redownload already in progress")
+                                log.info("slides", f"PPTX updated for slug={slug} — queuing redownload after current completes")
+                                _pending_redownload_slugs.add(slug)
                                 continue
                             _active_redownload_slugs.add(slug)
                         log.info("slides", f"PPTX updated for slug={slug} — starting redownload poller")

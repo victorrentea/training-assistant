@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import queue
+import re
 import ssl
 import threading
 from typing import Any, Callable
@@ -181,8 +182,16 @@ class DaemonWsClient:
                         self._work_queue.put((msg_type, data))
                 elif msg_type == "slide_log":
                     # Logging can happen on WS thread (no shared state mutation)
-                    _arrow = "↓" if data.get("event", "").endswith("_completed") else "↑"
-                    log.info("railway", f"{_arrow} {data.get('event')} {data.get('slug')}")
+                    _event = data.get("event", "")
+                    _slug = re.sub(r'-[0-9a-f]{32}$', '', data.get("slug", ""))
+                    _labels = {
+                        "download_slide_request": "pdf download",
+                        "download_slide_completed": "pdf downloaded ok",
+                        "download_failed": "pdf download failed",
+                    }
+                    _label = _labels.get(_event, _event)
+                    _arrow = "↓" if _event.endswith("_completed") else "↑"
+                    log.info("railway", f"{_arrow} {_label}: {_slug}")
         except ConnectionClosed:
             pass
         finally:

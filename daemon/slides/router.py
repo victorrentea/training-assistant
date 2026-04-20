@@ -24,6 +24,10 @@ _RAILWAY_DOWNLOAD_TIMEOUT_S: float = 120.0  # Railway downloads can take 10-15s 
 # from the main (sync) thread (e.g. backfill location metadata, overlay notifications).
 _event_loop: asyncio.AbstractEventLoop | None = None
 
+# Per-slug Events: set when an in-flight download completes (success or failure).
+# Prevents concurrent participant requests from each triggering a separate Railway download.
+_slug_download_events: dict[str, asyncio.Event] = {}
+
 
 def get_event_loop() -> asyncio.AbstractEventLoop | None:
     """Return the daemon's FastAPI event loop."""
@@ -191,10 +195,19 @@ async def check_slide_cache(session_id: str, slug: str, force: bool = False):
     if not force and misc_state.slides_updated.get(slug, {}).get("status") == "cached":
         return SlidesCheckResponse(status="cached")
 
+    # If a download is already in flight, wait for it instead of firing a duplicate.
+    if not force and slug in _slug_download_events:
+        await _slug_download_events[slug].wait()
+        if misc_state.slides_updated.get(slug, {}).get("status") == "cached":
+            return SlidesCheckResponse(status="cached")
+        # Previous download failed — fall through to retry
+
     drive_export_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url")
     if not drive_export_url:
         return JSONResponse({"status": "error", "detail": "no drive_export_url"}, status_code=404)
 
+    event = asyncio.Event()
+    _slug_download_events[slug] = event
     _mark_cache_status(slug, "downloading")
     _broadcast_slides_updated()
 
@@ -210,6 +223,9 @@ async def check_slide_cache(session_id: str, slug: str, force: bool = False):
         # participant. Broadcasting would trigger follow-retry storms in all
         # connected participants.
         return JSONResponse({"status": "error"}, status_code=503)
+    finally:
+        _slug_download_events.pop(slug, None)
+        event.set()
 
 
 @participant_router.get("/{session_id}/api/slides")
