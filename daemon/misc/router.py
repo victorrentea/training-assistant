@@ -12,10 +12,10 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from daemon.email_notify import notify as email_notify
-from daemon.slides.models import Slide
 from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
+from daemon.slides.models import Slide
 from daemon.ws_messages import PasteReceivedMsg
 from daemon.ws_publish import notify_host
 
