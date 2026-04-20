@@ -917,12 +917,14 @@ function _loadSlideHistory() {
         var entries = groups[slug];
         var catalogEntry = _findSlideBySlug(slug);
         var title = (catalogEntry && catalogEntry.name) || slug;
+        var isDark = document.documentElement.classList.contains('dark');
         var pagesHtml = entries.map(function(e) {
           var tRatio = (maxTs > minTs && e.last_seen_at) ? (new Date(e.last_seen_at).getTime() - minTs) / (maxTs - minTs) : 1;
-          var opacity = (0.35 + 0.65 * tRatio).toFixed(2);
+          var ch = isDark ? Math.round(80 + 175 * tRatio) : Math.round(160 - 160 * tRatio);
+          var color = 'rgb(' + ch + ',' + ch + ',' + ch + ')';
           var sRatio = (maxSec > minSec) ? (e.seconds - minSec) / (maxSec - minSec) : 1;
           var weight = Math.round(300 + 400 * sRatio);
-          return '<a href="#" onclick="return false" class="underline" style="color:var(--color-on-surface,#000);opacity:' + opacity + ';font-weight:' + weight + '" data-history-slug="' + slug.replace(/"/g, '&quot;') + '" data-history-page="' + Number(e.page || 1) + '">' + e.page + '</a>';
+          return '<a href="#" onclick="return false" class="underline" style="color:' + color + ';font-weight:' + weight + '" data-history-slug="' + slug.replace(/"/g, '&quot;') + '" data-history-page="' + Number(e.page || 1) + '">' + e.page + '</a>';
         }).join(', ');
         return '<div class="slide-history-row pl-4 pr-4 py-0.5 text-sm leading-relaxed rounded transition-colors flex items-baseline gap-1">' +
           '<span class="flex-shrink-0 text-on-surface-variant opacity-60">•</span>' +
