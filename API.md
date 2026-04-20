@@ -116,6 +116,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Slide cache status changed — contains full cache map to avoid polling<br>'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open.<br>`slides_updated` | `refreshed_slugs?: list[string]`<br>`slides_updated?: dict[str, Slide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
 | Participant slide history count changed<br>`slides_history_updated` | `count: int` |
 
+### Host REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Get Slides Compilation, compile all viewed slide pages into one PDF and return as a download; long-running: may trigger Railway to download PDFs from Google Drive first; progress is logged to the daemon log.<br>`GET /api/{session_id}/host/slides-compilation` | - | `any` |
+
 ### Host WS
 | Message | Payload |
 | --- | --- |
@@ -437,11 +442,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Agenda, serve the agenda .docx as base64-encoded JSON (survives WS proxy).<br>`GET /api/participant/agenda` | - | `data: string`<br>`filename: string` |
-
-### Host REST
-| Endpoint | Request | Response |
-| --- | --- | --- |
-| Get Slides Compilation, compile all viewed slide pages into one PDF and return as a download; long-running: may trigger Railway to download PDFs from Google Drive first; progress is logged to the daemon log.<br>`GET /api/{session_id}/host/slides-compilation` | - | `any` |
 
 ## Feature: Intellij
 

@@ -19,7 +19,7 @@ def _feature_for_misc_path(path: str) -> str:
         return "feedback"
     if "/notes" in path or "/summary" in path:
         return "notes_summary"
-    if "/slides" in path and "participant" in path:
+    if "/slides" in path:
         return "slides"
     return "misc"
 

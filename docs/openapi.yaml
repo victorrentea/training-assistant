@@ -684,7 +684,7 @@ paths:
           content:
             application/json:
               schema: {}
-      x-feature: misc
+      x-feature: slides
   /api/{session_id}/host/poll/queue:
     post:
       tags:
