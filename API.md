@@ -17,11 +17,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Scores & Leaderboard](#feature-scores--leaderboard)
 - [Emoji Reactions](#feature-emoji-reactions)
 - [Paste & File Upload](#feature-paste--file-upload)
-- [Notes & Summary](#feature-notes--summary)
+- [Notes, Summary & Agenda](#feature-notes,-summary--agenda)
 - [Feedback](#feature-feedback)
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
 - [Infrastructure](#feature-infrastructure)
-- [Misc](#feature-misc)
 - [Intellij](#feature-intellij)
 
 ## Feature: Session
@@ -106,7 +105,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Slides Updated, get slides cache status; primarily for diagnostics; UI cache invalidation is event-driven via slides_updated WS.<br>`GET /api/participant/slides` | - | `slides_updated?: dict[str, Slide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:SlideCacheStatus: 'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
+| Get Slides Updated, get slides cache status; returns cache status snapshot for all known slides; called on initial page load and after slides_updated WS.<br>`GET /api/participant/slides` | - | `slides_updated?: dict[str, Slide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:SlideCacheStatus: 'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
 | Get Slides History, return accumulated slide viewing history for the current session.<br>`GET /api/participant/slides/history` | - | `slides_log: list[SlidesLogEntry{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`file:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slide:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`seconds_spent:number`<br>&nbsp;&nbsp;&nbsp;&nbsp;`timestamp?:string`<br>`}]` |
 
 ### Participant WS
@@ -374,11 +373,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- |
 | Railway notifies daemon that a participant has uploaded a file<br>`file_ready_for_download` | `file_id: int`<br>`uuid: string  # Participant UUID who uploaded the file`<br>`filename: string`<br>`size: int  # File size in bytes`<br>`session_id: string` |
 
-## Feature: Notes & Summary
+## Feature: Notes, Summary & Agenda
 
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
+| Get Agenda, serve the agenda .docx as base64-encoded JSON (survives WS proxy).<br>`GET /api/participant/agenda` | - | `data: string`<br>`filename: string` |
 | Get Notes<br>`GET /api/participant/notes` | - | `notes_content?: string` |
 | Get Summary<br>`GET /api/participant/summary` | - | `points?: list[SummaryPoint{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`text:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`source:string`<br>`}]`<br>`raw_markdown?: string`<br>`updated_at?: string` |
 
@@ -435,13 +435,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Daemon asks Railway to forward an event to all participants in the session<br>Wrapper message — inner event payload is a participant WS message<br>`broadcast` | `event: dict  # Participant WS message payload to broadcast` |
 | Daemon returns the result of a proxied participant REST request<br>`proxy_response` | `id: string  # Correlation ID matching the original proxy_request`<br>`status: int  # HTTP status code`<br>`body: string  # Response body (JSON or plain text)`<br>`content_type: string  # MIME type of the response body` |
 | Daemon keepalive ping to Railway<br>`daemon_ping` | - |
-
-## Feature: Misc
-
-### Participant REST
-| Endpoint | Request | Response |
-| --- | --- | --- |
-| Get Agenda, serve the agenda .docx as base64-encoded JSON (survives WS proxy).<br>`GET /api/participant/agenda` | - | `data: string`<br>`filename: string` |
 
 ## Feature: Intellij
 

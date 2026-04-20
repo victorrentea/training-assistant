@@ -46,7 +46,7 @@ FEATURE_LABELS: dict[str, str] = {
     "emoji": "Emoji Reactions",
     "misc": "Misc",
     "paste_upload": "Paste & File Upload",
-    "notes_summary": "Notes & Summary",
+    "notes_summary": "Notes, Summary & Agenda",
     "feedback": "Feedback",
     "reload": "Cross-cutting: Reload",
     "transcription": "Transcription",

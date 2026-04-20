@@ -564,8 +564,8 @@ paths:
                 $ref: '#/components/schemas/SlidesResponse'
       x-feature: slides
       x-doc-notes:
-      - Primarily for diagnostics; UI cache invalidation is event-driven via slides_updated
-        WS.
+      - Returns cache status snapshot for all known slides; called on initial page
+        load and after slides_updated WS.
   /api/participant/slides/history:
     get:
       tags:
@@ -595,7 +595,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AgendaResponse'
-      x-feature: misc
+      x-feature: notes_summary
   /api/{session_id}/host/pastes:
     get:
       tags:
@@ -2667,16 +2667,6 @@ components:
           - type: string
           - type: 'null'
           title: Modified At
-        title:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Title
-        name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Name
         error:
           anyOf:
           - type: string

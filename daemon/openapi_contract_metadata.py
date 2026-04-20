@@ -17,7 +17,7 @@ def _feature_for_misc_path(path: str) -> str:
         return "paste_upload"
     if "feedback" in path:
         return "feedback"
-    if "/notes" in path or "/summary" in path:
+    if "/notes" in path or "/summary" in path or "/agenda" in path:
         return "notes_summary"
     if "/slides" in path:
         return "slides"
@@ -54,7 +54,7 @@ _DOC_NOTES: dict[tuple[str, str], list[str]] = {
         "Returns host-facing full state snapshot.",
     ],
     ("GET", "/api/participant/slides"): [
-        "Primarily for diagnostics; UI cache invalidation is event-driven via slides_updated WS.",
+        "Returns cache status snapshot for all known slides; called on initial page load and after slides_updated WS.",
     ],
 }
 
