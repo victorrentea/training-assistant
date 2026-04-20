@@ -15,7 +15,6 @@ import railway.shared.metrics as metrics  # noqa: F401 - import for Prometheus m
 from railway.features.inbox.router import router as inbox_router
 from railway.features.internal.router import router as internal_router
 from railway.features.pages.router import host_router, landing_router, participant_router
-from railway.features.session.notes_router import public_router as session_public_router
 from railway.features.slides import router as slides
 from railway.features.slides.upload import router as slides_upload_router
 from railway.features.upload import router as upload
@@ -163,9 +162,8 @@ session_participant = APIRouter(
     prefix="/{session_id}",
     dependencies=[Depends(require_valid_session)],
 )
-session_participant.include_router(participant_router)       # /, /notes
+session_participant.include_router(participant_router)       # /
 session_participant.include_router(slides.public_router)     # /api/slides, /api/slides/file/{slug}, /api/slides/current
-session_participant.include_router(session_public_router)    # /api/summary, /api/notes
 session_participant.include_router(upload_public_router)     # /api/upload (participant file upload)
 session_participant.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
 app.include_router(session_participant)
