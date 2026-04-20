@@ -8,7 +8,7 @@ from starlette.testclient import TestClient
 
 from daemon.participant.router import router
 from daemon.participant.state import ParticipantState
-from railway.shared.state import get_avatar_filename
+from daemon.participant.names import get_avatar_filename
 
 
 @pytest.fixture

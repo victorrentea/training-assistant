@@ -3,7 +3,8 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 
-from railway.shared.state import AppState, LOTR_NAMES, assign_avatar, get_avatar_filename
+from daemon.participant.names import LOTR_NAMES, assign_avatar, get_avatar_filename
+from railway.shared.state import AppState
 
 
 # ═══════════════════════════════════════════════════════════════════════

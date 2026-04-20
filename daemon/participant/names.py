@@ -1,5 +1,15 @@
-"""Character name pool for conference mode auto-assignment."""
-import hashlib
+"""Avatar and name assignment logic for participant identity."""
+import random
+
+LOTR_NAMES = [
+    # Ordered by cultural popularity: most recognizable → least
+    "Gandalf", "Frodo", "Aragorn", "Legolas", "Gollum",
+    "Samwise", "Gimli", "Smaug", "Bilbo", "Saruman",
+    "Galadriel", "Boromir", "Arwen", "Eowyn", "Merry",
+    "Pippin", "Elrond", "Thorin", "Theoden", "Faramir",
+    "Treebeard", "Shadowfax", "Radagast", "Tom Bombadil", "Eomer",
+    "Haldir", "Glorfindel", "Celeborn", "Grima Wormtongue", "The One Ring"
+]
 
 CHARACTER_NAMES: list[tuple[str, str]] = [
     # Star Wars
@@ -113,27 +123,61 @@ CHARACTER_NAMES: list[tuple[str, str]] = [
 ]
 
 
-def compute_letter_avatar(name: str) -> tuple[str, str]:
-    """Return (2-letter code, hex color) for a name.
-    Letters = first 2 chars of name uppercased.
-    Color = deterministic hash-based HSL color.
-    """
-    letters = name.replace("-", "").replace(" ", "")[:2].upper()
-    if len(letters) < 2:
-        letters = letters.ljust(2, "X")
-    h = int(hashlib.md5(name.encode()).hexdigest()[:8], 16)
-    hue = h % 360
-    sat = 55 + (h >> 8) % 25   # 55-80%
-    lum = 45 + (h >> 16) % 15  # 45-60%
-    color = f"hsl({hue},{sat}%,{lum}%)"
-    return letters, color
+def get_avatar_filename(name: str) -> str:
+    return name.lower().replace(' ', '-') + '.png'
+
+
+def assign_avatar(state, uuid: str, name: str) -> str:
+    """Assign avatar based on name. LOTR names get their matching avatar on first
+    assignment. Custom names get a unique avatar based on name hash.
+    Never overwrites an existing avatar (preserves refresh_avatar choices)."""
+    if uuid in state.participant_avatars:
+        return state.participant_avatars[uuid]
+    if name in LOTR_NAMES:
+        avatar = get_avatar_filename(name)
+        state.participant_avatars[uuid] = avatar
+        return avatar
+    taken = set(state.participant_avatars.values())
+    name_hash = sum(ord(c) for c in name) * 2654435761
+    preferred_index = name_hash % len(LOTR_NAMES)
+    for offset in range(len(LOTR_NAMES)):
+        avatar = get_avatar_filename(LOTR_NAMES[(preferred_index + offset) % len(LOTR_NAMES)])
+        if avatar not in taken:
+            state.participant_avatars[uuid] = avatar
+            return avatar
+    avatar = get_avatar_filename(LOTR_NAMES[preferred_index])
+    state.participant_avatars[uuid] = avatar
+    return avatar
+
+
+def refresh_avatar(state, uuid: str, rejected: set[str] | None = None) -> str | None:
+    """Reassign a random avatar different from current and any previously rejected,
+    ensuring uniqueness among connected participants."""
+    current = state.participant_avatars.get(uuid)
+    rejected = rejected or set()
+    if current:
+        rejected.add(current)
+
+    taken_by_others = {avatar for uid, avatar in state.participant_avatars.items()
+                       if uid != uuid and not uid.startswith("__")}
+    all_avatars = [get_avatar_filename(n) for n in LOTR_NAMES]
+
+    available = [a for a in all_avatars if a not in taken_by_others and a not in rejected]
+    if not available:
+        available = [a for a in all_avatars if a not in taken_by_others and a != current]
+    if not available:
+        available = [a for a in all_avatars if a != current]
+    if not available:
+        return None
+    new_avatar = random.choice(available)
+    state.participant_avatars[uuid] = new_avatar
+    return new_avatar
 
 
 def assign_conference_name(state) -> tuple[str, str]:
     """Pick a random unused character name for a new conference participant.
     Returns (name, universe). Unused = not assigned to any currently connected UUID.
     """
-    import random
     connected_uuids = {uid for uid in state.participants if not uid.startswith("__")}
     used_names = {state.participant_names.get(uid) for uid in connected_uuids
                   if uid in state.participant_names}

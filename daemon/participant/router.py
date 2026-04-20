@@ -22,9 +22,12 @@ from daemon.participant.state import GitRepoActivity, participant_state
 from daemon.slides.models import CurrentSlide
 from daemon.ws_messages import ParticipantListUpdatedMsg
 from daemon.ws_publish import notify_host
-from railway.shared.names import assign_conference_name
-from railway.shared.state import LOTR_NAMES, get_avatar_filename
-from railway.shared.state import refresh_avatar as _refresh_avatar_logic
+from daemon.participant.names import (
+    LOTR_NAMES,
+    assign_conference_name,
+    get_avatar_filename,
+    refresh_avatar as _refresh_avatar_logic,
+)
 
 logger = logging.getLogger(__name__)
 _COORDS_RE = re.compile(r"^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$")
