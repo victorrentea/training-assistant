@@ -361,6 +361,7 @@ def _slugify(value: str) -> str:
     return slug or "slide"
 
 
+
 def _normalize_slide_match_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", Path(str(value or "")).stem.lower())
 
@@ -427,11 +428,9 @@ def _resolve_presentation_slide_target(
                 if not source_value:
                     continue
                 source = Path(source_value).expanduser()
-                target_pdf = str(entry.get("target_pdf") or "").strip()
-                if not target_pdf:
-                    target_pdf = f"{source.stem}.pdf"
-                if not target_pdf.lower().endswith(".pdf"):
-                    target_pdf += ".pdf"
+                from daemon.slides.catalog import _title_to_pdf_name
+                title = str(entry.get("title") or "").strip()
+                target_pdf = _title_to_pdf_name(title) if title else f"{source.stem}.pdf"
                 explicit_slug = str(entry.get("slug") or "").strip().lower()
                 slug = explicit_slug or _slugify(Path(target_pdf).stem)
                 if slug in seen_slugs:
@@ -441,8 +440,7 @@ def _resolve_presentation_slide_target(
                 aliases = {
                     source.name,
                     source.stem,
-                    str(entry.get("title") or "").strip(),
-                    str(entry.get("name") or "").strip(),
+                    title,
                     Path(target_pdf).stem,
                 }
                 normalized_aliases = {_normalize_slide_match_key(alias) for alias in aliases if alias}

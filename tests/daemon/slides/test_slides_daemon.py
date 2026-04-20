@@ -269,7 +269,6 @@ def test_load_catalog_entries_and_resolve_targets(tmp_path):
                     {
                         "title": "Deck",
                         "source": str(deck),
-                        "target_pdf": "Deck Final.pdf",
                     }
                 ]
             }
@@ -283,7 +282,7 @@ def test_load_catalog_entries_and_resolve_targets(tmp_path):
     assert files == [deck]
     meta = metadata[str(deck.resolve())]
     assert meta["title"] == "Deck"
-    assert meta["target_pdf"] == "Deck Final.pdf"
+    assert meta["target_pdf"] == "Deck.pdf"
 
 
 def test_run_once_uses_catalog_target_pdf(tmp_path, monkeypatch):
@@ -300,7 +299,6 @@ def test_run_once_uses_catalog_target_pdf(tmp_path, monkeypatch):
                     {
                         "title": "Deck",
                         "source": str(deck),
-                        "target_pdf": "Deck Final.pdf",
                     }
                 ]
             }
@@ -324,8 +322,8 @@ def test_run_once_uses_catalog_target_pdf(tmp_path, monkeypatch):
     changed = _slides_upload.run_once(cfg, state)
     assert changed is True
     assert captured["source"] == deck
-    assert captured["target_pdf"] == "Deck Final.pdf"
-    assert captured["metadata"]["target_pdf"] == "Deck Final.pdf"
+    assert captured["target_pdf"] == "Deck.pdf"
+    assert captured["metadata"]["target_pdf"] == "Deck.pdf"
 
 
 def test_run_once_pushes_slides_list_only_when_payload_changes(tmp_path, monkeypatch):
@@ -441,7 +439,6 @@ def test_bootstrap_drive_urls_uses_alias_map(tmp_path, monkeypatch):
                     {
                         "title": "Reactive/WebFlux",
                         "source": "/tmp/reactive.pptx",
-                        "target_pdf": "Reactive WebFlux.pdf",
                     }
                 ]
             }

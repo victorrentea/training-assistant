@@ -44,6 +44,15 @@ def write_material_last_modified(publish_dir: Path | None, target_pdf: str | Non
 
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
+_NON_ASCII_RE = re.compile(r"[^\x00-\x7F]")
+_MULTI_SPACE_RE = re.compile(r"\s+")
+
+
+def _title_to_pdf_name(title: str) -> str:
+    name = _NON_ASCII_RE.sub("", title)
+    name = name.replace("/", " ").replace("\\", " ")
+    name = _MULTI_SPACE_RE.sub(" ", name).strip()
+    return f"{name}.pdf" if name else "slide.pdf"
 
 
 def list_pptx_files(folder: Path, recursive: bool) -> list[Path]:
@@ -82,16 +91,11 @@ def load_catalog_entries(path: Path | None) -> list[dict]:
         if not source.exists() or not source.is_file():
             log.error("slides", f"Missing source in catalog #{idx + 1}: {source}")
             continue
-        target_pdf = str(entry.get("target_pdf", "")).strip()
-        if not target_pdf:
-            target_pdf = f"{source.stem}.pdf"
-        if target_pdf.lower().endswith(".pdf") is False:
-            target_pdf += ".pdf"
-        target_pdf = target_pdf.replace("/", "-").replace("\\", "-")
+        title = str(entry.get("title", "")).strip()
         valid_entries.append({
-            "title": str(entry.get("title", "")).strip(),
+            "title": title,
             "source": source,
-            "target_pdf": target_pdf,
+            "target_pdf": _title_to_pdf_name(title),
             "drive_export_url": str(entry.get("drive_export_url", "")).strip(),
             "group": str(entry.get("group", "")).strip() or None,
         })
