@@ -82,7 +82,7 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
                 log.info("slides", f"Starting queued redownload for slug={slug}")
                 with _active_redownload_lock:
                     _active_redownload_slugs.add(slug)
-                from daemon.slides.router import _mark_cache_status, _broadcast_slides_updated
+                from daemon.slides.router import _broadcast_slides_updated, _mark_cache_status
                 _mark_cache_status(slug, "downloading")
                 _broadcast_slides_updated()
                 t = threading.Thread(
