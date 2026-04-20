@@ -89,9 +89,9 @@
     <div class="left-tabs-wrapper">
 
     <!-- Poll tab content -->
-    <div id="tab-content-poll" class="tab-content">
+    <div id="tab-content-poll" class="tab-content" style="overflow:hidden; display:flex; flex-direction:column;">
       <!-- Backstage manual entry -->
-      <div style="margin-top:.75rem;">
+      <div style="margin-top:.75rem; flex-shrink:0;">
         <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:.5rem;">
           <span style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">Backstage</span>
           <a href="#" onclick="event.preventDefault(); testOnePoll();" style="font-size:.8rem; color:var(--accent); text-decoration:none;">one</a>
@@ -101,8 +101,7 @@
              data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
         <div style="display:flex; flex-direction:column; gap:.4rem; margin-top:.4rem;">
           <div class="btn-row" style="align-items:center;">
-            <button class="btn" id="pop-queue-btn" onclick="popFromQueue()" disabled>⬆ Pop (0)</button>
-            <button class="btn" id="backstage-skip-btn" onclick="pollQueueSkip()" disabled>⏭</button>
+            <button class="btn" id="clear-queue-item-btn" onclick="clearBackstage()">✕ Clear</button>
             <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); margin:0 0 0 .25rem;">
               <input type="text" inputmode="numeric" pattern="[0-9]*" id="correct-count" value="1" maxlength="1"
                      style="width:2.8rem; height:34px; box-sizing:border-box; text-align:center; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.9rem;" />
@@ -112,6 +111,7 @@
           </div>
         </div>
       </div>
+      <ul id="queue-list" style="flex:1; min-height:0; overflow-y:auto; margin:.5rem 0 0 0; padding:.25rem 0 0 1.5rem; list-style:disc;"></ul>
     </div>
 
     <!-- Word Cloud tab content -->
