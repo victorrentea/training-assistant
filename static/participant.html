@@ -607,7 +607,18 @@ var LS = {
   NOTES_UNREAD: 'new:notes_unread',
   SUMMARY_UNREAD: 'new:summary_unread',
   ACTIVITY_SEEN: 'new:activity_seen',
+  SESSION_ID: 'new:session_id',
   scrollKey: function(view) { return 'new:scroll_' + view; },
+  getSessionId: function() { return localStorage.getItem(LS.SESSION_ID); },
+  setSessionId: function(id) { localStorage.setItem(LS.SESSION_ID, id); },
+  clearScrolls: function() {
+    var toRemove = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && (k.startsWith('new:scroll_') || k.startsWith('workshop_slide_page:'))) toRemove.push(k);
+    }
+    toRemove.forEach(function(k) { localStorage.removeItem(k); });
+  },
   getEmoji:  function()     { return JSON.parse(localStorage.getItem(LS.EMOJI_PROMOTED) || '[]'); },
   setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
   getScroll: function(view) { return localStorage.getItem(LS.scrollKey(view)); },
@@ -1954,6 +1965,10 @@ async function _refreshParticipantState() {
     _sessionId = status.session_id;
     console.log('[participant] session_id:', _sessionId);
     if (!_sessionId) return;
+    if (LS.getSessionId() !== _sessionId) {
+      LS.clearScrolls();
+      LS.setSessionId(_sessionId);
+    }
 
     // Register or rejoin
     var identity = null;
