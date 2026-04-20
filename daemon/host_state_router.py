@@ -234,21 +234,13 @@ def _get_join_base_url() -> str:
     return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
 
 
-def _build_slides_log_entries() -> list[dict]:
-    return [
-        {"file": sv["file_name"], "slide": sv["page"], "seconds_spent": sv["seconds"]}
-        for sv in misc_state.slides_viewed
-    ]
-
-
 def _build_slides_log_fields() -> dict:
     """Compute slides_log_deep_count and slides_log_topic from in-memory slides_viewed."""
-    slides_log = _build_slides_log_entries()
-    deep_count = len({(e["file"], e["slide"]) for e in slides_log})
+    deep_count = len({(sv["slug"], sv["page"]) for sv in misc_state.slides_viewed})
     if misc_state.current_slide and misc_state.current_slide.get("slug"):
         topic = misc_state.current_slide["slug"]
-    elif slides_log:
-        topic = max(slides_log, key=lambda e: e["seconds_spent"])["file"]
+    elif misc_state.slides_viewed:
+        topic = max(misc_state.slides_viewed, key=lambda sv: sv["seconds"])["slug"]
     else:
         topic = None
     return {

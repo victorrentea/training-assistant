@@ -20,7 +20,7 @@ class MiscState:
         self.slides_catalog: dict[str, dict] = {}   # slug → catalog entry (drive_export_url, title, etc.)
         # Synced from Railway state (slides + session info)
         self.current_slide: dict | None = None
-        self.slides_viewed: list[dict] = []  # [{file_name, page, seconds}]
+        self.slides_viewed: list[dict] = []  # [{slug, page, seconds}]
         self.gdrive_url: str | None = None
         self.agenda_docx_path: Path | None = None
         self.talk_presentation_name: str | None = None

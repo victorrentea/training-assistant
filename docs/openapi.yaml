@@ -2710,23 +2710,18 @@ components:
       title: SlidesHistoryResponse
     SlidesLogEntry:
       properties:
-        file:
+        slug:
           type: string
-          title: File
+          title: Slug
         slide:
           type: integer
           title: Slide
         seconds_spent:
           type: number
           title: Seconds Spent
-        timestamp:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Timestamp
       type: object
       required:
-      - file
+      - slug
       - slide
       - seconds_spent
       title: SlidesLogEntry

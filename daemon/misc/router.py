@@ -146,7 +146,7 @@ async def get_slides_updated():
 async def get_slides_history():
     """Return accumulated slide viewing history for the current session."""
     entries = [
-        SlidesLogEntry(file=sv["file_name"], slide=sv["page"], seconds_spent=sv["seconds"])
+        SlidesLogEntry(slug=sv["slug"], slide=sv["page"], seconds_spent=sv["seconds"])
         for sv in misc_state.slides_viewed
     ]
     return SlidesHistoryResponse(slides_log=entries)
@@ -231,39 +231,32 @@ async def get_slides_compilation(session_id: str):
         log.error("slides-compile", "pypdf not installed — add to [daemon] extras in pyproject.toml")
         return JSONResponse({"error": "pypdf not available"}, status_code=500)
 
-    # 1. Build reverse index: source_name → {slug, drive_export_url}
-    source_index: dict[str, dict] = {
-        entry["source_name"]: {"slug": slug, "drive_export_url": entry.get("drive_export_url", "")}
-        for slug, entry in misc_state.slides_catalog.items()
-        if entry.get("source_name")
-    }
-
-    # 2. Group slides_viewed by file_name, preserving encounter order
-    pages_by_file: dict[str, set[int]] = defaultdict(set)
-    file_order: list[str] = []
+    # 1. Group slides_viewed by slug, preserving encounter order
+    pages_by_slug: dict[str, set[int]] = defaultdict(set)
+    slug_order: list[str] = []
     for sv in misc_state.slides_viewed:
-        fn = sv.get("file_name", "")
-        if not fn:
+        slug = sv.get("slug", "")
+        if not slug:
             continue
-        if fn not in pages_by_file:
-            file_order.append(fn)
+        if slug not in pages_by_slug:
+            slug_order.append(slug)
         page = sv.get("page", 0)
         if page > 0:
-            pages_by_file[fn].add(page)
+            pages_by_slug[slug].add(page)
 
-    if not file_order:
+    if not slug_order:
         return Response(status_code=204)
 
-    # 3. Resolve file names to catalog entries
-    needed: list[dict] = []  # each: {slug, drive_export_url, file_name, pages}
-    for fn in file_order:
-        entry = source_index.get(fn)
-        if not entry:
-            log.error("slides-compile", f"No catalog entry for {fn!r} — skipping")
+    # 2. Resolve slugs to catalog entries
+    needed: list[dict] = []  # each: {slug, drive_export_url, pages}
+    for slug in slug_order:
+        catalog_entry = misc_state.slides_catalog.get(slug)
+        if not catalog_entry:
+            log.error("slides-compile", f"No catalog entry for slug={slug!r} — skipping")
             continue
-        pages = pages_by_file[fn]
+        pages = pages_by_slug[slug]
         if pages:
-            needed.append({**entry, "file_name": fn, "pages": pages})
+            needed.append({"slug": slug, "drive_export_url": catalog_entry.get("drive_export_url", ""), "pages": pages})
 
     if not needed:
         return Response(status_code=204)
@@ -285,7 +278,7 @@ async def get_slides_compilation(session_id: str):
             try:
                 await asyncio.to_thread(download_on_railway, deck["slug"], deck["drive_export_url"])
             except Exception as exc:
-                log.error("slides-compile", f"GDrive download failed for {deck['file_name']!r}: {exc}")
+                log.error("slides-compile", f"GDrive download failed for {deck['slug']!r}: {exc}")
             async with counter_lock:
                 done_count += 1
                 pct = int(done_count * 100 / total)
@@ -303,7 +296,7 @@ async def get_slides_compilation(session_id: str):
         try:
             pdf_bytes = await asyncio.to_thread(_fetch_pdf_bytes_from_railway, session_id, slug)
         except Exception as exc:
-            log.error("slides-compile", f"Failed to fetch PDF for {deck['file_name']!r}: {exc}")
+            log.error("slides-compile", f"Failed to fetch PDF for {deck['slug']!r}: {exc}")
             continue
         reader = PdfReader(BytesIO(pdf_bytes))
         n = len(reader.pages)

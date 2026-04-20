@@ -26,10 +26,9 @@ class CurrentSlide(BaseModel):
 
 
 class SlidesLogEntry(BaseModel):
-    file: str
+    slug: str
     slide: int
     seconds_spent: float
-    timestamp: str | None = None
 
 
 class SlidesHistoryResponse(BaseModel):

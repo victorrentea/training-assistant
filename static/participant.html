@@ -741,21 +741,8 @@ function _findSlideForHostCurrent(slidesCurrent) {
   if (!targetSlug) return null;
   return _slidesCatalog.find(function(slide) { return slide.slug === targetSlug; }) || null;
 }
-function _findSlideByHistoryFileName(fileName) {
-  var token = _normalizeSlideMatchToken(fileName);
-  if (!token) return null;
-  var exactByName = _slidesCatalog.find(function(s) {
-    return _normalizeSlideMatchToken(s.name) === token;
-  });
-  if (exactByName) return exactByName;
-  var exactBySlug = _slidesCatalog.find(function(s) {
-    return _normalizeSlideMatchToken(s.slug) === token;
-  });
-  if (exactBySlug) return exactBySlug;
-  return _slidesCatalog.find(function(s) {
-    var nameToken = _normalizeSlideMatchToken(s.name);
-    return nameToken && (nameToken.indexOf(token) >= 0 || token.indexOf(nameToken) >= 0);
-  }) || null;
+function _findSlideBySlug(slug) {
+  return _slidesCatalog.find(function(s) { return s.slug === slug; }) || null;
 }
 function _scrollSlidesToPage(page) {
   var targetPage = Math.max(1, Number(page || 1));
@@ -774,8 +761,8 @@ function _getCurrentSlidesPage() {
   var n = Number(m[1]);
   return Number.isFinite(n) ? n : null;
 }
-async function _openSlideFromHistory(fileName, page, focusEl) {
-  var slide = _findSlideByHistoryFileName(fileName);
+async function _openSlideFromHistory(slug, page, focusEl) {
+  var slide = _findSlideBySlug(slug);
   if (!slide) {
     showToast('Could not match that history item to an available topic.');
     return false;
@@ -915,26 +902,26 @@ function _loadSlideHistory() {
       var el = document.getElementById('slide-history-list');
       if (!el) return;
       if (!slides.length) { el.style.display = 'none'; return; }
-      // Group pages by file (strip .pptx extension for display)
       var groups = {}, order = [];
       slides.forEach(function(s) {
-        var name = (s.file || '').replace(/\.pptx$/i, '');
-        if (!groups[name]) { groups[name] = []; order.push(name); }
-        groups[name].push(s.slide);
+        var slug = s.slug || '';
+        if (!slug) return;
+        if (!groups[slug]) { groups[slug] = []; order.push(slug); }
+        groups[slug].push(s.slide);
       });
-      var lastOrderName = order[order.length - 1];
-      el.innerHTML = order.map(function(name) {
-        var pagesHtml = groups[name].map(function(p) {
-          return '<a href="#" onclick="return false" class="text-primary underline hover:text-white" data-history-file-name="' + name.replace(/"/g, '&quot;') + '" data-history-page="' + Number(p || 1) + '">' + p + '</a>';
+      el.innerHTML = order.map(function(slug) {
+        var catalogEntry = _findSlideBySlug(slug);
+        var title = (catalogEntry && catalogEntry.name) || slug;
+        var pagesHtml = groups[slug].map(function(p) {
+          return '<a href="#" onclick="return false" class="text-primary underline hover:text-white" data-history-slug="' + slug.replace(/"/g, '&quot;') + '" data-history-page="' + Number(p || 1) + '">' + p + '</a>';
         }).join(', ');
-        var liveBadge = '';
         return '<div class="slide-history-row pl-4 pr-4 py-0.5 text-sm leading-relaxed rounded transition-colors flex items-baseline gap-1">' +
           '<span class="flex-shrink-0 text-on-surface-variant opacity-60">•</span>' +
-          '<span><span class="font-semibold text-on-surface-variant mr-1">' + name + '</span>' +
-          pagesHtml + liveBadge + '</span></div>';
+          '<span><span class="font-semibold text-on-surface-variant mr-1">' + title + '</span>' +
+          pagesHtml + '</span></div>';
       }).join('');
       el.onclick = function(ev) {
-        var link = ev.target && ev.target.closest('a[data-history-file-name][data-history-page]');
+        var link = ev.target && ev.target.closest('a[data-history-slug][data-history-page]');
         if (!link) return;
         ev.preventDefault();
         var row = link.closest('.slide-history-row');
@@ -946,9 +933,9 @@ function _loadSlideHistory() {
           if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
           _historySelectedRowEl = row;
         }
-        var fileName = link.getAttribute('data-history-file-name') || '';
+        var slug = link.getAttribute('data-history-slug') || '';
         var page = Number(link.getAttribute('data-history-page') || '1');
-        _openSlideFromHistory(fileName, page, row || link);
+        _openSlideFromHistory(slug, page, row || link);
         _restartSlideHistoryAutoHideTimer();
       };
       el.onmouseenter = _restartSlideHistoryAutoHideTimer;

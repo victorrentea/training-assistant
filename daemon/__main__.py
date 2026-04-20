@@ -1031,7 +1031,12 @@ def run() -> None:
             # ── Process slides_viewed deltas from addon bridge ──
             for _sv_batch in _bridge.drain_slides_viewed():
                 from daemon.slides.merge_viewed import merge_slides_viewed
-                merge_slides_viewed(misc_state.slides_viewed, _sv_batch)
+                _slug_map = {
+                    v.get("source_name", ""): k
+                    for k, v in misc_state.slides_catalog.items()
+                    if v.get("source_name")
+                }
+                merge_slides_viewed(misc_state.slides_viewed, _sv_batch, _slug_map)
             _slides_history_count_after = len(misc_state.slides_viewed)
             if _slides_history_count_after != _prev_slides_history_count:
                 from daemon.ws_messages import SlidesHistoryCountUpdatedMsg
