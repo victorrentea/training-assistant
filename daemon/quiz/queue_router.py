@@ -6,12 +6,9 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
-from daemon.participant.state import participant_state
-from daemon.poll.state import poll_state
 from daemon.quiz.queue import quiz_queue
-from daemon.scores import scores
-from daemon.ws_messages import PollOpenedMsg, PollQueueUpdatedMsg
-from daemon.ws_publish import broadcast, notify_host
+from daemon.ws_messages import PollQueueUpdatedMsg
+from daemon.ws_publish import notify_host
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +34,7 @@ router = APIRouter(prefix="/api/{session_id}/host/poll/queue", tags=["poll"])
 
 @router.post("", status_code=204)
 async def submit_questions(body: SubmitQuestionsRequest):
-    """Replace the entire poll queue with the submitted questions. Typically called by AI submitting generated questions."""
+    """Replace the entire poll queue with the submitted questions."""
     questions = [q.model_dump() for q in body.questions]
     quiz_queue.submit(questions)
     daemon_log.info(_LOG, f"Queue submitted: {len(questions)} question(s)")
@@ -45,50 +42,16 @@ async def submit_questions(body: SubmitQuestionsRequest):
     return Response(status_code=204)
 
 
-@router.post("/submit", status_code=204)
-async def submit_current():
-    """Submit current queued question as a poll to participants and advance the queue."""
-    current = quiz_queue.current()
-    if current is None:
-        return JSONResponse({"error": "Poll queue is empty"}, status_code=400)
-
-    # Activity gate — same pattern as poll router
-    activity = participant_state.current_activity
-    if activity and activity not in ("none", "poll"):
-        return JSONResponse({"error": f"Activity {activity} is active"}, status_code=409)
-
-    options = current["options"]  # already list[str]
-    correct_count = len(current["correct_indices"])
-    multi = correct_count > 1
-
-    poll = poll_state.create_poll(
-        question=current["question"],
-        options=options,
-        multi=multi,
-        correct_count=correct_count if multi else None,
-    )
-    participant_state.current_activity = "poll"
-
-    poll_state.open_poll(scores.snapshot_base)
-
-    broadcast(PollOpenedMsg(poll=poll))
-    await notify_host(PollOpenedMsg(poll=poll))
-    quiz_queue.advance()
+@router.delete("/{index}", status_code=204)
+async def remove_from_queue(index: int):
+    """Remove the question at the given 0-based index from the queue."""
+    try:
+        removed = quiz_queue.all_items()[index]
+        quiz_queue.remove(index)
+    except IndexError:
+        return JSONResponse({"error": f"No item at index {index}"}, status_code=404)
     await notify_host(PollQueueUpdatedMsg())
-    daemon_log.info(_LOG, f"Fired question: \"{current['question'][:60]}\" — {quiz_queue.pending_count()} remaining")
-    return Response(status_code=204)
-
-
-@router.post("/skip", status_code=204)
-async def skip_current():
-    """Skip the current question without firing it."""
-    current = quiz_queue.current()
-    if current is None:
-        return JSONResponse({"error": "Poll queue is empty"}, status_code=400)
-
-    quiz_queue.advance()
-    await notify_host(PollQueueUpdatedMsg())
-    daemon_log.info(_LOG, f"Skipped question: \"{current['question'][:60]}\" — {quiz_queue.pending_count()} remaining")
+    daemon_log.info(_LOG, f"Removed queue item [{index}]: \"{removed['question'][:60]}\" — {quiz_queue.pending_count()} remaining")
     return Response(status_code=204)
 
 

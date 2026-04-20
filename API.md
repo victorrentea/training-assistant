@@ -187,9 +187,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Host starts a countdown timer to end the poll.<br>`POST /api/{session_id}/host/poll/end/timer` | `seconds?: int` | - |
 | Create Poll, host manually creates and immediately opens a new poll.<br>`POST /api/{session_id}/host/poll/manual/submit` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`correct_count?: int` | - |
 | Clear Queue<br>`DELETE /api/{session_id}/host/poll/queue` | - | - |
-| Submit Questions, replace the entire poll queue with the submitted questions; typically called by AI submitting generated questions.<br>`POST /api/{session_id}/host/poll/queue` | `questions: list[PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | - |
-| Skip Current<br>`POST /api/{session_id}/host/poll/queue/skip` | - | - |
-| Submit Current<br>`POST /api/{session_id}/host/poll/queue/submit` | - | - |
+| Submit Questions, replace the entire poll queue with the submitted questions.<br>`POST /api/{session_id}/host/poll/queue` | `questions: list[PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | - |
+| Remove From Queue<br>`DELETE /api/{session_id}/host/poll/queue/{index}` | - | - |
 
 ### Host WS
 | Message | Payload |

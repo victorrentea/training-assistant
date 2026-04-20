@@ -691,8 +691,7 @@ paths:
       tags:
       - poll
       summary: Submit Questions
-      description: Replace the entire poll queue with the submitted questions. Typically
-        called by AI submitting generated questions.
+      description: Replace the entire poll queue with the submitted questions.
       operationId: submit_questions_api__session_id__host_poll_queue_post
       requestBody:
         content:
@@ -714,25 +713,20 @@ paths:
         '204':
           description: Successful Response
       x-feature: poll
-  /api/{session_id}/host/poll/queue/submit:
-    post:
+  /api/{session_id}/host/poll/queue/{index}:
+    delete:
       tags:
       - poll
-      summary: Submit Current
-      description: Submit current queued question as a poll to participants and advance
-        the queue.
-      operationId: submit_current_api__session_id__host_poll_queue_submit_post
-      responses:
-        '204':
-          description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll/queue/skip:
-    post:
-      tags:
-      - poll
-      summary: Skip Current
-      description: Skip the current question without firing it.
-      operationId: skip_current_api__session_id__host_poll_queue_skip_post
+      summary: Remove From Queue
+      description: Remove the question at the given 0-based index from the queue.
+      operationId: remove_from_queue_api__session_id__host_poll_queue__index__delete
+      parameters:
+      - name: index
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Index
       responses:
         '204':
           description: Successful Response
