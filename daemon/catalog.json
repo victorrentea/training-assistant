@@ -12,12 +12,6 @@
       "drive_export_url": "https://docs.google.com/presentation/d/1SxjaM0f97P1EjPJUxrjQ7fU2KKF_CD-N/export/pdf"
     },
     {
-      "title": "Design Principles",
-      "group": "Architecture",
-      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Design Principles.pptx",
-      "drive_export_url": "https://docs.google.com/presentation/d/1OV2fE1vo2V12r1kNJKWCBB-mxwlxZHFI/export/pdf"
-    },
-    {
       "title": "Clean Architecture",
       "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Architecture.pptx",
@@ -42,12 +36,6 @@
       "drive_export_url": "https://docs.google.com/presentation/d/1KYOo8EkIy9UrLXvBTQjCduJgwMSAGMwF/export/pdf"
     },
     {
-      "title": "Psychology",
-      "group": "Architecture",
-      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Psychology.pptx",
-      "drive_export_url": "https://docs.google.com/presentation/d/1KVgI3spS60gO3QXQpvznKTrMbag6Nqmg/export/pdf"
-    },
-    {
       "title": "Event-Driven Architectures",
       "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Event-Driven Architectures (EDA).pptx",
@@ -58,6 +46,18 @@
       "group": "Architecture",
       "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Event-Driven Pitfalls.pptx",
       "drive_export_url": "https://docs.google.com/presentation/d/1RWP-kzEMJ6M6VLzgW6XP4jALAkYo8FGE/export/pdf"
+    },
+    {
+      "title": "Design Principles",
+      "group": "Architecture",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Design Principles.pptx",
+      "drive_export_url": "https://docs.google.com/presentation/d/1OV2fE1vo2V12r1kNJKWCBB-mxwlxZHFI/export/pdf"
+    },
+    {
+      "title": "Psychology",
+      "group": "Architecture",
+      "source": "/Users/victorrentea/My Drive/Cursuri/Architecture/Psychology.pptx",
+      "drive_export_url": "https://docs.google.com/presentation/d/1KVgI3spS60gO3QXQpvznKTrMbag6Nqmg/export/pdf"
     },
     {
       "title": "Unit Testing",
