@@ -121,13 +121,11 @@ def convert_with_google_drive_pull(
     config: SlidesDaemonConfig,
     state_entry: dict,
     drive_export_url: str,
-    drive_probe_url: str,
 ) -> Path:
     if not drive_export_url:
         raise RuntimeError(f"drive_url_error: Missing drive_export_url for {pptx_path.name}")
 
     previous_fingerprint = str(state_entry.get("last_drive_fingerprint") or "").strip()
-    _ = drive_probe_url  # Reserved for future diagnostics.
     deadline = time.time() + max(10.0, float(config.drive_sync_timeout_seconds))
     poll_interval = max(1.0, float(config.drive_poll_seconds))
     attempts = 0
@@ -193,12 +191,10 @@ def convert_pptx_to_pdf(
     work_pdf = config.work_dir / f"{slug}.pdf"
     metadata = metadata or {}
     drive_export_url = str(metadata.get("drive_export_url") or "").strip()
-    drive_probe_url = str(metadata.get("drive_probe_url") or drive_export_url).strip()
     return convert_with_google_drive_pull(
         pptx_path=pptx_path,
         output_pdf=work_pdf,
         config=config,
         state_entry=state_entry,
         drive_export_url=drive_export_url,
-        drive_probe_url=drive_probe_url,
     )

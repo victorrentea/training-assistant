@@ -125,7 +125,7 @@ def config_from_env() -> SlidesDaemonConfig:
     drive_bootstrap_url = os.environ.get("PPTX_DRIVE_BOOTSTRAP_URL", DEFAULT_DRIVE_BOOTSTRAP_URL).strip()
     catalog_file_str = os.environ.get(
         "PPTX_CATALOG_FILE",
-        str(Path(__file__).parent.parent.parent / "daemon" / "materials_slides_catalog.json"),
+        str(Path(__file__).parent.parent.parent / "daemon" / "catalog.json"),
     ).strip()
     catalog_file = Path(catalog_file_str).expanduser() if catalog_file_str else None
 

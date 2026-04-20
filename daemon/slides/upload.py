@@ -319,10 +319,6 @@ def bootstrap_drive_urls(catalog_path: Path, source_url: str) -> tuple[int, int]
         if str(entry.get("drive_export_url", "")).strip() != export_url:
             entry["drive_export_url"] = export_url
             updated += 1
-        probe = str(entry.get("drive_probe_url", "")).strip()
-        if not probe:
-            entry["drive_probe_url"] = export_url
-            updated += 1
 
     catalog_path.write_text(json.dumps(raw_catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return updated, missing

@@ -455,13 +455,12 @@ def test_bootstrap_drive_urls_uses_alias_map(tmp_path, monkeypatch):
     monkeypatch.setattr(_slides_upload, "_read_url_text", lambda *_args, **_kwargs: html)
 
     updated, missing = _slides_upload.bootstrap_drive_urls(catalog, "https://victorrentea.ro/slides/")
-    assert updated == 2
+    assert updated == 1
     assert missing == 0
 
     data = json.loads(catalog.read_text(encoding="utf-8"))
     entry = data["decks"][0]
     assert entry["drive_export_url"] == "https://docs.google.com/presentation/d/reactive123/export/pdf"
-    assert entry["drive_probe_url"] == "https://docs.google.com/presentation/d/reactive123/export/pdf"
 
 
 def test_google_drive_pull_single_fetch_accepts_new_fingerprint(tmp_path, monkeypatch):
@@ -486,7 +485,6 @@ def test_google_drive_pull_single_fetch_accepts_new_fingerprint(tmp_path, monkey
         config=cfg,
         state_entry=state_entry,
         drive_export_url="https://docs.google.com/presentation/d/abc/export/pdf",
-        drive_probe_url="https://docs.google.com/presentation/d/abc/export/pdf",
     )
     assert pdf == out
     assert downloaded["called"] == 1
@@ -523,7 +521,6 @@ def test_google_drive_pull_unchanged_fingerprint_alerts_when_drive_not_running(t
             config=cfg,
             state_entry=state_entry,
             drive_export_url="https://docs.google.com/presentation/d/abc/export/pdf",
-            drive_probe_url="https://docs.google.com/presentation/d/abc/export/pdf",
         )
 
     assert "Google Drive app not running" in alerted["msg"]
