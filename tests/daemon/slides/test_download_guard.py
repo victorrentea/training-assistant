@@ -270,7 +270,6 @@ class TestDownloadErrors:
 async def test_n_concurrent_requests_trigger_exactly_one_download(app, state, monkeypatch):
     """N concurrent participant requests for the same slug → exactly 1 Railway call."""
     download_count = [0]
-    download_started = asyncio.Event()
     can_finish = threading.Event()
 
     def blocking_download(slug, url):
