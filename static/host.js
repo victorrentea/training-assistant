@@ -1649,20 +1649,36 @@
       body: JSON.stringify({ question, options, multi, correct_count }),
     });
     if (res.ok) {
-      // Erase stale correct-opts and LLM hints for this question
       localStorage.removeItem('host_correct_' + question);
       localStorage.removeItem('host_llm_hints_' + question);
       correctOptIds = new Set();
       toast('Poll created & opened ✓');
-      pollInput.innerHTML = '<div><br></div>';
-      reclassifyLines();
-      const cc = document.getElementById('correct-count');
-      cc.value = 1; cc.disabled = false;
+      if (selectedQueueIndex !== null) {
+        await fetch(API(`/poll/queue/${selectedQueueIndex}`), { method: 'DELETE' });
+        selectedQueueIndex = null;
+        selectedQueueItem = null;
+      }
+      _resetBackstage();
     } else {
       const data = await res.json().catch(() => ({}));
       toast(data.detail || data.error || 'Error');
     }
   });
+
+  function _resetBackstage() {
+    pollInput.innerHTML = '<div><br></div>';
+    reclassifyLines();
+    const cc = document.getElementById('correct-count');
+    if (cc) { cc.value = 1; cc.readOnly = false; }
+  }
+
+  window.clearBackstage = function() {
+    selectedQueueIndex = null;
+    selectedQueueItem = null;
+    _resetBackstage();
+    const list = document.getElementById('queue-list');
+    if (list) list.querySelectorAll('li').forEach(li => { li.style.background = ''; });
+  };
 
   // ── Timer ──
   let activeTimer = null;   // {seconds, started_at (ms)} or null
