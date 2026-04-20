@@ -19,6 +19,7 @@ from starlette.responses import Response
 from daemon.host_state_router import _build_host_participants_list
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
 from daemon.participant.state import GitRepoActivity, participant_state
+from daemon.slides.models import CurrentSlide
 from daemon.ws_messages import ParticipantListUpdatedMsg
 from daemon.ws_publish import notify_host
 from railway.shared.names import assign_conference_name
@@ -176,11 +177,6 @@ class DebateArgumentParticipant(BaseModel):
     has_upvoted: bool
 
 
-class SlidesCurrentPayload(BaseModel):
-    slug: str | None = None
-    page: int | None = None
-
-
 class WordcloudData(BaseModel):
     words: dict[str, int]
     word_order: list[str]
@@ -218,7 +214,7 @@ class ParticipantStateResponse(BaseModel):
     poll_correct_indices: list[int] | None = None
     codereview: CodeReviewParticipantState
     debate: DebateData
-    slides_current: SlidesCurrentPayload | None = None
+    slides_current: CurrentSlide | None = None
     talk_presentation_slug: str | None = None
     notes_updated_at: str | None = None
     summary_updated_at: str | None = None
@@ -603,7 +599,7 @@ async def get_participant_state(request: Request):
         # Emoji counters (talk mode)
         "emoji_counters": dict(ps.emoji_counters),
         # Slides (from misc state — synced from Railway)
-        "slides_current": misc_state.slides_current,
+        "slides_current": misc_state.current_slide,
         "talk_presentation_slug": misc_state.talk_presentation_slug,
         # Summary / notes (timestamps only — full content fetched on demand)
         "notes_updated_at": notes_updated_at,

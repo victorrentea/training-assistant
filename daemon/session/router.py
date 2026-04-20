@@ -27,6 +27,7 @@ from daemon.session_state import (
     load_session_state,
     save_session_state,
 )
+from daemon.slides.models import CurrentSlide
 from daemon.ws_messages import SlidesCurrentMsg, TalkPdfFailedMsg, TalkPdfReadyMsg
 from scripts.resolve_gdrive_link import (
     gdrive_view_url_to_presentation_export_url,
@@ -216,7 +217,7 @@ async def get_session_active():
 
 @global_router.post("/talk-presentation-path", status_code=204)
 async def talk_presentation_path(body: TalkPresentationPathRequest):
-    """Host drops a PPTX file during a talk — resolve GDrive URL, trigger Railway download, push slides_current."""
+    """Host drops a PPTX file during a talk — resolve GDrive URL, trigger Railway download, push current_slide_updated."""
     pptx_path = Path(body.path)
     slug = _slugify(pptx_path.stem)
     gdrive_url = resolve_gdrive_file_url(body.path)
@@ -249,7 +250,7 @@ async def talk_presentation_path(body: TalkPresentationPathRequest):
 
 
 async def _download_and_activate_talk_slides(slug: str, pdf_export_url: str) -> None:
-    """Background: ask Railway to download the PDF, then push slides_current to all participants."""
+    """Background: ask Railway to download the PDF, then push current_slide_updated to all participants."""
     from daemon.slides.router import download_on_railway
     try:
         daemon_log.info("talk     ", f"download→railway slug={slug}")
@@ -258,8 +259,8 @@ async def _download_and_activate_talk_slides(slug: str, pdf_export_url: str) -> 
         daemon_log.info("talk     ", f"download done slug={slug} sha={sha}")
         misc_state.talk_presentation_slug = slug
         await ws_publish.notify_host(TalkPdfReadyMsg(slug=slug))
-        ws_publish.broadcast(SlidesCurrentMsg(slides_current={"slug": slug, "page": 1}))
-        daemon_log.info("talk     ", f"slides_current pushed slug={slug}")
+        ws_publish.broadcast(SlidesCurrentMsg(current_slide=CurrentSlide(slug=slug, page=1)))
+        daemon_log.info("talk     ", f"current_slide_updated pushed slug={slug}")
     except Exception as e:
         daemon_log.error("talk     ", f"download failed slug={slug}: {e}")
         await ws_publish.notify_host(TalkPdfFailedMsg())

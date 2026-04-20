@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from daemon.email_notify import notify as email_notify
+from daemon.slides.models import Slide
 from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
@@ -45,17 +46,8 @@ class AgendaResponse(BaseModel):
     data: str  # base64-encoded .docx content
     filename: str
 
-class SlidesCacheStatusEntry(BaseModel):
-    status: str
-    size_bytes: int | None = None
-    downloaded_at: str | None = None
-    modified_at: str | None = None
-    title: str | None = None
-    name: str | None = None
-    error: str | None = None
-
-class SlidesCacheStatusResponse(BaseModel):
-    slides_updated: dict[str, SlidesCacheStatusEntry] = {}
+class SlidesResponse(BaseModel):
+    slides_updated: dict[str, Slide] = {}
 
 class PasteEntry(BaseModel):
     id: str
@@ -143,10 +135,10 @@ async def get_summary():
     )
 
 
-@participant_router.get("/slides-cache-status", response_model=SlidesCacheStatusResponse)
+@participant_router.get("/slides", response_model=SlidesResponse)
 async def get_slides_updated():
     """Get slides cache status."""
-    return SlidesCacheStatusResponse.model_validate({"slides_updated": misc_state.slides_updated})
+    return SlidesResponse.model_validate({"slides_updated": misc_state.slides_updated})
 
 
 @participant_router.get("/agenda", response_model=AgendaResponse)

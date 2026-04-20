@@ -85,11 +85,6 @@ class SlidesLogEntry(BaseModel):
     timestamp: str
 
 
-class SlidesCurrentPayload(BaseModel):
-    slug: str | None = None
-    page: int | None = None
-
-
 class HostStateResponse(BaseModel):
     type: Literal["state"] = "state"
     mode: str
@@ -255,8 +250,8 @@ def _build_slides_log_fields() -> dict:
         for sv in misc_state.slides_viewed
     ]
     deep_count = len({(e["file"], e["slide"]) for e in slides_log})
-    if misc_state.slides_current and misc_state.slides_current.get("slug"):
-        topic = misc_state.slides_current["slug"]
+    if misc_state.current_slide and misc_state.current_slide.get("slug"):
+        topic = misc_state.current_slide["slug"]
     elif slides_log:
         topic = max(slides_log, key=lambda e: e["seconds_spent"])["file"]
     else:

@@ -249,7 +249,7 @@ def _build_runtime_session_snapshot(
             "round_timer_seconds": debate_snapshot.get("round_timer_seconds"),
             "round_timer_started_at": debate_snapshot.get("round_timer_started_at"),
         },
-        "slides_current": misc_state.slides_current,
+        "current_slide": misc_state.current_slide,
         "slides_viewed": [dict(sv) for sv in misc_state.slides_viewed],
         "git_repos": [r.model_dump() for r in participant_state.git_repos],
         "talk_presentation_name": misc_state.talk_presentation_name,
@@ -1023,22 +1023,12 @@ def run() -> None:
                                 "slug": _target["slug"],
                                 "page": _slide_num,
                             }
-                            if misc_state.slides_current != _sc:
-                                misc_state.slides_current = _sc
+                            if misc_state.current_slide != _sc:
+                                misc_state.current_slide = _sc
+                                from daemon.slides.models import CurrentSlide
                                 from daemon.ws_messages import SlidesCurrentMsg
-                                ws_publish.broadcast(SlidesCurrentMsg(slides_current=_sc))
+                                ws_publish.broadcast(SlidesCurrentMsg(current_slide=CurrentSlide(**_sc)))
                                 log.info("addons   ", f"← Slide: {_deck}:{_slide_num}")
-                        elif _target and not _target.get("matched", True):
-                            if misc_state.slides_current is not None:
-                                misc_state.slides_current = None
-                                from daemon.ws_messages import SlidesCurrentMsg
-                                ws_publish.broadcast(SlidesCurrentMsg(slides_current=None))
-                    else:
-                        _sc = {"page": _slide_num}
-                        if misc_state.slides_current != _sc:
-                            misc_state.slides_current = _sc
-                            from daemon.ws_messages import SlidesCurrentMsg
-                            ws_publish.broadcast(SlidesCurrentMsg(slides_current=_sc))
 
             # ── Process slides_viewed deltas from addon bridge ──
             for _sv_batch in _bridge.drain_slides_viewed():

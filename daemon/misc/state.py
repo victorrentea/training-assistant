@@ -19,7 +19,7 @@ class MiscState:
         self.slides_updated: dict[str, dict] = {}
         self.slides_catalog: dict[str, dict] = {}   # slug → catalog entry (drive_export_url, title, etc.)
         # Synced from Railway state (slides + session info)
-        self.slides_current: dict | None = None
+        self.current_slide: dict | None = None
         self.slides_viewed: list[dict] = []  # [{file_name, page, seconds}]
         self.gdrive_url: str | None = None
         self.agenda_docx_path: Path | None = None
@@ -59,8 +59,8 @@ class MiscState:
             if "slides_updated" in data:
                 self.slides_updated.clear()
                 self.slides_updated.update(data["slides_updated"])
-            if "slides_current" in data:
-                self.slides_current = data["slides_current"]
+            if "current_slide" in data:
+                self.current_slide = data["current_slide"]
             if "slides_viewed" in data:
                 self.slides_viewed = list(data.get("slides_viewed") or [])
             if "gdrive_url" in data:
@@ -160,7 +160,7 @@ class MiscState:
             self.summary_updated_at = None
             # slides_updated is NOT cleared — it's infrastructure state
             # (PDF cache + PPTX file timestamps) that survives session changes.
-            self.slides_current = None
+            self.current_slide = None
             self.slides_viewed = []
             self.gdrive_url = None
             self.talk_presentation_name = None

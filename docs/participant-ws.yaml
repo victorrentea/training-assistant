@@ -18,11 +18,11 @@ channels:
       summary: Events received by participant
       message:
         oneOf:
-          - $ref: '#/components/messages/slides_current'
+          - $ref: '#/components/messages/current_slide_updated'
           - $ref: '#/components/messages/slides_updated'
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/active_participants_count_updated'
-          - $ref: '#/components/messages/slides_history_count_updated'
+          - $ref: '#/components/messages/slides_history_updated'
           - $ref: '#/components/messages/poll_opened'
           - $ref: '#/components/messages/poll_ended'
           - $ref: '#/components/messages/poll_correct_revealed'
@@ -49,24 +49,24 @@ components:
 
     # ── Slides ────────────────────────────────────────────────────────────────
 
-    slides_current:
+    current_slide_updated:
       summary: Host navigated to a new slide
       x-feature: slides
       payload:
         type: object
-        required: [type]
+        required: [type, current_slide]
         properties:
           type:
             type: string
-            enum: [slides_current]
-          slides_current:
-            $ref: '#/components/schemas/SlidesCurrent'
-            nullable: true
-            description: null means no active slide
+            enum: [current_slide_updated]
+          current_slide:
+            $ref: '#/components/schemas/CurrentSlide'
 
     slides_updated:
       summary: Slide cache status changed — contains full cache map to avoid polling
       x-feature: slides
+      x-doc-notes:
+        - "'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open."
       payload:
         type: object
         required: [type]
@@ -82,7 +82,7 @@ components:
           slides_updated:
             type: object
             additionalProperties:
-              type: object
+              $ref: '#/components/schemas/Slide'
             default: {}
 
     # ── Activity ──────────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ components:
           count:
             type: integer
 
-    slides_history_count_updated:
+    slides_history_updated:
       summary: Participant slide history count changed
       x-feature: slides
       payload:
@@ -127,7 +127,7 @@ components:
         properties:
           type:
             type: string
-            enum: [slides_history_count_updated]
+            enum: [slides_history_updated]
           count:
             type: integer
 
@@ -490,44 +490,22 @@ components:
 
   schemas:
 
-    SlidesCurrent:
+    CurrentSlide:
       type: object
+      required: [slug, page]
       properties:
-        url:
-          type: string
-          nullable: true
         slug:
           type: string
-          nullable: true
-        presentation_name:
-          type: string
-          nullable: true
-        current_page:
+        page:
           type: integer
-          nullable: true
-        updated_at:
-          type: string
-          format: date-time
-          nullable: true
 
-    SlideWithCacheStatus:
+    Slide:
       type: object
-      required: [slug, status]
+      required: [status]
       properties:
-        slug:
-          type: string
-        name:
-          type: string
-          nullable: true
-        title:
-          type: string
-          nullable: true
-        drive_export_url:
-          type: string
-          nullable: true
         status:
           type: string
-          description: '"not_cached"|"downloading"|"cached"|"stale"|"poll_timeout"|"download_failed"'
+          enum: [not_cached, cached, downloading, download_failed]
         size_bytes:
           type: integer
           nullable: true
@@ -535,16 +513,18 @@ components:
           type: string
           format: date-time
           nullable: true
-
-    CacheStatusEntry:
-      type: object
-      required: [status]
-      properties:
-        status:
+        modified_at:
           type: string
-          description: '"downloading"|"ready"|"error"'
-        size_bytes:
-          type: integer
+          format: date-time
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        error:
+          type: string
           nullable: true
 
     Poll:

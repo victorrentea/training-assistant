@@ -43,6 +43,8 @@ components:
     slides_updated:
       summary: Slide cache status changed — contains full cache map to avoid polling
       x-feature: slides
+      x-doc-notes:
+        - "'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open."
       payload:
         type: object
         required: [type]
@@ -58,7 +60,7 @@ components:
           slides_updated:
             type: object
             additionalProperties:
-              type: object
+              $ref: '#/components/schemas/Slide'
             default: {}
 
     # ── Poll ─────────────────────────────────────────────────────────────────
@@ -307,44 +309,32 @@ components:
 
   schemas:
 
-    SlideWithCacheStatus:
-      type: object
-      required: [slug, status]
-      properties:
-        slug:
-          type: string
-        name:
-          type: string
-          nullable: true
-        title:
-          type: string
-          nullable: true
-        drive_export_url:
-          type: string
-          nullable: true
-        status:
-          type: string
-          description: '"not_cached"|"downloading"|"cached"|"stale"|"poll_timeout"|"download_failed"'
-        size_bytes:
-          type: integer
-          nullable: true
-        downloaded_at:
-          type: string
-          format: date-time
-          nullable: true
-
-    CacheStatusEntry:
+    Slide:
       type: object
       required: [status]
       properties:
         status:
           type: string
+          enum: [not_cached, cached, downloading, download_failed]
         size_bytes:
           type: integer
           nullable: true
         downloaded_at:
           type: string
           format: date-time
+          nullable: true
+        modified_at:
+          type: string
+          format: date-time
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        error:
+          type: string
           nullable: true
 
     QAQuestion:

@@ -152,7 +152,7 @@ class PersistedSessionState(PersistedModel):
     talk_presentation_name: str | None = Field(default=None, description="Display name of the last PPTX dropped in talk mode (stem, no extension)")
     talk_presentation_url: str | None = Field(default=None, description="PDF export URL for talk PPTX (docs.google.com/presentation/d/.../export/pdf)")
     talk_presentation_slug: str | None = Field(default=None, description="Railway slug under which the talk PPTX PDF is cached")
-    slides_current: dict[str, Any] | None = Field(default=None, description="{presentation_name, current_page}")
+    current_slide: dict[str, Any] | None = Field(default=None, description="{slug, page}")
     slides_viewed: list[ViewedSlide] = Field(default_factory=list, description="Accumulated per-slide viewing durations from addons")
     git_repos: list[PersistedGitRepoActivity] = Field(default_factory=list, description="Accumulated git file-open events for this session")
     emoji_counters: dict[str, int] = Field(default_factory=dict, description="emoji → cumulative reaction count (talk mode)")

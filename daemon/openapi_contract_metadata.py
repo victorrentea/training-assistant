@@ -19,7 +19,7 @@ def _feature_for_misc_path(path: str) -> str:
         return "feedback"
     if "/notes" in path or "/summary" in path:
         return "notes_summary"
-    if "slides-cache-status" in path:
+    if path.endswith("/slides") and "participant" in path:
         return "slides"
     return "misc"
 
@@ -53,7 +53,7 @@ _DOC_NOTES: dict[tuple[str, str], list[str]] = {
     ("GET", "/api/{session_id}/host/state"): [
         "Returns host-facing full state snapshot.",
     ],
-    ("GET", "/api/participant/slides-cache-status"): [
+    ("GET", "/api/participant/slides"): [
         "Primarily for diagnostics; UI cache invalidation is event-driven via slides_updated WS.",
     ],
 }

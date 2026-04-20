@@ -563,20 +563,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/SummaryResponse'
       x-feature: notes_summary
-  /api/participant/slides-cache-status:
+  /api/participant/slides:
     get:
       tags:
       - misc
       summary: Get Slides Updated
       description: Get slides cache status.
-      operationId: get_slides_updated_api_participant_slides_cache_status_get
+      operationId: get_slides_updated_api_participant_slides_get
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SlidesCacheStatusResponse'
+                $ref: '#/components/schemas/SlidesResponse'
       x-feature: slides
       x-doc-notes:
       - Primarily for diagnostics; UI cache invalidation is event-driven via slides_updated
@@ -1170,7 +1170,7 @@ paths:
       - session
       summary: Talk Presentation Path
       description: Host drops a PPTX file during a talk — resolve GDrive URL, trigger
-        Railway download, push slides_current.
+        Railway download, push current_slide_updated.
       operationId: talk_presentation_path_api_session_talk_presentation_path_post
       requestBody:
         content:
@@ -1410,6 +1410,19 @@ components:
       - options
       - multi
       title: CreatePollRequest
+    CurrentSlide:
+      properties:
+        slug:
+          type: string
+          title: Slug
+        page:
+          type: integer
+          title: Page
+      type: object
+      required:
+      - slug
+      - page
+      title: CurrentSlide
     DaemonStatusResponse:
       properties:
         code_timestamp:
@@ -2257,7 +2270,7 @@ components:
           $ref: '#/components/schemas/DebateData'
         slides_current:
           anyOf:
-          - $ref: '#/components/schemas/SlidesCurrentPayload'
+          - $ref: '#/components/schemas/CurrentSlide'
           - type: 'null'
         talk_presentation_slug:
           anyOf:
@@ -2641,23 +2654,10 @@ components:
       required:
       - entries
       title: ShowLeaderboardResponse
-    SlideHistoryResponse:
-      properties:
-        slides:
-          items:
-            additionalProperties: true
-            type: object
-          type: array
-          title: Slides
-      type: object
-      required:
-      - slides
-      title: SlideHistoryResponse
-    SlidesCacheStatusEntry:
+    Slide:
       properties:
         status:
-          type: string
-          title: Status
+          $ref: '#/components/schemas/SlideCacheStatus'
         size_bytes:
           anyOf:
           - type: integer
@@ -2691,17 +2691,27 @@ components:
       type: object
       required:
       - status
-      title: SlidesCacheStatusEntry
-    SlidesCacheStatusResponse:
+      title: Slide
+    SlideCacheStatus:
+      type: string
+      enum:
+      - not_cached
+      - cached
+      - downloading
+      - download_failed
+      title: SlideCacheStatus
+    SlideHistoryResponse:
       properties:
-        slides_updated:
-          additionalProperties:
-            $ref: '#/components/schemas/SlidesCacheStatusEntry'
-          type: object
-          title: Slides Updated
-          default: {}
+        slides:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Slides
       type: object
-      title: SlidesCacheStatusResponse
+      required:
+      - slides
+      title: SlideHistoryResponse
     SlidesCheckResponse:
       properties:
         status:
@@ -2711,20 +2721,6 @@ components:
       required:
       - status
       title: SlidesCheckResponse
-    SlidesCurrentPayload:
-      properties:
-        slug:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Slug
-        page:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Page
-      type: object
-      title: SlidesCurrentPayload
     SlidesLogEntry:
       properties:
         file:
@@ -2746,6 +2742,16 @@ components:
       - seconds_spent
       - timestamp
       title: SlidesLogEntry
+    SlidesResponse:
+      properties:
+        slides_updated:
+          additionalProperties:
+            $ref: '#/components/schemas/Slide'
+          type: object
+          title: Slides Updated
+          default: {}
+      type: object
+      title: SlidesResponse
     StartSessionRequest:
       properties:
         name:

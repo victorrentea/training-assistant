@@ -13,17 +13,19 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from daemon.slides.models import CurrentSlide, Slide
+
 # ── Slides ────────────────────────────────────────────────────────────────────
 
 class SlidesCurrentMsg(BaseModel):
-    type: Literal["slides_current"] = "slides_current"
-    slides_current: dict[str, Any] | None = None
+    type: Literal["current_slide_updated"] = "current_slide_updated"
+    current_slide: CurrentSlide
 
 
 class SlidesCacheStatusMsg(BaseModel):
     type: Literal["slides_updated"] = "slides_updated"
     refreshed_slugs: list[str] = []
-    slides_updated: dict[str, Any] = {}
+    slides_updated: dict[str, Slide] = {}
 
 
 # ── Activity ──────────────────────────────────────────────────────────────────
@@ -43,7 +45,7 @@ class ActiveParticipantsCountUpdatedMsg(BaseModel):
 
 class SlidesHistoryCountUpdatedMsg(BaseModel):
     """Participant-only: total number of tracked viewed slides."""
-    type: Literal["slides_history_count_updated"] = "slides_history_count_updated"
+    type: Literal["slides_history_updated"] = "slides_history_updated"
     count: int
 
 
@@ -261,13 +263,13 @@ class ReloadMsg(BaseModel):
 
 PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
-    "slides_current": SlidesCurrentMsg,
+    "current_slide_updated": SlidesCurrentMsg,
     "slides_updated": SlidesCacheStatusMsg,
     # Activity
     "activity_updated": ActivityUpdatedMsg,
     # Identity
     "active_participants_count_updated": ActiveParticipantsCountUpdatedMsg,
-    "slides_history_count_updated": SlidesHistoryCountUpdatedMsg,
+    "slides_history_updated": SlidesHistoryCountUpdatedMsg,
     # Poll
     "poll_opened": PollOpenedMsg,
     "poll_ended": PollEndedMsg,
@@ -333,13 +335,13 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
 # Keep these maps in sync with PARTICIPANT_MESSAGES / HOST_MESSAGES.
 PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Slides
-    "slides_current": "slides",
+    "current_slide_updated": "slides",
     "slides_updated": "slides",
     # Activity
     "activity_updated": "activity",
     # Identity
     "active_participants_count_updated": "identity",
-    "slides_history_count_updated": "slides",
+    "slides_history_updated": "slides",
     # Poll
     "poll_opened": "poll",
     "poll_ended": "poll",
