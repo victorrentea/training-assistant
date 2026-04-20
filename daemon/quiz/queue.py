@@ -4,31 +4,30 @@
 class PollQueue:
     def __init__(self):
         self._questions: list[dict] = []
-        self._index: int = 0
 
     def submit(self, questions: list[dict]) -> None:
-        """Replace the entire queue and reset the index."""
+        """Replace the entire queue."""
         self._questions = list(questions)
-        self._index = 0
 
     def current(self) -> dict | None:
-        """Return the next question to be fired, or None if the queue is exhausted."""
-        if self._index < len(self._questions):
-            return self._questions[self._index]
-        return None
+        """Return the first question in the queue, or None if empty."""
+        return self._questions[0] if self._questions else None
+
+    def all_items(self) -> list[dict]:
+        """Return all queued questions."""
+        return list(self._questions)
 
     def pending_count(self) -> int:
-        """Return the number of questions remaining (including the current one)."""
-        return max(0, len(self._questions) - self._index)
+        """Return the number of questions remaining."""
+        return len(self._questions)
 
-    def advance(self) -> None:
-        """Move to the next question."""
-        self._index += 1
+    def remove(self, index: int) -> None:
+        """Remove the question at the given 0-based index."""
+        del self._questions[index]
 
     def clear(self) -> None:
         """Discard all questions."""
         self._questions = []
-        self._index = 0
 
 
 quiz_queue = PollQueue()
