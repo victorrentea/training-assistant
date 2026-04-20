@@ -2668,9 +2668,7 @@ components:
           - type: 'null'
           title: Modified At
         title:
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
           title: Title
         error:
           anyOf:
@@ -2680,6 +2678,7 @@ components:
       type: object
       required:
       - status
+      - title
       title: Slide
     SlideCacheStatus:
       type: string

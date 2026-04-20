@@ -236,8 +236,8 @@ def _slides_updated_with_titles() -> dict[str, dict]:
     for slug, entry in misc_state.slides_updated.items():
         enriched = dict(entry)
         catalog_entry = misc_state.slides_catalog.get(slug)
-        if isinstance(catalog_entry, dict) and catalog_entry.get("title"):
-            enriched["title"] = catalog_entry["title"]
+        title = isinstance(catalog_entry, dict) and (catalog_entry.get("title") or catalog_entry.get("name"))
+        enriched["title"] = title or slug
         result[slug] = enriched
     return result
 
