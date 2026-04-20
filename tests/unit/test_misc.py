@@ -1,11 +1,11 @@
 """Unit tests for state.py, messaging.py, and auth.py."""
+
 import os
+
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
 
 from daemon.participant.names import LOTR_NAMES, assign_avatar, get_avatar_filename
 from railway.shared.state import AppState
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # state.py
@@ -61,6 +61,7 @@ class TestAssignAvatar:
 # auth.py
 # ═══════════════════════════════════════════════════════════════════════
 
+
 class TestAuth:
     @pytest.fixture(autouse=True)
     def restore_auth_env(self):
@@ -77,8 +78,10 @@ class TestAuth:
             os.environ["HOST_PASSWORD"] = orig_pass
 
     def test_correct_credentials(self):
-        from railway.shared.auth import require_host_auth
         from fastapi.security import HTTPBasicCredentials
+
+        from railway.shared.auth import require_host_auth
+
         os.environ["HOST_USERNAME"] = "testuser"
         os.environ["HOST_PASSWORD"] = "testpass"
         creds = HTTPBasicCredentials(username="testuser", password="testpass")
@@ -86,9 +89,11 @@ class TestAuth:
         require_host_auth(creds)
 
     def test_wrong_username(self):
-        from railway.shared.auth import require_host_auth
-        from fastapi.security import HTTPBasicCredentials
         from fastapi import HTTPException
+        from fastapi.security import HTTPBasicCredentials
+
+        from railway.shared.auth import require_host_auth
+
         os.environ["HOST_USERNAME"] = "testuser"
         os.environ["HOST_PASSWORD"] = "testpass"
         creds = HTTPBasicCredentials(username="wrong", password="testpass")
@@ -97,9 +102,11 @@ class TestAuth:
         assert exc_info.value.status_code == 401
 
     def test_wrong_password(self):
-        from railway.shared.auth import require_host_auth
-        from fastapi.security import HTTPBasicCredentials
         from fastapi import HTTPException
+        from fastapi.security import HTTPBasicCredentials
+
+        from railway.shared.auth import require_host_auth
+
         os.environ["HOST_USERNAME"] = "testuser"
         os.environ["HOST_PASSWORD"] = "testpass"
         creds = HTTPBasicCredentials(username="testuser", password="wrong")

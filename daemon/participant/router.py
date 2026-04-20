@@ -1,4 +1,5 @@
 """Daemon participant router — identity endpoints (set_name, roll-avatar, location)."""
+
 import asyncio
 import json
 import logging
@@ -18,16 +19,18 @@ from starlette.responses import Response
 
 from daemon.host_state_router import _build_host_participants_list
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
-from daemon.participant.state import GitRepoActivity, participant_state
-from daemon.slides.models import CurrentSlide
-from daemon.ws_messages import ParticipantListUpdatedMsg
-from daemon.ws_publish import notify_host
 from daemon.participant.names import (
     LOTR_NAMES,
     assign_conference_name,
     get_avatar_filename,
+)
+from daemon.participant.names import (
     refresh_avatar as _refresh_avatar_logic,
 )
+from daemon.participant.state import GitRepoActivity, participant_state
+from daemon.slides.models import CurrentSlide
+from daemon.ws_messages import ParticipantListUpdatedMsg
+from daemon.ws_publish import notify_host
 
 logger = logging.getLogger(__name__)
 _COORDS_RE = re.compile(r"^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$")
@@ -35,6 +38,7 @@ _TIMEZONE_RE = re.compile(r"^🕐\s+(.+)$")
 
 
 # ── Pydantic models ──
+
 
 class RegisterResponse(BaseModel):
     name: str
@@ -49,11 +53,14 @@ class RegisterRequest(BaseModel):
 class RenameRequest(BaseModel):
     name: str
 
+
 class AvatarRequest(BaseModel):
     rejected: list[str] = []
 
+
 class AvatarResponse(BaseModel):
     avatar: str
+
 
 class LocationRequest(BaseModel):
     location: str
@@ -61,7 +68,6 @@ class LocationRequest(BaseModel):
 
 class GitActivityResponse(BaseModel):
     git_repos: list[GitRepoActivity]
-
 
 
 def _http_get_json(url: str, *, timeout: float = 2.5):
@@ -81,8 +87,13 @@ def _country_from_coords(lat: str, lon: str) -> tuple[str, str]:
     address = data.get("address") or {}
     code = str(address.get("country_code") or "").strip().upper()
     city = str(
-        address.get("city") or address.get("town") or address.get("village")
-        or address.get("county") or address.get("suburb") or address.get("state") or ""
+        address.get("city")
+        or address.get("town")
+        or address.get("village")
+        or address.get("county")
+        or address.get("suburb")
+        or address.get("state")
+        or ""
     ).strip()
     return (code if len(code) == 2 else ""), city
 
@@ -226,12 +237,14 @@ class ParticipantStateResponse(BaseModel):
 def _build_qa_for_participant(pid: str) -> list[dict]:
     """Build QA question list (raw format) for participant — is_own/has_upvoted computed client-side."""
     from daemon.qa.state import qa_state
+
     return qa_state.build_question_list_raw()
 
 
 def _build_codereview_for_participant(pid: str) -> dict:
     """Build codereview state personalised for participant pid."""
     from daemon.codereview.state import codereview_state
+
     cr = codereview_state
     result = {
         "snippet": cr.snippet,
@@ -243,9 +256,7 @@ def _build_codereview_for_participant(pid: str) -> dict:
     # Compute line_percentages in reviewing phase
     if cr.phase == "reviewing" and cr.snippet:
         line_count = len(cr.snippet.splitlines())
-        total_participants = max(1, len([
-            p for p in cr.selections if not p.startswith("__")
-        ]))
+        total_participants = max(1, len([p for p in cr.selections if not p.startswith("__")]))
         line_percentages: dict[int, int] = {}
         for line_idx in range(line_count):
             sel_count = sum(1 for sels in cr.selections.values() if line_idx in sels)
@@ -257,6 +268,7 @@ def _build_codereview_for_participant(pid: str) -> dict:
 def _build_debate_for_participant(pid: str) -> dict:
     """Build debate state personalised for participant pid."""
     from daemon.debate.state import debate_state
+
     ds = debate_state
     snap = ds.snapshot()
     # Add personalised fields
@@ -287,12 +299,14 @@ def _build_debate_for_participant(pid: str) -> dict:
 def _get_score(pid: str) -> int:
     """Read score from the authoritative daemon.scores singleton."""
     from daemon.scores import scores
+
     return scores.scores.get(pid, 0)
 
 
 def _build_poll_for_participant(pid: str) -> dict:
     """Build poll state personalised for participant pid."""
     from daemon.poll.state import poll_state
+
     ps = poll_state
     poll = dict(ps.poll) if ps.poll else None
     if poll is not None:
@@ -314,6 +328,7 @@ def _build_poll_for_participant(pid: str) -> dict:
         result["my_voted_indices"] = None
     result["poll_correct_indices"] = ps.poll_correct_indices
     return result
+
 
 async def _notify_host_participant_list():
     """Push the current participant list to the host browser directly."""
@@ -342,7 +357,9 @@ def _build_mini_state() -> SimpleNamespace:
     return SimpleNamespace(
         participant_names=ps.participant_names,
         participant_avatars=ps.participant_avatars,
-        participants={uid: None for uid in ps.participant_names},  # fake WS entries for name pool checks
+        participants={
+            uid: None for uid in ps.participant_names
+        },  # fake WS entries for name pool checks
         mode=ps.mode,
     )
 
@@ -413,9 +430,14 @@ async def register_participant(request: Request, body: RegisterRequest):
     else:
         # Workshop mode: random LOTR name while trying to keep name/avatar in sync
         taken_names = set(ps.participant_names.values())
-        taken_avatars = {a for uid, a in ps.participant_avatars.items() if uid != pid and not uid.startswith("__")}
+        taken_avatars = {
+            a
+            for uid, a in ps.participant_avatars.items()
+            if uid != pid and not uid.startswith("__")
+        }
         sync_candidates = [
-            name for name in LOTR_NAMES
+            name
+            for name in LOTR_NAMES
             if name not in taken_names and get_avatar_filename(name) not in taken_avatars
         ]
         if sync_candidates:
@@ -433,7 +455,11 @@ async def register_participant(request: Request, body: RegisterRequest):
         avatar = _pick_random_available_avatar(pid)
     else:
         mapped_avatar = get_avatar_filename(raw_name) if raw_name in LOTR_NAMES else None
-        taken_by_others = {a for uid, a in ps.participant_avatars.items() if uid != pid and not uid.startswith("__")}
+        taken_by_others = {
+            a
+            for uid, a in ps.participant_avatars.items()
+            if uid != pid and not uid.startswith("__")
+        }
         if mapped_avatar and mapped_avatar not in taken_by_others:
             avatar = mapped_avatar
         else:
@@ -475,7 +501,9 @@ async def rename_participant(request: Request, body: RenameRequest):
     ps = participant_state
 
     if pid not in ps.participant_names:
-        return JSONResponse({"error": "Participant not registered — call /register first"}, status_code=400)
+        return JSONResponse(
+            {"error": "Participant not registered — call /register first"}, status_code=400
+        )
 
     raw_name = body.name.strip()[:32]
     if not raw_name:
@@ -561,6 +589,7 @@ async def get_participant_state(request: Request):
     notes_updated_at = read_notes_updated_at()
 
     from daemon.session.state import get_active_session_name
+
     state_msg = {
         # Core identity / session
         "mode": ps.mode,
@@ -608,7 +637,8 @@ async def get_participant_state(request: Request):
         # Google Drive folder link for session materials
         "gdrive_url": misc_state.gdrive_url,
         # Agenda .docx availability
-        "has_agenda": misc_state.agenda_docx_path is not None and misc_state.agenda_docx_path.exists(),
+        "has_agenda": misc_state.agenda_docx_path is not None
+        and misc_state.agenda_docx_path.exists(),
         # Last git repo URL — used by talk mode to enable the Git Repo top button
         "last_git_url": ps.git_repos[-1].url if ps.git_repos else None,
     }
@@ -626,6 +656,7 @@ def _get_current_session_id() -> str | None:
     """Safely get the current session ID from session_state module."""
     try:
         from daemon.session_state import get_current_session_id
+
         return get_current_session_id()
     except Exception:
         return None
