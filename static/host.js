@@ -1610,7 +1610,7 @@
     _lastRandomIndex = idx;
     initComposer(RANDOM_POLLS[idx]);
     const cc = document.getElementById('correct-count');
-    cc.value = 1; cc.disabled = false;
+    cc.value = 1; cc.readOnly = false;
   };
 
   pollInput.addEventListener('input', () => {
@@ -1654,7 +1654,8 @@
       correctOptIds = new Set();
       toast('Poll created & opened ✓');
       if (selectedQueueIndex !== null) {
-        await fetch(API(`/poll/queue/${selectedQueueIndex}`), { method: 'DELETE' });
+        const deleteRes = await fetch(API(`/poll/queue/${selectedQueueIndex}`), { method: 'DELETE' });
+        if (!deleteRes.ok) toast('Queue item delete failed — queue may be out of sync');
         selectedQueueIndex = null;
         selectedQueueItem = null;
       }
