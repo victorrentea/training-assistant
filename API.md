@@ -105,14 +105,14 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Slides Updated, get slides cache status; returns cache status snapshot for all known slides; called on initial page load and after slides_updated WS.<br>`GET /api/participant/slides` | - | `slides_updated?: dict[str, Slide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:SlideCacheStatus: 'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
+| Get Slides Decks, returns cache status snapshot for all known decks; called on initial page load and after decks_updated WS.<br>`GET /api/participant/slides/decks` | - | `decks?: dict[str, Deck{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:SlideCacheStatus: 'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
 | Get Slides History, return accumulated slide viewing history for the current session.<br>`GET /api/participant/slides/history` | - | `slides_log: list[SlidesLogEntry{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slide:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`seconds_spent:number`<br>`}]` |
 
 ### Participant WS
 | Message | Payload |
 | --- | --- |
 | Host navigated to a new slide<br>`current_slide_updated` | `current_slide: CurrentSlide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`page:int`<br>`}` |
-| Slide cache status changed — contains full cache map to avoid polling<br>'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open.<br>`slides_updated` | `refreshed_slugs?: list[string]`<br>`slides_updated?: dict[str, Slide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
+| Deck cache status changed — contains full cache map to avoid polling<br>'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open.<br>`decks_updated` | `refreshed_slugs?: list[string]`<br>`decks?: dict[str, Deck{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
 | Participant slide history count changed<br>`slides_history_updated` | `count: int` |
 
 ### Host REST
@@ -123,7 +123,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Slide cache status changed — contains full cache map to avoid polling<br>'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open.<br>`slides_updated` | `refreshed_slugs?: list[string]`<br>`slides_updated?: dict[str, Slide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
+| Deck cache status changed — contains full cache map to avoid polling<br>'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open.<br>`decks_updated` | `refreshed_slugs?: list[string]`<br>`decks?: dict[str, Deck{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
 | PDF was successfully downloaded to Railway and is ready to serve<br>`talk_pdf_ready` | `slug: string` |
 | PDF download from Google Drive failed — host should be notified<br>`talk_pdf_failed` | - |
 

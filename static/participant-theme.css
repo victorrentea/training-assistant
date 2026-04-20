@@ -57,6 +57,7 @@
   .hover\:bg-surface-container:hover      { background-color: var(--color-surface-container); }
   .hover\:bg-surface-container-low:hover  { background-color: var(--color-surface-container-low); }
   .hover\:bg-surface-container-high:hover { background-color: var(--color-surface-container-high); }
+  .hover\:text-on-surface:hover           { color: var(--color-on-surface); }
   .bg-primary                  { background-color: var(--color-primary); }
   .bg-primary-dim              { background-color: var(--color-primary-dim); }
   .bg-primary-container        { background-color: var(--color-primary-container); }
