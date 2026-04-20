@@ -8,7 +8,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon.codereview.state import codereview_state
-from daemon.slides.models import SlidesLogEntry
 from daemon.debate.state import debate_state
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
 from daemon.misc.state import misc_state
