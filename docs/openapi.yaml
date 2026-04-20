@@ -1093,6 +1093,28 @@ paths:
       x-feature: host_state
       x-doc-notes:
       - Returns host-facing full state snapshot.
+  /api/{session_id}/host/slides/history:
+    get:
+      tags:
+      - host-state
+      summary: Get Slides History
+      description: Return accumulated slide viewing history for the current session.
+      operationId: get_slides_history_api__session_id__host_slides_history_get
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlidesHistoryResponse'
+      x-feature: identity
   /api/session/create:
     post:
       tags:
@@ -2035,11 +2057,6 @@ components:
           - type: string
           - type: 'null'
           title: Talk Presentation Slug
-        slides_log:
-          items:
-            $ref: '#/components/schemas/SlidesLogEntry'
-          type: array
-          title: Slides Log
         slides_log_deep_count:
           type: integer
           title: Slides Log Deep Count
@@ -2121,7 +2138,6 @@ components:
       - debate_arguments
       - debate_champions
       - debate_auto_assigned
-      - slides_log
       - slides_log_deep_count
       - join_base_url
       - transcript_line_count
@@ -2721,6 +2737,17 @@ components:
       required:
       - status
       title: SlidesCheckResponse
+    SlidesHistoryResponse:
+      properties:
+        slides_log:
+          items:
+            $ref: '#/components/schemas/SlidesLogEntry'
+          type: array
+          title: Slides Log
+      type: object
+      required:
+      - slides_log
+      title: SlidesHistoryResponse
     SlidesLogEntry:
       properties:
         file:
@@ -2733,14 +2760,15 @@ components:
           type: number
           title: Seconds Spent
         timestamp:
-          type: string
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Timestamp
       type: object
       required:
       - file
       - slide
       - seconds_spent
-      - timestamp
       title: SlidesLogEntry
     SlidesResponse:
       properties:

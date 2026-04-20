@@ -82,7 +82,11 @@ class SlidesLogEntry(BaseModel):
     file: str
     slide: int
     seconds_spent: float
-    timestamp: str
+    timestamp: str | None = None
+
+
+class SlidesHistoryResponse(BaseModel):
+    slides_log: list[SlidesLogEntry]
 
 
 class HostStateResponse(BaseModel):
@@ -113,7 +117,6 @@ class HostStateResponse(BaseModel):
     debate_round_timer_started_at: str | None = None
     talk_presentation_name: str | None = None
     talk_presentation_slug: str | None = None
-    slides_log: list[SlidesLogEntry]
     slides_log_deep_count: int
     slides_log_topic: str | None = None
     git_repos: list[GitRepoActivity] = []
@@ -242,13 +245,16 @@ def _get_join_base_url() -> str:
     return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
 
 
-def _build_slides_log_fields() -> dict:
-    """Compute slides_log, slides_log_deep_count, slides_log_topic from in-memory slides_viewed."""
-
-    slides_log = [
+def _build_slides_log_entries() -> list[dict]:
+    return [
         {"file": sv["file_name"], "slide": sv["page"], "seconds_spent": sv["seconds"]}
         for sv in misc_state.slides_viewed
     ]
+
+
+def _build_slides_log_fields() -> dict:
+    """Compute slides_log_deep_count and slides_log_topic from in-memory slides_viewed."""
+    slides_log = _build_slides_log_entries()
     deep_count = len({(e["file"], e["slide"]) for e in slides_log})
     if misc_state.current_slide and misc_state.current_slide.get("slug"):
         topic = misc_state.current_slide["slug"]
@@ -257,7 +263,6 @@ def _build_slides_log_fields() -> dict:
     else:
         topic = None
     return {
-        "slides_log": slides_log,
         "slides_log_deep_count": deep_count,
         "slides_log_topic": topic,
     }
@@ -328,6 +333,12 @@ async def get_host_state(request: Request, session_id: str):
     }
 
     return JSONResponse(state_msg)
+
+
+@router.get("/slides/history", response_model=SlidesHistoryResponse)
+async def get_slides_history(session_id: str):
+    """Return accumulated slide viewing history for the current session."""
+    return SlidesHistoryResponse(slides_log=_build_slides_log_entries())
 
 
 def _get_gdrive_running() -> bool:
