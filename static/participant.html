@@ -2547,7 +2547,19 @@ async function loadSummary() {
       const md = data.raw_markdown ||
         (data.points || []).map(p => '- ' + (typeof p === 'string' ? p : p.text)).join('\n');
       _summaryRawMarkdown = md || '';
-      el.innerHTML = md ? marked.parse(md) : 'No summary yet.';
+      if (md) {
+        var _summaryRenderer = new marked.Renderer();
+        _summaryRenderer.link = function(href, title, text) {
+          var t = title ? ' title="' + title + '"' : '';
+          return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>'
+            + text
+            + '<span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:middle;margin-left:2px;opacity:0.7">open_in_new</span>'
+            + '</a>';
+        };
+        el.innerHTML = marked.parse(md, { renderer: _summaryRenderer });
+      } else {
+        el.textContent = 'No summary yet.';
+      }
     } else {
       el.textContent = 'No summary yet.';
     }
