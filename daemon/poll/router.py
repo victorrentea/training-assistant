@@ -177,6 +177,7 @@ async def get_poll_state():
     from daemon.quiz.queue import quiz_queue
     ps = poll_state
     p = ps.poll
+    _queue_current = quiz_queue.current()
     return HostPollStateResponse(
         id=p["id"] if p else None,
         question=p["question"] if p else None,
@@ -191,6 +192,6 @@ async def get_poll_state():
         queue=PollQueueStatus(
             pending=quiz_queue.pending_count(),
             items=[QueuedQuestion(**q) for q in quiz_queue.all_items()],
-            current=QueuedQuestion(**quiz_queue.current()) if quiz_queue.current() else None,
+            current=QueuedQuestion(**_queue_current) if _queue_current else None,
         ),
     )
