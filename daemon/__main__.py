@@ -407,6 +407,7 @@ def _resolve_presentation_slide_target(
         aliases = {
             str(entry.get("title") or "").strip(),
             str(entry.get("name") or "").strip(),
+            str(entry.get("source_name") or "").strip(),
         }
         normalized_aliases = {_normalize_slide_match_key(a) for a in aliases if a}
         if normalized_name and normalized_name in normalized_aliases:
