@@ -332,11 +332,30 @@ body{visibility:hidden}
   <div id="activity-poll-section" style="display:none"></div>
 </div>
 <!-- AI Summary View -->
-<div id="notes-view" style="display:none" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('notes',this)">
-  <div id="notes-content" class="text-on-surface leading-relaxed whitespace-pre-wrap">Loading…</div>
+<div id="notes-view" style="display:none" class="relative h-full flex flex-col">
+  <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
+    <button onclick="downloadNotes()" class="p-2 rounded-full text-on-surface-variant transition-all flex hover-green" title="Download as text file">
+      <span class="material-symbols-outlined">download</span>
+    </button>
+  </div>
+  <div id="notes-scroll" class="flex-grow overflow-y-auto px-16 py-12" onscroll="saveScroll('notes',this)">
+    <div id="notes-content" class="text-on-surface leading-relaxed whitespace-pre-wrap">Loading…</div>
+  </div>
 </div>
-<div id="summary-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('summary',this)">
-  <div id="summary-content" class="text-on-surface leading-relaxed prose max-w-none">Loading…</div>
+<div id="summary-view" style="display:none;font-size:120%" class="relative h-full flex flex-col">
+  <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
+    <button onclick="downloadSummaryMd()" class="px-3 py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" title="Download as Markdown">
+      <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
+      <span>.md</span>
+    </button>
+    <button onclick="downloadSummaryPdf()" class="px-3 py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" title="Download as PDF">
+      <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
+      <span>.pdf</span>
+    </button>
+  </div>
+  <div id="summary-scroll" class="flex-grow overflow-y-auto px-16 py-12" onscroll="saveScroll('summary',this)">
+    <div id="summary-content" class="text-on-surface leading-relaxed prose max-w-none">Loading…</div>
+  </div>
 </div>
 <!-- Agenda View -->
 <div id="agenda-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
@@ -576,6 +595,8 @@ body{visibility:hidden}
 <script>
 var _notesDirty = true;
 var _summaryDirty = true;
+var _notesRawText = '';
+var _summaryRawMarkdown = '';
 var _agendaDirty = true;
 // ── Local-storage namespace ───────────────────────────────────────────────────
 var LS = {
@@ -1475,9 +1496,9 @@ function showView(name) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
   });
-  var el = document.getElementById(name + '-view');
+  var scrollEl = document.getElementById(name + '-scroll') || document.getElementById(name + '-view');
   var saved = LS.getScroll(name);
-  if (saved) el.scrollTop = parseInt(saved, 10);
+  if (saved) scrollEl.scrollTop = parseInt(saved, 10);
   if (name === 'slides') {
     var followCb = document.getElementById('slides-follow-checkbox');
     if (followCb) followCb.checked = LS.getFollow();
@@ -2501,11 +2522,12 @@ async function loadNotes() {
   try {
     const data = await fetch(`/${_sessionId}/api/participant/notes`).then(r => r.ok ? r.json() : Promise.reject('not found'));
     if (data && data.notes_content) {
+      _notesRawText = data.notes_content;
       el.innerHTML = linkifyText(data.notes_content);
     } else {
       el.textContent = 'No notes yet.';
     }
-    var viewEl = document.getElementById('notes-view');
+    var viewEl = document.getElementById('notes-scroll');
     var saved = LS.getScroll('notes');
     if (saved) viewEl.scrollTop = parseInt(saved, 10);
   } catch (e) {
@@ -2524,17 +2546,53 @@ async function loadSummary() {
     if (data) {
       const md = data.raw_markdown ||
         (data.points || []).map(p => '- ' + (typeof p === 'string' ? p : p.text)).join('\n');
+      _summaryRawMarkdown = md || '';
       el.innerHTML = md ? marked.parse(md) : 'No summary yet.';
     } else {
       el.textContent = 'No summary yet.';
     }
-    var viewEl = document.getElementById('summary-view');
+    var viewEl = document.getElementById('summary-scroll');
     var saved = LS.getScroll('summary');
     if (saved) viewEl.scrollTop = parseInt(saved, 10);
   } catch (e) {
     el.textContent = 'Failed to load summary.';
     _summaryDirty = true;
   }
+}
+
+function _downloadTimestamp() {
+  var now = new Date();
+  var hh = String(now.getHours()).padStart(2, '0');
+  var mm = String(now.getMinutes()).padStart(2, '0');
+  var yyyy = now.getFullYear();
+  var mo = String(now.getMonth() + 1).padStart(2, '0');
+  var dd = String(now.getDate()).padStart(2, '0');
+  return hh + '-' + mm + ' ' + yyyy + '-' + mo + '-' + dd;
+}
+function downloadNotes() {
+  if (!_notesRawText) return;
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([_notesRawText], { type: 'text/plain' }));
+  a.download = 'notes-' + _downloadTimestamp() + '.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function downloadSummaryMd() {
+  if (!_summaryRawMarkdown) return;
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([_summaryRawMarkdown], { type: 'text/markdown' }));
+  a.download = 'ai summary-' + _downloadTimestamp() + '.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function downloadSummaryPdf() {
+  var content = document.getElementById('summary-content');
+  if (!content || !_summaryRawMarkdown) return;
+  var w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>AI Summary</title><style>body{font-family:system-ui,sans-serif;padding:2rem 4rem;max-width:800px;margin:0 auto;font-size:1.1rem;line-height:1.6}h1,h2,h3,h4{margin-top:1.5em;line-height:1.3}li{margin:.3em 0}code{background:#f0f0f0;padding:.1em .3em;border-radius:3px}pre{background:#f0f0f0;padding:1em;border-radius:6px;overflow-x:auto}</style></head><body>' + content.innerHTML + '</body></html>');
+  w.document.close();
+  w.focus();
+  setTimeout(function() { w.print(); }, 400);
 }
 </script>
 <!-- Onboarding overlay (workshop mode, first visit) -->
