@@ -906,30 +906,27 @@ function _loadSlideHistory() {
       slides.forEach(function(s) {
         var slug = s.slug || '';
         if (!slug) return;
-        if (!groups[slug]) { groups[slug] = { pages: [], seconds: 0, last_seen_at: null }; order.push(slug); }
-        groups[slug].pages.push(s.slide);
-        groups[slug].seconds += (s.seconds_spent || 0);
-        if (s.last_seen_at && (!groups[slug].last_seen_at || s.last_seen_at > groups[slug].last_seen_at))
-          groups[slug].last_seen_at = s.last_seen_at;
+        if (!groups[slug]) { groups[slug] = []; order.push(slug); }
+        groups[slug].push({ page: s.slide, seconds: s.seconds_spent || 0, last_seen_at: s.last_seen_at || null });
       });
-      var allSeconds = order.map(function(s) { return groups[s].seconds; });
+      var allSeconds = slides.map(function(s) { return s.seconds_spent || 0; });
       var minSec = Math.min.apply(null, allSeconds), maxSec = Math.max.apply(null, allSeconds);
-      var allTs = order.map(function(s) { return groups[s].last_seen_at ? new Date(groups[s].last_seen_at).getTime() : 0; });
-      var minTs = Math.min.apply(null, allTs), maxTs = Math.max.apply(null, allTs);
+      var allTs = slides.map(function(s) { return s.last_seen_at ? new Date(s.last_seen_at).getTime() : 0; }).filter(Boolean);
+      var minTs = allTs.length ? Math.min.apply(null, allTs) : 0, maxTs = allTs.length ? Math.max.apply(null, allTs) : 0;
       el.innerHTML = order.map(function(slug) {
-        var g = groups[slug];
+        var entries = groups[slug];
         var catalogEntry = _findSlideBySlug(slug);
         var title = (catalogEntry && catalogEntry.name) || slug;
-        var pagesHtml = g.pages.map(function(p) {
-          return '<a href="#" onclick="return false" class="text-primary underline" data-history-slug="' + slug.replace(/"/g, '&quot;') + '" data-history-page="' + Number(p || 1) + '">' + p + '</a>';
+        var pagesHtml = entries.map(function(e) {
+          var tRatio = (maxTs > minTs && e.last_seen_at) ? (new Date(e.last_seen_at).getTime() - minTs) / (maxTs - minTs) : 1;
+          var opacity = (0.35 + 0.65 * tRatio).toFixed(2);
+          var sRatio = (maxSec > minSec) ? (e.seconds - minSec) / (maxSec - minSec) : 1;
+          var weight = Math.round(300 + 400 * sRatio);
+          return '<a href="#" onclick="return false" class="text-primary underline" style="opacity:' + opacity + ';font-weight:' + weight + '" data-history-slug="' + slug.replace(/"/g, '&quot;') + '" data-history-page="' + Number(e.page || 1) + '">' + e.page + '</a>';
         }).join(', ');
-        var tRatio = (maxTs > minTs && g.last_seen_at) ? (new Date(g.last_seen_at).getTime() - minTs) / (maxTs - minTs) : 1;
-        var opacity = 0.35 + 0.65 * tRatio;
-        var sRatio = (maxSec > minSec) ? (g.seconds - minSec) / (maxSec - minSec) : 1;
-        var weight = Math.round(300 + 400 * sRatio);
-        return '<div class="slide-history-row pl-4 pr-4 py-0.5 text-sm leading-relaxed rounded transition-colors flex items-baseline gap-1" style="opacity:' + opacity.toFixed(2) + ';font-weight:' + weight + '">' +
-          '<span class="flex-shrink-0" style="color:var(--color-on-surface,#000)">•</span>' +
-          '<span style="color:var(--color-on-surface,#000)">' + title + ' <span class="text-primary">' + pagesHtml + '</span></span></div>';
+        return '<div class="slide-history-row pl-4 pr-4 py-0.5 text-sm leading-relaxed rounded transition-colors flex items-baseline gap-1">' +
+          '<span class="flex-shrink-0 text-on-surface-variant opacity-60">•</span>' +
+          '<span class="text-on-surface">' + title + ' ' + pagesHtml + '</span></div>';
       }).join('');
       el.onclick = function(ev) {
         var link = ev.target && ev.target.closest('a[data-history-slug][data-history-page]');
