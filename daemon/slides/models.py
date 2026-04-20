@@ -29,6 +29,7 @@ class SlidesLogEntry(BaseModel):
     slug: str
     slide: int
     seconds_spent: float
+    last_seen_at: str | None = None
 
 
 class SlidesHistoryResponse(BaseModel):

@@ -106,7 +106,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Slides Decks, returns cache status snapshot for all known decks on initial page load; decks_updated WS carries full data so no re-polling needed.<br>`GET /api/participant/slides/decks` | - | `decks?: dict[str, Deck{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:SlideCacheStatus: 'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
-| Get Slides History, return accumulated slide viewing history for the current session.<br>`GET /api/participant/slides/history` | - | `slides_log: list[SlidesLogEntry{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slide:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`seconds_spent:number`<br>`}]` |
+| Get Slides History, return accumulated slide viewing history for the current session.<br>`GET /api/participant/slides/history` | - | `slides_log: list[SlidesLogEntry{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slide:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`seconds_spent:number`<br>&nbsp;&nbsp;&nbsp;&nbsp;`last_seen_at?:string`<br>`}]` |
 
 ### Participant WS
 | Message | Payload |

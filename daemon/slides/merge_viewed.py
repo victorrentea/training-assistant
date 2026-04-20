@@ -1,6 +1,8 @@
 """Merge incoming slides_viewed deltas into the accumulated list."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 
 def merge_slides_viewed(
     existing: list[dict],
@@ -36,8 +38,10 @@ def merge_slides_viewed(
         if not slug:
             continue
         key = (slug, page)
+        now = datetime.now(tz=timezone.utc).isoformat()
         if key in index:
             existing[index[key]]["seconds"] += seconds
+            existing[index[key]]["last_seen_at"] = now
         else:
             index[key] = len(existing)
-            existing.append({"slug": slug, "page": page, "seconds": seconds})
+            existing.append({"slug": slug, "page": page, "seconds": seconds, "last_seen_at": now})

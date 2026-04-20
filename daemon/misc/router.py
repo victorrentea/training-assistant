@@ -146,7 +146,7 @@ async def get_slides_decks():
 async def get_slides_history():
     """Return accumulated slide viewing history for the current session."""
     entries = [
-        SlidesLogEntry(slug=sv["slug"], slide=sv["page"], seconds_spent=sv["seconds"])
+        SlidesLogEntry(slug=sv["slug"], slide=sv["page"], seconds_spent=sv["seconds"], last_seen_at=sv.get("last_seen_at"))
         for sv in misc_state.slides_viewed
     ]
     return SlidesHistoryResponse(slides_log=entries)

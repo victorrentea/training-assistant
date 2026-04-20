@@ -2730,6 +2730,11 @@ components:
         seconds_spent:
           type: number
           title: Seconds Spent
+        last_seen_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Seen At
       type: object
       required:
       - slug
