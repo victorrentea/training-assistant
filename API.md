@@ -107,6 +107,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Slides Updated, get slides cache status; primarily for diagnostics; UI cache invalidation is event-driven via slides_updated WS.<br>`GET /api/participant/slides` | - | `slides_updated?: dict[str, Slide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:SlideCacheStatus: 'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
+| Get Slides History, return accumulated slide viewing history for the current session.<br>`GET /api/participant/slides/history` | - | `slides_log: list[SlidesLogEntry{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`file:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slide:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`seconds_spent:number`<br>&nbsp;&nbsp;&nbsp;&nbsp;`timestamp?:string`<br>`}]` |
 
 ### Participant WS
 | Message | Payload |
@@ -436,7 +437,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Agenda, serve the agenda .docx as base64-encoded JSON (survives WS proxy).<br>`GET /api/participant/agenda` | - | `data: string`<br>`filename: string` |
-| Get Slides History, return accumulated slide viewing history for the current session.<br>`GET /api/participant/slides/history` | - | `slides_log: list[SlidesLogEntry{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`file:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slide:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`seconds_spent:number`<br>&nbsp;&nbsp;&nbsp;&nbsp;`timestamp?:string`<br>`}]` |
 
 ### Host REST
 | Endpoint | Request | Response |

@@ -580,7 +580,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SlidesHistoryResponse'
-      x-feature: misc
+      x-feature: slides
   /api/participant/agenda:
     get:
       tags:
