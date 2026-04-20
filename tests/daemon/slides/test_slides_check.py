@@ -86,7 +86,7 @@ def test_check_calls_railway_rest_and_returns_200(fresh_misc_state, monkeypatch)
     assert resp.json()["status"] == "cached"
     assert fresh_misc_state.slides_updated["myslug"]["status"] == "cached"
     assert fresh_misc_state.slides_updated["myslug"]["last_sha256"] == "abc123"
-    assert len(broadcasts) >= 2  # downloading + cached
+    assert len(broadcasts) == 1  # only "downloading"; "cached" comes via slide_log handler
 
 
 def test_check_returns_503_on_railway_failure(fresh_misc_state, monkeypatch):

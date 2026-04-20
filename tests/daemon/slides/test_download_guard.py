@@ -218,7 +218,9 @@ class TestDownloadHappyPath:
         assert state.slides_updated[SLUG]["status"] == "cached"
         assert state.slides_updated[SLUG]["last_sha256"] == "abc"
 
-    def test_broadcasts_downloading_then_cached(self, client, state, monkeypatch):
+    def test_broadcasts_downloading_status(self, client, state, monkeypatch):
+        # Only "downloading" is broadcast from check_slide_cache; "cached" with
+        # downloaded_at is broadcast later when slide_log "download_slide_completed" arrives.
         monkeypatch.setattr("daemon.slides.router.download_on_railway",
                             lambda s, u: {"sha256": "abc"})
         broadcasts = []
@@ -226,8 +228,6 @@ class TestDownloadHappyPath:
             client.get(_check_url())
         statuses = [b.decks[SLUG].status if SLUG in b.decks else None for b in broadcasts]
         assert "downloading" in statuses
-        assert "cached" in statuses
-        assert statuses.index("downloading") < statuses.index("cached")
 
     def test_slot_released_after_success(self, client, state, monkeypatch):
         monkeypatch.setattr("daemon.slides.router.download_on_railway",
