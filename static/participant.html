@@ -2333,15 +2333,6 @@ function _handleWsMessage(msg) {
     }
     case 'decks_updated':
       (function(incomingDecks) {
-        // Log deck timestamps in local time for debugging
-        if (incomingDecks && typeof incomingDecks === 'object') {
-          Object.keys(incomingDecks).forEach(function(slug) {
-            var d = incomingDecks[slug] || {};
-            var ma = d.modified_at ? new Date(d.modified_at).toLocaleString() : 'n/a';
-            var da = d.downloaded_at ? new Date(d.downloaded_at).toLocaleString() : 'n/a';
-            console.log('[WS] decks_updated', slug, 'modified_at=' + ma, 'downloaded_at=' + da, 'status=' + d.status);
-          });
-        }
         // Capture active slug; prefer the direct variable over splitting _activeSlideId
         var activeSlug = _activeSlideSlug || (_activeSlideId ? (_activeSlideId.split('|')[0] || null) : null);
         if (!activeSlug) {
@@ -2351,7 +2342,11 @@ function _handleWsMessage(msg) {
         // Detect if the active deck's content changed (re-downloaded).
         var prevDownloadedAt = (_slidesCacheStatus[activeSlug] || {}).downloaded_at;
         var newDownloadedAt = (incomingDecks[activeSlug] || {}).downloaded_at;
-        console.log('[WS] decks_updated active=' + activeSlug, 'prev_downloaded_at=' + prevDownloadedAt, 'new_downloaded_at=' + newDownloadedAt);
+        var _ad = (incomingDecks && activeSlug && incomingDecks[activeSlug]) || {};
+        console.log('[WS] decks_updated', Object.keys(incomingDecks || {}).length + ' decks; active=' + activeSlug
+          + ' modified_at=' + (_ad.modified_at ? new Date(_ad.modified_at).toLocaleString() : 'n/a')
+          + ' downloaded_at=' + (newDownloadedAt ? new Date(newDownloadedAt).toLocaleString() : 'null')
+          + ' (prev=' + (prevDownloadedAt ? new Date(prevDownloadedAt).toLocaleString() : 'null') + ')');
         var activeRefreshed = activeSlug && incomingDecks && window.loadPdf &&
           newDownloadedAt && (newDownloadedAt !== prevDownloadedAt);
         // Update local cache status from inline payload (avoids hitting daemon).
