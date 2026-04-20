@@ -35,7 +35,6 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
     On exhaustion (hash unchanged after retries): logs warning, beeps.
     """
     from daemon.slides.router import (
-        _broadcast_slides_updated,
         _mark_cache_status,
         download_on_railway,
     )
