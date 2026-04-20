@@ -1213,12 +1213,12 @@ function _formatSlideAge(updatedAt) {
   var dt = new Date(updatedAt);
   if (isNaN(dt.getTime())) return '';
   var sec = Math.max(1, Math.floor((Date.now() - dt.getTime()) / 1000));
-  if (sec < 60) return Math.max(15, Math.ceil(sec / 15) * 15) + 's ago';
-  if (sec < 3600) return Math.ceil(sec / 60) + 'm ago';
-  if (sec < 86400) return Math.ceil(sec / 3600) + 'h ago';
+  if (sec < 60) return Math.max(15, Math.ceil(sec / 15) * 15) + 's';
+  if (sec < 3600) return Math.ceil(sec / 60) + 'm';
+  if (sec < 86400) return Math.ceil(sec / 3600) + 'h';
   var days = Math.ceil(sec / 86400);
-  if (days < 7) return days + 'd ago';
-  if (days < 45) return Math.ceil(days / 7) + 'w ago';
+  if (days < 7) return days + 'd';
+  if (days < 45) return Math.ceil(days / 7) + 'w';
   var nowYear = new Date().getFullYear();
   if (dt.getFullYear() !== nowYear) return String(dt.getFullYear());
   return dt.toLocaleString(undefined, { month: 'short' });
