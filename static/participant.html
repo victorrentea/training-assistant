@@ -707,7 +707,9 @@ function _findSlideForHostCurrent(slidesCurrent) {
   if (!slidesCurrent || !_slidesCatalog.length) return null;
   var targetSlug = String(slidesCurrent.slug || '').trim();
   if (!targetSlug) return null;
-  return _slidesCatalog.find(function(slide) { return slide.slug === targetSlug; }) || null;
+  var found = _slidesCatalog.find(function(slide) { return slide.slug === targetSlug; }) || null;
+  if (!found) console.warn('[follow] slug not found in catalog:', targetSlug, '| catalog slugs:', _slidesCatalog.map(function(s){return s.slug;}));
+  return found;
 }
 function _findSlideByHistoryFileName(fileName) {
   var token = _normalizeSlideMatchToken(fileName);
