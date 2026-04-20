@@ -19,7 +19,7 @@
       "target_module": "railway.features.slides"
     }
   ],
-  "generated_contract_count": 27,
+  "generated_contract_count": 17,
   "generated_contracts": [
     {
       "source_module": "railway.features.internal.router",
@@ -28,11 +28,6 @@
     },
     {
       "source_module": "railway.features.internal.router",
-      "target_module": "railway.features.session.notes_router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.internal.router",
       "target_module": "railway.features.slides",
       "type": "forbidden"
     },
@@ -53,11 +48,6 @@
     },
     {
       "source_module": "railway.features.pages.router",
-      "target_module": "railway.features.session.notes_router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.pages.router",
       "target_module": "railway.features.slides",
       "type": "forbidden"
     },
@@ -72,31 +62,6 @@
       "type": "forbidden"
     },
     {
-      "source_module": "railway.features.session.notes_router",
-      "target_module": "railway.features.internal.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.session.notes_router",
-      "target_module": "railway.features.pages.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.session.notes_router",
-      "target_module": "railway.features.slides",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.session.notes_router",
-      "target_module": "railway.features.upload",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.session.notes_router",
-      "target_module": "railway.features.ws",
-      "type": "forbidden"
-    },
-    {
       "source_module": "railway.features.slides",
       "target_module": "railway.features.internal.router",
       "type": "forbidden"
@@ -104,11 +69,6 @@
     {
       "source_module": "railway.features.slides",
       "target_module": "railway.features.pages.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.slides",
-      "target_module": "railway.features.session.notes_router",
       "type": "forbidden"
     },
     {
@@ -128,11 +88,6 @@
     },
     {
       "source_module": "railway.features.upload",
-      "target_module": "railway.features.session.notes_router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.upload",
       "target_module": "railway.features.slides",
       "type": "forbidden"
     },
@@ -144,11 +99,6 @@
     {
       "source_module": "railway.features.ws",
       "target_module": "railway.features.pages.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.ws",
-      "target_module": "railway.features.session.notes_router",
       "type": "forbidden"
     },
     {
@@ -162,11 +112,6 @@
       "code_path": "features/pages/router.py",
       "id": "pageRoutes",
       "module": "railway.features.pages.router"
-    },
-    {
-      "code_path": "features/session/notes_router.py",
-      "id": "publicNotes",
-      "module": "railway.features.session.notes_router"
     },
     {
       "code_path": "features/slides/*",
@@ -190,6 +135,12 @@
     }
   ],
   "unresolved_components": [
+    {
+      "code_path": "features/session/notes_router.py",
+      "id": "publicNotes",
+      "module": "railway.features.session.notes_router",
+      "reason": "module_not_found"
+    },
     {
       "code_path": "shared/*",
       "id": "sharedCore",

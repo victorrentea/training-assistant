@@ -11,7 +11,7 @@ class SlideCacheStatus(str, Enum):
     download_failed = "download_failed"
 
 
-class Slide(BaseModel):
+class Deck(BaseModel):
     status: SlideCacheStatus
     size_bytes: int | None = None
     downloaded_at: str | None = None

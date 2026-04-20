@@ -216,7 +216,6 @@ async def get_status():
         "railway_started_at": _RAILWAY_STARTED_AT_ISO,
         "session_active": state.session_id is not None,
         "session_id": state.session_id,
-        "slides_current": state.slides_current,
     }
 
 
@@ -231,5 +230,4 @@ async def get_session_status(session_id: str, _=Depends(require_valid_session)):
         "railway_started_at": _RAILWAY_STARTED_AT_ISO,
         "session_active": True,
         "session_id": state.session_id,
-        "slides_current": state.slides_current,
     }

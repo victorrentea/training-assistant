@@ -19,7 +19,7 @@ channels:
       message:
         oneOf:
           - $ref: '#/components/messages/current_slide_updated'
-          - $ref: '#/components/messages/slides_updated'
+          - $ref: '#/components/messages/decks_updated'
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/active_participants_count_updated'
           - $ref: '#/components/messages/slides_history_updated'
@@ -62,8 +62,8 @@ components:
           current_slide:
             $ref: '#/components/schemas/CurrentSlide'
 
-    slides_updated:
-      summary: Slide cache status changed — contains full cache map to avoid polling
+    decks_updated:
+      summary: Deck cache status changed — contains full cache map to avoid polling
       x-feature: slides
       x-doc-notes:
         - "'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open."
@@ -73,16 +73,16 @@ components:
         properties:
           type:
             type: string
-            enum: [slides_updated]
+            enum: [decks_updated]
           refreshed_slugs:
             type: array
             items:
               type: string
             default: []
-          slides_updated:
+          decks:
             type: object
             additionalProperties:
-              $ref: '#/components/schemas/Slide'
+              $ref: '#/components/schemas/Deck'
             default: {}
 
     # ── Activity ──────────────────────────────────────────────────────────────
@@ -499,9 +499,9 @@ components:
         page:
           type: integer
 
-    Slide:
+    Deck:
       type: object
-      required: [status]
+      required: [status, title]
       properties:
         status:
           type: string
@@ -519,10 +519,6 @@ components:
           nullable: true
         title:
           type: string
-          nullable: true
-        name:
-          type: string
-          nullable: true
         error:
           type: string
           nullable: true

@@ -21,7 +21,7 @@ channels:
       summary: Events received by host browser
       message:
         oneOf:
-          - $ref: '#/components/messages/slides_updated'
+          - $ref: '#/components/messages/decks_updated'
           - $ref: '#/components/messages/poll_queue_updated'
           - $ref: '#/components/messages/vote_update'
           - $ref: '#/components/messages/wordcloud_updated'
@@ -40,8 +40,8 @@ channels:
 components:
   messages:
 
-    slides_updated:
-      summary: Slide cache status changed — contains full cache map to avoid polling
+    decks_updated:
+      summary: Deck cache status changed — contains full cache map to avoid polling
       x-feature: slides
       x-doc-notes:
         - "'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open."
@@ -51,16 +51,16 @@ components:
         properties:
           type:
             type: string
-            enum: [slides_updated]
+            enum: [decks_updated]
           refreshed_slugs:
             type: array
             items:
               type: string
             default: []
-          slides_updated:
+          decks:
             type: object
             additionalProperties:
-              $ref: '#/components/schemas/Slide'
+              $ref: '#/components/schemas/Deck'
             default: {}
 
     # ── Poll ─────────────────────────────────────────────────────────────────
@@ -309,9 +309,9 @@ components:
 
   schemas:
 
-    Slide:
+    Deck:
       type: object
-      required: [status]
+      required: [status, title]
       properties:
         status:
           type: string
@@ -329,10 +329,6 @@ components:
           nullable: true
         title:
           type: string
-          nullable: true
-        name:
-          type: string
-          nullable: true
         error:
           type: string
           nullable: true

@@ -53,8 +53,8 @@ _DOC_NOTES: dict[tuple[str, str], list[str]] = {
     ("GET", "/api/{session_id}/host/state"): [
         "Returns host-facing full state snapshot.",
     ],
-    ("GET", "/api/participant/slides"): [
-        "Returns cache status snapshot for all known slides; called on initial page load and after slides_updated WS.",
+    ("GET", "/api/participant/slides/decks"): [
+        "Returns cache status snapshot for all known decks on initial page load; decks_updated WS carries full data so no re-polling needed.",
     ],
 }
 

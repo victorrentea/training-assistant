@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from daemon.slides.models import CurrentSlide, Slide
+from daemon.slides.models import CurrentSlide, Deck
 
 # ── Slides ────────────────────────────────────────────────────────────────────
 
@@ -22,10 +22,10 @@ class SlidesCurrentMsg(BaseModel):
     current_slide: CurrentSlide
 
 
-class SlidesCacheStatusMsg(BaseModel):
-    type: Literal["slides_updated"] = "slides_updated"
+class DecksUpdatedMsg(BaseModel):
+    type: Literal["decks_updated"] = "decks_updated"
     refreshed_slugs: list[str] = []
-    slides_updated: dict[str, Slide] = {}
+    decks: dict[str, Deck] = {}
 
 
 # ── Activity ──────────────────────────────────────────────────────────────────
@@ -264,7 +264,7 @@ class ReloadMsg(BaseModel):
 PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
     "current_slide_updated": SlidesCurrentMsg,
-    "slides_updated": SlidesCacheStatusMsg,
+    "decks_updated": DecksUpdatedMsg,
     # Activity
     "activity_updated": ActivityUpdatedMsg,
     # Identity
@@ -304,7 +304,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
 
 HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
-    "slides_updated": SlidesCacheStatusMsg,
+    "decks_updated": DecksUpdatedMsg,
     # Poll
     "poll_queue_updated": PollQueueUpdatedMsg,
     "vote_update": VoteUpdateMsg,
@@ -336,7 +336,7 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
 PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Slides
     "current_slide_updated": "slides",
-    "slides_updated": "slides",
+    "decks_updated": "slides",
     # Activity
     "activity_updated": "activity",
     # Identity
@@ -375,7 +375,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
 
 HOST_MESSAGE_FEATURES: dict[str, str] = {
     # Slides
-    "slides_updated": "slides",
+    "decks_updated": "slides",
     # Poll
     "poll_queue_updated": "poll",
     "vote_update": "poll",

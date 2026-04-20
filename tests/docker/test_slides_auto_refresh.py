@@ -209,7 +209,7 @@ def test_participant_receives_refreshed_slugs_in_ws():
                 _ws.addEventListener('message', (evt) => {
                     try {
                         const msg = JSON.parse(evt.data);
-                        if (msg.type === 'slides_updated' && Array.isArray(msg.refreshed_slugs)) {
+                        if (msg.type === 'decks_updated' && Array.isArray(msg.refreshed_slugs)) {
                             window._capturedRefreshedSlugs.push(...msg.refreshed_slugs);
                         }
                     } catch {}

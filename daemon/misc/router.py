@@ -15,7 +15,7 @@ from daemon.email_notify import notify as email_notify
 from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
-from daemon.slides.models import Slide, SlidesHistoryResponse, SlidesLogEntry
+from daemon.slides.models import Deck, SlidesHistoryResponse, SlidesLogEntry
 from daemon.ws_messages import PasteReceivedMsg
 from daemon.ws_publish import notify_host
 
@@ -46,8 +46,8 @@ class AgendaResponse(BaseModel):
     data: str  # base64-encoded .docx content
     filename: str
 
-class SlidesResponse(BaseModel):
-    slides_updated: dict[str, Slide] = {}
+class DecksResponse(BaseModel):
+    decks: dict[str, Deck] = {}
 
 class PasteEntry(BaseModel):
     id: str
@@ -135,11 +135,11 @@ async def get_summary():
     )
 
 
-@participant_router.get("/slides", response_model=SlidesResponse)
-async def get_slides_updated():
-    """Get slides cache status."""
+@participant_router.get("/slides/decks", response_model=DecksResponse)
+async def get_slides_decks():
+    """Get slides cache status for all known decks; called on initial page load (decks_updated WS carries full data and replaces polling)."""
     from daemon.slides.router import _slides_updated_with_titles
-    return SlidesResponse.model_validate({"slides_updated": _slides_updated_with_titles()})
+    return DecksResponse.model_validate({"decks": _slides_updated_with_titles()})
 
 
 @participant_router.get("/slides/history", response_model=SlidesHistoryResponse)

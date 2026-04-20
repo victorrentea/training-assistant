@@ -456,7 +456,7 @@
         _setTalkPptxLabel(document.getElementById('talk-pptx-label')?.textContent?.replace(/^▶ /, '') || '', true);
       } else if (msg.type === 'talk_pdf_failed') {
         toast('Impossible to export PDF');
-      } else if (msg.type === 'slides_updated') {
+      } else if (msg.type === 'decks_updated') {
         _refreshHostSlidesCatalog();
       } else if (msg.type === 'vote_update') {
         totalVotes = msg.voted_count || 0;

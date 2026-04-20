@@ -548,24 +548,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/SummaryResponse'
       x-feature: notes_summary
-  /api/participant/slides:
+  /api/participant/slides/decks:
     get:
       tags:
       - misc
-      summary: Get Slides Updated
-      description: Get slides cache status.
-      operationId: get_slides_updated_api_participant_slides_get
+      summary: Get Slides Decks
+      description: Get slides cache status for all known decks; called on initial
+        page load and after slides_updated WS.
+      operationId: get_slides_decks_api_participant_slides_decks_get
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SlidesResponse'
+                $ref: '#/components/schemas/DecksResponse'
       x-feature: slides
       x-doc-notes:
-      - Returns cache status snapshot for all known slides; called on initial page
-        load and after slides_updated WS.
+      - Returns cache status snapshot for all known decks; called on initial page
+        load and after decks_updated WS.
   /api/participant/slides/history:
     get:
       tags:
@@ -1623,6 +1624,48 @@ components:
       - champions
       - auto_assigned
       title: DebateData
+    Deck:
+      properties:
+        status:
+          $ref: '#/components/schemas/SlideCacheStatus'
+        size_bytes:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Size Bytes
+        downloaded_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Downloaded At
+        modified_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Modified At
+        title:
+          type: string
+          title: Title
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+      type: object
+      required:
+      - status
+      - title
+      title: Deck
+    DecksResponse:
+      properties:
+        decks:
+          additionalProperties:
+            $ref: '#/components/schemas/Deck'
+          type: object
+          title: Decks
+          default: {}
+      type: object
+      title: DecksResponse
     EditQuestionTextBody:
       properties:
         text:
@@ -2648,38 +2691,6 @@ components:
       required:
       - entries
       title: ShowLeaderboardResponse
-    Slide:
-      properties:
-        status:
-          $ref: '#/components/schemas/SlideCacheStatus'
-        size_bytes:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Size Bytes
-        downloaded_at:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Downloaded At
-        modified_at:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Modified At
-        title:
-          type: string
-          title: Title
-        error:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Error
-      type: object
-      required:
-      - status
-      - title
-      title: Slide
     SlideCacheStatus:
       type: string
       enum:
@@ -2725,16 +2736,6 @@ components:
       - slide
       - seconds_spent
       title: SlidesLogEntry
-    SlidesResponse:
-      properties:
-        slides_updated:
-          additionalProperties:
-            $ref: '#/components/schemas/Slide'
-          type: object
-          title: Slides Updated
-          default: {}
-      type: object
-      title: SlidesResponse
     StartSessionRequest:
       properties:
         name:

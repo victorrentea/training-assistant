@@ -7,7 +7,9 @@ to all connected participants (throttled to max 1/sec).
 """
 import json
 import logging
-from typing import Optional
+from typing import Optional, Union
+
+from pydantic import BaseModel
 
 from railway.shared.state import state
 from railway.shared.throttle import AsyncThrottle
@@ -38,9 +40,9 @@ async def _broadcast_foreach(sender):
         state.participants.pop(pid, None)
 
 
-async def broadcast(message: dict, exclude: Optional[str] = None):
+async def broadcast(message: Union[BaseModel, dict], exclude: Optional[str] = None):
     """Send identical message to all connected clients."""
-    text = json.dumps(message)
+    text = message.model_dump_json() if isinstance(message, BaseModel) else json.dumps(message)
     async def _send(pid, ws):
         if pid == exclude:
             return

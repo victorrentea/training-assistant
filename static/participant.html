@@ -2322,7 +2322,7 @@ function _handleWsMessage(msg) {
       if (onSummary) loadSummary();
       break;
     }
-    case 'slides_updated':
+    case 'decks_updated':
       (function(refreshedSlugs, inlineCacheStatus) {
         // Update local cache status from inline payload (avoids hitting daemon).
         if (inlineCacheStatus && typeof inlineCacheStatus === 'object') {
@@ -2354,9 +2354,9 @@ function _handleWsMessage(msg) {
             }
           }
         }).catch(function() {});
-      })(msg.refreshed_slugs, msg.slides_updated);
+      })(msg.refreshed_slugs, msg.decks);
       break;
-    case 'slides_current': _onIncomingHostSlidesCurrent(msg.slides_current || null); break;
+    case 'current_slide_updated': _onIncomingHostSlidesCurrent(msg.current_slide || null); break;
     case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;
     case 'active_participants_count_updated': {
       var paxDisplay = document.getElementById('pax-count-display');

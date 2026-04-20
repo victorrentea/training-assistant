@@ -14,9 +14,18 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+from pydantic import BaseModel
+
 from railway.features.ws.proxy_bridge import proxy_to_daemon
 from railway.shared.messaging import broadcast
 from railway.shared.state import state
+
+
+class DecksUpdatedMsg(BaseModel):
+    type: str = "decks_updated"
+    slides: list = []
+    decks: dict = {}
+    refreshed_slugs: list[str] = []
 
 logger = logging.getLogger(__name__)
 
@@ -149,13 +158,7 @@ async def broadcast_slides_updated() -> None:
     else:
         state.slides = slides
         state.slides_updated = _cache_map_from_slides(slides)
-    await broadcast(
-        {
-            "type": "slides_updated",
-            "slides": slides,
-            "slides_updated": state.slides_updated,
-        }
-    )
+    await broadcast(DecksUpdatedMsg(slides=slides, decks=state.slides_updated))
 
 
 async def do_invalidate_download(slug: str, drive_export_url: str) -> None:
@@ -175,14 +178,7 @@ async def do_invalidate_download(slug: str, drive_export_url: str) -> None:
     else:
         state.slides = slides
         state.slides_updated = _cache_map_from_slides(slides)
-    await broadcast(
-        {
-            "type": "slides_updated",
-            "slides": slides,
-            "slides_updated": state.slides_updated,
-            "refreshed_slugs": [slug],
-        }
-    )
+    await broadcast(DecksUpdatedMsg(slides=slides, decks=state.slides_updated, refreshed_slugs=[slug]))
 
 
 # ---------------------------------------------------------------------------

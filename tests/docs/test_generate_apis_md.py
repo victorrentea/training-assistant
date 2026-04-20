@@ -142,9 +142,9 @@ def test_generator_pretty_prints_multi_field_shapes_one_per_line():
 def test_generator_expands_referenced_response_types():
     output = _run_generator()
 
-    slides_cache_row = re.search(r"^\| .*`GET /api/participant/slides`.*\|$", output, re.MULTILINE)
-    assert slides_cache_row, "Missing table row for GET /api/participant/slides"
-    assert "`slides_updated?: dict[str, Slide{`" in slides_cache_row.group(0)
+    slides_cache_row = re.search(r"^\| .*`GET /api/participant/slides/decks`.*\|$", output, re.MULTILINE)
+    assert slides_cache_row, "Missing table row for GET /api/participant/slides/decks"
+    assert "`decks?: dict[str, Deck{`" in slides_cache_row.group(0)
     assert "&nbsp;&nbsp;&nbsp;&nbsp;`status:SlideCacheStatus:" in slides_cache_row.group(0)
 
 

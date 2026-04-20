@@ -241,11 +241,11 @@ def _slides_updated_with_titles() -> dict[str, dict]:
 
 
 def _broadcast_slides_updated(refreshed_slugs: list[str] | None = None) -> None:
-    from daemon.ws_messages import SlidesCacheStatusMsg
+    from daemon.ws_messages import DecksUpdatedMsg
     from daemon.ws_publish import broadcast
-    broadcast(SlidesCacheStatusMsg(
+    broadcast(DecksUpdatedMsg(
         refreshed_slugs=refreshed_slugs or [],
-        slides_updated=_slides_updated_with_titles(),
+        decks=_slides_updated_with_titles(),
     ))
 
 

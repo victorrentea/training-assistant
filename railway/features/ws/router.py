@@ -134,15 +134,6 @@ async def _handle_broadcast(data: dict):
     if not event:
         return
     event_type = event.get("type")
-    # Mirror slides_current into Railway state so /api/status can return it.
-    # Two event shapes from daemon:
-    #   {type:"slides_current", slug:..., url:..., ...}  — active slide
-    #   {type:"slides_current", slides_current: null}    — no active slide
-    if event_type == "slides_current":
-        if "slides_current" in event:
-            state.slides_current = event["slides_current"]  # may be None
-        else:
-            state.slides_current = {k: v for k, v in event.items() if k != "type"}
     msg = json.dumps(event)
     for pid, ws in list(state.participants.items()):
         if pid.startswith("__") and pid != "__host__":  # keep host, skip other special keys

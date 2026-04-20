@@ -224,7 +224,7 @@ class TestDownloadHappyPath:
         broadcasts = []
         with patch("daemon.ws_publish.broadcast", side_effect=lambda m: broadcasts.append(m)):
             client.get(_check_url())
-        statuses = [b.slides_updated[SLUG].status if SLUG in b.slides_updated else None for b in broadcasts]
+        statuses = [b.decks[SLUG].status if SLUG in b.decks else None for b in broadcasts]
         assert "downloading" in statuses
         assert "cached" in statuses
         assert statuses.index("downloading") < statuses.index("cached")
