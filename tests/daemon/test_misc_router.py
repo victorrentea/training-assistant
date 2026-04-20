@@ -84,10 +84,10 @@ def test_compilation_returns_204_when_no_slides_viewed():
 
 
 def test_compilation_skips_file_with_no_catalog_entry():
-    """If a file_name from slides_viewed has no matching catalog entry, it is skipped."""
+    """If a slug from slides_viewed has no matching catalog entry, it is skipped."""
     client = _host_client()
     with patch("daemon.misc.router.misc_state") as ms:
-        ms.slides_viewed = [{"file_name": "Unknown.pptx", "page": 1, "seconds": 10}]
+        ms.slides_viewed = [{"slug": "unknown-abc", "page": 1, "seconds": 10}]
         ms.slides_catalog = {}
         ms.slides_updated = {}
         resp = client.get("/api/test-session/host/slides-compilation")
@@ -112,12 +112,11 @@ def test_compilation_returns_pdf_for_cached_slide():
          patch("daemon.misc.router._fetch_pdf_bytes_from_railway", return_value=pdf_bytes) as fetch_mock, \
          patch("daemon.misc.router.asyncio.to_thread", side_effect=lambda fn, *a, **kw: fn(*a, **kw)):
         ms.slides_viewed = [
-            {"file_name": "AI Coding.pptx", "page": 1, "seconds": 30},
-            {"file_name": "AI Coding.pptx", "page": 2, "seconds": 20},
+            {"slug": "ai-coding-abc", "page": 1, "seconds": 30},
+            {"slug": "ai-coding-abc", "page": 2, "seconds": 20},
         ]
         ms.slides_catalog = {
             "ai-coding-abc": {
-                "source_name": "AI Coding.pptx",
                 "drive_export_url": "https://gdrive.example.com/pdf",
             }
         }
