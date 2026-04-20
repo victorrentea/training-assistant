@@ -131,6 +131,7 @@ async def _fetch_latest_slides_from_daemon() -> list[dict] | None:
 
 
 def _cache_map_from_slides(slides: list[dict]) -> dict[str, dict]:
+    existing = state.slides_updated if isinstance(state.slides_updated, dict) else {}
     cache_map: dict[str, dict] = {}
     for raw in slides:
         if not isinstance(raw, dict):
@@ -138,11 +139,17 @@ def _cache_map_from_slides(slides: list[dict]) -> dict[str, dict]:
         slug = str(raw.get("slug", "")).strip()
         if not slug:
             continue
+        prev = existing.get(slug, {})
         entry: dict[str, object] = {"status": str(raw.get("status", "not_cached") or "not_cached")}
         if raw.get("size_bytes") is not None:
             entry["size_bytes"] = raw.get("size_bytes")
-        if raw.get("downloaded_at"):
-            entry["downloaded_at"] = raw.get("downloaded_at")
+        # Daemon doesn't track when Railway downloaded — preserve Railway's own value
+        downloaded_at = prev.get("downloaded_at") or raw.get("downloaded_at")
+        if downloaded_at:
+            entry["downloaded_at"] = downloaded_at
+        # modified_at is the PPTX mtime — daemon is the source of truth
+        if raw.get("modified_at"):
+            entry["modified_at"] = raw.get("modified_at")
         if raw.get("error"):
             entry["error"] = raw.get("error")
         cache_map[slug] = entry
