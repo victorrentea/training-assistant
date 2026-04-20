@@ -198,7 +198,6 @@ def _slides_with_embedded_cache_status() -> list[dict]:
             slides.append(
                 {
                     "slug": slug,
-                    "name": meta_name or slug,
                     "title": meta_name or slug,
                     "url": f"/api/slides/download/{slug}",
                     "updated_at": meta_updated_at,
@@ -236,8 +235,7 @@ def _slides_updated_with_titles() -> dict[str, dict]:
     for slug, entry in misc_state.slides_updated.items():
         enriched = dict(entry)
         catalog_entry = misc_state.slides_catalog.get(slug)
-        title = isinstance(catalog_entry, dict) and (catalog_entry.get("title") or catalog_entry.get("name"))
-        enriched["title"] = title or slug
+        enriched["title"] = (isinstance(catalog_entry, dict) and catalog_entry.get("title")) or slug
         result[slug] = enriched
     return result
 
