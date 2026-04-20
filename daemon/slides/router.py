@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import socket
+import threading
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -24,9 +25,73 @@ _RAILWAY_DOWNLOAD_TIMEOUT_S: float = 120.0  # Railway downloads can take 10-15s 
 # from the main (sync) thread (e.g. backfill location metadata, overlay notifications).
 _event_loop: asyncio.AbstractEventLoop | None = None
 
-# Per-slug Events: set when an in-flight download completes (success or failure).
-# Prevents concurrent participant requests from each triggering a separate Railway download.
-_slug_download_events: dict[str, asyncio.Event] = {}
+# Unified download guard — single source of truth for both participant-triggered and
+# PPTX-change-triggered downloads. All access is protected by _download_guard_lock.
+_active_download_slugs: set[str] = set()
+_pending_redownload_slugs: set[str] = set()  # PPTX changed while a download was in-flight
+_download_guard_lock = threading.Lock()
+_download_wait_events: dict[str, asyncio.Event] = {}  # async waiters in check_slide_cache
+
+
+def _claim_download(slug: str) -> bool:
+    """Atomically claim the download slot. Returns True iff this caller should proceed."""
+    with _download_guard_lock:
+        if slug in _active_download_slugs:
+            return False
+        _active_download_slugs.add(slug)
+        return True
+
+
+def _get_wait_event(slug: str) -> asyncio.Event:
+    """Get or create the asyncio.Event to await while slug is downloading.
+    Must be called from the asyncio event loop thread."""
+    with _download_guard_lock:
+        if slug not in _download_wait_events:
+            _download_wait_events[slug] = asyncio.Event()
+        return _download_wait_events[slug]
+
+
+def _finish_download(slug: str) -> bool:
+    """Release the download slot and wake any async waiters.
+    Returns True if a pending redownload should be started.
+    Safe to call from any thread."""
+    with _download_guard_lock:
+        _active_download_slugs.discard(slug)
+        event = _download_wait_events.pop(slug, None)
+        pending = slug in _pending_redownload_slugs
+        _pending_redownload_slugs.discard(slug)
+    if event is not None:
+        loop = _event_loop
+        if loop is not None and loop.is_running():
+            loop.call_soon_threadsafe(event.set)
+        else:
+            event.set()
+    return pending
+
+
+def _queue_pending_redownload(slug: str) -> None:
+    """Queue slug for redownload after the current in-flight download completes."""
+    with _download_guard_lock:
+        _pending_redownload_slugs.add(slug)
+
+
+def _trigger_pending_redownload(slug: str) -> None:
+    """Start a redownload poller thread for a slug queued while a download was in flight."""
+    drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
+    if not drive_url or not _claim_download(slug):
+        return
+    from daemon import log
+    from daemon.slides.loop import _run_redownload_poller
+    log.info("slides", f"Starting queued redownload for slug={slug}")
+    _mark_cache_status(slug, "downloading")
+    _broadcast_slides_updated()
+    t = threading.Thread(
+        target=_run_redownload_poller,
+        args=(slug, drive_url),
+        daemon=True,
+        name=f"redownload-{slug}",
+    )
+    t.start()
 
 
 def get_event_loop() -> asyncio.AbstractEventLoop | None:
@@ -195,19 +260,18 @@ async def check_slide_cache(session_id: str, slug: str, force: bool = False):
     if not force and misc_state.slides_updated.get(slug, {}).get("status") == "cached":
         return SlidesCheckResponse(status="cached")
 
-    # If a download is already in flight, wait for it instead of firing a duplicate.
-    if not force and slug in _slug_download_events:
-        await _slug_download_events[slug].wait()
+    # If any download is already in flight (participant or PPTX-change path), wait for it.
+    if not force and not _claim_download(slug):
+        await _get_wait_event(slug).wait()
         if misc_state.slides_updated.get(slug, {}).get("status") == "cached":
             return SlidesCheckResponse(status="cached")
-        # Previous download failed — fall through to retry
+        return JSONResponse({"status": "error"}, status_code=503)
 
     drive_export_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url")
     if not drive_export_url:
+        _finish_download(slug)
         return JSONResponse({"status": "error", "detail": "no drive_export_url"}, status_code=404)
 
-    event = asyncio.Event()
-    _slug_download_events[slug] = event
     _mark_cache_status(slug, "downloading")
     _broadcast_slides_updated()
 
@@ -224,8 +288,8 @@ async def check_slide_cache(session_id: str, slug: str, force: bool = False):
         # connected participants.
         return JSONResponse({"status": "error"}, status_code=503)
     finally:
-        _slug_download_events.pop(slug, None)
-        event.set()
+        if _finish_download(slug):
+            _trigger_pending_redownload(slug)
 
 
 @participant_router.get("/{session_id}/api/slides")

@@ -26,9 +26,6 @@ _REDOWNLOAD_FIRST_DELAY_S = 10.0
 _REDOWNLOAD_RETRY_INTERVAL_S = 5.0
 _REDOWNLOAD_MAX_RETRIES = 5
 
-_active_redownload_slugs: set[str] = set()
-_pending_redownload_slugs: set[str] = set()  # PPTX changed while download was in-flight
-_active_redownload_lock = threading.Lock()
 
 
 def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
@@ -71,27 +68,9 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
         from daemon.slides.drive_sync import _beep_local
         _beep_local()
     finally:
-        with _active_redownload_lock:
-            _active_redownload_slugs.discard(slug)
-            should_retry = slug in _pending_redownload_slugs
-            _pending_redownload_slugs.discard(slug)
-
-        if should_retry:
-            drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
-            if drive_url:
-                log.info("slides", f"Starting queued redownload for slug={slug}")
-                with _active_redownload_lock:
-                    _active_redownload_slugs.add(slug)
-                from daemon.slides.router import _broadcast_slides_updated, _mark_cache_status
-                _mark_cache_status(slug, "downloading")
-                _broadcast_slides_updated()
-                t = threading.Thread(
-                    target=_run_redownload_poller,
-                    args=(slug, drive_url),
-                    daemon=True,
-                    name=f"redownload-{slug}",
-                )
-                t.start()
+        from daemon.slides.router import _finish_download, _trigger_pending_redownload
+        if _finish_download(slug):
+            _trigger_pending_redownload(slug)
 
 
 class SlidesRunner:
@@ -224,17 +203,17 @@ class SlidesRunner:
                 if existing.get("status") == "cached":
                     drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
                     if drive_url:
-                        with _active_redownload_lock:
-                            if slug in _active_redownload_slugs:
-                                log.info("slides", f"PPTX updated for slug={slug} — queuing redownload after current completes")
-                                _pending_redownload_slugs.add(slug)
-                                continue
-                            _active_redownload_slugs.add(slug)
-                        log.info("slides", f"PPTX updated for slug={slug} — starting redownload poller")
                         from daemon.slides.router import (
                             _broadcast_slides_updated,
+                            _claim_download,
                             _mark_cache_status,
+                            _queue_pending_redownload,
                         )
+                        if not _claim_download(slug):
+                            log.info("slides", f"PPTX updated for slug={slug} — queuing redownload after current completes")
+                            _queue_pending_redownload(slug)
+                            continue
+                        log.info("slides", f"PPTX updated for slug={slug} — starting redownload poller")
                         _mark_cache_status(slug, "downloading")
                         _broadcast_slides_updated()
                         t = threading.Thread(
