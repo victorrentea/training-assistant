@@ -7,6 +7,7 @@ import queue
 import re
 import ssl
 import threading
+from datetime import datetime, timezone
 from typing import Any, Callable
 
 from websockets.exceptions import ConnectionClosed
@@ -181,9 +182,9 @@ class DaemonWsClient:
                         # Enqueue for main thread processing
                         self._work_queue.put((msg_type, data))
                 elif msg_type == "slide_log":
-                    # Logging can happen on WS thread (no shared state mutation)
                     _event = data.get("event", "")
-                    _slug = re.sub(r'-[0-9a-f]{32}$', '', data.get("slug", ""))
+                    _full_slug = data.get("slug", "")
+                    _slug = re.sub(r'-[0-9a-f]{32}$', '', _full_slug)
                     _labels = {
                         "download_slide_request": "pdf download",
                         "download_slide_completed": "pdf downloaded ok",
@@ -192,6 +193,13 @@ class DaemonWsClient:
                     _label = _labels.get(_event, _event)
                     _arrow = "↓" if _event.endswith("_completed") else "↑"
                     log.info("railway", f"{_arrow} {_label}: {_slug}")
+                    if _event == "download_slide_completed" and _full_slug:
+                        from daemon.misc.state import misc_state
+                        from daemon.slides.router import _broadcast_slides_updated
+                        _downloaded_at = data.get("downloaded_at") or datetime.now(timezone.utc).isoformat()
+                        existing = misc_state.slides_updated.get(_full_slug, {})
+                        misc_state.slides_updated[_full_slug] = {**existing, "downloaded_at": _downloaded_at}
+                        _broadcast_slides_updated()
         except ConnectionClosed:
             pass
         finally:

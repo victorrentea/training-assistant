@@ -50,9 +50,9 @@ def _ssl_ctx() -> ssl.SSLContext:
 # Logging / status helpers
 # ---------------------------------------------------------------------------
 
-async def _push_log(slug: str, event: str, detail: str = "") -> None:
+async def _push_log(slug: str, event: str, detail: str = "", **extra) -> None:
     """Send a slide_log message to the daemon WS and log locally."""
-    msg = {"type": "slide_log", "slug": slug, "event": event, "detail": detail}
+    msg = {"type": "slide_log", "slug": slug, "event": event, "detail": detail, **extra}
     logger.info("[slides-cache] %s slug=%s %s", event, slug, detail)
     ws = state.daemon_ws
     if ws is not None:
@@ -233,7 +233,7 @@ async def do_download(slug: str, url: str) -> Path:
         _set_status(slug, "cached", size_bytes=size, downloaded_at=downloaded_at)
         size_mb = size / (1024 * 1024)
         size_str = f"{size_mb:.1f} MB" if size_mb >= 1 else f"{size / 1024:.0f} KB"
-        await _push_log(slug, "download_slide_completed", f"Downloaded PDF from Google Drive: {size_str}")
+        await _push_log(slug, "download_slide_completed", f"Downloaded PDF from Google Drive: {size_str}", downloaded_at=downloaded_at)
         return dest
     except Exception as exc:
         _set_status(slug, "download_failed", error=str(exc))

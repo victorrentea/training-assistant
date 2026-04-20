@@ -53,7 +53,7 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
                 if new_hash != prev_hash:
                     log.info("slides", f"Google Drive PDF updated for slug={slug} (attempt {attempt})")
                     _mark_cache_status(slug, "cached", last_sha256=new_hash)
-                    _broadcast_slides_updated()
+                    # Broadcast happens in ws_client when slide_log "download_slide_completed" arrives
                     return
 
                 log.info("slides", f"Google Drive PDF unchanged for slug={slug} (attempt {attempt}/{_REDOWNLOAD_MAX_RETRIES})")
