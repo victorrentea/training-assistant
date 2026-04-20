@@ -2465,15 +2465,19 @@ components:
         pending:
           type: integer
           title: Pending
+        items:
+          items:
+            $ref: '#/components/schemas/QueuedQuestion'
+          type: array
+          title: Items
         current:
           anyOf:
-          - additionalProperties: true
-            type: object
+          - $ref: '#/components/schemas/QueuedQuestion'
           - type: 'null'
-          title: Current
       type: object
       required:
       - pending
+      - items
       title: PollQueueStatus
     QAQuestionRaw:
       properties:
@@ -2506,6 +2510,27 @@ components:
       - answered
       - timestamp
       title: QAQuestionRaw
+    QueuedQuestion:
+      properties:
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            type: string
+          type: array
+          title: Options
+        correct_indices:
+          items:
+            type: integer
+          type: array
+          title: Correct Indices
+      type: object
+      required:
+      - question
+      - options
+      - correct_indices
+      title: QueuedQuestion
     RegisterRequest:
       properties:
         name:

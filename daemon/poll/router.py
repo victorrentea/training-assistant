@@ -48,9 +48,16 @@ class HostPollVote(BaseModel):
     option_indices: list[int]
     voted_at: str
 
+class QueuedQuestion(BaseModel):
+    question: str
+    options: list[str]
+    correct_indices: list[int]
+
+
 class PollQueueStatus(BaseModel):
     pending: int
-    current: dict | None = None
+    items: list[QueuedQuestion]
+    current: QueuedQuestion | None = None  # always items[0] if non-empty
 
 class HostPollStateResponse(BaseModel):
     id: str | None = None
@@ -181,5 +188,9 @@ async def get_poll_state():
         correct_indices=ps.poll_correct_indices,
         poll_running=ps.poll_active,
         votes={pid: HostPollVote(**v) for pid, v in ps.votes.items()},
-        queue=PollQueueStatus(pending=quiz_queue.pending_count(), current=quiz_queue.current()),
+        queue=PollQueueStatus(
+            pending=quiz_queue.pending_count(),
+            items=[QueuedQuestion(**q) for q in quiz_queue.all_items()],
+            current=QueuedQuestion(**quiz_queue.current()) if quiz_queue.current() else None,
+        ),
     )
