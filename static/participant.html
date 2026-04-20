@@ -907,20 +907,20 @@ function _loadSlideHistory() {
   if (!_sessionId) return;
   clearTimeout(_slideHistoryTimer);
   _slideHistoryTimer = null;
-  fetch('/' + _sessionId + '/api/participant/slide-history')
+  fetch('/' + _sessionId + '/api/participant/slides/history')
     .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
     .then(function(data) {
-      var slides = data.slides || [];
+      var slides = data.slides_log || [];
       _setPastSlidesBadge(slides.length);
       var el = document.getElementById('slide-history-list');
       if (!el) return;
       if (!slides.length) { el.style.display = 'none'; return; }
-      // Group pages by file_name (strip .pptx extension for display)
+      // Group pages by file (strip .pptx extension for display)
       var groups = {}, order = [];
       slides.forEach(function(s) {
-        var name = (s.file_name || '').replace(/\.pptx$/i, '');
+        var name = (s.file || '').replace(/\.pptx$/i, '');
         if (!groups[name]) { groups[name] = []; order.push(name); }
-        groups[name].push(s.page);
+        groups[name].push(s.slide);
       });
       var lastOrderName = order[order.length - 1];
       el.innerHTML = order.map(function(name) {

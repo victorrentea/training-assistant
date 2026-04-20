@@ -128,21 +128,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/GitActivityResponse'
       x-feature: activity
-  /api/participant/slide-history:
-    get:
-      tags:
-      - participant
-      summary: Get Slide History
-      description: Return accumulated per-slide viewing history for the current session.
-      operationId: get_slide_history_api_participant_slide_history_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SlideHistoryResponse'
-      x-feature: identity
   /api/{session_id}/host/participants/resolve-locations:
     post:
       tags:
@@ -581,6 +566,21 @@ paths:
       x-doc-notes:
       - Primarily for diagnostics; UI cache invalidation is event-driven via slides_updated
         WS.
+  /api/participant/slides/history:
+    get:
+      tags:
+      - misc
+      summary: Get Slides History
+      description: Return accumulated slide viewing history for the current session.
+      operationId: get_slides_history_api_participant_slides_history_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlidesHistoryResponse'
+      x-feature: misc
   /api/participant/agenda:
     get:
       tags:
@@ -1093,28 +1093,6 @@ paths:
       x-feature: host_state
       x-doc-notes:
       - Returns host-facing full state snapshot.
-  /api/{session_id}/host/slides/history:
-    get:
-      tags:
-      - host-state
-      summary: Get Slides History
-      description: Return accumulated slide viewing history for the current session.
-      operationId: get_slides_history_api__session_id__host_slides_history_get
-      parameters:
-      - name: session_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Session Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SlidesHistoryResponse'
-      x-feature: identity
   /api/session/create:
     post:
       tags:
@@ -2716,18 +2694,6 @@ components:
       - downloading
       - download_failed
       title: SlideCacheStatus
-    SlideHistoryResponse:
-      properties:
-        slides:
-          items:
-            additionalProperties: true
-            type: object
-          type: array
-          title: Slides
-      type: object
-      required:
-      - slides
-      title: SlideHistoryResponse
     SlidesCheckResponse:
       properties:
         status:

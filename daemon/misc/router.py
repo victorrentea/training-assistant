@@ -15,7 +15,7 @@ from daemon.email_notify import notify as email_notify
 from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
-from daemon.slides.models import Slide
+from daemon.slides.models import Slide, SlidesHistoryResponse, SlidesLogEntry
 from daemon.ws_messages import PasteReceivedMsg
 from daemon.ws_publish import notify_host
 
@@ -139,6 +139,16 @@ async def get_summary():
 async def get_slides_updated():
     """Get slides cache status."""
     return SlidesResponse.model_validate({"slides_updated": misc_state.slides_updated})
+
+
+@participant_router.get("/slides/history", response_model=SlidesHistoryResponse)
+async def get_slides_history():
+    """Return accumulated slide viewing history for the current session."""
+    entries = [
+        SlidesLogEntry(file=sv["file_name"], slide=sv["page"], seconds_spent=sv["seconds"])
+        for sv in misc_state.slides_viewed
+    ]
+    return SlidesHistoryResponse(slides_log=entries)
 
 
 @participant_router.get("/agenda", response_model=AgendaResponse)

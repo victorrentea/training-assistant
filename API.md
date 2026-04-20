@@ -65,7 +65,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Register Participant, idempotent for returning participants.<br>`POST /api/participant/register` | `name?: string`<br>`location?: string` | `name: string`<br>`avatar: string` |
 | Rejoin Participant, lookup-only identity restore for returning UUIDs in current session.<br>`POST /api/participant/rejoin` | - | `name: string`<br>`avatar: string` |
 | Roll Avatar Endpoint, re-roll avatar (conference mode only).<br>`POST /api/participant/roll-avatar` | `rejected?: list[string]` | `avatar: string` |
-| Get Slide History, return accumulated per-slide viewing history for the current session.<br>`GET /api/participant/slide-history` | - | `slides: list[dict[str, any]]` |
 
 ### Participant WS
 | Message | Payload |
@@ -76,7 +75,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Resolve Participant Locations, backfill city name + timezone + country for all participants missing geo metadata.<br>`POST /api/{session_id}/host/participants/resolve-locations` | - | - |
-| Get Slides History, return accumulated slide viewing history for the current session.<br>`GET /api/{session_id}/host/slides/history` | - | `slides_log: list[SlidesLogEntry{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`file:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slide:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`seconds_spent:number`<br>&nbsp;&nbsp;&nbsp;&nbsp;`timestamp?:string`<br>`}]` |
 
 ### Host WS
 | Message | Payload |
@@ -438,6 +436,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Agenda, serve the agenda .docx as base64-encoded JSON (survives WS proxy).<br>`GET /api/participant/agenda` | - | `data: string`<br>`filename: string` |
+| Get Slides History, return accumulated slide viewing history for the current session.<br>`GET /api/participant/slides/history` | - | `slides_log: list[SlidesLogEntry{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`file:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slide:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`seconds_spent:number`<br>&nbsp;&nbsp;&nbsp;&nbsp;`timestamp?:string`<br>`}]` |
 
 ### Host REST
 | Endpoint | Request | Response |

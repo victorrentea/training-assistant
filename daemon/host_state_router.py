@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon.codereview.state import codereview_state
+from daemon.slides.models import SlidesLogEntry
 from daemon.debate.state import debate_state
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
 from daemon.misc.state import misc_state
@@ -76,17 +77,6 @@ class DebateArgumentHost(BaseModel):
     upvoters: list[str]
     ai_generated: bool
     merged_into: str | None = None
-
-
-class SlidesLogEntry(BaseModel):
-    file: str
-    slide: int
-    seconds_spent: float
-    timestamp: str | None = None
-
-
-class SlidesHistoryResponse(BaseModel):
-    slides_log: list[SlidesLogEntry]
 
 
 class HostStateResponse(BaseModel):
@@ -333,12 +323,6 @@ async def get_host_state(request: Request, session_id: str):
     }
 
     return JSONResponse(state_msg)
-
-
-@router.get("/slides/history", response_model=SlidesHistoryResponse)
-async def get_slides_history(session_id: str):
-    """Return accumulated slide viewing history for the current session."""
-    return SlidesHistoryResponse(slides_log=_build_slides_log_entries())
 
 
 def _get_gdrive_running() -> bool:
