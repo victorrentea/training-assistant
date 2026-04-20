@@ -2349,9 +2349,17 @@ function _handleWsMessage(msg) {
           + ' (prev=' + (prevDownloadedAt ? new Date(prevDownloadedAt).toLocaleString() : 'null') + ')');
         var activeRefreshed = activeSlug && incomingDecks && window.loadPdf &&
           newDownloadedAt && (newDownloadedAt !== prevDownloadedAt);
-        // Update local cache status from inline payload (avoids hitting daemon).
+        // Merge: preserve non-null downloaded_at — daemon broadcasts don't include it
         if (incomingDecks && typeof incomingDecks === 'object') {
-          _slidesCacheStatus = incomingDecks;
+          var merged = {};
+          Object.keys(incomingDecks).forEach(function(s) {
+            var inc = incomingDecks[s] || {};
+            var prev = _slidesCacheStatus[s] || {};
+            merged[s] = (!inc.downloaded_at && prev.downloaded_at)
+              ? Object.assign({}, inc, {downloaded_at: prev.downloaded_at})
+              : inc;
+          });
+          _slidesCacheStatus = merged;
         }
         // Show/hide refreshing overlay for the active slide.
         var refreshOverlay = document.getElementById('slide-refresh-overlay');

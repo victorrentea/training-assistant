@@ -94,6 +94,11 @@ async def download_from_gdrive(slug: str, body: DownloadFromGdriveRequest):
         path = await do_download(slug, drive_export_url)
         sha = _file_sha256(path)
         size = path.stat().st_size
+        # Broadcast before returning — ensures participants see updated downloaded_at
+        # before daemon's own _broadcast_slides_updated() fires (which omits downloaded_at).
+        from railway.features.slides.cache import DecksUpdatedMsg
+        from railway.shared.messaging import broadcast
+        await broadcast(DecksUpdatedMsg(slides=state.slides or [], decks=state.slides_updated))
         return DownloadFromGdriveResponse(status="cached", sha256=sha, size=size)
     except Exception as exc:
         logger.exception("[slides] download-from-gdrive failed for slug=%s", slug)
