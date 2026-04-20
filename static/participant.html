@@ -229,7 +229,7 @@ body{visibility:hidden}
 <span>Follow</span>
 </label>
 </a>
-<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="topics-list mx-2 rounded-xl">
+<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="topics-list mx-2 rounded-xl bg-surface-container-high">
 <div class="overflow-y-auto h-full">
 <div id="topics-inner" class="py-1"></div>
 </div>
@@ -245,7 +245,7 @@ body{visibility:hidden}
 </span>
 <span id="past-slides-badge" class="badge-new ml-auto" style="display:none"></span>
 </a>
-<div id="slide-history-list" class="mx-2 mt-1 rounded-xl overflow-hidden" style="display:none"></div>
+<div id="slide-history-list" class="mx-2 mt-1 rounded-xl bg-surface-container-high" style="display:none;overflow:hidden"></div>
 </div>
 <a data-nav="activity" onclick="showView('activity')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
@@ -275,7 +275,7 @@ body{visibility:hidden}
 <span class="material-symbols-outlined repos-arrow text-xl transition-transform duration-300">chevron_right</span>
 </span>
 </a>
-<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="repos-list mx-2 rounded-xl">
+<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="repos-list mx-2 rounded-xl bg-surface-container-high">
 <a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="nav-item rounded-lg px-2 py-1.5 flex items-center gap-2 transition-all cursor-pointer text-sm mx-1 mt-1" style="display:none">
 <span class="material-symbols-outlined flex-shrink-0" style="font-size:1.25rem">folder_shared</span>
 <span class="flex-1">Google Drive</span>
@@ -849,7 +849,7 @@ function _hideSlideHistory() {
   clearTimeout(_slideHistoryTimer);
   _slideHistoryTimer = null;
   var el = document.getElementById('slide-history-list');
-  if (el) el.style.display = 'none';
+  if (el) { el.style.overflowY = 'hidden'; el.style.maxHeight = ''; el.style.display = 'none'; }
   if (_historySelectedRowEl) {
     _historySelectedRowEl.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-semibold');
     _historySelectedRowEl = null;
@@ -924,6 +924,10 @@ function _loadSlideHistory() {
       el.onmouseenter = _restartSlideHistoryAutoHideTimer;
       el.onmousemove = _restartSlideHistoryAutoHideTimer;
       el.style.display = 'block';
+      requestAnimationFrame(function() {
+        el.style.maxHeight = _computeListHeight(el) + 'px';
+        el.style.overflowY = 'auto';
+      });
       _restartSlideHistoryAutoHideTimer();
     })
     .catch(function() { var el = document.getElementById('slide-history-list'); if (el) el.style.display = 'none'; });
@@ -971,6 +975,10 @@ function _recomputeOpenMenuHeights() {
     repos.style.transition = 'none';
     repos.style.maxHeight = _computeListHeight(repos) + 'px';
     requestAnimationFrame(function() { repos.style.transition = ''; });
+  }
+  var pastSlides = document.getElementById('slide-history-list');
+  if (pastSlides && pastSlides.style.display !== 'none' && pastSlides.style.display !== '') {
+    pastSlides.style.maxHeight = _computeListHeight(pastSlides) + 'px';
   }
 }
 window.addEventListener('resize', _recomputeOpenMenuHeights);
