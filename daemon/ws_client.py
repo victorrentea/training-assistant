@@ -15,7 +15,7 @@ from daemon import log
 from daemon.config import DEFAULT_SERVER_URL
 
 _RECONNECT_INTERVAL = float(os.environ.get("DAEMON_WS_RECONNECT_INTERVAL_SECONDS", "3.0"))
-_NOISY_PROXY_MSG_TYPES = frozenset({"proxy_request", "proxy_response"})
+_NOISY_PROXY_MSG_TYPES = frozenset({"proxy_request", "proxy_response", "slide_log"})
 
 
 def _ssl_context() -> ssl.SSLContext:
