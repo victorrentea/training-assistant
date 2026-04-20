@@ -22,6 +22,9 @@ public_router = APIRouter()
 daemon_router = APIRouter()  # global daemon-facing endpoints (no session prefix)
 logger = logging.getLogger(__name__)
 
+# Tracks the single active invalidation task per slug; new saves cancel the old one.
+_pending_invalidate_tasks: dict[str, asyncio.Task] = {}
+
 
 class SlideInvalidateRequest(BaseModel):
     drive_export_url: str = ""
@@ -53,7 +56,15 @@ async def invalidate_slide(slug: str, body: SlideInvalidateRequest | None = None
         cached.unlink(missing_ok=True)
     _set_status(slug, "stale")
 
-    asyncio.create_task(do_invalidate_download(slug, drive_export_url))
+    # Cancel any in-flight invalidation for this slug — keep only the most recent save.
+    existing = _pending_invalidate_tasks.get(slug)
+    if existing and not existing.done():
+        logger.info("[slides] cancelling superseded invalidation task for slug=%s", slug)
+        existing.cancel()
+
+    task = asyncio.create_task(do_invalidate_download(slug, drive_export_url))
+    _pending_invalidate_tasks[slug] = task
+    task.add_done_callback(lambda t: _pending_invalidate_tasks.pop(slug, None))
     return {"status": "invalidating", "slug": slug}
 
 
