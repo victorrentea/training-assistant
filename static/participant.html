@@ -1001,7 +1001,10 @@ function openRepos() {
   var list = document.querySelector('.repos-list');
   var arrow = document.querySelector('.repos-arrow');
   list.style.maxHeight = '0px';
-  requestAnimationFrame(function() { list.style.maxHeight = _computeListHeight(list) + 'px'; });
+  requestAnimationFrame(function() {
+    list.style.maxHeight = _computeListHeight(list) + 'px';
+    setTimeout(function() { list.style.overflowY = 'auto'; }, 600);
+  });
   arrow.style.transform = 'rotate(90deg)';
   fetch('/' + _sessionId + '/api/participant/git-activity')
     .then(function(r) { return r.json(); })
@@ -1044,6 +1047,7 @@ function closeRepos() {
   var list = document.querySelector('.repos-list');
   var arrow = document.querySelector('.repos-arrow');
   if (!list) return;
+  list.style.overflowY = 'hidden';
   list.style.maxHeight = '0px';
   arrow.style.transform = 'rotate(0deg)';
 }
