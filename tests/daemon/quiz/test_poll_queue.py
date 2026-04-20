@@ -8,7 +8,7 @@ Q2 = {"question": "Q2", "options": ["c", "d"], "correct_indices": [1]}
 Q3 = {"question": "Q3", "options": ["e", "f"], "correct_indices": [0]}
 
 
-class TestPollQueueRemove:
+class TestPollQueue:
     def test_remove_first_item_leaves_second_as_current(self):
         q = PollQueue()
         q.submit([Q1, Q2])
