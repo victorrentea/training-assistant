@@ -1,5 +1,6 @@
 """Unit tests for PollQueue."""
 import pytest
+
 from daemon.quiz.queue import PollQueue
 
 Q1 = {"question": "Q1", "options": ["a", "b"], "correct_indices": [0]}
