@@ -97,6 +97,7 @@ def test_compilation_skips_file_with_no_catalog_entry():
 def test_compilation_returns_pdf_for_cached_slide():
     """When all PDFs are already cached on Railway, returns a compiled PDF."""
     import io
+
     from pypdf import PdfWriter
 
     # Build a minimal valid 2-page PDF
