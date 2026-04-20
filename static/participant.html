@@ -784,6 +784,13 @@ async function _applyHostSlideFollow(slidesCurrent) {
   var topicEl = document.querySelector('.topic-item[data-slide-id="' + targetSlide._id + '"]');
   if (_activeSlideId !== targetSlide._id) {
     await selectTopic(topicEl || document.querySelector('.topic-item'), null, targetSlide);
+    // Delay > 300ms so we fire after selectTopic's stored-page restoration,
+    // which otherwise overrides the host's current page.
+    var _tp = targetPage;
+    setTimeout(function() {
+      _scrollSlidesToPage(_tp) || setTimeout(function() { _scrollSlidesToPage(_tp); }, 200);
+    }, 350);
+    return;
   }
   var currentPage = _getCurrentSlidesPage();
   if (currentPage === targetPage) return;
