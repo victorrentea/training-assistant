@@ -1,4 +1,3 @@
-from daemon import host_state_router
 
 
 def test_build_slides_log_fields_reads_from_misc_state(monkeypatch):
