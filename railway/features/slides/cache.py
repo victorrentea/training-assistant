@@ -25,7 +25,6 @@ class DecksUpdatedMsg(BaseModel):
     type: str = "decks_updated"
     slides: list = []
     decks: dict = {}
-    refreshed_slugs: list[str] = []
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +177,7 @@ async def do_invalidate_download(slug: str, drive_export_url: str) -> None:
     else:
         state.slides = slides
         state.slides_updated = _cache_map_from_slides(slides)
-    await broadcast(DecksUpdatedMsg(slides=slides, decks=state.slides_updated, refreshed_slugs=[slug]))
+    await broadcast(DecksUpdatedMsg(slides=slides, decks=state.slides_updated))
 
 
 # ---------------------------------------------------------------------------

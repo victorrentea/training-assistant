@@ -240,13 +240,10 @@ def _slides_updated_with_titles() -> dict[str, dict]:
     return result
 
 
-def _broadcast_slides_updated(refreshed_slugs: list[str] | None = None) -> None:
+def _broadcast_slides_updated() -> None:
     from daemon.ws_messages import DecksUpdatedMsg
     from daemon.ws_publish import broadcast
-    broadcast(DecksUpdatedMsg(
-        refreshed_slugs=refreshed_slugs or [],
-        decks=_slides_updated_with_titles(),
-    ))
+    broadcast(DecksUpdatedMsg(decks=_slides_updated_with_titles()))
 
 
 # ── Participant router ──

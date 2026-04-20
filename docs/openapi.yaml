@@ -554,7 +554,7 @@ paths:
       - misc
       summary: Get Slides Decks
       description: Get slides cache status for all known decks; called on initial
-        page load and after slides_updated WS.
+        page load (decks_updated WS carries full data and replaces polling).
       operationId: get_slides_decks_api_participant_slides_decks_get
       responses:
         '200':
@@ -565,8 +565,8 @@ paths:
                 $ref: '#/components/schemas/DecksResponse'
       x-feature: slides
       x-doc-notes:
-      - Returns cache status snapshot for all known decks; called on initial page
-        load and after decks_updated WS.
+      - Returns cache status snapshot for all known decks on initial page load; decks_updated
+        WS carries full data so no re-polling needed.
   /api/participant/slides/history:
     get:
       tags:

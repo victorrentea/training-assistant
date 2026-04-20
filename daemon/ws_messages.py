@@ -24,7 +24,6 @@ class SlidesCurrentMsg(BaseModel):
 
 class DecksUpdatedMsg(BaseModel):
     type: Literal["decks_updated"] = "decks_updated"
-    refreshed_slugs: list[str] = []
     decks: dict[str, Deck] = {}
 
 

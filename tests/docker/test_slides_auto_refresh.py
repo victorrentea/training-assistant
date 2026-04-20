@@ -180,8 +180,8 @@ def test_invalidate_without_drive_url_in_body_uses_stored_catalog():
     assert status in (200, 422), f"Unexpected status {status}"
 
 
-def test_participant_receives_refreshed_slugs_in_ws():
-    """Participant WS receives slides_updated with refreshed_slugs after invalidate."""
+def test_participant_receives_updated_downloaded_at_in_ws():
+    """Participant WS receives decks_updated with changed downloaded_at after invalidate."""
     session_id = fresh_session("AutoRefreshWS")
     _mock_drive_reset_delays()
     _prime_slide_cache(session_id)
@@ -197,22 +197,24 @@ def test_participant_receives_refreshed_slugs_in_ws():
         pax = ParticipantPage(pax_page)
         pax.join("RefreshWatcher")
 
-        # Inject a WS message listener on the already-open _ws connection.
-        # Overriding the WebSocket class here would not catch messages on the
-        # existing connection that was established during page load.
-        pax_page.evaluate("""() => {
-            window._capturedRefreshedSlugs = [];
-            if (typeof _ws !== 'undefined' && _ws) {
-                _ws.addEventListener('message', (evt) => {
-                    try {
+        # Capture initial downloaded_at for the target slug, then watch for a change.
+        pax_page.evaluate(f"""() => {{
+            window._initialDownloadedAt = (window._slidesCacheStatus || {{}})['{_SLUG}']?.downloaded_at || null;
+            window._refreshedDownloadedAt = null;
+            if (typeof _ws !== 'undefined' && _ws) {{
+                _ws.addEventListener('message', (evt) => {{
+                    try {{
                         const msg = JSON.parse(evt.data);
-                        if (msg.type === 'decks_updated' && Array.isArray(msg.refreshed_slugs)) {
-                            window._capturedRefreshedSlugs.push(...msg.refreshed_slugs);
-                        }
-                    } catch {}
-                });
-            }
-        }""")
+                        if (msg.type === 'decks_updated' && msg.decks && msg.decks['{_SLUG}']) {{
+                            const incoming = msg.decks['{_SLUG}'].downloaded_at;
+                            if (incoming && incoming !== window._initialDownloadedAt) {{
+                                window._refreshedDownloadedAt = incoming;
+                            }}
+                        }}
+                    }} catch {{}}
+                }});
+            }}
+        }}""")
 
         # Wait for participant to connect
         _await_condition(
@@ -225,16 +227,14 @@ def test_participant_receives_refreshed_slugs_in_ws():
         status = _call_invalidate(session_id, drive_export_url)
         assert status == 200, f"POST /invalidate returned {status}"
 
-        # Participant should receive slides_updated with refreshed_slugs=[slug]
+        # Participant should receive decks_updated with a new downloaded_at for the slug
         _await_condition(
-            lambda: pax_page.evaluate(
-                f"() => window._capturedRefreshedSlugs.includes('{_SLUG}')"
-            ),
+            lambda: pax_page.evaluate("() => !!window._refreshedDownloadedAt"),
             timeout_ms=15_000,
-            msg=f"Participant did not receive refreshed_slugs=['{_SLUG}'] within 15s",
+            msg=f"Participant did not receive updated downloaded_at for '{_SLUG}' within 15s",
         )
-        captured = pax_page.evaluate("() => window._capturedRefreshedSlugs")
-        print(f"[test] Participant received refreshed_slugs: {captured} ✓")
+        new_ts = pax_page.evaluate("() => window._refreshedDownloadedAt")
+        print(f"[test] Participant received updated downloaded_at: {new_ts} ✓")
 
         browser.close()
 

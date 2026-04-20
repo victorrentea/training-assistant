@@ -66,7 +66,7 @@ components:
       summary: Deck cache status changed — contains full cache map to avoid polling
       x-feature: slides
       x-doc-notes:
-        - "'refreshed_slugs' lists slugs whose PDF content changed (hash changed) — trigger re-download if that slide is currently open."
+        - "Compare incoming decks[slug].downloaded_at against previous value to detect content changes (re-download)."
       payload:
         type: object
         required: [type]
@@ -74,11 +74,6 @@ components:
           type:
             type: string
             enum: [decks_updated]
-          refreshed_slugs:
-            type: array
-            items:
-              type: string
-            default: []
           decks:
             type: object
             additionalProperties:
