@@ -25,12 +25,9 @@ import urllib.request
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
-import pytest
-from playwright.sync_api import sync_playwright, expect
-
 from pages.participant_page import ParticipantPage
+from playwright.sync_api import sync_playwright
 from session_utils import fresh_session
-
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")

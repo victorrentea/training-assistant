@@ -133,7 +133,6 @@ async def _handle_broadcast(data: dict):
     event = data.get("event")
     if not event:
         return
-    event_type = event.get("type")
     msg = json.dumps(event)
     for pid, ws in list(state.participants.items()):
         if pid.startswith("__") and pid != "__host__":  # keep host, skip other special keys
