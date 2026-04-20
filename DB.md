@@ -68,7 +68,7 @@ talk_presentation_url?: string  # PDF export URL for talk PPTX (docs.google.com/
 talk_presentation_slug?: string  # Railway slug under which the talk PPTX PDF is cached
 current_slide?: dict[str, any]  # {slug, page}
 slides_viewed?: list[ViewedSlide{
-  file_name:string  # PowerPoint file name, e.g. 'AI Coding.pptx'
+  slug:string  # Railway slug identifying the slide deck
   page:int  # 1-based slide number
   seconds?:int  # Cumulative seconds viewed
 }]  # Accumulated per-slide viewing durations from addons

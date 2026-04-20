@@ -80,9 +80,9 @@ class PersistedDebateState(PersistedModel):
 
 
 class ViewedSlide(PersistedModel):
-    """Single slide viewing record: cumulative seconds on one (file, page) pair."""
+    """Single slide viewing record: cumulative seconds on one (slug, page) pair."""
 
-    file_name: str = Field(description="PowerPoint file name, e.g. 'AI Coding.pptx'")
+    slug: str = Field(description="Railway slug identifying the slide deck")
     page: int = Field(description="1-based slide number")
     seconds: int = Field(default=0, description="Cumulative seconds viewed")
 
