@@ -2667,6 +2667,11 @@ components:
           - type: string
           - type: 'null'
           title: Modified At
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
         error:
           anyOf:
           - type: string

@@ -16,6 +16,7 @@ class Slide(BaseModel):
     size_bytes: int | None = None
     downloaded_at: str | None = None
     modified_at: str | None = None
+    title: str | None = None
     error: str | None = None
 
 

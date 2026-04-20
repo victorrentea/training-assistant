@@ -231,12 +231,23 @@ def _uploaded_slide_meta(slug: str) -> tuple[str, str | None]:
     return name, str(updated_at) if updated_at else None
 
 
+def _slides_updated_with_titles() -> dict[str, dict]:
+    result = {}
+    for slug, entry in misc_state.slides_updated.items():
+        enriched = dict(entry)
+        catalog_entry = misc_state.slides_catalog.get(slug)
+        if isinstance(catalog_entry, dict) and catalog_entry.get("title"):
+            enriched["title"] = catalog_entry["title"]
+        result[slug] = enriched
+    return result
+
+
 def _broadcast_slides_updated(refreshed_slugs: list[str] | None = None) -> None:
     from daemon.ws_messages import SlidesCacheStatusMsg
     from daemon.ws_publish import broadcast
     broadcast(SlidesCacheStatusMsg(
         refreshed_slugs=refreshed_slugs or [],
-        slides_updated=dict(misc_state.slides_updated),
+        slides_updated=_slides_updated_with_titles(),
     ))
 
 

@@ -93,25 +93,6 @@ def _slides_with_embedded_cache_status() -> list[dict]:
     return merged
 
 
-def _merge_embedded_slide_status(payload: dict) -> list[dict]:
-    raw_slides = payload.get("slides")
-    slides = raw_slides if isinstance(raw_slides, list) else []
-    cache_status = payload.get("cache_status")
-    cache_map = cache_status if isinstance(cache_status, dict) else {}
-    merged: list[dict] = []
-    for raw in slides:
-        if not isinstance(raw, dict):
-            continue
-        slide = dict(raw)
-        slug = str(slide.get("slug", "")).strip()
-        status_entry = cache_map.get(slug) if slug else None
-        if isinstance(status_entry, dict):
-            slide.update(status_entry)
-        if "status" not in slide:
-            slide["status"] = "not_cached"
-        merged.append(slide)
-    return merged
-
 
 async def _fetch_latest_slides_from_daemon() -> list[dict] | None:
     sid = (state.session_id or "").strip()
@@ -134,7 +115,8 @@ async def _fetch_latest_slides_from_daemon() -> list[dict] | None:
         payload = json.loads(raw_body.decode("utf-8"))
         if not isinstance(payload, dict):
             return None
-        return _merge_embedded_slide_status(payload)
+        slides = payload.get("slides")
+        return slides if isinstance(slides, list) else None
     except Exception:
         logger.exception("Failed to parse daemon /api/slides payload")
         return None

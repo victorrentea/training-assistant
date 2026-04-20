@@ -138,7 +138,8 @@ async def get_summary():
 @participant_router.get("/slides", response_model=SlidesResponse)
 async def get_slides_updated():
     """Get slides cache status."""
-    return SlidesResponse.model_validate({"slides_updated": misc_state.slides_updated})
+    from daemon.slides.router import _slides_updated_with_titles
+    return SlidesResponse.model_validate({"slides_updated": _slides_updated_with_titles()})
 
 
 @participant_router.get("/slides/history", response_model=SlidesHistoryResponse)
