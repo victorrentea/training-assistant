@@ -1525,6 +1525,8 @@
 
   // ── Poll composer (contenteditable) ──
   const pollInput = document.getElementById('poll-input');
+  let selectedQueueIndex = null;   // index of queue item currently loaded into textarea
+  let selectedQueueItem = null;    // full {question, options, correct_indices} of selected item
 
   // Read plain text lines from contenteditable div
   function getLines() {
@@ -1613,8 +1615,6 @@
 
   pollInput.addEventListener('input', () => {
     reclassifyLines();
-    const cc = document.getElementById('correct-count');
-    if (cc && cc.disabled) cc.disabled = false;
   });
 
   // Intercept paste: always insert as plain text to avoid rich-HTML corruption
@@ -1738,7 +1738,6 @@
     totalVotes = allVotes.length;
     renderPollDisplay();
     renderPollQueuePanel(data.queue);
-    updatePopButton(data.queue);
   }
 
   // ── Render ──
@@ -1897,33 +1896,6 @@
 
   // ── Poll Queue ──────────────────────────────────────────────────────────────
 
-  function updatePopButton(queue) {
-    const pending = queue?.pending || 0;
-    const popBtn = document.getElementById('pop-queue-btn');
-    if (popBtn) { popBtn.disabled = pending === 0; popBtn.textContent = `⬆ Pop (${pending})`; }
-    const skipBtn = document.getElementById('backstage-skip-btn');
-    if (skipBtn) skipBtn.disabled = pending === 0;
-  }
-
-  async function popFromQueue() {
-    const btn = document.getElementById('pop-queue-btn');
-    if (!btn || btn.disabled) return;
-    const res = await fetch(API('/poll'));
-    if (!res.ok) return;
-    const data = await res.json();
-    const q = data.queue?.current;
-    if (!q) return;
-    const text = q.question + '\n\n' + q.options.join('\n');
-    initComposer(text);
-    const cc = document.getElementById('correct-count');
-    cc.value = (q.correct_indices || []).length || 1;
-    cc.disabled = true;
-    if (q.correct_indices && q.correct_indices.length > 0) {
-      localStorage.setItem('host_queue_hints_' + q.question, JSON.stringify(q.correct_indices));
-    }
-    pollInput.focus();
-    await fetch(API('/poll/queue/skip'), { method: 'POST' });
-  }
 
   async function pushDummyQueue() {
     const questions = [
@@ -1952,47 +1924,34 @@
     }
   }
 
-  function renderPollQueuePanel(_data) {
-    // Queue panel removed from UI; Pop button state handled by updatePopButton
+  function renderPollQueuePanel(queue) {
+    const list = document.getElementById('queue-list');
+    if (!list) return;
+    const items = queue?.items || [];
+    list.innerHTML = items.map((item, i) =>
+      `<li data-idx="${i}" style="cursor:pointer; padding:.2rem .25rem; border-radius:4px; ${i === selectedQueueIndex ? 'background:var(--surface2);' : ''}">${escHtml(item.question)}</li>`
+    ).join('');
+    list.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', () => selectQueueItem(parseInt(li.dataset.idx), items));
+    });
   }
 
-  async function pollQueueFire() {
-    const btn = document.getElementById('poll-queue-fire-btn');
-    btn.disabled = true;
-    try {
-      const res = await fetch(API('/poll/queue/submit'), { method: 'POST' });
-      if (res.ok) {
-        toast('Question fired from queue \u2713');
-      } else {
-        const err = await res.json().catch(() => ({}));
-        toast(err.detail || 'Failed to fire question');
-      }
-    } catch (e) {
-      toast('Failed to reach server');
-    } finally {
-      btn.disabled = false;
-      await fetchPollState();
-    }
+  function selectQueueItem(index, items) {
+    const item = items[index];
+    if (!item) return;
+    selectedQueueIndex = index;
+    selectedQueueItem = item;
+    const text = item.question + '\n\n' + item.options.join('\n');
+    initComposer(text);
+    const cc = document.getElementById('correct-count');
+    if (cc) { cc.value = item.correct_indices.length || 1; cc.readOnly = true; }
+    const list = document.getElementById('queue-list');
+    if (list) list.querySelectorAll('li').forEach((li, i) => {
+      li.style.background = i === index ? 'var(--surface2)' : '';
+    });
+    pollInput.focus();
   }
 
-  async function pollQueueSkip() {
-    const btn = document.getElementById('poll-queue-skip-btn');
-    btn.disabled = true;
-    try {
-      const res = await fetch(API('/poll/queue/skip'), { method: 'POST' });
-      if (res.ok) {
-        toast('Question skipped');
-      } else {
-        const err = await res.json().catch(() => ({}));
-        toast(err.detail || 'Failed to skip question');
-      }
-    } catch (e) {
-      toast('Failed to reach server');
-    } finally {
-      btn.disabled = false;
-      await fetchPollState();
-    }
-  }
 
   function startPollQueuePolling() {
     fetchPollState();
