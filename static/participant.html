@@ -664,7 +664,7 @@ var PdfCache = (function() {
       if (page > 1) {
         var container = document.getElementById('pdf-pages');
         var section = container.querySelector('section[data-page="' + page + '"]');
-        if (section) container.scrollTop = section.offsetTop;
+        if (section) section.scrollIntoView({ behavior: 'instant', block: 'start' });
       }
     } catch(e) {
       console.error('PDF load error', e);
