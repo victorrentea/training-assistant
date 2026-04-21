@@ -1516,7 +1516,7 @@ function toggleRepos() {
   var list = document.querySelector('.repos-list');
   if (!list.style.maxHeight || list.style.maxHeight === '0px') { openRepos(); } else { closeRepos(); }
 }
-async function selectTopic(el, event, slide) {
+async function selectTopic(el, event, slide, targetPageOverride) {
   if (event) event.stopPropagation();
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('nav-active'); });
   var slidesNav = document.querySelector('[data-nav="slides"]');
@@ -1542,24 +1542,19 @@ async function selectTopic(el, event, slide) {
         if (_checkOverlay) { _checkOverlay.style.display = 'none'; }
         showToast('Slide not ready on server yet. Try again in a few seconds.');
         return;
-      } finally {
-        if (_checkOverlay) { _checkOverlay.style.display = 'none'; }
       }
+      // Do NOT hide overlay here — loadPdf will hide it after rendering
     }
     var dlUrl = slide.url + (slide.url.includes('?') ? '&' : '?') + 'download=1';
     var dlBtn = document.getElementById('pdf-download');
     if (dlBtn) { dlBtn.href = dlUrl; dlBtn.setAttribute('download', slide.name || ''); }
-    await window.loadPdf(slide.url);
+    var downloadedAt = (_slidesCacheStatus[slide.slug] || {}).downloaded_at || null;
+    var storedPage = slide.slug ? parseInt(localStorage.getItem('workshop_slide_page:' + slide.slug) || '1', 10) : 1;
+    var targetPage = targetPageOverride || (storedPage > 1 ? storedPage : 1);
+    await window.loadPdf(slide.url, slide.slug, downloadedAt, targetPage);
     _activeSlideId = slide._id || null;
     _activeSlideSlug = slide.slug || null;
     if (_activeSlideSlug) LS.setActiveSlide(_activeSlideSlug);
-    // Restore last viewed page from localStorage
-    if (slide.slug) {
-      var storedPage = parseInt(localStorage.getItem('workshop_slide_page:' + slide.slug) || '1', 10);
-      if (storedPage > 1) {
-        setTimeout(function() { _scrollSlidesToPage(storedPage); }, 300);
-      }
-    }
   }
 }
 function showView(name) {
