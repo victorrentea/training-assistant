@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
-import pytest
+import pytest  # noqa: I001
 from playwright.sync_api import expect, sync_playwright
 
 from pages.host_page import HostPage
