@@ -1654,6 +1654,8 @@
       correctOptIds = new Set();
       toast('Poll created & opened ✓');
       if (selectedQueueIndex !== null) {
+        if (selectedQueueItem?.correct_indices?.length)
+          localStorage.setItem('host_queue_hints_' + question, JSON.stringify(selectedQueueItem.correct_indices));
         const deleteRes = await fetch(API(`/poll/queue/${selectedQueueIndex}`), { method: 'DELETE' });
         if (!deleteRes.ok) toast('Queue item delete failed — queue may be out of sync');
         selectedQueueIndex = null;
