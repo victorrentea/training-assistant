@@ -646,14 +646,30 @@ var PdfCache = (function() {
     await renderAllPages(currentScale);
   };
 
-  window.loadPdf = async function(url) {
+  window.loadPdf = async function(url, slug, downloadedAt, targetPage) {
+    var overlay = document.getElementById('pdf-check-overlay');
+    if (overlay) overlay.style.display = 'flex';
     try {
-      pdfDoc = await pdfjsLib.getDocument(url).promise;
+      var buffer = slug ? await PdfCache.get(slug, downloadedAt) : null;
+      if (!buffer) {
+        var resp = await fetch(url);
+        if (!resp.ok) throw new Error('PDF fetch failed: ' + resp.status);
+        buffer = await resp.arrayBuffer();
+        if (slug && downloadedAt) await PdfCache.put(slug, downloadedAt, buffer);
+      }
+      pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
       totalPages = pdfDoc.numPages;
-      document.getElementById('pdf-pages').scrollTop = 0;
       await renderAllPages(currentScale);
+      var page = (targetPage && targetPage > 1) ? targetPage : 1;
+      if (page > 1) {
+        var container = document.getElementById('pdf-pages');
+        var section = container.querySelector('section[data-page="' + page + '"]');
+        if (section) container.scrollTop = section.offsetTop;
+      }
     } catch(e) {
       console.error('PDF load error', e);
+    } finally {
+      if (overlay) overlay.style.display = 'none';
     }
   };
 </script>
