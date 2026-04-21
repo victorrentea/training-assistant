@@ -482,7 +482,7 @@ var PdfCache = (function() {
           e.target.result.createObjectStore(STORE, { keyPath: 'slug' });
         };
         req.onsuccess = function(e) { resolve(e.target.result); };
-        req.onerror = function(e) { reject(e.target.error); };
+        req.onerror = function(e) { _dbPromise = null; reject(e.target.error); };
       });
     }
     return _dbPromise;
@@ -498,7 +498,7 @@ var PdfCache = (function() {
           req.onerror = function(e) { reject(e.target.error); };
         });
         if (!entry) return null;
-        if (entry.downloaded_at !== expectedDownloadedAt) return null;
+        if (expectedDownloadedAt && entry.downloaded_at !== expectedDownloadedAt) return null;
         return entry.data;
       } catch(e) {
         console.warn('[PdfCache] get failed', e);
