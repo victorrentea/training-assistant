@@ -301,7 +301,7 @@ body{visibility:hidden}
   <span id="name-edit-wrap" style="display:none" class="flex-1">
     <input id="name-edit-input" type="text" maxlength="32" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
   </span>
-  <button id="share-location-btn" onclick="requestParticipantLocation(); event.stopPropagation();" title="Share my location" style="display:none" class="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+  <button id="share-location-btn" onclick="requestParticipantLocation(); event.stopPropagation();" title="Share your location with host" style="display:none" class="flex-shrink-0 opacity-60 transition-all" onmouseenter="this.style.color='var(--warn)';this.style.opacity='1'" onmouseleave="this.style.color='';this.style.opacity='0.6'">
     <span class="material-symbols-outlined" style="font-size:1.25rem">location_on</span>
   </button>
 </div>
