@@ -1678,7 +1678,7 @@
     selectedQueueItem = null;
     _resetBackstage();
     const list = document.getElementById('queue-list');
-    if (list) list.querySelectorAll('li').forEach(li => { li.style.background = ''; });
+    if (list) list.querySelectorAll('li').forEach(li => { li.classList.remove('selected'); });
   };
 
   // ── Timer ──
@@ -1945,9 +1945,10 @@
     const list = document.getElementById('queue-list');
     if (!list) return;
     const items = queue?.items || [];
-    list.innerHTML = items.map((item, i) =>
-      `<li data-idx="${i}" style="cursor:pointer; padding:.2rem .25rem; border-radius:4px; ${i === selectedQueueIndex ? 'background:var(--surface2);' : ''}">${escHtml(item.question)}</li>`
-    ).join('');
+    list.innerHTML = items.map((item, i) => {
+      const multi = item.correct_indices.length > 1 ? ' <span style="color:#e55; font-size:.7rem;">#multi</span>' : '';
+      return `<li data-idx="${i}" class="${i === selectedQueueIndex ? 'selected' : ''}">${escHtml(item.question)}${multi}</li>`;
+    }).join('');
     list.querySelectorAll('li').forEach(li => {
       li.addEventListener('click', () => selectQueueItem(parseInt(li.dataset.idx), items));
     });
@@ -1964,7 +1965,7 @@
     if (cc) { cc.value = item.correct_indices.length || 1; cc.readOnly = true; }
     const list = document.getElementById('queue-list');
     if (list) list.querySelectorAll('li').forEach((li, i) => {
-      li.style.background = i === index ? 'var(--surface2)' : '';
+      li.classList.toggle('selected', i === index);
     });
     pollInput.focus();
   }

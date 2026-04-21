@@ -1951,3 +1951,18 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   animation: none;
   background: rgba(99, 200, 255, 0.15);
 }
+
+/* Queue list */
+#queue-list li {
+  font-size: .78rem;
+  cursor: pointer;
+  padding: .15rem .35rem;
+  border-radius: 4px;
+  transition: background .12s;
+}
+#queue-list li:hover {
+  background: var(--surface);
+}
+#queue-list li.selected {
+  background: var(--surface2);
+}
