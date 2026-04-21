@@ -1054,7 +1054,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
 
 .llm-hint { opacity: .55; font-size: .9em; margin-left: .3rem; }
-.queue-hint-check { opacity: .5; color: #48cfad; font-size: 1em; margin-left: .3rem; font-weight: 700; }
+.queue-hint-check { opacity: .4; font-size: 1em; margin-left: .3rem; }
 
 /* ── Timer ── */
 .timer-btns { display: flex; align-items: center; gap: .5rem; margin-top: .6rem; flex-wrap: wrap; }

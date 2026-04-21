@@ -1786,7 +1786,7 @@
       return `
         <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${idx}" ${clickable}>
           <div class="result-label">
-            <span>${escHtml(text)}${isCorrect ? ' ✅' : ''}${queueHint ? ' <span class="queue-hint-check">✓</span>' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
+            <span>${escHtml(text)}${isCorrect ? ' ✅' : ''}${queueHint ? ' <span class="queue-hint-check">✅</span>' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
             <span class="pct">${count}</span>
           </div>
           <div class="bar-track">
@@ -1876,7 +1876,7 @@
         const llmHint = hints && hints.includes(idx) && !isCorrect;
         const queueHint = qHints && qHints.includes(idx) && !isCorrect;
         labelSpan.innerHTML = escHtml(text) + (isCorrect ? ' ✅' : '') +
-          (queueHint ? ' <span class="queue-hint-check">✓</span>' : '') +
+          (queueHint ? ' <span class="queue-hint-check">✅</span>' : '') +
           (llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : '');
       }
       if (fill) {
