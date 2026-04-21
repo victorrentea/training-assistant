@@ -1967,7 +1967,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 /* Queue list */
 #queue-list li {
-  font-size: .78rem;
+  font-size: .86rem;
   cursor: pointer;
   padding: .15rem .35rem;
   border-radius: 4px;
