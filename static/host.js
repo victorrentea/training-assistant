@@ -1787,7 +1787,7 @@
         <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${idx}" ${clickable}>
           <div class="result-label">
             <span>${escHtml(text)}${isCorrect ? ' ✅' : ''}${queueHint ? ' <span class="queue-hint-check">✓</span>' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
-            <span class="pct">${count} vote${count!==1?'s':''} · ${pct}%</span>
+            <span class="pct">${count}</span>
           </div>
           <div class="bar-track">
             <div class="bar-fill ${leading}" style="width:${pct}%"></div>
@@ -1882,7 +1882,7 @@
         fill.style.width = `${pct}%`;
         fill.className = `bar-fill ${count === maxCount && count > 0 ? 'leading' : ''}`;
       }
-      if (pctEl) pctEl.textContent = `${count} vote${count!==1?'s':''} · ${pct}%`;
+      if (pctEl) pctEl.textContent = `${count}`;
     });
     const totalEl = document.querySelector('#poll-display p[style]');
     if (totalEl) totalEl.textContent = `${totalVotes} total vote${totalVotes!==1?'s':''}`;

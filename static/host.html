@@ -99,16 +99,14 @@
         </div>
         <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
              data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
-        <div style="display:flex; flex-direction:column; gap:.4rem; margin-top:.4rem;">
-          <div class="btn-row" style="align-items:center;">
-            <button class="btn" id="clear-queue-item-btn" onclick="clearBackstage()">✕ Clear</button>
-            <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); margin:0 0 0 .25rem;">
-              <input type="text" inputmode="numeric" pattern="[0-9]*" id="correct-count" value="1" maxlength="1"
-                     style="width:2.8rem; height:34px; box-sizing:border-box; text-align:center; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.9rem;" />
-              correct
-            </label>
-            <button class="btn btn-success" id="create-btn" style="margin-left:auto;" disabled>▶</button>
-          </div>
+        <div class="btn-row" style="align-items:center; margin-top:.25rem;">
+          <button class="btn" id="clear-queue-item-btn" onclick="clearBackstage()">✕ Clear</button>
+          <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); margin:0 0 0 .25rem;">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" id="correct-count" value="1" maxlength="1"
+                   style="width:2.8rem; height:34px; box-sizing:border-box; text-align:center; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.9rem;" />
+            correct
+          </label>
+          <button class="btn btn-success" id="create-btn" style="margin-left:auto;" disabled>▶ Send</button>
         </div>
       </div>
       <ol id="queue-list" style="flex:1; min-height:0; overflow-y:scroll; margin:.5rem 0 0 0; padding:.25rem 0 0 1.5rem;"></ol>
