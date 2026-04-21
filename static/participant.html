@@ -2464,6 +2464,15 @@ function _handleWsMessage(msg) {
           + ' (prev=' + (prevDownloadedAt ? new Date(prevDownloadedAt).toLocaleString() : 'null') + ')');
         var activeRefreshed = activeSlug && incomingDecks && window.loadPdf &&
           newDownloadedAt && (newDownloadedAt !== prevDownloadedAt);
+        // Invalidate IDB cache for slugs whose downloaded_at changed.
+        // Must run BEFORE the merge below overwrites _slidesCacheStatus.
+        if (incomingDecks && typeof incomingDecks === 'object') {
+          Object.keys(incomingDecks).forEach(function(s) {
+            var newDAt = (incomingDecks[s] || {}).downloaded_at;
+            var oldDAt = (_slidesCacheStatus[s] || {}).downloaded_at;
+            if (newDAt && newDAt !== oldDAt) PdfCache.invalidate(s);
+          });
+        }
         // Merge: preserve non-null downloaded_at — daemon broadcasts don't include it
         if (incomingDecks && typeof incomingDecks === 'object') {
           var merged = {};
@@ -2487,7 +2496,9 @@ function _handleWsMessage(msg) {
           if (activeRefreshed) {
             var activeSlide = _slidesCatalog.find(function(s) { return s.slug === activeSlug; });
             if (activeSlide) {
-              window.loadPdf(activeSlide.url + (activeSlide.url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + Date.now()).then(function() {
+              var currentPage = _getCurrentSlidesPage() || 1;
+              var freshDAt = (_slidesCacheStatus[activeSlug] || {}).downloaded_at || null;
+              window.loadPdf(activeSlide.url, activeSlug, freshDAt, currentPage).then(function() {
                 _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
                 if (refreshOverlay) refreshOverlay.style.display = 'none';
               });
