@@ -1636,7 +1636,8 @@ var _myVote = null;       // integer index (single) or Set<int> (multi)
 var _pollResult = null;   // {correct_indices: Set, voted_indices: Set} after reveal
 var _voteCounts = [];
 var _multiWarnShown = false;
-var _activeTimer = null;
+var _activeTimer = null;   // {seconds, startedAt (ms)} or null
+var _timerInterval = null;
 
 function _shouldShowOnboarding() {
   if (_isHostTab) return false;
@@ -2266,7 +2267,26 @@ function _renderActivityPoll() {
       optionsHTML +
       footer +
       anonMsg +
+      '<div class="pax-countdown" id="pax-countdown"></div>' +
     '</div>';
+}
+
+function _startParticipantCountdown() {
+  clearInterval(_timerInterval);
+  _timerInterval = setInterval(function() {
+    var el = document.getElementById('pax-countdown');
+    if (!el || !_activeTimer) { clearInterval(_timerInterval); return; }
+    var elapsed = (Date.now() - _activeTimer.startedAt) / 1000;
+    var remaining = Math.max(0, _activeTimer.seconds - elapsed);
+    el.textContent = '\u23F1 ' + Math.ceil(remaining) + 's';
+    el.style.color = remaining <= 5 ? 'var(--danger)' : 'var(--warn)';
+    if (remaining <= 0) {
+      clearInterval(_timerInterval);
+      _timerInterval = null;
+      _activeTimer = null;
+      el.textContent = '';
+    }
+  }, 200);
 }
 
 function castVote(optionIdx) {
@@ -2392,11 +2412,21 @@ function _handleWsMessage(msg) {
       break;
     }
     case 'poll_opened':
+      clearInterval(_timerInterval);
+      _timerInterval = null;
+      _activeTimer = null;
       _pollActive = true;
       _applyPollState(msg);
       _renderActivityPoll();
       break;
+    case 'poll_end_countdown_started':
+      _activeTimer = { seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
+      _startParticipantCountdown();
+      break;
     case 'poll_ended':
+      clearInterval(_timerInterval);
+      _timerInterval = null;
+      _activeTimer = null;
       _pollActive = false;
       if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || [];
       _renderActivityPoll();
