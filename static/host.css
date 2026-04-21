@@ -1030,7 +1030,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   border-radius: 5px;
   transition: width .5s ease;
 }
-.bar-fill.leading { background: var(--accent2); }
 
 .status-pill {
   padding: 0 .7rem;
