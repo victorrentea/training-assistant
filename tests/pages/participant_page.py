@@ -67,6 +67,10 @@ class ParticipantPage:
             for el in self._page.locator(".pct").all()
         ]
 
+    def get_countdown_text(self) -> str:
+        """Return the text content of the participant countdown element."""
+        return self._page.locator("#pax-countdown").inner_text()
+
     # ── Word Cloud ────────────────────────────────────────────────────────────
 
     def submit_word(self, word: str) -> None:

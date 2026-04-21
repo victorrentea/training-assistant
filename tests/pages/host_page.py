@@ -57,6 +57,17 @@ class HostPage:
             timeout=5000,
         )
 
+    def start_timer(self, seconds: int) -> None:
+        """Start a countdown timer to end the poll via daemon API."""
+        self._page.evaluate(f"""async () => {{
+            const resp = await fetch(API('/poll/end/timer'), {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{ seconds: {seconds} }})
+            }});
+            if (!resp.ok) throw new Error('Timer start failed: ' + resp.status);
+        }}""")
+
     def reopen_poll(self) -> None:
         self._page.locator("button[onclick='setPollStatus(true)']").click(force=True)
         self._page.wait_for_selector("#poll-display.voting-active", timeout=5000)
