@@ -1832,6 +1832,7 @@
 
     el.innerHTML = `
       <p class="poll-question">${escHtml(currentPoll.question)}</p>
+      ${currentPoll.multi && currentPoll.correct_count ? `<p class="poll-multi-subtitle">(select ${currentPoll.correct_count} correct answer${currentPoll.correct_count !== 1 ? 's' : ''})</p>` : ''}
       ${mainContent}${pollActive ? '' : '</p>'}
       ${currentPoll.source ? `<p class="poll-source-ref">📖 ${escHtml(currentPoll.source)}${currentPoll.page ? `, p. ${escHtml(currentPoll.page)}` : ''}</p>` : ''}
       <div class="btn-row">

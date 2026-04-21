@@ -182,6 +182,7 @@ body{visibility:hidden}
 .vote-msg { margin-top: 1rem; text-align: center; font-size: .85rem; color: #48cfad; }
 .vote-anon-hint { margin-top: .75rem; text-align: center; font-size: .78rem; color: var(--color-on-surface-variant, #566166); letter-spacing: .01em; }
 .multi-hint { color: #f0a500; font-size: .85em; opacity: .8; }
+.poll-multi-subtitle { font-size: .9rem; color: #f0a500; margin: -.25rem 0 .75rem; text-align: center; }
 .multi-warning { margin-top: .5rem; text-align: center; font-size: .9rem; font-weight: 700; color: #f0a500; }
 @keyframes poll-warn-blink { 0%, 100% { opacity: 1; } 40% { opacity: 0; } }
 .blink { animation: poll-warn-blink .6s ease-in-out 3; }
@@ -2244,13 +2245,13 @@ function _renderActivityPoll() {
     if (selCount > 0 && !atLimitNow) {
       var blink = !_multiWarnShown ? ' blink' : '';
       if (!_multiWarnShown) _multiWarnShown = true;
-      warning = '<div class="multi-warning' + blink + '">&#x26A0;&#xFE0F; ' + multiHint + '!</div>';
+      warning = '<div class="multi-warning' + blink + '">' + multiHint + '!</div>';
     }
     var selMsg = selCount > 0
       ? (atLimitNow
           ? '&#x2705; ' + selCount + ' of ' + correctCount + ' selected &mdash; click to deselect.'
           : '&#x2705; ' + selCount + ' of ' + (correctCount != null ? correctCount : '?') + ' selected &mdash; click to toggle.')
-      : '<span class="multi-hint">&#x26A0;&#xFE0F; ' + multiHint + '.</span>';
+      : '<span class="multi-hint">' + multiHint + '.</span>';
     footer = '<div class="vote-msg">' + selMsg + '</div>' + (atLimitNow ? '' : warning);
   } else if (hasVoted) {
     footer = '<div class="vote-msg">&#x2705; Vote registered! Click another option to change it.</div>';
@@ -2261,6 +2262,7 @@ function _renderActivityPoll() {
   section.innerHTML =
     '<div class="poll-card">' +
       '<h2>' + _escHtml(_currentPoll.question) + '</h2>' +
+      (multi && _currentPoll.correct_count ? '<p class="poll-multi-subtitle">(select ' + _currentPoll.correct_count + ' correct answer' + (_currentPoll.correct_count !== 1 ? 's' : '') + ')</p>' : '') +
       optionsHTML +
       footer +
       anonMsg +
