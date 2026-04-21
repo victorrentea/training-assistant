@@ -1699,6 +1699,7 @@ var _voteCounts = [];
 var _multiWarnShown = false;
 var _activeTimer = null;   // {seconds, startedAt (ms)} or null
 var _timerInterval = null;
+var _pollWsSeq = 0;        // incremented on each WS poll_opened/poll_ended; used to detect race with initial state fetch
 
 function _shouldShowOnboarding() {
   if (_isHostTab) return false;
@@ -2057,6 +2058,7 @@ async function _refreshParticipantState() {
     loadSlidesCatalog();
     _connectWS();
 
+    var _pollWsSeqBeforeFetch = _pollWsSeq;
     var state = await fetch('/' + _sessionId + '/api/participant/state', {
       headers: { 'X-Participant-ID': _myUUID }
     }).then(function(r) { return r.json(); });
@@ -2065,6 +2067,15 @@ async function _refreshParticipantState() {
     // Apply name/avatar from state
     if (state.my_name) _updateProfileCard(_applyHostSuffix(state.my_name), null);
     if (state.my_avatar) _applyAvatar(state.my_avatar);
+    // Skip stale poll state from REST if WS already delivered a newer poll event during the fetch
+    if (_pollWsSeq > _pollWsSeqBeforeFetch) {
+      console.log('[participant] WS poll event during fetch — skipping stale poll state from REST');
+      delete state.poll;
+      delete state.poll_active;
+      delete state.vote_counts;
+      delete state.my_voted_indices;
+      delete state.poll_correct_indices;
+    }
     _applyState(state);
     document.getElementById('loading-screen').style.display = 'none';
     if (_shouldShowOnboarding()) _showOnboarding();
@@ -2485,10 +2496,12 @@ function _handleWsMessage(msg) {
       break;
     }
     case 'poll_opened':
+      _pollWsSeq++;
       clearInterval(_timerInterval);
       _timerInterval = null;
       _activeTimer = null;
       _pollActive = true;
+      _voteCounts = [];
       _applyPollState(msg);
       _renderActivityPoll();
       break;
@@ -2497,6 +2510,7 @@ function _handleWsMessage(msg) {
       _startParticipantCountdown();
       break;
     case 'poll_ended':
+      _pollWsSeq++;
       clearInterval(_timerInterval);
       _timerInterval = null;
       _activeTimer = null;
