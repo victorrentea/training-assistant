@@ -494,7 +494,7 @@ var PdfCache = (function() {
           req.onerror = function(e) { reject(e.target.error); };
         });
         if (!entry) return null;
-        if (expectedDownloadedAt && entry.downloaded_at !== expectedDownloadedAt) return null;
+        if (entry.downloaded_at !== expectedDownloadedAt) return null;
         return entry.data;
       } catch(e) {
         console.warn('[PdfCache] get failed', e);
