@@ -290,10 +290,6 @@ body{visibility:hidden}
 <span class="material-symbols-outlined">upload</span>
 <span class="text-base">Upload / Paste</span>
 </a>
-<a id="share-location-nav" onclick="requestParticipantLocation()" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
-<span class="material-symbols-outlined">location_on</span>
-<span class="text-base">Share my location</span>
-</a>
 </nav>
 <hr class="-mx-4 border-outline-variant"/>
 <div id="profile-card" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer group" style="margin-bottom:0.5rem">
@@ -305,6 +301,9 @@ body{visibility:hidden}
   <span id="name-edit-wrap" style="display:none" class="flex-1">
     <input id="name-edit-input" type="text" maxlength="32" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
   </span>
+  <button id="share-location-btn" onclick="requestParticipantLocation(); event.stopPropagation();" title="Share my location" style="display:none" class="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+    <span class="material-symbols-outlined" style="font-size:1.25rem">location_on</span>
+  </button>
 </div>
 </aside>
 <div id="deploy-age-line" onclick="resetOnboardingForTest()" title="Click to reset onboarding (for testing)"
@@ -1548,7 +1547,7 @@ function initActivityView() {
 function initLocationMenuEntry() {
   if (_activityLocationSent) return;
   if (!navigator.geolocation) return;
-  var entry = document.getElementById('share-location-nav');
+  var entry = document.getElementById('share-location-btn');
   if (!entry) return;
   if (navigator.permissions) {
     navigator.permissions.query({name: 'geolocation'}).then(function(result) {
@@ -1580,7 +1579,7 @@ function _sendParticipantLocation(lat, lon) {
   }).then(function(resp) {
     if (resp.ok) {
       _activityLocationSent = true;
-      var entry = document.getElementById('share-location-nav');
+      var entry = document.getElementById('share-location-btn');
       if (entry) entry.style.display = 'none';
     }
   }).catch(function() {});
