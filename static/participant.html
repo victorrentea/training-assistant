@@ -473,15 +473,19 @@ body{visibility:hidden}
 var PdfCache = (function() {
   var DB_NAME = 'workshop-pdf-cache';
   var STORE = 'pdfs';
+  var _dbPromise = null;
   function _open() {
-    return new Promise(function(resolve, reject) {
-      var req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = function(e) {
-        e.target.result.createObjectStore(STORE, { keyPath: 'slug' });
-      };
-      req.onsuccess = function(e) { resolve(e.target.result); };
-      req.onerror = function(e) { reject(e.target.error); };
-    });
+    if (!_dbPromise) {
+      _dbPromise = new Promise(function(resolve, reject) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function(e) {
+          e.target.result.createObjectStore(STORE, { keyPath: 'slug' });
+        };
+        req.onsuccess = function(e) { resolve(e.target.result); };
+        req.onerror = function(e) { reject(e.target.error); };
+      });
+    }
+    return _dbPromise;
   }
   return {
     get: async function(slug, expectedDownloadedAt) {
@@ -506,9 +510,9 @@ var PdfCache = (function() {
         var db = await _open();
         await new Promise(function(resolve, reject) {
           var tx = db.transaction(STORE, 'readwrite');
-          var req = tx.objectStore(STORE).put({ slug: slug, downloaded_at: downloaded_at, data: buffer });
-          req.onsuccess = resolve;
-          req.onerror = function(e) { reject(e.target.error); };
+          tx.oncomplete = resolve;
+          tx.onerror = function(e) { reject(e.target.error); };
+          tx.objectStore(STORE).put({ slug: slug, downloaded_at: downloaded_at, data: buffer });
         });
       } catch(e) {
         console.warn('[PdfCache] put failed', e);
@@ -519,9 +523,9 @@ var PdfCache = (function() {
         var db = await _open();
         await new Promise(function(resolve, reject) {
           var tx = db.transaction(STORE, 'readwrite');
-          var req = tx.objectStore(STORE).delete(slug);
-          req.onsuccess = resolve;
-          req.onerror = function(e) { reject(e.target.error); };
+          tx.oncomplete = resolve;
+          tx.onerror = function(e) { reject(e.target.error); };
+          tx.objectStore(STORE).delete(slug);
         });
       } catch(e) {
         console.warn('[PdfCache] invalidate failed', e);
