@@ -323,6 +323,19 @@ body {
   overflow-y: hidden;
 }
 
+#tab-content-poll {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#queue-list {
+  flex: 1;
+  min-height: 0;
+  height: 0;          /* forces flex-grow to control height, not content */
+  overflow-y: auto;
+}
+
 .host-col-center {
   display: flex;
   flex-direction: column;
