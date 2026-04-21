@@ -469,6 +469,67 @@ body{visibility:hidden}
 </div>
 </main>
 </div>
+<script>
+var PdfCache = (function() {
+  var DB_NAME = 'workshop-pdf-cache';
+  var STORE = 'pdfs';
+  function _open() {
+    return new Promise(function(resolve, reject) {
+      var req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = function(e) {
+        e.target.result.createObjectStore(STORE, { keyPath: 'slug' });
+      };
+      req.onsuccess = function(e) { resolve(e.target.result); };
+      req.onerror = function(e) { reject(e.target.error); };
+    });
+  }
+  return {
+    get: async function(slug, expectedDownloadedAt) {
+      try {
+        var db = await _open();
+        var entry = await new Promise(function(resolve, reject) {
+          var tx = db.transaction(STORE, 'readonly');
+          var req = tx.objectStore(STORE).get(slug);
+          req.onsuccess = function(e) { resolve(e.target.result); };
+          req.onerror = function(e) { reject(e.target.error); };
+        });
+        if (!entry) return null;
+        if (expectedDownloadedAt && entry.downloaded_at !== expectedDownloadedAt) return null;
+        return entry.data;
+      } catch(e) {
+        console.warn('[PdfCache] get failed', e);
+        return null;
+      }
+    },
+    put: async function(slug, downloaded_at, buffer) {
+      try {
+        var db = await _open();
+        await new Promise(function(resolve, reject) {
+          var tx = db.transaction(STORE, 'readwrite');
+          var req = tx.objectStore(STORE).put({ slug: slug, downloaded_at: downloaded_at, data: buffer });
+          req.onsuccess = resolve;
+          req.onerror = function(e) { reject(e.target.error); };
+        });
+      } catch(e) {
+        console.warn('[PdfCache] put failed', e);
+      }
+    },
+    invalidate: async function(slug) {
+      try {
+        var db = await _open();
+        await new Promise(function(resolve, reject) {
+          var tx = db.transaction(STORE, 'readwrite');
+          var req = tx.objectStore(STORE).delete(slug);
+          req.onsuccess = resolve;
+          req.onerror = function(e) { reject(e.target.error); };
+        });
+      } catch(e) {
+        console.warn('[PdfCache] invalidate failed', e);
+      }
+    }
+  };
+})();
+</script>
 <script type="module">
   import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
