@@ -340,8 +340,6 @@
       if (msg.type === 'poll_ended') {
         _clearTimer();
         pollActive = false;
-        voteCounts = msg.vote_counts || [];
-        totalVotes = voteCounts.reduce((a, b) => a + b, 0);
         renderPollDisplay();
         fetchPollState();
         return;
