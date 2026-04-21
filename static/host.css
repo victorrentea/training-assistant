@@ -1976,6 +1976,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 #queue-list li:hover {
   background: var(--surface);
+  color: #fff;
+}
+@media (prefers-color-scheme: light) {
+  #queue-list li:hover { color: #000; }
 }
 #queue-list li.selected {
   background: var(--surface2);
