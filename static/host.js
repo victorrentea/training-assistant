@@ -1643,11 +1643,17 @@
     const correct_count_val = parseInt(correctCountEl.value) || 1;
     const multi = correct_count_val > 1;
     const correct_count = multi ? correct_count_val : null;
-    const res = await fetch(API('/poll/manual/submit'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, options, multi, correct_count }),
-    });
+    let res;
+    try {
+      res = await fetch(API('/poll/manual/submit'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, options, multi, correct_count }),
+      });
+    } catch (e) {
+      toast('Network error — daemon unreachable');
+      return;
+    }
     if (res.ok) {
       localStorage.removeItem('host_correct_' + question);
       localStorage.removeItem('host_llm_hints_' + question);
