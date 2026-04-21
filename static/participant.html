@@ -187,6 +187,7 @@ body{visibility:hidden}
 @keyframes poll-warn-blink { 0%, 100% { opacity: 1; } 40% { opacity: 0; } }
 .blink { animation: poll-warn-blink .6s ease-in-out 3; }
 .pax-countdown { text-align: center; font-size: 1.6rem; font-weight: 700; margin-top: .75rem; min-height: 2rem; letter-spacing: .02em; }
+#share-location-btn:hover { color: var(--warn); opacity: 1; }
 .closed-banner {
   margin-top: 1rem; padding: .6rem 1rem;
   background: rgba(255,107,107,0.09); border: 1px solid #ff6b6b;
@@ -301,7 +302,7 @@ body{visibility:hidden}
   <span id="name-edit-wrap" style="display:none" class="flex-1">
     <input id="name-edit-input" type="text" maxlength="32" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
   </span>
-  <button id="share-location-btn" onclick="requestParticipantLocation(); event.stopPropagation();" title="Share your location with host" style="display:none" class="flex-shrink-0 opacity-60 transition-all" onmouseenter="this.style.color='var(--warn)';this.style.opacity='1'" onmouseleave="this.style.color='';this.style.opacity='0.6'">
+  <button id="share-location-btn" onclick="requestParticipantLocation(); event.stopPropagation();" title="Share your location with host" style="display:none" class="flex-shrink-0 opacity-60 transition-all">
     <span class="material-symbols-outlined" style="font-size:1.25rem">location_on</span>
   </button>
 </div>
