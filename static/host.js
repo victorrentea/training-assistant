@@ -1929,6 +1929,46 @@
         options: ['Garbage Collection', 'Manual memory management', 'Object-oriented', 'Static typing'],
         correct_indices: [0, 2, 3],
       },
+      {
+        question: 'What does SOLID stand for?',
+        options: ['Single Responsibility', 'Open/Closed', 'Liskov Substitution', 'Interface Segregation'],
+        correct_indices: [0, 1, 2, 3],
+      },
+      {
+        question: 'Which HTTP method is idempotent?',
+        options: ['POST', 'PUT', 'PATCH', 'DELETE'],
+        correct_indices: [1, 3],
+      },
+      {
+        question: 'What is the time complexity of binary search?',
+        options: ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'],
+        correct_indices: [1],
+      },
+      {
+        question: 'Which of these are creational design patterns?',
+        options: ['Singleton', 'Observer', 'Factory', 'Decorator'],
+        correct_indices: [0, 2],
+      },
+      {
+        question: 'What does TDD stand for?',
+        options: ['Test-Driven Development', 'Type-Driven Design', 'Test-Driven Design', 'Top-Down Development'],
+        correct_indices: [0],
+      },
+      {
+        question: 'Which of these are valid HTTP status codes for success?',
+        options: ['200 OK', '201 Created', '301 Moved', '204 No Content'],
+        correct_indices: [0, 1, 3],
+      },
+      {
+        question: 'What is a pure function?',
+        options: ['No side effects', 'Same output for same input', 'Uses global state', 'Always returns void'],
+        correct_indices: [0, 1],
+      },
+      {
+        question: 'Which SQL clause filters grouped results?',
+        options: ['WHERE', 'HAVING', 'GROUP BY', 'ORDER BY'],
+        correct_indices: [1],
+      },
     ];
     const res = await fetch(API('/poll/queue'), {
       method: 'POST',
