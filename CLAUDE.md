@@ -24,7 +24,7 @@ Host panel credentials: `~/.training-assistants-secrets.env` (`HOST_USERNAME`, `
 - **No frontend build step**: plain HTML + vanilla JS — no npm, no bundler, no framework
 - **No large data through host machine**: large-file downloads (e.g. slide PDFs from Google Drive) must happen on Railway backend, not the daemon
 - **UUID-based identity**: participants identified by UUID (not name). First WS message must be `set_name`. Host cookie (`is_host=1`) switches UUID storage to `sessionStorage` for multi-tab testing
-- **Votes are final**: once a participant votes, they cannot change their vote
+- **Votes are mutable**: participants can change their vote at any time while the poll is open; the last vote timestamp is used for scoring
 - **Disabled buttons on empty input**: all input+button pairs must disable the button when input is empty/whitespace-only
 - **Consistent tab button styling**: all host tab-bar buttons share the same `.tab-btn` visual treatment — no special backgrounds/borders/colors on individual buttons
 - **`static/work-hours.js` ownership**: do not auto-edit; updated manually by the project owner
