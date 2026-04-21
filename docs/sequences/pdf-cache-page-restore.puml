@@ -1,0 +1,59 @@
+@startuml pdf-cache-page-restore
+title PDF Browser Cache + Instant Page Restore
+
+participant "Participant JS" as JS
+participant "PdfCache\n(IndexedDB)" as IDB
+participant "Railway / Daemon" as Server
+participant "Daemon WS" as WS
+
+== Happy path — cached, no update ==
+
+JS -> JS: loadPdf(url, slug, dAt, targetPage)
+JS -> JS: show #pdf-loading-overlay
+JS -> IDB: get(slug, dAt)
+IDB --> JS: HIT — return buffer
+note right: no network request
+JS -> JS: pdfjsLib.getDocument({data: buffer})
+JS -> JS: renderAllPages()
+JS -> JS: _scrollSlidesToPage(targetPage)
+note right: synchronous, no setTimeout
+JS -> JS: hide #pdf-loading-overlay
+note right: user sees correct page instantly
+
+== Cache miss — first load or after invalidation ==
+
+JS -> IDB: get(slug, dAt)
+IDB --> JS: MISS — null (missing or stale dAt)
+JS -> Server: fetch(url)
+Server --> JS: 200 + PDF bytes
+JS -> IDB: put(slug, dAt, buffer)
+note right: saved for next load
+JS -> JS: render + scroll + reveal (as above)
+
+== PPTX updated — online participant (WS path) ==
+
+WS -> JS: DecksUpdatedMsg (new dAt for slug)
+JS -> IDB: invalidate(slug)
+IDB --> JS: deleted
+note right: proactive eviction
+JS -> JS: loadPdf() triggered by follow/reload
+JS -> IDB: get(slug, newDAt)
+IDB --> JS: MISS
+JS -> Server: fetch(url)
+Server --> JS: new PDF bytes
+note right: fresh PDF delivered
+
+== PPTX updated — reconnecting participant (missed WS) ==
+
+JS -> Server: GET /api/participant/state
+Server --> JS: state with new dAt for slug
+note right: _slidesCacheStatus refreshed
+JS -> JS: loadPdf(url, slug, newDAt, targetPage)
+JS -> IDB: get(slug, newDAt)
+IDB --> JS: MISS — dAt mismatch with stored entry
+note right: implicit invalidation — no extra code needed
+JS -> Server: fetch(url)
+Server --> JS: new PDF bytes
+note right: fresh PDF delivered
+
+@enduml
