@@ -2269,10 +2269,22 @@ function _renderActivityPoll() {
       anonMsg +
       '<div class="pax-countdown" id="pax-countdown"></div>' +
     '</div>';
+  _refreshCountdownDisplay();
+}
+
+function _refreshCountdownDisplay() {
+  if (!_activeTimer) return;
+  var el = document.getElementById('pax-countdown');
+  if (!el) return;
+  var elapsed = (Date.now() - _activeTimer.startedAt) / 1000;
+  var remaining = Math.max(0, _activeTimer.seconds - elapsed);
+  el.textContent = '\u23F1 ' + Math.ceil(remaining) + 's';
+  el.style.color = remaining <= 5 ? 'var(--danger)' : 'var(--warn)';
 }
 
 function _startParticipantCountdown() {
   clearInterval(_timerInterval);
+  _timerInterval = null;
   _timerInterval = setInterval(function() {
     var el = document.getElementById('pax-countdown');
     if (!el || !_activeTimer) { clearInterval(_timerInterval); return; }
