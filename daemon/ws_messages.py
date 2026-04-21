@@ -67,7 +67,6 @@ class PollOpenedMsg(BaseModel):
 
 class PollEndedMsg(BaseModel):
     type: Literal["poll_ended"] = "poll_ended"
-    vote_counts: list[int]
 
 
 class PollCorrectRevealedMsg(BaseModel):

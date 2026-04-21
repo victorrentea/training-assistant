@@ -1704,7 +1704,6 @@ var _currentPoll = null;
 var _pollActive = false;
 var _myVote = null;       // integer index (single) or Set<int> (multi)
 var _pollResult = null;   // {correct_indices: Set, voted_indices: Set} after reveal
-var _voteCounts = [];
 var _multiWarnShown = false;
 var _activeTimer = null;   // {seconds, startedAt (ms)} or null
 var _timerInterval = null;
@@ -2081,7 +2080,6 @@ async function _refreshParticipantState() {
       console.log('[participant] WS poll event during fetch — skipping stale poll state from REST');
       delete state.poll;
       delete state.poll_active;
-      delete state.vote_counts;
       delete state.my_voted_indices;
       delete state.poll_correct_indices;
     }
@@ -2205,16 +2203,6 @@ function _escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function _largestRemainder(floats) {
-  var total = floats.reduce(function(a, b) { return a + b; }, 0);
-  if (total === 0) return floats.map(function() { return 0; });
-  var floors = floats.map(Math.floor);
-  var remainder = 100 - floors.reduce(function(a, b) { return a + b; }, 0);
-  var order = floats.map(function(v, i) { return [v - Math.floor(v), i]; })
-    .sort(function(a, b) { return b[0] - a[0]; });
-  for (var i = 0; i < Math.min(remainder, order.length); i++) floors[order[i][1]]++;
-  return floors;
-}
 
 function _applyPollState(msg) {
   if (msg.poll !== undefined) {
@@ -2228,8 +2216,6 @@ function _applyPollState(msg) {
     _currentPoll = msg.poll;
   }
   if (msg.poll_active !== undefined) _pollActive = !!msg.poll_active;
-  if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || [];
-
   // Restore vote from server state (authoritative)
   if (msg.my_voted_indices != null) {
     _myVote = (_currentPoll && _currentPoll.multi)
@@ -2279,16 +2265,9 @@ function _renderActivityPoll() {
   if (waiting) waiting.style.display = 'none';
 
   var multi = !!_currentPoll.multi;
-  var totalVotes = (_voteCounts || []).reduce(function(a, b) { return a + b; }, 0);
   var hasVoted = multi ? (_myVote instanceof Set && _myVote.size > 0) : _myVote !== null;
-  var showResults = !_pollActive;
-
-  var pcts = _largestRemainder(_currentPoll.options.map(function(opt, idx) {
-    return totalVotes > 0 ? ((_voteCounts || [])[idx] || 0) / totalVotes * 100 : 0;
-  }));
 
   var optionsHTML = _currentPoll.options.map(function(text, idx) {
-    var pct = pcts[idx];
     var isSelected = multi ? (_myVote instanceof Set && _myVote.has(idx)) : (_myVote === idx);
     var selected = isSelected ? 'selected' : '';
     var atLimit = multi && _currentPoll.correct_count && _myVote instanceof Set && _myVote.size >= _currentPoll.correct_count;
@@ -2302,10 +2281,8 @@ function _renderActivityPoll() {
     }
     var checkbox = multi ? '<span class="multi-check">' + (isSelected ? '\u2611' : '\u2610') + '</span> ' : '';
     return '<button class="option-btn ' + selected + '" ' + disabled + ' onclick="castVote(' + idx + ')">' +
-      '<div class="bar" style="width:' + (showResults ? pct : 0) + '%"></div>' +
       '<span>' + checkbox + _escHtml(text) + '</span>' +
       resultIcon +
-      (showResults ? '<span class="pct">' + pct + '%</span>' : '') +
       '</button>';
   }).join('');
 
@@ -2521,7 +2498,6 @@ function _handleWsMessage(msg) {
       _timerInterval = null;
       _activeTimer = null;
       _pollActive = true;
-      _voteCounts = [];
       _applyPollState(msg);
       _renderActivityPoll();
       break;
@@ -2535,7 +2511,6 @@ function _handleWsMessage(msg) {
       _timerInterval = null;
       _activeTimer = null;
       _pollActive = false;
-      if (msg.vote_counts !== undefined) _voteCounts = msg.vote_counts || [];
       _renderActivityPoll();
       break;
     case 'scores_updated': {

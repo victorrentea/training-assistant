@@ -146,20 +146,13 @@ components:
     poll_ended:
       summary: Voting closed by host
       x-feature: poll
-      x-doc-notes:
-        - Participants can see how others voted via vote_counts.
       payload:
         type: object
-        required: [type, vote_counts]
+        required: [type]
         properties:
           type:
             type: string
             enum: [poll_ended]
-          vote_counts:
-            type: array
-            items:
-              type: integer
-            description: Vote count per option, indexed by option position
 
     poll_correct_revealed:
       summary: Host revealed correct answers

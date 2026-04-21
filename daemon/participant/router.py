@@ -220,7 +220,6 @@ class ParticipantStateResponse(BaseModel):
     qa_questions: list[QAQuestionRaw]
     poll: PollData | None = None
     poll_active: bool
-    vote_counts: list[int]
     my_voted_indices: list[int] | None = None
     poll_correct_indices: list[int] | None = None
     codereview: CodeReviewParticipantState
@@ -319,7 +318,6 @@ def _build_poll_for_participant(pid: str) -> dict:
     result: dict = {
         "poll": poll,
         "poll_active": ps.poll_active,
-        "vote_counts": ps.vote_counts() if ps.poll else [],
     }
     my_vote_entry = ps.votes.get(pid)
     if my_vote_entry is not None:

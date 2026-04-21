@@ -35,8 +35,6 @@ class CreatePollRequest(BaseModel):
     multi: bool
     correct_count: Optional[int] = None
 
-class EndPollResponse(BaseModel):
-    vote_counts: list[int]
 
 class RevealCorrectRequest(BaseModel):
     correct_indices: list[int]
@@ -126,8 +124,8 @@ async def end_poll():
     if not poll_state.poll:
         return JSONResponse({"error": "No poll"}, status_code=400)
 
-    result = poll_state.close_poll()
-    ended_msg = PollEndedMsg(vote_counts=result["vote_counts"])
+    poll_state.close_poll()
+    ended_msg = PollEndedMsg()
     broadcast(ended_msg)
     await notify_host(ended_msg)
     return Response(status_code=204)

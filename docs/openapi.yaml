@@ -2276,11 +2276,6 @@ components:
         poll_active:
           type: boolean
           title: Poll Active
-        vote_counts:
-          items:
-            type: integer
-          type: array
-          title: Vote Counts
         my_voted_indices:
           anyOf:
           - items:
@@ -2340,7 +2335,6 @@ components:
       - wordcloud
       - qa_questions
       - poll_active
-      - vote_counts
       - codereview
       - debate
       - slides_history_count
