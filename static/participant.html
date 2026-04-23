@@ -219,7 +219,8 @@ body{visibility:hidden}
 <span class="text-base">Slides</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 </span>
-<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-base font-medium whitespace-nowrap cursor-pointer rounded-full px-2 py-0.5 transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);">
+<button onclick="event.stopPropagation(); _jumpToHostSlide()" title="Jump to host slide" class="ml-auto inline-flex items-center rounded-full px-2 py-0.5 cursor-pointer transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);background:none;font-size:1rem;line-height:1;">🎯</button>
+<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 text-base font-medium whitespace-nowrap cursor-pointer rounded-full px-2 py-0.5 transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);">
 <input id="slides-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onFollowChange(this.checked)" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
 <span>Follow</span>
 </label>
@@ -699,7 +700,7 @@ var LS = {
   setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
   getView:   function()     { return localStorage.getItem(LS.VIEW) || 'slides'; },
   setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
-  getFollow: function()     { var v = localStorage.getItem(LS.FOLLOW); return v === null ? true : v === '1'; },
+  getFollow: function()     { var v = localStorage.getItem(LS.FOLLOW); return v === null ? false : v === '1'; },
   setFollow: function(val)  { localStorage.setItem(LS.FOLLOW, val ? '1' : '0'); },
   getActiveSlide: function()     { return localStorage.getItem(LS.ACTIVE_SLIDE); },
   setActiveSlide: function(slug) { localStorage.setItem(LS.ACTIVE_SLIDE, slug); },
@@ -781,6 +782,18 @@ function _onFollowChange(checked) {
   } else {
     _applyHostSlideFollow(_hostSlidesCurrent).catch(function(){});
   }
+}
+async function _jumpToHostSlide() {
+  if (!_hostSlidesCurrent) return;
+  var targetSlide = _findSlideForHostCurrent(_hostSlidesCurrent);
+  if (!targetSlide) return;
+  var targetPage = _getHostCurrentPage(_hostSlidesCurrent);
+  if (!_isSlidesViewSelected()) {
+    showView('slides');
+    openTopics();
+  }
+  var topicEl = document.querySelector('.topic-item[data-slide-id="' + targetSlide._id + '"]');
+  await selectTopic(topicEl || document.querySelector('.topic-item'), null, targetSlide, targetPage);
 }
 function _normalizeSlideMatchToken(value) {
   return String(value || '')
