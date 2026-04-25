@@ -211,8 +211,11 @@ def _download_pdf_sync(url: str, dest: Path) -> int:
 
 
 async def _download_pdf(url: str, dest: Path) -> int:
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, _download_pdf_sync, url, dest)
+    # asyncio.to_thread copies the current contextvars.Context (including the
+    # OTel trace context) into the worker thread, so the urllib client span
+    # for the GDrive fetch chains under the current Railway server span.
+    # loop.run_in_executor would lose that context and start a fresh trace.
+    return await asyncio.to_thread(_download_pdf_sync, url, dest)
 
 
 # ---------------------------------------------------------------------------
