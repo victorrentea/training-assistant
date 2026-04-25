@@ -5,7 +5,10 @@ Generic transformation rules:
 2. Collapse broadcast relay (Daemon -> Railway -> Browser becomes Daemon -> Browser)
 3. Participant names from service.name attribute
 4. Arrow labels from span names
-5. (DISABLED) Same-service parent->child spans render as self-messages
+5. Same-service parent->child spans are filtered out (auto-instrumented urllib
+   / ASGI client spans add no information). Exception: spans whose name starts
+   with "step:" pass through and render as self-messages, used to highlight an
+   important sub-step inside a request (e.g. step:download_via_railway).
 6. Infer host origin from /host/ path patterns in root daemon spans
 7. Infer broadcast/notify targets from span name prefixes
 8. Railway root spans (browser parent missing) => Participant -> Railway
@@ -108,13 +111,16 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, int, str
                 edges.append(("Participant", "Railway", name, start, end, phase, tid, False))
                 continue
 
-        # Standard parent->child edge (Rule 5 disabled: same-service edges render
-        # as self-messages, e.g. step:download_via_railway under the check span).
+        # Standard parent->child edge.
         if not pid or pid not in index:
             continue
         parent = index[pid]
         from_svc = _service_name(parent)
         to_svc = _service_name(span)
+        # Rule 5: skip same-service edges (auto-instrumented urllib / ASGI noise),
+        # EXCEPT explicit "step:" spans which highlight an important sub-step.
+        if from_svc == to_svc and not name.startswith("step:"):
+            continue
         label = name or "unknown"
         edges.append((from_svc, to_svc, label, start, end, phase, tid, False))
     return edges

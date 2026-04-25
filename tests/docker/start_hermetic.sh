@@ -77,8 +77,8 @@ cat > /tmp/test-slides-catalog.json <<CATALOG
   ]
 }
 CATALOG
-# Overwrite the production catalog with our test catalog (backend hardcodes this path)
-cp /tmp/test-slides-catalog.json /app/daemon/materials_slides_catalog.json
+# Overwrite the production catalog with our test catalog (daemon reads daemon/catalog.json)
+cp /tmp/test-slides-catalog.json /app/daemon/catalog.json
 
 # Start mock Google Drive server (needs /app on path for daemon.telemetry)
 PYTHONPATH=/app python /tests/mock_drive_server.py &
