@@ -72,7 +72,10 @@ EOF
         esac
         old_svg="$svg_dir/$(basename "${old_path%.puml}").svg"
         rm -f "$old_svg"
-        git add -A -- "$old_svg"
+        # Tolerate the case where the old svg was already removed/renamed in
+        # the staged changes (e.g. someone git mv'd the svg too) — git add -A
+        # on a path that's neither on disk nor in the index errors out.
+        git add -A -- "$old_svg" 2>/dev/null || true
         ;;
     esac
   done <<EOF

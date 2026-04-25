@@ -283,21 +283,41 @@ def generate_puml(traces_path: str, family: str, output: str,
             if p not in participants:
                 participants.append(p)
 
-    # 10 distinct PlantUML colors for trace hash correlation
+    # 10 visually distinct trace colors, cycled by trace order. Ordered so each
+    # neighbour (and the wrap-around) sits in a far-apart hue/lightness slot —
+    # avoids the "two greens in a row" effect from the previous palette which
+    # had multiple near-duplicate shades (red/dark-red, blue/dark-blue, etc).
     _TRACE_COLORS = [
-        "#E74C3C", "#2E86C1", "#27AE60", "#F39C12", "#8E44AD",
-        "#D35400", "#1ABC9C", "#C0392B", "#2980B9", "#16A085",
+        "#1F77B4",  # blue
+        "#D62728",  # red
+        "#2CA02C",  # green
+        "#FF7F0E",  # orange
+        "#9467BD",  # purple
+        "#17BECF",  # cyan
+        "#BCBD22",  # olive
+        "#E377C2",  # pink
+        "#8C564B",  # brown
+        "#7F7F7F",  # gray
     ]
+
+    # Assign a sequential 1-based digit label to each trace_id in order of
+    # first appearance. Easier to follow than hash digits.
+    trace_tags: dict[str, tuple[str, str]] = {}  # tid → (label, color)
+    for e in edges:
+        tid = e[6]
+        if tid and tid not in trace_tags:
+            idx = len(trace_tags) + 1  # 1-based
+            color = _TRACE_COLORS[(idx - 1) % len(_TRACE_COLORS)]
+            trace_tags[tid] = (str(idx), color)
 
     def _render_edge(e: tuple) -> str:
         f, t, label, _ts, _end, phase, tid, is_async = e
         arrow = "-->" if is_async else "->"
         color = "[#gray]" if phase == "given" else ""
-        # Append colored trace hash after label for visual correlation
-        if tid:
-            h = hash(tid) % 100
-            c = _TRACE_COLORS[h % len(_TRACE_COLORS)]
-            trace_tag = f" <color:{c}>[{h:02d}]</color>"
+        tag = trace_tags.get(tid)
+        if tag:
+            tag_label, tag_color = tag
+            trace_tag = f" <color:{tag_color}>[{tag_label}]</color>"
         else:
             trace_tag = ""
         return f'"{f}" {color}{arrow} "{t}": {label}{trace_tag}'

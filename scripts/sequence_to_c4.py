@@ -7,7 +7,7 @@ files to docs/sequences/gen/.
 
 Usage:
     python3 scripts/sequence_to_c4.py                 # all extracted files
-    python3 scripts/sequence_to_c4.py 06-slides.puml  # specific file(s)
+    python3 scripts/sequence_to_c4.py 06-slides-sequence.puml  # specific file(s)
     python3 scripts/sequence_to_c4.py --render        # also render SVGs
 """
 from __future__ import annotations
@@ -212,8 +212,10 @@ def _build_c4(
 # ---------------------------------------------------------------------------
 
 def _process_file(src: Path, render: bool) -> Path:
-    title_raw = src.stem  # e.g. "06-slides"
-    title = re.sub(r"^\d+-", "", title_raw).replace("-", " ").title()
+    # Strip the "-sequence" suffix used on extracted source files so C4
+    # outputs stay e.g. "06-slides-c4.puml" instead of "06-slides-sequence-c4.puml".
+    base_stem = re.sub(r"-sequence$", "", src.stem)  # e.g. "06-slides"
+    title = re.sub(r"^\d+-", "", base_stem).replace("-", " ").title()
     title = f"{title} — C4 Container View"
 
     participants, edges = parse_sequence(src)
@@ -222,7 +224,7 @@ def _process_file(src: Path, render: bool) -> Path:
     c4_puml = _build_c4(title, source_rel, participants, edges)
 
     GEN_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = GEN_DIR / f"{src.stem}-c4.puml"
+    out_path = GEN_DIR / f"{base_stem}-c4.puml"
     out_path.write_text(c4_puml)
     print(f"generated {out_path.relative_to(ROOT)}")
 

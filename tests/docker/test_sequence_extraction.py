@@ -173,7 +173,7 @@ def test_poll_sequence_diagram_extraction():
     sys.path.insert(0, "/app")
     from scripts.traces_to_puml import generate_puml
 
-    output_path = "/app/docs/sequences/extracted/03-poll-and-quiz.puml"
+    output_path = "/app/docs/sequences/extracted/03-poll-and-quiz-sequence.puml"
     generate_puml(TRACES_FILE, family="", output=output_path)
     generated = Path(output_path).read_text()
     print("=== Generated PlantUML ===")
@@ -238,7 +238,7 @@ def test_qa_sequence_diagram_extraction():
     sys.path.insert(0, "/app")
     from scripts.traces_to_puml import generate_puml
 
-    output_path = "/app/docs/sequences/extracted/04-qa-and-wordcloud.puml"
+    output_path = "/app/docs/sequences/extracted/04-qa-and-wordcloud-sequence.puml"
     generate_puml(TRACES_FILE, family="", output=output_path)
     generated = Path(output_path).read_text()
     print("=== Generated PlantUML ===")
@@ -305,7 +305,7 @@ def test_slides_sequence_diagram_extraction():
     sys.path.insert(0, "/app")
     from scripts.traces_to_puml import generate_puml
 
-    output_path = "/app/docs/sequences/extracted/06-slides.puml"
+    output_path = "/app/docs/sequences/extracted/06-slides-sequence.puml"
     generate_puml(TRACES_FILE, family="", output=output_path, scenarios=scenarios,
                   title="Feature: Slides Catalog, Viewing, and Follow Mode",
                   participant_names=all_participant_names)
