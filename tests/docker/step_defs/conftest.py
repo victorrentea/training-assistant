@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import urllib.request
+from pathlib import Path
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
@@ -22,6 +23,9 @@ from playwright.sync_api import expect, sync_playwright
 
 sys.path.insert(0, "/tests")
 from session_utils import fresh_session  # noqa: E402, I001
+
+TRACES_FILE = os.environ.get("OTEL_TRACES_FILE", "/tmp/traces.jsonl")
+SEQ_OUTPUT_DIR = "/app/docs/sequences/extracted"
 
 
 BASE = "http://localhost:8000"
@@ -70,26 +74,161 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
 from pytest_bdd import given, parsers  # noqa: E402, I001
 
 
+def pytest_configure(config):
+    """Register custom markers used by the BDD harness.
+
+    The hermetic Docker image doesn't ship with pyproject.toml, so the
+    marker registrations from there don't apply inside the container.
+    Register them locally to silence PytestUnknownMarkWarning.
+    """
+    config.addinivalue_line(
+        "markers", "nightly: slow tests run once per day in nightly CI",
+    )
+    config.addinivalue_line(
+        "markers",
+        "seq: scenarios exercised to produce a sequence-diagram PUML — also implies nightly",
+    )
+
+
 def pytest_bdd_apply_tag(tag, function):
-    """Map BDD feature file tags to pytest marks."""
+    """Map BDD feature file tags to pytest marks.
+
+    `@seq` implies `@nightly` because sequence-diagram scenarios spin up
+    real browsers and traces — too slow for every-push CI.
+    """
     if tag == "nightly":
         function.pytestmark = getattr(function, "pytestmark", []) + [pytest.mark.nightly]
+        return True
+    if tag == "seq":
+        function.pytestmark = getattr(function, "pytestmark", []) + [
+            pytest.mark.seq, pytest.mark.nightly,
+        ]
         return True
     return None
 
 
-# ── BDD phase tracking for OTel ──────────────────────────────────────────
+# ── Sequence-diagram extraction harness ──────────────────────────────────
+#
+# When a scenario carries the `@seq` tag, the hooks below capture per-scenario
+# timing (start/when-boundary/end) and OTel-friendly bdd.phase attributes on
+# spans. After the test session finishes, scenarios are grouped by feature
+# file and one `<feature>-sequence.puml` is emitted per group via
+# `scripts.traces_to_puml.generate_puml`. SVGs are auto-rendered.
+
+_seq_collector: dict = {
+    "scenarios": [],          # list[dict]: one per @seq scenario
+    "uuid_to_name": {},       # session-wide UUID → participant name
+    "current": None,          # in-flight scenario timing dict
+    "traces_cleared": False,
+}
+
+
+def _scenario_has_seq_tag(scenario) -> bool:
+    return any(t == "seq" for t in (scenario.tags or set()))
+
+
+def _capture_participant_uuids() -> None:
+    """Read participant UUIDs from page localStorage into the session map.
+
+    Step-def modules register live ParticipantPage objects in module-level
+    `_participants` dicts. We harvest UUID→name mappings while the pages
+    are still alive (i.e. during after-scenario, before browser teardown).
+    """
+    for mod_name, mod in list(sys.modules.items()):
+        if not mod_name.endswith(".test_slides") and mod_name != "test_slides":
+            continue
+        pax_dict = getattr(mod, "_participants", None)
+        if not isinstance(pax_dict, dict):
+            continue
+        for name, pax in pax_dict.items():
+            try:
+                uid = pax._page.evaluate(
+                    "() => localStorage.getItem('workshop_participant_uuid')"
+                )
+                if uid:
+                    _seq_collector["uuid_to_name"][uid] = name
+            except Exception:
+                pass
+
+
+@pytest.hookimpl
+def pytest_bdd_before_scenario(request, feature, scenario):
+    if not _scenario_has_seq_tag(scenario):
+        return
+    if not _seq_collector["traces_cleared"]:
+        Path(TRACES_FILE).write_text("")
+        _seq_collector["traces_cleared"] = True
+    _seq_collector["current"] = {
+        "name": scenario.name,
+        "feature_filename": Path(feature.filename).stem,
+        "feature_title": feature.name,
+        "start_ns": time.time_ns(),
+        "when_start_ns": 0,
+        "end_ns": 0,
+    }
+
 
 @pytest.hookimpl
 def pytest_bdd_before_step(request, feature, scenario, step, step_func):
-    """Set bdd.phase attribute on current OTel span for PlantUML gray/black arrows."""
+    """Tag spans with bdd.phase + capture Given→When boundary for @seq scenarios."""
+    keyword = step.keyword.lower().strip()
     try:
         from opentelemetry import trace
         span = trace.get_current_span()
         if span and span.is_recording():
-            span.set_attribute("bdd.phase", step.keyword.lower().strip())
+            span.set_attribute("bdd.phase", keyword)
     except ImportError:
         pass
+
+    cur = _seq_collector["current"]
+    if cur and cur["when_start_ns"] == 0 and keyword == "when":
+        cur["when_start_ns"] = time.time_ns()
+
+
+@pytest.hookimpl
+def pytest_bdd_after_scenario(request, feature, scenario):
+    cur = _seq_collector["current"]
+    if not cur:
+        return
+    cur["end_ns"] = time.time_ns()
+    _capture_participant_uuids()
+    _seq_collector["scenarios"].append(cur)
+    _seq_collector["current"] = None
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if not _seq_collector["scenarios"]:
+        return
+    # Let any in-flight spans flush to the JSONL exporter.
+    time.sleep(2)
+
+    sys.path.insert(0, "/app")
+    from scripts.traces_to_puml import generate_puml
+
+    by_feature: dict[str, list[dict]] = {}
+    feature_titles: dict[str, str] = {}
+    for sc in _seq_collector["scenarios"]:
+        feat = sc["feature_filename"]
+        by_feature.setdefault(feat, []).append({
+            "name": sc["name"],
+            "start_ns": sc["start_ns"],
+            "when_start_ns": sc["when_start_ns"] or sc["start_ns"],
+            "end_ns": sc["end_ns"],
+        })
+        feature_titles[feat] = sc["feature_title"]
+
+    Path(SEQ_OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+    for feat, scenarios in by_feature.items():
+        output = f"{SEQ_OUTPUT_DIR}/{feat}-sequence.puml"
+        generate_puml(
+            TRACES_FILE,
+            family="",
+            output=output,
+            scenarios=scenarios,
+            title=f"Feature: {feature_titles[feat]}",
+            participant_names=_seq_collector["uuid_to_name"],
+        )
+        print(f"[seq] generated {output} ({len(scenarios)} scenarios)")
 
 
 @pytest.fixture

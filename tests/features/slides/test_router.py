@@ -1,14 +1,11 @@
 import base64
 import json
 import os
-import threading
 
+from fastapi.responses import JSONResponse, Response
 from fastapi.testclient import TestClient
-from fastapi.responses import JSONResponse
-from fastapi.responses import Response
 
 from railway.app import app, state
-
 
 _HOST_AUTH_HEADERS = {
     "Authorization": "Basic " + base64.b64encode(
@@ -26,24 +23,11 @@ def teardown_function():
     state.reset()
 
 
-def test_slides_current_in_api_status():
-    """slides_current set by daemon WS is exposed via /api/status."""
-    state.slides_current = {
-        "url": "https://slides.example.com/abc123.pdf",
-        "slug": "abc123",
-        "source_file": "deck.pptx",
-        "presentation_name": "deck.pptx",
-        "current_page": 3,
-    }
-
-    public = TestClient(app)
-    status = public.get("/api/status")
-    assert status.status_code == 200
-    assert status.json()["slides_current"]["slug"] == "abc123"
-
-
-# NOTE: POST /slides/current and DELETE /slides/current removed — daemon uses WS now.
-# NOTE: GET /{session_id}/api/slides/current removed — slides_current lives in /api/status.
+# slides_current is daemon-resident state; the daemon broadcasts
+# current_slide_updated to participants via WS. Railway no longer holds or
+# exposes it, so there is no /api/status assertion here. Coverage lives in
+# the hermetic tests (test_follow_me, test_follow_mode_slow_drive, slides
+# bdd scenarios) which read window._hostSlidesCurrent on the participant page.
 
 
 def test_slides_upload_requires_host_auth(monkeypatch, tmp_path):

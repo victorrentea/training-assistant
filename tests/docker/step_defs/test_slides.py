@@ -137,28 +137,30 @@ def addons_bridge_reports(request, session_id, deck, page):
 
     expected_slug = _deck_to_expected_slug(deck)
 
-    # Wait for daemon to connect, receive the slide event, and push slides_current
-    # to Railway with the correct slug and page.
-    # Railway state.slides_current may carry a stale value from a previous scenario;
-    # wait until we see the EXACT slug+page from this deck/page combination.
+    # Wait for the daemon to connect to the bridge, receive the slide event, and
+    # broadcast `current_slide_updated` over WS. Verify by reading the
+    # participant's JS-side `_hostSlidesCurrent` — the same state that drives
+    # follow-mode in the browser. Railway's /api/status no longer carries
+    # slides_current (it's daemon-resident), so we poll a registered
+    # participant's page directly.
+    if not _participants:
+        raise AssertionError(
+            "addons_bridge_reports requires at least one participant to be joined"
+        )
+    pax = next(iter(_participants.values()))
     deadline = time.monotonic() + 20
     while time.monotonic() < deadline:
         try:
-            req = urllib.request.Request(
-                f"{BASE}/api/status",
-                headers={"Authorization": f"Basic {_auth_header()}", "Content-Type": "application/json"},
-            )
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                data = json.loads(resp.read())
-                sc = data.get("slides_current") or {}
-                if sc.get("slug") == expected_slug and sc.get("page") == page:
-                    break
+            sc = pax._page.evaluate("() => window._hostSlidesCurrent || null")
+            if sc and sc.get("slug") == expected_slug and sc.get("page") == page:
+                break
         except Exception:
             pass
         time.sleep(0.5)
     else:
         raise AssertionError(
-            f"Daemon did not push slides_current slug={expected_slug!r} page={page} to Railway within 20s"
+            f"Daemon did not broadcast current_slide_updated slug={expected_slug!r} "
+            f"page={page} to the participant within 20s"
         )
 
 
@@ -289,7 +291,7 @@ def receives_valid_pdf(request, name):
 
 @when(parsers.parse('the host updates the slide "{slug}"'))
 def host_updates_slide(session_id, slug):
-    """Invalidate a slide to trigger re-download (simulates host updating the Google Drive file).
+    """Refresh a slide to trigger re-download (simulates host updating the Google Drive file).
     This is infra/cache management — API call is appropriate here."""
     _, body = _api("GET", f"/{session_id}/api/slides")
     data = json.loads(body)
@@ -299,8 +301,10 @@ def host_updates_slide(session_id, slug):
         if s.get("slug") == slug:
             drive_url = s.get("drive_export_url")
             break
-    payload = {"drive_export_url": drive_url} if drive_url else {}
-    _api("POST", f"/api/{session_id}/api/slides/invalidate/{slug}", data=payload, base=BASE, timeout=10)
+    if not drive_url:
+        raise AssertionError(f"slide {slug!r} has no drive_export_url in catalog")
+    _api("POST", f"/api/slides/refresh/{slug}",
+         data={"drive_export_url": drive_url}, base=BASE, timeout=10)
 
 
 @when("the slide content is visually rendered")

@@ -38,11 +38,9 @@ sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
 import pytest
-from playwright.sync_api import sync_playwright, expect
-
 from pages.participant_page import ParticipantPage
+from playwright.sync_api import expect, sync_playwright
 from session_utils import fresh_session
-
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
@@ -106,19 +104,15 @@ def _mock_drive_reset_delays():
         pass
 
 
-def _backend_slides_current_slug() -> str | None:
-    """Return the slug in /api/status slides_current, or None."""
-    import base64
+def _participant_host_slide_slug(pax_page) -> str | None:
+    """Return the slug in the participant's `_hostSlidesCurrent` JS state.
+
+    slides_current is daemon-resident (not on Railway's /api/status); the
+    daemon broadcasts current_slide_updated to participants via WS.
+    """
     try:
-        auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-        req = urllib.request.Request(
-            f"{BASE}/api/status",
-            headers={"Authorization": f"Basic {auth}"},
-        )
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = json.loads(resp.read())
-            sc = data.get("slides_current")
-            return sc.get("slug") if sc else None
+        sc = pax_page.evaluate("() => window._hostSlidesCurrent || null")
+        return sc.get("slug") if sc else None
     except Exception:
         return None
 
@@ -198,13 +192,13 @@ def test_follow_mode_survives_slow_drive(delay_s, presentation, slug, host_slide
             pax = ParticipantPage(pax_page)
             pax.join(f"Follower-{delay_s}s")
 
-            # Wait for daemon to push slides_current (probes every ~0.5s in tests).
+            # Wait for daemon to broadcast current_slide_updated to the participant.
             _await_condition(
-                lambda: _backend_slides_current_slug() == slug,
+                lambda: _participant_host_slide_slug(pax_page) == slug,
                 timeout_ms=15_000,
-                msg=f"Daemon did not push slides_current for '{slug}' within 15s",
+                msg=f"Daemon did not broadcast current_slide_updated for '{slug}' within 15s",
             )
-            print(f"[{delay_s}s] Backend received slides_current slug='{slug}'")
+            print(f"[{delay_s}s] Participant received slides_current slug='{slug}'")
 
             # Overlay opens as soon as auto-follow triggers (before PDF finishes).
             expect(pax_page.locator("#slides-view")).to_be_visible(timeout=15_000)

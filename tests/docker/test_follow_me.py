@@ -19,17 +19,13 @@ import sys
 import threading
 import time
 import urllib.request
-from pathlib import Path
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
-import pytest
-from playwright.sync_api import sync_playwright, expect
-
 from pages.participant_page import ParticipantPage
+from playwright.sync_api import expect, sync_playwright
 from session_utils import fresh_session
-
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
@@ -52,6 +48,7 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
 def _run_mock_addon_bridge(deck: str, slide: int, stop_event: threading.Event):
     """Run a mock addon-bridge WS server that sends one slide event to each connecting client."""
     import asyncio
+
     import websockets
 
     async def handle(websocket):
@@ -116,26 +113,23 @@ def test_follow_me_basic():
 
         time.sleep(2)
 
-        # Wait for daemon to detect slide pointer and push slides_current to backend
-        def _backend_has_slides_current():
+        # Wait for daemon to detect slide pointer and broadcast
+        # current_slide_updated to participants. State is daemon-resident
+        # (not on Railway's /api/status); verify via the participant's
+        # JS-side `_hostSlidesCurrent` — same state that drives follow mode.
+        def _participant_has_host_slide():
             try:
-                req = urllib.request.Request(
-                    f"{BASE}/api/status",
-                    headers={"Authorization": f"Basic {__import__('base64').b64encode(f'{HOST_USER}:{HOST_PASS}'.encode()).decode()}"}
-                )
-                with urllib.request.urlopen(req, timeout=3) as resp:
-                    data = json.loads(resp.read())
-                    sc = data.get("slides_current")
-                    return sc and sc.get("slug")
+                sc = pax_page.evaluate("() => window._hostSlidesCurrent || null")
+                return sc.get("slug") if sc else None
             except Exception:
                 return None
 
         slug = _await_condition(
-            _backend_has_slides_current,
+            _participant_has_host_slide,
             timeout_ms=20000,
-            msg="Daemon did not push slides_current to backend within 20s"
+            msg="Daemon did not broadcast current_slide_updated to the participant within 20s"
         )
-        print(f"Backend slides_current slug: {slug}")
+        print(f"Participant _hostSlidesCurrent slug: {slug}")
 
         # Click the Follow button (label for the checkbox)
         follow_btn = pax_page.locator("label[for='slides-follow-checkbox']")
@@ -158,7 +152,7 @@ def test_follow_me_basic():
         )
 
         # Verify the participant navigated to the correct slide
-        active_slide = _await_condition(
+        _await_condition(
             lambda: pax_page.locator(".topic-item.topic-active").count() > 0,
             timeout_ms=15000,
             msg="No active slide item after clicking Follow"

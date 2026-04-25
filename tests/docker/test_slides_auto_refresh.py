@@ -3,15 +3,12 @@ Hermetic E2E test: Participant auto-refreshes slide when PPTX is saved.
 
 Flow under test:
 1. Participant opens the session; slides catalog loads
-2. Daemon (simulated via direct API call) calls POST /{sid}/api/slides/invalidate/{slug}
+2. Daemon (simulated via direct API call) calls POST /api/slides/refresh/{slug}
 3. Railway deletes its cached PDF and re-downloads from mock Google Drive
 4. Railway broadcasts slides_updated with refreshed_slugs=[slug]
 5. Participant browser receives the WS message and calls _loadSlideIntoViewer
    with forceReload=true, triggering a fresh GET /api/slides/download/{slug}?v=...
 6. Railway serves the re-downloaded PDF bytes
-
-This test also verifies the BEFORE-state (bug): without code changes,
-the invalidate endpoint returns 404 and mock Drive count stays at 1.
 """
 
 import base64
@@ -100,9 +97,9 @@ def _get_drive_export_url(session_id: str) -> str:
     return ""
 
 
-def _call_invalidate(session_id: str, drive_export_url: str = "") -> int:
-    """POST /api/slides/invalidate/{slug} on Railway. Returns HTTP status code."""
-    url = f"{BASE}/api/{session_id}/api/slides/invalidate/{_SLUG}"
+def _call_refresh(drive_export_url: str = "") -> int:
+    """POST /api/slides/refresh/{slug} on Railway. Returns HTTP status code."""
+    url = f"{BASE}/api/slides/refresh/{_SLUG}"
     body = json.dumps({"drive_export_url": drive_export_url}).encode()
     req = urllib.request.Request(
         url,
@@ -123,8 +120,8 @@ def _call_invalidate(session_id: str, drive_export_url: str = "") -> int:
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 
-def test_invalidate_triggers_railway_redownload():
-    """POST /api/slides/invalidate/{slug} causes Railway to re-download from mock Drive."""
+def test_refresh_triggers_railway_redownload():
+    """POST /api/slides/refresh/{slug} causes Railway to re-download from mock Drive."""
     session_id = fresh_session("AutoRefresh")
     _mock_drive_reset_delays()
     _mock_drive_reset()
@@ -144,10 +141,10 @@ def test_invalidate_triggers_railway_redownload():
     assert drive_export_url, "No drive_export_url found for slug in catalog"
     print(f"[test] drive_export_url: {drive_export_url}")
 
-    # Simulate daemon calling invalidate after a PPTX save
-    status = _call_invalidate(session_id, drive_export_url)
-    assert status == 200, f"POST /invalidate returned {status}, expected 200"
-    print(f"[test] POST /invalidate returned {status} ✓")
+    # Simulate daemon calling refresh after a PPTX save
+    status = _call_refresh(drive_export_url)
+    assert status == 200, f"POST /refresh returned {status}, expected 200"
+    print(f"[test] POST /refresh returned {status} ✓")
 
     # Railway should re-download from mock Drive (async background task)
     _await_condition(
@@ -166,22 +163,19 @@ def test_invalidate_triggers_railway_redownload():
     print(f"[test] /download still serves valid PDF ({len(pdf_bytes)} bytes) ✓")
 
 
-def test_invalidate_without_drive_url_in_body_uses_stored_catalog():
-    """If drive_export_url is omitted from body, Railway uses the stored catalog URL."""
+def test_refresh_without_drive_url_in_body_returns_422():
+    """The refresh endpoint requires drive_export_url; missing/empty → 422."""
     session_id = fresh_session("AutoRefreshNoUrl")
     _mock_drive_reset_delays()
     _prime_slide_cache(session_id)
     _mock_drive_reset()
 
-    # Call without drive_export_url body field (Railway should fall back to state.slides)
-    status = _call_invalidate(session_id, drive_export_url="")
-    # May return 200 (if URL in catalog) or 422 (if not stored on Railway)
-    print(f"[test] POST /invalidate (no body URL) returned {status}")
-    assert status in (200, 422), f"Unexpected status {status}"
+    status = _call_refresh(drive_export_url="")
+    assert status == 422, f"POST /refresh with no drive_export_url returned {status}, expected 422"
 
 
 def test_participant_receives_updated_downloaded_at_in_ws():
-    """Participant WS receives decks_updated with changed downloaded_at after invalidate."""
+    """Participant WS receives decks_updated with changed downloaded_at after refresh."""
     session_id = fresh_session("AutoRefreshWS")
     _mock_drive_reset_delays()
     _prime_slide_cache(session_id)
@@ -223,9 +217,9 @@ def test_participant_receives_updated_downloaded_at_in_ws():
             msg="No slides loaded for participant",
         )
 
-        # Trigger invalidate
-        status = _call_invalidate(session_id, drive_export_url)
-        assert status == 200, f"POST /invalidate returned {status}"
+        # Trigger refresh
+        status = _call_refresh(drive_export_url)
+        assert status == 200, f"POST /refresh returned {status}"
 
         # Participant should receive decks_updated with a new downloaded_at for the slug
         _await_condition(
@@ -239,7 +233,7 @@ def test_participant_receives_updated_downloaded_at_in_ws():
         browser.close()
 
 
-def test_participant_auto_reloads_active_slide_after_invalidate():
+def test_participant_auto_reloads_active_slide_after_refresh():
     """Participant reloads the active slide PDF when slides_updated has refreshed_slugs."""
     session_id = fresh_session("AutoRefreshReload")
     _mock_drive_reset_delays()
@@ -263,32 +257,39 @@ def test_participant_auto_reloads_active_slide_after_invalidate():
 
         # Inject a spy on window.loadPdf to detect reloads without relying on network monitoring.
         # Network monitoring is unreliable (pdf.js may use workers, caching, etc.).
+        # Capture (url, slug, downloadedAt) — cache-busting is now keyed by
+        # downloadedAt (PdfCache invalidation), not by a ?v= URL parameter.
         pax_page.evaluate("""() => {
             const origLoadPdf = window.loadPdf;
             window._loadPdfCalls = [];
-            window.loadPdf = async function(...args) {
-                window._loadPdfCalls.push(args[0] || '');
-                return origLoadPdf(...args);
+            window.loadPdf = async function(url, slug, downloadedAt, targetPage) {
+                window._loadPdfCalls.push({url: url || '', slug: slug || '', downloadedAt: downloadedAt || null});
+                return origLoadPdf(url, slug, downloadedAt, targetPage);
             };
         }""")
 
-        # Trigger invalidate (simulates daemon notification after PPTX save)
-        status = _call_invalidate(session_id, drive_export_url)
-        assert status == 200, f"POST /invalidate returned {status}"
-        print(f"[test] POST /invalidate returned {status} ✓")
+        # Trigger refresh (simulates daemon notification after PPTX save)
+        status = _call_refresh(drive_export_url)
+        assert status == 200, f"POST /refresh returned {status}"
+        print(f"[test] POST /refresh returned {status} ✓")
 
-        # Participant should auto-reload the slide: window.loadPdf called with ?v= URL
+        # Participant should auto-reload the slide for the active slug.
         _await_condition(
-            lambda: pax_page.evaluate("() => window._loadPdfCalls.length > 0"),
+            lambda: pax_page.evaluate(
+                f"() => (window._loadPdfCalls || []).some(c => c.slug === '{_SLUG}')"
+            ),
             timeout_ms=20_000,
-            msg=f"Participant did not auto-reload slide '{_SLUG}' after invalidate",
+            msg=f"Participant did not auto-reload slide '{_SLUG}' after refresh",
         )
         calls = pax_page.evaluate("() => window._loadPdfCalls")
-        reload_url = calls[-1] if calls else ""
-        print(f"[test] Participant reloaded slide via loadPdf: {reload_url} ✓")
-        # URL should have ?v= cache-bust parameter
-        assert "?v=" in reload_url, (
-            f"Expected reload URL to have ?v= cache-buster, got: {reload_url!r}"
+        last = calls[-1] if calls else {}
+        print(f"[test] Participant reloaded slide via loadPdf: {last} ✓")
+        # Cache invalidation moved from ?v= URL params to PdfCache (IDB) keyed
+        # by downloadedAt — the new value must be present and differ from the
+        # cached one (test reset cache before triggering refresh).
+        assert last.get("slug") == _SLUG, f"Expected slug={_SLUG}, got {last!r}"
+        assert last.get("downloadedAt"), (
+            f"Expected non-empty downloadedAt for cache key, got {last!r}"
         )
 
         browser.close()
