@@ -22,6 +22,7 @@ Feature: Slides Catalog, Viewing, and Follow Mode
     And the slide content is visually rendered
     And Google Drive was called at most 1 time
 
+  @seq
   Scenario: Second participant gets cached slide with at most 1 Drive call
     Given Bob joins as a participant
     When Alice opens slide "clean-code"
@@ -37,6 +38,7 @@ Feature: Slides Catalog, Viewing, and Follow Mode
     And Alice opens slide "clean-code"
     Then Alice sees page 3 of "clean-code"
 
+  @seq
   Scenario: Participant downloads a slide PDF from the catalog
     When Alice clicks the download button for "clean-code"
     Then Alice receives a valid PDF file
@@ -55,6 +57,7 @@ Feature: Slides Catalog, Viewing, and Follow Mode
 
   # ── Follow Mode ──────────────────────────────────────────────────────
 
+  @seq
   Scenario: Participant follows host's current slide
     Given the addons bridge reports current slide is "Clean Code.pptx" page 3
     When Alice clicks the Follow button
@@ -79,6 +82,7 @@ Feature: Slides Catalog, Viewing, and Follow Mode
     And the follow button is still enabled
     And the active slide is "clean-code"
 
+  @seq
   Scenario: Participant sees the updated slide version after host updates it
     When Alice opens slide "clean-code"
     And the slide content is visually rendered

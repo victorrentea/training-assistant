@@ -6,6 +6,7 @@ Tagged @pytest.mark.nightly — runs in nightly CI only.
 import base64
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
@@ -34,6 +35,32 @@ def _ns_now() -> int:
 
 def _auth_header() -> str:
     return base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
+
+
+_FEATURE_SCENARIO_RE = re.compile(r"^\s*Scenario:\s*(.+?)\s*$")
+
+
+def feature_scenario(feature_path: str, keyword: str) -> str:
+    """Return the scenario name from feature_path that contains keyword.
+
+    Lets the diagram-section labels in the generated PUML stay in sync with
+    the canonical Gherkin "Scenario:" lines in the .feature files instead
+    of being hardcoded twice. Match is case-insensitive and uses a unique
+    substring so renames in the feature file surface as a clear failure.
+    """
+    text = Path(feature_path).read_text(encoding="utf-8")
+    matches = []
+    for line in text.splitlines():
+        m = _FEATURE_SCENARIO_RE.match(line)
+        if m and keyword.lower() in m.group(1).lower():
+            matches.append(m.group(1))
+    if not matches:
+        raise ValueError(
+            f"No scenario containing {keyword!r} in {feature_path}")
+    if len(matches) > 1:
+        raise ValueError(
+            f"Keyword {keyword!r} matches multiple scenarios in {feature_path}: {matches}")
+    return matches[0]
 
 
 def _api(method, path, data=None, base_url=None, actor=None):
@@ -116,7 +143,23 @@ class ScenarioRunner:
         return self._participants[name]
 
     def when(self):
-        """Mark the Given→When boundary."""
+        """Mark the Given→When boundary.
+
+        Waits for setup-related traces (participant rename's
+        participant_list_updated, the throttled active_participants_count_updated
+        broadcast, any in-flight client polling, etc.) to drain so they end up
+        inside the init group instead of bleeding into the When phase.
+        """
+        for page in [self.host_page] + [p._page for p in self._participants.values()]:
+            if page is None:
+                continue
+            try:
+                page.wait_for_load_state("networkidle", timeout=3000)
+            except Exception:
+                pass
+        # The Railway active_participants_count_updated broadcast is throttled
+        # at ~1s — wait past it so the broadcast lands in init, not in when.
+        time.sleep(1.1)
         self._when_ns = _ns_now()
 
     @property
@@ -261,11 +304,20 @@ def test_slides_sequence_diagram_extraction():
     scenarios = []
     all_participant_names: dict[str, str] = {}  # UUID → name across all scenarios
 
+    # Diagram section labels are pulled from the slides.feature file so the
+    # extracted PUML stays in sync with the canonical Gherkin names. Each
+    # keyword below must uniquely match exactly one scenario in the feature.
+    feature_path = "/tests/features/slides.feature"
+    name_opens_slide = feature_scenario(feature_path, "opens a slide and sees rendered")
+    name_cached_slide = feature_scenario(feature_path, "Second participant gets cached")
+    name_navigate_resume = feature_scenario(feature_path, "Navigating back to a slide")
+    name_host_updates = feature_scenario(feature_path, "auto-refreshed when host updates")
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
         # Scenario 1: Participant opens a slide
-        with ScenarioRunner(browser, "Participant opens a slide") as sc:
+        with ScenarioRunner(browser, name_opens_slide) as sc:
             alice = sc.participant()
             sc.when()
             alice.open_slide("clean-code")
@@ -273,7 +325,7 @@ def test_slides_sequence_diagram_extraction():
         all_participant_names.update(sc.uuid_to_name)
 
         # Scenario 2: Two participants open the same (cached) slide
-        with ScenarioRunner(browser, "Second participant gets cached slide",
+        with ScenarioRunner(browser, name_cached_slide,
                             participants=["Alice", "Bob"]) as sc:
             sc.when()
             sc.participant("Alice").open_slide("design-patterns")
@@ -282,7 +334,7 @@ def test_slides_sequence_diagram_extraction():
         all_participant_names.update(sc.uuid_to_name)
 
         # Scenario 3: Navigate between slides
-        with ScenarioRunner(browser, "Navigate to page and resume") as sc:
+        with ScenarioRunner(browser, name_navigate_resume) as sc:
             alice = sc.participant()
             sc.when()
             alice.open_slide("clean-code")
@@ -292,7 +344,7 @@ def test_slides_sequence_diagram_extraction():
         all_participant_names.update(sc.uuid_to_name)
 
         # Scenario 4: Host updates a slide (invalidation → re-download)
-        with ScenarioRunner(browser, "Host updates a slide") as sc:
+        with ScenarioRunner(browser, name_host_updates) as sc:
             sc.participant().open_slide("architecture")  # cache it (Given)
             sc.when()
             # Hit the daemon's test endpoint (which mirrors the production
@@ -323,7 +375,7 @@ def test_slides_sequence_diagram_extraction():
     print(generated)
 
     assert "@startuml" in generated and "->" in generated
-    assert "== Participant opens a slide ==" in generated
-    assert "== Host updates a slide ==" in generated
+    assert f"== {name_opens_slide} ==" in generated
+    assert f"== {name_host_updates} ==" in generated
     assert "group init" in generated
     print("SUCCESS: Slides sequence diagram with 4 scenarios")
