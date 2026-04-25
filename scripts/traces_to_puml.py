@@ -55,17 +55,55 @@ def _build_span_index(spans: list[dict]) -> dict[str, dict]:
 _HOST_PATH_RE = re.compile(r"(GET|POST|PUT|DELETE|PATCH) /.*host")
 
 
+def _logical_ends(index: dict[str, dict]) -> dict[str, int]:
+    """Compute each span's logical end_time = max(own end, recursive descendants).
+
+    A handler that fires off an async background task ends its own span when
+    the response is sent, but the descendant spans (created from that
+    background task) keep running. Using own end_time alone would close the
+    handler's activation bar before the descendant events render, breaking
+    the visual chain. Logical end_time keeps the activation open through
+    every descendant.
+    """
+    children: dict[str, list[str]] = {}
+    for sid, s in index.items():
+        pid = _parent_id(s)
+        if pid and pid in index:
+            children.setdefault(pid, []).append(sid)
+
+    memo: dict[str, int] = {}
+
+    def walk(sid: str) -> int:
+        if sid in memo:
+            return memo[sid]
+        span = index.get(sid)
+        if not span:
+            return 0
+        end = span.get("end_time", span.get("start_time", 0))
+        for cid in children.get(sid, []):
+            end = max(end, walk(cid))
+        memo[sid] = end
+        return end
+
+    for sid in index:
+        walk(sid)
+    return memo
+
+
 def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, int, str, str, bool]]:
     """Extract edges from spans.
 
     Returns (from_svc, to_svc, label, start_time, end_time, bdd_phase, trace_id, is_async).
     is_async=True for broadcast/notify_host (rendered as dashed arrows).
-    end_time drives PlantUML activate/deactivate brackets.
+    end_time drives PlantUML activate/deactivate brackets — extended to cover
+    descendant spans so async background work after a handler returns stays
+    inside the handler's activation bar.
     """
     # Noise: spans that add no useful info to sequence diagrams
     _SKIP_PATTERNS = {"/api/status", "/static", "/favicon"}
 
     index = _build_span_index(spans)
+    logical_end = _logical_ends(index)
     # Railway spans whose children include a different service are proxy parents
     _railway_proxy_parents = set()
     for s in spans:
@@ -80,7 +118,7 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, int, str
             continue
         svc = _service_name(span)
         start = span.get("start_time", 0)
-        end = span.get("end_time", start)
+        end = logical_end.get(_span_id(span), span.get("end_time", start))
         pid = _parent_id(span)
         phase = span.get("attributes", {}).get("bdd.phase", "")
         tid = span.get("context", {}).get("trace_id", "")
