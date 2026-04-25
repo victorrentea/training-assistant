@@ -292,11 +292,14 @@ def test_scenarios_parameter_colors_by_trace_id():
     assert "== Open slide ==" in content
 
 
-def test_activations_emitted_for_synchronous_request():
-    """Each non-async edge emits activate/deactivate brackets for the destination.
+def test_activations_emitted_only_when_span_has_follow_up_arrows():
+    """A non-async edge is bracketed with activate/deactivate only if its
+    destination has a later outgoing edge during the span's lifespan.
 
-    The activation lifespan matches the underlying span (start_time → end_time),
-    so nested calls produce nested activation bars in the diagram.
+    The outer Host->Daemon span has a child step:* edge (Daemon->Daemon)
+    inside it, so its activation IS emitted. The inner step span has no
+    children, so it is NOT activated — leaf calls stay unbracketed to
+    keep the diagram clean.
     """
     from scripts.traces_to_puml import generate_puml
 
@@ -304,8 +307,6 @@ def test_activations_emitted_for_synchronous_request():
         path = f.name
     out = path + ".puml"
 
-    # Outer Host->Daemon span (1000-5000) with a nested Daemon->Daemon
-    # step span (1500-4500) inside it.
     _write_spans(path, [
         _make_span("POST /api/{session_id}/host/poll", "Daemon", span_id="s1",
                    start_time=1000, end_time=5000),
@@ -316,11 +317,31 @@ def test_activations_emitted_for_synchronous_request():
     generate_puml(path, family="", output=out)
     content = Path(out).read_text()
 
-    # Use full-line matching to avoid 'activate' substring-matching 'deactivate'
     activate_lines = [ln for ln in content.split("\n") if ln.strip() == 'activate "Daemon"']
     deactivate_lines = [ln for ln in content.split("\n") if ln.strip() == 'deactivate "Daemon"']
-    assert len(activate_lines) == 2, f"expected 2 activations, got {activate_lines}"
-    assert len(deactivate_lines) == 2, f"expected 2 deactivations, got {deactivate_lines}"
+    assert len(activate_lines) == 1, f"expected 1 activation (outer span only), got {activate_lines}"
+    assert len(deactivate_lines) == 1, f"expected 1 deactivation, got {deactivate_lines}"
+
+
+def test_no_activation_for_leaf_request():
+    """A non-async edge with no follow-up arrows is rendered without an
+    activation bracket — the participant lifeline stays unbracketed."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("GET /api/{session_id}/host/state", "Daemon", span_id="s1",
+                   start_time=1000, end_time=2000),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    assert 'activate "Daemon"' not in content
+    assert 'deactivate "Daemon"' not in content
 
 
 def test_async_edges_do_not_activate():

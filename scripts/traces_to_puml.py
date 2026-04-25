@@ -335,22 +335,37 @@ def generate_puml(traces_path: str, family: str, output: str,
     def _interleave_activations(edge_list: list[tuple], indent: str = "") -> list[str]:
         """Render edges with activate/deactivate brackets per Rule 9.
 
-        Each non-async edge activates the destination service for its span's
-        lifespan (start_time → end_time). Activations are closed in end_time
-        order; OTel parent-child nesting guarantees this matches PlantUML's
-        per-actor LIFO stack semantics.
+        A non-async edge activates its destination only if at least one
+        later edge originates from that destination during the span's
+        lifespan — i.e. only spans that produce follow-up arrows in the
+        diagram get an activation bar. Leaf calls (no observable
+        sub-activity) stay unbracketed to keep the diagram clean.
+        Activations close in end_time order; OTel parent-child nesting
+        guarantees this matches PlantUML's per-actor LIFO stack semantics.
         """
+        # Pre-compute whether each edge's destination has a follow-up
+        # outgoing arrow during this edge's [start, end] window.
+        has_child = [False] * len(edge_list)
+        for i, edge_i in enumerate(edge_list):
+            _, t_i, _, start_i, end_i, _, _, _ = edge_i
+            for j in range(i + 1, len(edge_list)):
+                f_j, _, _, start_j, _, _, _, _ = edge_list[j]
+                if start_j > end_i:
+                    break
+                if f_j == t_i and start_j >= start_i:
+                    has_child[i] = True
+                    break
+
         out: list[str] = []
         active: list[tuple[int, str]] = []  # (end_time, service), end-time ascending
-        for edge in edge_list:
+        for i, edge in enumerate(edge_list):
             _f, t, _label, start, end, _phase, _tid, is_async = edge
             while active and active[0][0] <= start:
                 _, svc = active.pop(0)
                 out.append(f'{indent}deactivate "{svc}"')
             out.append(f"{indent}{_render_edge(edge)}")
-            if not is_async:
+            if not is_async and has_child[i]:
                 out.append(f'{indent}activate "{t}"')
-                # Insert preserving end_time ascending order
                 pos = 0
                 while pos < len(active) and active[pos][0] <= end:
                     pos += 1
