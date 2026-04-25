@@ -325,7 +325,7 @@
         return;
       }
       if (msg.type === 'poll_queue_updated') {
-        fetchPollState();
+        if (_currentActivity === 'poll') fetchPollState();
         return;
       }
       if (msg.type === 'poll_opened') {
@@ -341,7 +341,7 @@
         _clearTimer();
         pollActive = false;
         renderPollDisplay();
-        fetchPollState();
+        if (_currentActivity === 'poll') fetchPollState();
         return;
       }
       if (msg.type === 'poll_correct_revealed') {
@@ -378,7 +378,9 @@
       }
       if (msg.type === 'state') {
         versionReloadGuard && versionReloadGuard.check(msg.backend_version);
-        fetchPollState();
+        // Only refresh poll state when the host is (or is being switched to)
+        // the poll tab — avoids two GET /poll on every state snapshot.
+        if (msg.current_activity === 'poll') fetchPollState();
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
         ingestParticipants(msg.participants || []);
         totalParticipants = (msg.participants || []).length;
@@ -2018,10 +2020,6 @@
   }
 
 
-  function startPollQueuePolling() {
-    fetchPollState();
-  }
-
   function toast(msg) {
     const el = document.getElementById('toast');
     el.textContent = msg;
@@ -2543,7 +2541,6 @@
   }
 
   connectWS();
-  startPollQueuePolling();
 
   document.getElementById('wc-host-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') hostSubmitWord();
