@@ -228,6 +228,7 @@ def generate_puml(traces_path: str, family: str, output: str,
         # for request edges (from="Participant").
         all_names = sorted(set(participant_names.values()))
         default_actor = f"Participant\\n{all_names[0]}" if len(all_names) == 1 else "Participant"
+        named_actors = [f"Participant\\n{n}" for n in all_names]
         named = []
         for f, t, label, ts, end, phase, tid, is_async in edges:
             resolved = trace_to_name.get(tid)
@@ -237,13 +238,22 @@ def generate_puml(traces_path: str, family: str, output: str,
                     f = actor
                 if t == "Participant":
                     t = actor
+                named.append((f, t, label, ts, end, phase, tid, is_async))
+            elif is_async and t == "Participant" and named_actors:
+                # Unresolved broadcast — fan out to every known named participant
+                # (the broadcast really did go to all of them; we just couldn't
+                # attribute the trace to a single one).
+                for actor in named_actors:
+                    named.append((f, actor, label, ts, end, phase, tid, is_async))
             elif f == "Participant" and not is_async:
                 # Unresolved request from participant — use default
-                f = default_actor
-            named.append((f, t, label, ts, end, phase, tid, is_async))
+                named.append((default_actor, t, label, ts, end, phase, tid, is_async))
+            else:
+                named.append((f, t, label, ts, end, phase, tid, is_async))
         edges = named
-        # Drop edges still referencing generic "Participant" — they're noise
-        # (broadcasts to all, unresolvable proxy calls)
+        # Drop any remaining edges referencing the generic "Participant"
+        # placeholder (e.g. broadcasts emitted before any named participant
+        # joined, or unresolvable proxy calls).
         edges = [e for e in edges if e[0] != "Participant" and e[1] != "Participant"]
 
     if not scenarios:

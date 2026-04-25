@@ -196,10 +196,23 @@ class DaemonWsClient:
                     if _event == "download_slide_completed" and _full_slug:
                         from daemon.misc.state import misc_state
                         from daemon.slides.router import _broadcast_slides_updated
+                        from daemon.telemetry.ws_propagation import extract_trace_context
                         _downloaded_at = data.get("downloaded_at") or datetime.now(timezone.utc).isoformat()
                         existing = misc_state.slides_updated.get(_full_slug, {})
                         misc_state.slides_updated[_full_slug] = {**existing, "downloaded_at": _downloaded_at}
-                        _broadcast_slides_updated()
+                        # Restore the upstream trace context (set by Railway's
+                        # _push_log) so the broadcast chains under the same
+                        # trace as the originating participant request.
+                        _ctx = extract_trace_context(data)
+                        if _ctx is not None:
+                            from opentelemetry import context as _otel_ctx
+                            _token = _otel_ctx.attach(_ctx)
+                            try:
+                                _broadcast_slides_updated()
+                            finally:
+                                _otel_ctx.detach(_token)
+                        else:
+                            _broadcast_slides_updated()
         except ConnectionClosed:
             pass
         finally:

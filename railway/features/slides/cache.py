@@ -51,8 +51,18 @@ def _ssl_ctx() -> ssl.SSLContext:
 # ---------------------------------------------------------------------------
 
 async def _push_log(slug: str, event: str, detail: str = "", **extra) -> None:
-    """Send a slide_log message to the daemon WS and log locally."""
+    """Send a slide_log message to the daemon WS and log locally.
+
+    Injects the current OTel trace context into the message so the daemon
+    can chain its follow-up actions (e.g. the post-download decks_updated
+    broadcast) under the same trace as the original participant request.
+    """
     msg = {"type": "slide_log", "slug": slug, "event": event, "detail": detail, **extra}
+    try:
+        from daemon.telemetry.ws_propagation import inject_trace_context
+        inject_trace_context(msg)
+    except Exception:
+        pass
     logger.info("[slides-cache] %s slug=%s %s", event, slug, detail)
     ws = state.daemon_ws
     if ws is not None:
