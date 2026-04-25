@@ -5,10 +5,11 @@ Generic transformation rules:
 2. Collapse broadcast relay (Daemon -> Railway -> Browser becomes Daemon -> Browser)
 3. Participant names from service.name attribute
 4. Arrow labels from span names
-5. Skip internal spans (same service parent->child)
+5. (DISABLED) Same-service parent->child spans render as self-messages
 6. Infer host origin from /host/ path patterns in root daemon spans
 7. Infer broadcast/notify targets from span name prefixes
 8. Railway root spans (browser parent missing) => Participant -> Railway
+9. Activations: each non-async edge activates the destination for its span lifespan
 """
 import json
 import re
@@ -51,11 +52,12 @@ def _build_span_index(spans: list[dict]) -> dict[str, dict]:
 _HOST_PATH_RE = re.compile(r"(GET|POST|PUT|DELETE|PATCH) /.*host")
 
 
-def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str, bool]]:
+def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, int, str, str, bool]]:
     """Extract edges from spans.
 
-    Returns (from_svc, to_svc, label, start_time, bdd_phase, trace_id, is_async).
+    Returns (from_svc, to_svc, label, start_time, end_time, bdd_phase, trace_id, is_async).
     is_async=True for broadcast/notify_host (rendered as dashed arrows).
+    end_time drives PlantUML activate/deactivate brackets.
     """
     # Noise: spans that add no useful info to sequence diagrams
     _SKIP_PATTERNS = {"/api/status", "/static", "/favicon"}
@@ -75,6 +77,7 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
             continue
         svc = _service_name(span)
         start = span.get("start_time", 0)
+        end = span.get("end_time", start)
         pid = _parent_id(span)
         phase = span.get("attributes", {}).get("bdd.phase", "")
         tid = span.get("context", {}).get("trace_id", "")
@@ -82,17 +85,17 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
         # Rule 7: broadcast:* and notify_host:* root spans from Daemon
         if svc == "Daemon" and name.startswith("broadcast:"):
             msg_type = name.split(":", 1)[1]
-            edges.append(("Daemon", "Participant", msg_type, start, phase, tid, True))
+            edges.append(("Daemon", "Participant", msg_type, start, end, phase, tid, True))
             continue
         if svc == "Daemon" and name.startswith("notify_host:"):
             msg_type = name.split(":", 1)[1]
-            edges.append(("Daemon", "Host", msg_type, start, phase, tid, True))
+            edges.append(("Daemon", "Host", msg_type, start, end, phase, tid, True))
             continue
 
         # Rule 6: Daemon root HTTP spans with /host/ path => Host -> Daemon
         if svc == "Daemon" and (not pid or pid not in index):
             if _HOST_PATH_RE.match(name):
-                edges.append(("Host", "Daemon", name, start, phase, tid, False))
+                edges.append(("Host", "Daemon", name, start, end, phase, tid, False))
                 continue
 
         # Rule 8: Railway root HTTP spans (browser parent not in traces) => Participant -> Railway
@@ -102,28 +105,31 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, str, str
             if (sid not in _railway_proxy_parents
                     and re.match(r"(GET|POST|PUT|DELETE|PATCH|HEAD) /\S", name)
                     and "/ws/" not in name):
-                edges.append(("Participant", "Railway", name, start, phase, tid, False))
+                edges.append(("Participant", "Railway", name, start, end, phase, tid, False))
                 continue
 
-        # Standard: cross-service parent->child edge
+        # Standard parent->child edge (Rule 5 disabled: same-service edges render
+        # as self-messages, e.g. step:download_via_railway under the check span).
         if not pid or pid not in index:
             continue
         parent = index[pid]
         from_svc = _service_name(parent)
         to_svc = _service_name(span)
-        if from_svc == to_svc:
-            continue  # Rule 5: skip internal spans
         label = name or "unknown"
-        edges.append((from_svc, to_svc, label, start, phase, tid, False))
+        edges.append((from_svc, to_svc, label, start, end, phase, tid, False))
     return edges
 
 
 def _collapse_proxy(edges: list[tuple]) -> list[tuple]:
-    """Rule 1: Railway->Daemon edges become Participant->Daemon (Railway is a proxy)."""
+    """Rule 1: Railway->Daemon edges become Participant->Daemon (Railway is a proxy).
+
+    The collapsed edge inherits the daemon span's start_time/end_time so the
+    activation bar reflects the daemon's actual work duration.
+    """
     result = []
     skip = set()
     for i, e in enumerate(edges):
-        f, t, label, ts, phase, tid, is_async = e
+        f, t, label, ts, end, phase, tid, is_async = e
         if i in skip:
             continue
         if t == "Railway" and label == "proxy_request":
@@ -131,13 +137,13 @@ def _collapse_proxy(edges: list[tuple]) -> list[tuple]:
                 e2 = edges[j]
                 if e2[0] == "Railway" and e2[1] == "Daemon":
                     source = "Participant" if f == "Railway" else f
-                    result.append((source, "Daemon", e2[2], ts, phase, tid, is_async))
+                    result.append((source, "Daemon", e2[2], e2[3], e2[4], phase, tid, is_async))
                     skip.add(j)
                     break
             else:
                 result.append(e)
         elif f == "Railway" and t == "Daemon":
-            result.append(("Participant", "Daemon", label, ts, phase, tid, is_async))
+            result.append(("Participant", "Daemon", label, ts, end, phase, tid, is_async))
         else:
             result.append(e)
     return result
@@ -155,7 +161,8 @@ def _collapse_broadcast(edges: list[tuple]) -> list[tuple]:
             for j in range(i + 1, len(edges)):
                 e2 = edges[j]
                 if e2[0] == "Railway" and e2[1] not in ("Daemon", "Railway"):
-                    result.append(("Daemon", e2[1], label, e[3], e[4], e[5], e[6]))
+                    # Preserve the original Daemon span timing (e[3], e[4]).
+                    result.append(("Daemon", e2[1], label, e[3], e[4], e[5], e[6], e[7]))
                     skip.add(j)
                     break
             else:
@@ -216,7 +223,7 @@ def generate_puml(traces_path: str, family: str, output: str,
         all_names = sorted(set(participant_names.values()))
         default_actor = f"Participant\\n{all_names[0]}" if len(all_names) == 1 else "Participant"
         named = []
-        for f, t, label, ts, phase, tid, is_async in edges:
+        for f, t, label, ts, end, phase, tid, is_async in edges:
             resolved = trace_to_name.get(tid)
             if resolved:
                 actor = f"Participant\\n{resolved}"
@@ -227,7 +234,7 @@ def generate_puml(traces_path: str, family: str, output: str,
             elif f == "Participant" and not is_async:
                 # Unresolved request from participant — use default
                 f = default_actor
-            named.append((f, t, label, ts, phase, tid, is_async))
+            named.append((f, t, label, ts, end, phase, tid, is_async))
         edges = named
         # Drop edges still referencing generic "Participant" — they're noise
         # (broadcasts to all, unresolvable proxy calls)
@@ -240,7 +247,7 @@ def generate_puml(traces_path: str, family: str, output: str,
     if scenarios:
         phased = []
         for e in edges:
-            f, t, label, ts, phase, tid, is_async = e
+            f, t, label, ts, end, phase, tid, is_async = e
             if not phase:
                 phase = ""
                 for sc in scenarios:
@@ -252,7 +259,7 @@ def generate_puml(traces_path: str, family: str, output: str,
                         break
                 if not phase:
                     phase = "given"  # unmatched = setup noise
-            phased.append((f, t, label, ts, phase, tid, is_async))
+            phased.append((f, t, label, ts, end, phase, tid, is_async))
         edges = phased
 
     # Collect actor names in canonical order
@@ -260,8 +267,9 @@ def generate_puml(traces_path: str, family: str, output: str,
     for e in edges:
         all_actors.add(e[0])
         all_actors.add(e[1])
-    # Named participants (Participant\nAlice) replace generic "Participant"
-    named_pax = sorted(a for a in all_actors if a.startswith("Participant\n"))
+    # Named participants ("Participant\\nAlice") use the literal two-character
+    # sequence backslash+n as PlantUML's line-break marker — match that prefix.
+    named_pax = sorted(a for a in all_actors if a.startswith("Participant\\n"))
     _CANONICAL_ORDER = ["Host"] + (named_pax or (["Participant"] if "Participant" in all_actors else [])) + ["Railway", "Daemon", "GDrive", "Addons"]
     participants = [p for p in _CANONICAL_ORDER if p in all_actors]
     for e in edges:
@@ -276,7 +284,7 @@ def generate_puml(traces_path: str, family: str, output: str,
     ]
 
     def _render_edge(e: tuple) -> str:
-        f, t, label, _ts, phase, tid, is_async = e
+        f, t, label, _ts, _end, phase, tid, is_async = e
         arrow = "-->" if is_async else "->"
         color = "[#gray]" if phase == "given" else ""
         # Append colored trace hash after label for visual correlation
@@ -287,6 +295,34 @@ def generate_puml(traces_path: str, family: str, output: str,
         else:
             trace_tag = ""
         return f'"{f}" {color}{arrow} "{t}": {label}{trace_tag}'
+
+    def _interleave_activations(edge_list: list[tuple], indent: str = "") -> list[str]:
+        """Render edges with activate/deactivate brackets per Rule 9.
+
+        Each non-async edge activates the destination service for its span's
+        lifespan (start_time → end_time). Activations are closed in end_time
+        order; OTel parent-child nesting guarantees this matches PlantUML's
+        per-actor LIFO stack semantics.
+        """
+        out: list[str] = []
+        active: list[tuple[int, str]] = []  # (end_time, service), end-time ascending
+        for edge in edge_list:
+            _f, t, _label, start, end, _phase, _tid, is_async = edge
+            while active and active[0][0] <= start:
+                _, svc = active.pop(0)
+                out.append(f'{indent}deactivate "{svc}"')
+            out.append(f"{indent}{_render_edge(edge)}")
+            if not is_async:
+                out.append(f'{indent}activate "{t}"')
+                # Insert preserving end_time ascending order
+                pos = 0
+                while pos < len(active) and active[pos][0] <= end:
+                    pos += 1
+                active.insert(pos, (end, t))
+        while active:
+            _, svc = active.pop(0)
+            out.append(f'{indent}deactivate "{svc}"')
+        return out
 
     lines = ["@startuml"]
     lines.append("hide footbox")
@@ -310,22 +346,18 @@ def generate_puml(traces_path: str, family: str, output: str,
                 continue
             lines.append(f'== {sc["name"]} ==')
             # Group Given-phase edges into a collapsed "init" block
-            given_edges = [e for e in sc_edges if e[4] == "given"]
-            when_edges = [e for e in sc_edges if e[4] != "given"]
+            given_edges = [e for e in sc_edges if e[5] == "given"]
+            when_edges = [e for e in sc_edges if e[5] != "given"]
             if given_edges and when_edges:
                 lines.append("group init")
-                for e in given_edges:
-                    lines.append(f"  {_render_edge(e)}")
+                lines.extend(_interleave_activations(given_edges, indent="  "))
                 lines.append("end")
-                for e in when_edges:
-                    lines.append(_render_edge(e))
+                lines.extend(_interleave_activations(when_edges))
             else:
-                for e in sc_edges:
-                    lines.append(_render_edge(e))
+                lines.extend(_interleave_activations(sc_edges))
             lines.append("")
     else:
-        for e in edges:
-            lines.append(_render_edge(e))
+        lines.extend(_interleave_activations(edges))
     lines.append("")
     lines.append("@enduml")
 

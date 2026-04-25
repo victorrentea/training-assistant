@@ -282,8 +282,11 @@ async def check_slide_cache(session_id: str, slug: str, force: bool = False):
     _broadcast_slides_updated()
 
     try:
-        result = await asyncio.to_thread(download_on_railway, slug, drive_export_url)
-        _mark_cache_status(slug, "cached", last_sha256=result.get("sha256", ""))
+        from opentelemetry import trace
+        tracer = trace.get_tracer("daemon.slides.router")
+        with tracer.start_as_current_span("step:download_via_railway"):
+            result = await asyncio.to_thread(download_on_railway, slug, drive_export_url)
+            _mark_cache_status(slug, "cached", last_sha256=result.get("sha256", ""))
         # Broadcast happens in ws_client when slide_log "download_slide_completed" arrives
         return SlidesCheckResponse(status="cached")
     except Exception as exc:

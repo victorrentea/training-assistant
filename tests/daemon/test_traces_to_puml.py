@@ -44,7 +44,12 @@ def test_basic_cross_service_arrows():
     assert "@enduml" in content
 
 
-def test_skip_internal_spans():
+def test_internal_spans_render_as_self_messages():
+    """Same-service parent->child spans render as self-messages (Daemon->Daemon).
+
+    Previously filtered by Rule 5; now kept so explicit step:* spans inside a
+    request can highlight an important sub-step (e.g. step:download_via_railway).
+    """
     from scripts.traces_to_puml import generate_puml
 
     with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
@@ -56,15 +61,17 @@ def test_skip_internal_spans():
                     start_time=1000, attributes={"trace.family": "test"}),
         _make_span("POST /api/poll", "Daemon", span_id="s2", parent_span_id="s1",
                     start_time=1001, attributes={"trace.family": "test"}),
-        _make_span("create_poll", "Daemon", span_id="s3", parent_span_id="s2",
+        _make_span("step:create_poll", "Daemon", span_id="s3", parent_span_id="s2",
                     start_time=1002, attributes={"trace.family": "test"}),
     ])
 
     generate_puml(path, family="test", output=out)
     content = Path(out).read_text()
 
-    assert "create_poll" not in content
+    assert "step:create_poll" in content
     assert "POST /api/poll" in content
+    # The internal span should appear as a Daemon-to-Daemon self-message
+    assert '"Daemon" -> "Daemon"' in content
 
 
 def test_collapse_proxy_chain():
@@ -283,3 +290,89 @@ def test_scenarios_parameter_colors_by_trace_id():
     assert "[#gray]" not in broadcast_line
     # Scenario separator should be present
     assert "== Open slide ==" in content
+
+
+def test_activations_emitted_for_synchronous_request():
+    """Each non-async edge emits activate/deactivate brackets for the destination.
+
+    The activation lifespan matches the underlying span (start_time → end_time),
+    so nested calls produce nested activation bars in the diagram.
+    """
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    # Outer Host->Daemon span (1000-5000) with a nested Daemon->Daemon
+    # step span (1500-4500) inside it.
+    _write_spans(path, [
+        _make_span("POST /api/{session_id}/host/poll", "Daemon", span_id="s1",
+                   start_time=1000, end_time=5000),
+        _make_span("step:create_poll", "Daemon", span_id="s2", parent_span_id="s1",
+                   start_time=1500, end_time=4500),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    # Use full-line matching to avoid 'activate' substring-matching 'deactivate'
+    activate_lines = [ln for ln in content.split("\n") if ln.strip() == 'activate "Daemon"']
+    deactivate_lines = [ln for ln in content.split("\n") if ln.strip() == 'deactivate "Daemon"']
+    assert len(activate_lines) == 2, f"expected 2 activations, got {activate_lines}"
+    assert len(deactivate_lines) == 2, f"expected 2 deactivations, got {deactivate_lines}"
+
+
+def test_async_edges_do_not_activate():
+    """Broadcast/notify_host edges are fire-and-forget — no activation bracket."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("broadcast:poll_opened", "Daemon", span_id="s1",
+                   start_time=1000, end_time=2000),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    assert "poll_opened" in content
+    assert 'activate "Participant"' not in content
+
+
+def test_named_participants_appear_in_canonical_position():
+    """Named participants (Participant\\nAlice) sit between Host and Railway."""
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("POST /api/{session_id}/host/poll", "Daemon", span_id="s1",
+                   start_time=1000, end_time=2000),
+        _make_span("GET /api/participant/state", "Participant",
+                   span_id="s2", trace_id="t-alice", start_time=1100, end_time=1200,
+                   attributes={"participant.id": "uuid-alice"}),
+        _make_span("GET /api/participant/state", "Daemon", span_id="s3",
+                   parent_span_id="s2", trace_id="t-alice",
+                   start_time=1101, end_time=1199),
+        _make_span("POST /api/slides/download-from-gdrive", "Railway",
+                   span_id="s4", parent_span_id="s1",
+                   start_time=1300, end_time=1900),
+    ])
+
+    generate_puml(path, family="", output=out,
+                  participant_names={"uuid-alice": "Alice"})
+    content = Path(out).read_text()
+
+    # Extract participant declarations in order
+    parts = [line for line in content.split("\n") if line.startswith("participant ")]
+    assert any("Host" in p for p in parts)
+    alice_idx = next(i for i, p in enumerate(parts) if "Alice" in p)
+    railway_idx = next(i for i, p in enumerate(parts) if "Railway" in p)
+    daemon_idx = next(i for i, p in enumerate(parts) if "Daemon" in p)
+    assert alice_idx < railway_idx < daemon_idx, f"order wrong: {parts}"
