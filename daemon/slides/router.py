@@ -307,3 +307,50 @@ async def list_slides(session_id: str):
     return SlidesListResponse(slides=_slides_with_embedded_cache_status())
 
 
+# ── Test endpoint ──────────────────────────────────────────────────────
+# Simulates the production PPTX-watcher path so hermetic tests can exercise
+# the full FileSystem → Daemon → Railway → GDrive flow without needing a
+# real .pptx file change. The daemon listens on localhost only, so leaving
+# this endpoint registered in production is harmless.
+
+class PptxUpdateDetectedRequest(BaseModel):
+    slug: str
+    session_id: str
+
+
+@participant_router.post("/test/pptx-update-detected")
+async def simulate_pptx_update_detected(req: PptxUpdateDetectedRequest):
+    """Test-only: simulate the daemon's PPTX watcher detecting a file change.
+
+    Mirrors what daemon/slides/upload.py::_notify_railway_invalidate does
+    in production after a real file change is observed and a fresh PDF
+    has been published to Drive: POST the slug + drive_export_url to
+    Railway's invalidate endpoint, which re-downloads from Drive and
+    pushes a slide_log message back over WS.
+    """
+    drive_export_url = misc_state.slides_catalog.get(req.slug, {}).get("drive_export_url", "")
+    if not drive_export_url:
+        return JSONResponse(
+            {"status": "error", "detail": f"slug {req.slug} not in catalog"},
+            status_code=404,
+        )
+    url = f"{_railway_base_url()}/api/{req.session_id}/api/slides/invalidate/{req.slug}"
+    body = json.dumps({"drive_export_url": drive_export_url}).encode()
+    request = urllib.request.Request(
+        url,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": _railway_auth_header(),
+        },
+        data=body,
+    )
+    await asyncio.to_thread(_invoke_railway_invalidate, request)
+    return {"status": "invalidate_requested", "slug": req.slug}
+
+
+def _invoke_railway_invalidate(request: urllib.request.Request) -> None:
+    with urllib.request.urlopen(request, timeout=10, context=_ssl_context()) as resp:
+        resp.read()
+
+

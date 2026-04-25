@@ -295,12 +295,12 @@ def test_slides_sequence_diagram_extraction():
         with ScenarioRunner(browser, "Host updates a slide") as sc:
             sc.participant().open_slide("architecture")  # cache it (Given)
             sc.when()
-            _, body = _api("GET", f"/{sc.session_id}/api/slides")
-            slides = json.loads(body).get("slides", [])
-            drive_url = next((s["drive_export_url"] for s in slides
-                              if s.get("slug") == "architecture"), "")
-            _api("POST", f"/api/{sc.session_id}/api/slides/invalidate/architecture",
-                 data={"drive_export_url": drive_url}, base_url=BASE,
+            # Hit the daemon's test endpoint (which mirrors the production
+            # PPTX-watcher path) so the trace shows
+            #   FileSystem -> Daemon -> Railway -> GDrive
+            # rather than skipping the daemon hop.
+            _api("POST", "/test/pptx-update-detected",
+                 data={"slug": "architecture", "session_id": sc.session_id},
                  actor="FileSystem")
             sc.participant()._page.wait_for_timeout(3000)
         scenarios.append(sc.result)

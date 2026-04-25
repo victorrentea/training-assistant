@@ -1,13 +1,13 @@
 @startuml
 hide footbox
 title Feature: Slides Catalog, Viewing, and Follow Mode
-caption <color:gray>Generated 2026-04-25 17:34</color>
+caption <color:gray>Generated 2026-04-25 17:59</color>
 
 participant "Host"
-participant "FileSystem"
 participant "Participant\nAlice"
 participant "Participant\nBob"
 participant "Daemon"
+participant "FileSystem"
 participant "Railway"
 participant "GDrive"
 
@@ -23,13 +23,13 @@ group init
   "Daemon" [#gray]--> "Host": participant_list_updated <color:#17BECF>[6]</color>
   deactivate "Daemon"
   "Participant\nAlice" [#gray]-> "Daemon": GET /api/participant/state <color:#BCBD22>[7]</color>
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#E377C2>[8]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#E377C2>[8]</color>
 end
-"Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#8C564B>[9]</color>
+"Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#E377C2>[8]</color>
 activate "Daemon"
-"Daemon" --> "Host": participant_list_updated <color:#8C564B>[9]</color>
+"Daemon" --> "Host": participant_list_updated <color:#E377C2>[8]</color>
 deactivate "Daemon"
+"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[9]</color>
+"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#8C564B>[9]</color>
 "Participant\nAlice" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#7F7F7F>[10]</color>
 activate "Daemon"
 "Daemon" --> "Participant\nAlice": decks_updated <color:#7F7F7F>[10]</color>
@@ -38,8 +38,8 @@ activate "Daemon"
 "Daemon" -> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#7F7F7F>[10]</color>
 activate "Railway"
 "Railway" -> "GDrive": GET clean-code.pdf <color:#7F7F7F>[10]</color>
-"Daemon" --> "Participant\nAlice": decks_updated <color:#7F7F7F>[10]</color>
 deactivate "Railway"
+"Daemon" --> "Participant\nAlice": decks_updated <color:#7F7F7F>[10]</color>
 deactivate "Daemon"
 deactivate "Daemon"
 
@@ -147,12 +147,15 @@ group init
   "Daemon" [#gray]-> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#FF7F0E>[54]</color>
   activate "Railway"
   "Railway" [#gray]-> "GDrive": GET architecture.pdf <color:#FF7F0E>[54]</color>
-  deactivate "Railway"
   "Daemon" [#gray]--> "Participant\nAlice": decks_updated <color:#FF7F0E>[54]</color>
+  deactivate "Railway"
   deactivate "Daemon"
   deactivate "Daemon"
 end
-"FileSystem" -> "Railway": POST /api/{session_id}/api/slides/invalidate/{slug} <color:#9467BD>[55]</color>
+"FileSystem" -> "Daemon": POST /test/pptx-update-detected <color:#9467BD>[55]</color>
+activate "Daemon"
+"Daemon" -> "Railway": POST /api/{session_id}/api/slides/invalidate/{slug} <color:#9467BD>[55]</color>
+deactivate "Daemon"
 "Railway" -> "GDrive": GET architecture.pdf <color:#9467BD>[55]</color>
 "Daemon" --> "Participant\nAlice": decks_updated <color:#9467BD>[55]</color>
 "Daemon" --> "Participant\nBob": decks_updated <color:#9467BD>[55]</color>

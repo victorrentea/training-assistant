@@ -95,8 +95,14 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, int, str
             edges.append(("Daemon", "Host", msg_type, start, end, phase, tid, True))
             continue
 
-        # Rule 6: Daemon root HTTP spans with /host/ path => Host -> Daemon
+        # Rule 6: Daemon root HTTP spans
+        # - X-Actor header (captured as "actor" attr) wins, e.g. FileSystem.
+        # - Otherwise, /host/ path patterns attribute to "Host".
         if svc == "Daemon" and (not pid or pid not in index):
+            actor_attr = (span.get("attributes", {}).get("actor") or "").strip()
+            if actor_attr:
+                edges.append((actor_attr, "Daemon", name, start, end, phase, tid, False))
+                continue
             if _HOST_PATH_RE.match(name):
                 edges.append(("Host", "Daemon", name, start, end, phase, tid, False))
                 continue
@@ -296,9 +302,9 @@ def generate_puml(traces_path: str, family: str, output: str,
     # sequence backslash+n as PlantUML's line-break marker — match that prefix.
     named_pax = sorted(a for a in all_actors if a.startswith("Participant\\n"))
     _CANONICAL_ORDER = (
-        ["Host", "FileSystem"]
+        ["Host"]
         + (named_pax or (["Participant"] if "Participant" in all_actors else []))
-        + ["Daemon", "Railway", "GDrive", "Addons"]
+        + ["Daemon", "FileSystem", "Railway", "GDrive", "Addons"]
     )
     participants = [p for p in _CANONICAL_ORDER if p in all_actors]
     for e in edges:
