@@ -39,11 +39,17 @@ def _load_spec() -> dict:
 
 
 def _collect_railway_routes() -> set[str]:
-    """Scan all Python files under railway/ and return the set of decorator paths."""
+    """Return the set of fully-mounted Railway route paths from the live app.
+
+    Using the live FastAPI app (rather than scanning decorators) means the
+    paths already include router prefixes (e.g. session_host /api/{session_id})
+    and we don't need fragile suffix matching.
+    """
+    from railway.app import app
     found: set[str] = set()
-    for py_file in sorted(RAILWAY_DIR.rglob("*.py")):
-        text = py_file.read_text(encoding="utf-8", errors="replace")
-        for _method, path in _ROUTE_RE.findall(text):
+    for route in app.routes:
+        path = getattr(route, "path", None)
+        if path:
             found.add(path)
     return found
 
@@ -87,27 +93,81 @@ class TestRailwayOpenApi:
         )
 
     def test_spec_paths_exist_in_railway_source(self, spec: dict, railway_routes: set[str]):
-        """Every path in the spec must match a @router.<method>() decorator in railway/."""
-        # Build a normalised set of known route paths for quick lookup
+        """Every path in the spec must correspond to a real Railway route."""
         normalised_routes = {_normalize_path_params(r) for r in railway_routes}
-
-        missing: list[str] = []
-        for path in sorted(spec.get("paths", {}).keys()):
-            normalised_path = _normalize_path_params(path)
-
-            # Accept either an exact match or a suffix match (router prefix cases)
-            found = (
-                normalised_path in normalised_routes
-                or any(
-                    route == normalised_path or route.endswith(normalised_path)
-                    for route in normalised_routes
-                )
-            )
-            if not found:
-                missing.append(f"  {path}  (normalised: {normalised_path})")
-
+        missing = sorted(
+            f"  {path}"
+            for path in spec.get("paths", {}).keys()
+            if _normalize_path_params(path) not in normalised_routes
+        )
         assert not missing, (
-            "Spec paths NOT found as route decorators in railway/ source:\n"
+            "Spec paths NOT found in the live Railway app:\n"
             + "\n".join(missing)
-            + "\n\nEither add the missing route to railway/ or remove the stale entry from docs/railway-openapi.yaml."
+            + "\n\nRemove the stale entries from docs/railway-openapi.yaml."
+        )
+
+    def test_every_host_auth_route_documented(self, spec: dict):
+        """Every Railway route guarded by require_host_auth (i.e. callable by
+        the daemon over HTTP Basic) must be documented in railway-openapi.yaml.
+
+        Catches the silent drift the previous reverse-only check missed —
+        e.g. POST /api/{session_id}/api/slides/invalidate/{slug} existed in
+        the code for months without a contract entry, so it never made it
+        into API.md.
+        """
+        # Routes that are intentionally NOT in the JSON REST contract.
+        # Each entry must justify why the contract doesn't apply.
+        non_rest_routes: dict[tuple[str, str], str] = {
+            ("GET", "/host"):
+                "HTML page (host dashboard); not a JSON REST endpoint.",
+            ("GET", "/host/{param}"):
+                "HTML page (session-scoped host dashboard); not a JSON REST endpoint.",
+            ("GET", "/metrics"):
+                "Prometheus metrics endpoint (text/plain); not part of the daemon-Railway REST contract.",
+        }
+
+        from railway.app import app
+        from railway.shared.auth import require_host_auth
+
+        def _route_uses_dep(route, target) -> bool:
+            dep = getattr(route, "dependant", None)
+            if dep is None:
+                return False
+            stack = [dep]
+            while stack:
+                d = stack.pop()
+                if getattr(d, "call", None) is target:
+                    return True
+                stack.extend(getattr(d, "dependencies", []) or [])
+            return False
+
+        spec_paths: set[tuple[str, str]] = set()
+        for path, methods in spec.get("paths", {}).items():
+            for method in methods:
+                if method.lower() in _HTTP_METHODS:
+                    spec_paths.add((method.upper(), _normalize_path_params(path)))
+
+        live_host_auth: set[tuple[str, str]] = set()
+        for route in app.routes:
+            methods = getattr(route, "methods", None) or set()
+            path = getattr(route, "path", None)
+            if not path:
+                continue
+            if not _route_uses_dep(route, require_host_auth):
+                continue
+            for method in methods:
+                if method.upper() in {m.upper() for m in _HTTP_METHODS}:
+                    live_host_auth.add((method.upper(), _normalize_path_params(path)))
+
+        missing = sorted(
+            (m, p) for m, p in (live_host_auth - spec_paths)
+            if (m, p) not in non_rest_routes
+        )
+        assert not missing, (
+            "Host-auth Railway routes NOT documented in docs/railway-openapi.yaml:\n"
+            + "\n".join(f"  {m} {p}" for m, p in missing)
+            + "\n\nAdd each missing operation to docs/railway-openapi.yaml so the"
+            " daemon↔Railway contract stays exhaustive."
+            "\nFor genuinely non-REST endpoints (HTML pages, metrics, etc.) add an"
+            f" entry to the non_rest_routes allow-list in {__file__} with a justification."
         )

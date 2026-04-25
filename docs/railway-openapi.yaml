@@ -26,6 +26,96 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActiveSessionResponse'
       x-feature: session_management
+  /api/session/start:
+    post:
+      tags:
+      - session
+      summary: Generate a new session_id (test bootstrap)
+      description: >
+        Used by hermetic test setup when the daemon is not running.
+        Generates a fresh session_id on Railway directly. Production sessions
+        are created on the daemon, not here.
+      operationId: session_start
+      security:
+      - basicAuth: []
+      responses:
+        '200':
+          description: Generated session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionStartResponse'
+      x-feature: session_management
+  /api/slides/upload:
+    post:
+      tags:
+      - slides
+      summary: Upload a slide PDF directly to Railway
+      description: >
+        Multipart upload (file + optional slug + optional name) used by the
+        host UI to add a slide deck without going through Google Drive. Stored
+        in the runtime "uploaded slides" directory and broadcast via
+        decks_updated.
+      operationId: upload_slide_pdf
+      security:
+      - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadSlidePdfRequest'
+      responses:
+        '200':
+          description: Upload accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSlidePdfResponse'
+        '400':
+          description: Bad request (non-PDF, empty body, etc.)
+      x-feature: slides
+  /api/{session_id}/api/slides/invalidate/{slug}:
+    post:
+      tags:
+      - slides
+      summary: Invalidate cached PDF and re-download from Drive
+      description: >
+        Daemon's PPTX watcher calls this after detecting a .pptx file change
+        and confirming Drive has the updated PDF. Railway deletes the old
+        cached file, marks status=stale, then spawns a background task to
+        re-download from Drive. On completion broadcasts decks_updated so
+        connected participants auto-reload the active slide.
+      operationId: invalidate_slide
+      security:
+      - basicAuth: []
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlideInvalidateRequest'
+      responses:
+        '200':
+          description: Invalidation queued (download runs async)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlideInvalidateResponse'
+        '422':
+          description: drive_export_url not provided and not in Railway state
+      x-feature: slides
   /api/slides/download-from-gdrive/{slug}:
     post:
       tags:
@@ -63,7 +153,7 @@ paths:
         '502':
           description: Google Drive download failed
       x-feature: slides
-  /upload/{file_id}:
+  /api/{session_id}/upload/{file_id}:
     get:
       tags:
       - upload
@@ -76,6 +166,11 @@ paths:
       security:
       - basicAuth: []
       parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
       - name: file_id
         in: path
         required: true
@@ -93,7 +188,7 @@ paths:
         '404':
           description: File not found or content missing
       x-feature: paste_upload
-  /upload/{file_id}/ack:
+  /api/{session_id}/upload/{file_id}/ack:
     post:
       tags:
       - upload
@@ -105,6 +200,11 @@ paths:
       security:
       - basicAuth: []
       parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
       - name: file_id
         in: path
         required: true
@@ -130,6 +230,62 @@ paths:
         '404':
           description: File not found
       x-feature: paste_upload
+  /internal/upload-static:
+    post:
+      tags:
+      - infrastructure
+      summary: Upload a static asset to Railway
+      description: >
+        Daemon pushes a static file (HTML/JS/CSS/etc.) into Railway's static/
+        directory so the latest UI can serve from production without a full
+        Railway redeploy. Path is validated against an allow-list of file
+        extensions and traversal-safe.
+      operationId: upload_static
+      security:
+      - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadStaticRequest'
+      responses:
+        '200':
+          description: File written
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadStaticResponse'
+        '400':
+          description: Invalid path / extension / oversized payload
+      x-feature: infrastructure
+  /internal/delete-static:
+    post:
+      tags:
+      - infrastructure
+      summary: Delete a static asset from Railway
+      description: >
+        Counterpart to /internal/upload-static. Used by the daemon to remove
+        files no longer in the source tree.
+      operationId: delete_static
+      security:
+      - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteStaticRequest'
+      responses:
+        '200':
+          description: File deleted (or already absent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteStaticResponse'
+        '400':
+          description: Invalid path / extension
+      x-feature: infrastructure
 components:
   securitySchemes:
     basicAuth:
@@ -181,3 +337,99 @@ components:
           description: Absolute local path where the daemon saved the file.
       required:
       - disk_path
+    SessionStartResponse:
+      type: object
+      properties:
+        session_id:
+          type: string
+      required:
+      - session_id
+    SlideInvalidateRequest:
+      type: object
+      properties:
+        drive_export_url:
+          type: string
+          description: >
+            Google Drive PDF export URL for the deck. Optional — if omitted
+            Railway falls back to whatever URL it last knew for this slug.
+      required: []
+    SlideInvalidateResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Always "invalidating"; the actual download runs async.
+        slug:
+          type: string
+      required:
+      - status
+      - slug
+    UploadSlidePdfRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: PDF file to upload.
+        slug:
+          type: string
+          description: Optional slug; derived from filename when omitted.
+        name:
+          type: string
+          description: Optional display name; derived from filename when omitted.
+      required:
+      - file
+    UploadSlidePdfResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        slide:
+          type: object
+          description: Resulting slide entry (slug, name, url, updated_at, source).
+      required:
+      - ok
+      - slide
+    UploadStaticRequest:
+      type: object
+      properties:
+        path:
+          type: string
+          description: Path under static/ where the file should be written.
+        content_b64:
+          type: string
+          description: Base64-encoded file content (max 20MB decoded).
+      required:
+      - path
+      - content_b64
+    UploadStaticResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+      required:
+      - status
+      - path
+      - size
+    DeleteStaticRequest:
+      type: object
+      properties:
+        path:
+          type: string
+      required:
+      - path
+    DeleteStaticResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        action:
+          type: string
+          description: '"deleted" or "not_found".'
+      required:
+      - status
+      - action

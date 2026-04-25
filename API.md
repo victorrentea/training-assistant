@@ -42,6 +42,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Active Session ID, daemon calls on startup to discover if a session is already active on Railway; returns the current session_id or null if no session is active.<br>`GET /api/session/active` | - | `session_id: any  # Current active session ID, or null if no session is active.` |
+| Generate a new session_id (test bootstrap), used by hermetic test setup when the daemon is not running; generates a fresh session_id on Railway directly; production sessions are created on the daemon, not here.<br>`POST /api/session/start` | - | `session_id: string` |
 
 ### Railway WS
 | Message | Payload |
@@ -131,6 +132,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Download Slide PDF from Google Drive, daemon asks Railway to fetch a PDF export from Google Drive and cache it locally on Railway; railway downloads the file, caches it, and returns the SHA-256 hash so the daemon can detect content changes.<br>`POST /api/slides/download-from-gdrive/{slug}` | `drive_export_url: string  # Google Drive PDF export URL for the slide deck.` | `status: string  # Always "cached" on success.`<br>`sha256: string  # SHA-256 hex digest of the cached PDF file.`<br>`size: int  # File size in bytes.` |
+| Upload a slide PDF directly to Railway, multipart upload (file + optional slug + optional name) used by the host UI to add a slide deck without going through Google Drive; stored in the runtime "uploaded slides" directory and broadcast via decks_updated.<br>`POST /api/slides/upload` | `file: string  # PDF file to upload.`<br>`slug?: string  # Optional slug; derived from filename when omitted.`<br>`name?: string  # Optional display name; derived from filename when omitted.` | `ok: bool`<br>`slide: dict  # Resulting slide entry (slug, name, url, updated_at, source).` |
+| Invalidate cached PDF and re-download from Drive, daemon's PPTX watcher calls this after detecting a .pptx file change and confirming Drive has the updated PDF; railway deletes the old cached file, marks status=stale, then spawns a background task to re-download from Drive; on completion broadcasts decks_updated so connected participants auto-reload the active slide.<br>`POST /api/{session_id}/api/slides/invalidate/{slug}` | `drive_export_url?: string  # Google Drive PDF export URL for the deck. Optional — if omitted Railway falls back to whatever URL it last knew for this slug.` | `status: string  # Always "invalidating"; the actual download runs async.`<br>`slug: string` |
 
 ### Railway WS
 | Message | Payload |
@@ -364,8 +367,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Download Uploaded File, daemon downloads a participant-uploaded file from Railway's temporary storage; called after Railway notifies the daemon via WebSocket that a new file is ready for download.<br>`GET /upload/{file_id}` | - | `application/octet-stream: string` |
-| Acknowledge File Download, daemon confirms it has downloaded and persisted the file to local disk; railway deletes its temporary copy upon receiving this acknowledgement.<br>`POST /upload/{file_id}/ack` | `disk_path: string  # Absolute local path where the daemon saved the file.` | `ok?: bool` |
+| Download Uploaded File, daemon downloads a participant-uploaded file from Railway's temporary storage; called after Railway notifies the daemon via WebSocket that a new file is ready for download.<br>`GET /api/{session_id}/upload/{file_id}` | - | `application/octet-stream: string` |
+| Acknowledge File Download, daemon confirms it has downloaded and persisted the file to local disk; railway deletes its temporary copy upon receiving this acknowledgement.<br>`POST /api/{session_id}/upload/{file_id}/ack` | `disk_path: string  # Absolute local path where the daemon saved the file.` | `ok?: bool` |
 
 ### Railway WS
 | Message | Payload |
@@ -425,6 +428,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Daemon synced static files — browser should reload<br>Host client should trigger full page reload to pick up new static assets.<br>`reload` | - |
 
 ## Feature: Infrastructure
+
+### Railway REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Delete a static asset from Railway, counterpart to /internal/upload-static; used by the daemon to remove files no longer in the source tree.<br>`POST /internal/delete-static` | `path: string` | `status: string`<br>`action: string  # "deleted" or "not_found".` |
+| Upload a static asset to Railway, daemon pushes a static file (HTML/JS/CSS/etc.) into Railway's static/ directory so the latest UI can serve from production without a full Railway redeploy; path is validated against an allow-list of file extensions and traversal-safe.<br>`POST /internal/upload-static` | `path: string  # Path under static/ where the file should be written.`<br>`content_b64: string  # Base64-encoded file content (max 20MB decoded).` | `status: string`<br>`path: string`<br>`size: int` |
 
 ### Railway WS
 | Message | Payload |
