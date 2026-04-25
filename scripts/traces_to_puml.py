@@ -101,14 +101,23 @@ def _extract_edges(spans: list[dict]) -> list[tuple[str, str, str, int, int, str
                 edges.append(("Host", "Daemon", name, start, end, phase, tid, False))
                 continue
 
-        # Rule 8: Railway root HTTP spans (browser parent not in traces) => Participant -> Railway
-        # Skip proxy parents (they have children and are handled by _collapse_proxy).
+        # Rule 8: Railway root HTTP spans (browser parent not in traces) => <actor> -> Railway.
+        # If the request carried an X-Actor header (captured as the "actor" span
+        # attribute, e.g. "FileSystem" for daemon-watcher-triggered invalidates),
+        # use it as the source. Without an explicit actor we fall back to the
+        # generic "Participant" placeholder and skip proxy parents (those have
+        # non-Railway children and are handled by _collapse_proxy). When actor
+        # IS set we emit the edge regardless of proxy-parent status, since the
+        # endpoint really did originate from that actor and the user wants to
+        # see the trigger arrow even if Railway also calls back into the daemon.
         if svc == "Railway" and (not pid or pid not in index):
             sid = _span_id(span)
-            if (sid not in _railway_proxy_parents
-                    and re.match(r"(GET|POST|PUT|DELETE|PATCH|HEAD) /\S", name)
-                    and "/ws/" not in name):
-                edges.append(("Participant", "Railway", name, start, end, phase, tid, False))
+            actor_attr = (span.get("attributes", {}).get("actor") or "").strip()
+            if (re.match(r"(GET|POST|PUT|DELETE|PATCH|HEAD) /\S", name)
+                    and "/ws/" not in name
+                    and (actor_attr or sid not in _railway_proxy_parents)):
+                actor = actor_attr or "Participant"
+                edges.append((actor, "Railway", name, start, end, phase, tid, False))
                 continue
 
         # Standard parent->child edge.
@@ -286,7 +295,11 @@ def generate_puml(traces_path: str, family: str, output: str,
     # Named participants ("Participant\\nAlice") use the literal two-character
     # sequence backslash+n as PlantUML's line-break marker — match that prefix.
     named_pax = sorted(a for a in all_actors if a.startswith("Participant\\n"))
-    _CANONICAL_ORDER = ["Host"] + (named_pax or (["Participant"] if "Participant" in all_actors else [])) + ["Daemon", "Railway", "GDrive", "Addons"]
+    _CANONICAL_ORDER = (
+        ["Host", "FileSystem"]
+        + (named_pax or (["Participant"] if "Participant" in all_actors else []))
+        + ["Daemon", "Railway", "GDrive", "Addons"]
+    )
     participants = [p for p in _CANONICAL_ORDER if p in all_actors]
     for e in edges:
         for p in (e[0], e[1]):

@@ -31,12 +31,22 @@ def setup_tracing():
 
 
 def _server_request_hook(span, scope):
-    """Capture X-Participant-ID from request headers as a span attribute."""
+    """Capture diagram-attribution headers as span attributes.
+
+    - X-Participant-ID → participant.id (used to map traces to a named
+      participant in extracted sequence diagrams).
+    - X-Actor → actor (used by traces_to_puml.py Rule 8 to label the
+      originating actor of an otherwise rootless Railway request, e.g.
+      "FileSystem" when the daemon's PPTX watcher invalidates a slide).
+    """
     if span and span.is_recording():
         headers = dict(scope.get("headers", []))
         pid = headers.get(b"x-participant-id", b"").decode()
         if pid:
             span.set_attribute("participant.id", pid)
+        actor = headers.get(b"x-actor", b"").decode().strip()
+        if actor:
+            span.set_attribute("actor", actor)
 
 
 def instrument_fastapi_app(app):

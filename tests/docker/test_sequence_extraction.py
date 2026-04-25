@@ -36,12 +36,19 @@ def _auth_header() -> str:
     return base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
 
 
-def _api(method, path, data=None, base_url=None):
+def _api(method, path, data=None, base_url=None, actor=None):
     target = base_url or DAEMON_BASE
     body = json.dumps(data).encode() if data else (b"" if method in ("POST", "PUT") else None)
+    headers = {"Authorization": f"Basic {_auth_header()}", "Content-Type": "application/json"}
+    if actor:
+        # Captured as the "actor" span attribute by FastAPI's request hook;
+        # used by traces_to_puml.py to label the originating actor on
+        # otherwise-rootless Railway requests (e.g. "FileSystem" for the
+        # daemon's PPTX-watcher-driven invalidate flow).
+        headers["X-Actor"] = actor
     req = urllib.request.Request(
         f"{target}{path}", method=method,
-        headers={"Authorization": f"Basic {_auth_header()}", "Content-Type": "application/json"},
+        headers=headers,
         data=body,
     )
     if method in ("POST", "PUT") and data is None:
@@ -293,7 +300,8 @@ def test_slides_sequence_diagram_extraction():
             drive_url = next((s["drive_export_url"] for s in slides
                               if s.get("slug") == "architecture"), "")
             _api("POST", f"/api/{sc.session_id}/api/slides/invalidate/architecture",
-                 data={"drive_export_url": drive_url}, base_url=BASE)
+                 data={"drive_export_url": drive_url}, base_url=BASE,
+                 actor="FileSystem")
             sc.participant()._page.wait_for_timeout(3000)
         scenarios.append(sc.result)
         all_participant_names.update(sc.uuid_to_name)

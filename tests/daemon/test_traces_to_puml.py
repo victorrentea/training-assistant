@@ -323,6 +323,32 @@ def test_activations_emitted_only_when_span_has_follow_up_arrows():
     assert len(deactivate_lines) == 1, f"expected 1 deactivation, got {deactivate_lines}"
 
 
+def test_actor_attribute_overrides_participant_source():
+    """Railway root spans with an "actor" attribute use that as the source.
+
+    Set by the FastAPI request hook from the X-Actor header — lets the
+    daemon's PPTX-watcher invalidate flow render as FileSystem -> Railway
+    instead of being dropped as an unattributed "Participant" call.
+    """
+    from scripts.traces_to_puml import generate_puml
+
+    with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
+        path = f.name
+    out = path + ".puml"
+
+    _write_spans(path, [
+        _make_span("POST /api/{session_id}/api/slides/invalidate/{slug}", "Railway",
+                   span_id="s1", start_time=1000, end_time=2000,
+                   attributes={"actor": "FileSystem"}),
+    ])
+
+    generate_puml(path, family="", output=out)
+    content = Path(out).read_text()
+
+    assert '"FileSystem" -> "Railway"' in content
+    assert '"Participant" -> "Railway"' not in content
+
+
 def test_no_activation_for_leaf_request():
     """A non-async edge with no follow-up arrows is rendered without an
     activation bracket — the participant lifeline stays unbracketed."""
