@@ -2044,17 +2044,21 @@ async function _refreshParticipantState() {
       LS.setSessionId(_sessionId);
     }
 
-    // Register or rejoin
+    // Register or rejoin. ?as=Alice in the URL pre-seeds the desired name
+    // so first-visit registration is one server round-trip (register-with-name)
+    // instead of register → auto-LotR-name → rename. Used by the hermetic
+    // sequence-extraction tests; harmless for normal users.
+    var _asName = (new URLSearchParams(location.search)).get('as') || '';
     var identity = null;
     if (_isFirstVisit) {
-      var regResp = await _registerRailway({});
+      var regResp = await _registerRailway(_asName ? { name: _asName } : {});
       if (regResp.ok) identity = await regResp.json();
     } else {
       var rejoinResp = await _rejoinRailway();
       if (rejoinResp.status === 200) {
         identity = await rejoinResp.json();
       } else {
-        var regResp2 = await _registerRailway({});
+        var regResp2 = await _registerRailway(_asName ? { name: _asName } : {});
         if (regResp2.ok) identity = await regResp2.json();
       }
     }

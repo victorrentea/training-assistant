@@ -5,6 +5,7 @@ Feature: Q&A with Upvoting
   Background:
     Given a fresh session
 
+  @seq
   Scenario: Submit question and host sees it
     Given the host has opened the Q&A tab
     And a participant joins as "Alice"
@@ -12,6 +13,7 @@ Feature: Q&A with Upvoting
     Then the host sees a question containing "dependency injection"
     And the question has 0 upvotes
 
+  @seq
   Scenario: Upvoting and sort order
     Given the host has opened the Q&A tab
     And 3 participants have joined
@@ -26,6 +28,7 @@ Feature: Q&A with Upvoting
     And question "Gamma" has 0 upvotes
     And questions are sorted by upvotes descending
 
+  @seq
   Scenario: Late joiner sees existing Q&A
     Given the host has opened the Q&A tab
     And a participant joins as "EarlyBird"

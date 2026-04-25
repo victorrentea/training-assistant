@@ -125,7 +125,12 @@ class ScenarioRunner:
             ctx = self._browser.new_context()
             self._contexts.append(ctx)
             page = ctx.new_page()
-            page.goto(f"{BASE}/{self.session_id}", wait_until="networkidle")
+            # ?as=NAME makes the page register with the name in one shot,
+            # so the diagram shows POST /register only (no follow-up
+            # PUT /name). Diagrams stay focused on real workshop traffic
+            # rather than the dev shorthand of "join then rename".
+            from urllib.parse import quote
+            page.goto(f"{BASE}/{self.session_id}?as={quote(name)}", wait_until="networkidle")
             pax = ParticipantPage(page)
             pax.join(name)
             self._participants[name] = pax
@@ -344,9 +349,11 @@ def test_slides_sequence_diagram_extraction():
         all_participant_names.update(sc.uuid_to_name)
 
         # Scenario 4: Host updates a slide (invalidation → re-download)
+        # Per the Gherkin scenario, both "Alice opens slide" and "host updates"
+        # are When steps — so when() comes BEFORE the open_slide call.
         with ScenarioRunner(browser, name_host_updates) as sc:
-            sc.participant().open_slide("architecture")  # cache it (Given)
             sc.when()
+            sc.participant().open_slide("architecture")
             # Hit the daemon's test endpoint (which mirrors the production
             # PPTX-watcher path) so the trace shows
             #   FileSystem -> Daemon -> Railway -> GDrive
@@ -377,5 +384,5 @@ def test_slides_sequence_diagram_extraction():
     assert "@startuml" in generated and "->" in generated
     assert f"== {name_opens_slide} ==" in generated
     assert f"== {name_host_updates} ==" in generated
-    assert "group init" in generated
+    assert "group #F5F5F5 init" in generated
     print("SUCCESS: Slides sequence diagram with 4 scenarios")

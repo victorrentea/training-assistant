@@ -28,12 +28,16 @@ class ParticipantPage:
 
     def join(self, name: str) -> None:
         """Join session with a given name.
-        Participants auto-join with a LotR name, so wait for main screen,
-        then rename via inline edit."""
-        # Wait for auto-join to complete
+
+        Prefers single-shot register-with-name when the page was loaded with
+        ?as=NAME (the seq-extraction harness does this). Falls back to the
+        auto-join + rename flow otherwise.
+        """
         expect(self._page.locator("#display-name")).to_be_visible(timeout=10000)
-        # Rename via inline edit
         expect(self._page.locator("#display-name .display-name-text")).not_to_be_empty(timeout=3000)
+        current = (self._page.locator("#display-name .display-name-text").inner_text() or "").strip()
+        if current == name:
+            return  # already joined under this name via ?as=
         self.rename(name)
 
     def rename(self, name: str) -> None:

@@ -457,7 +457,9 @@ def generate_puml(traces_path: str, family: str, output: str,
             given_edges = [e for e in sc_edges if e[5] == "given"]
             when_edges = [e for e in sc_edges if e[5] != "given"]
             if given_edges and when_edges:
-                lines.append("group init")
+                # Very light gray group fill so the setup section visually
+                # recedes against the When/Then phase.
+                lines.append("group #F5F5F5 init")
                 lines.extend(_interleave_activations(given_edges, indent="  "))
                 lines.append("end")
                 lines.extend(_interleave_activations(when_edges))
