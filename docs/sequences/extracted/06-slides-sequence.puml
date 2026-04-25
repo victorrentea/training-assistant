@@ -1,13 +1,13 @@
 @startuml
 hide footbox
 title Feature: Slides Catalog, Viewing, and Follow Mode
-caption <color:gray>Generated 2026-04-25 10:28</color>
+caption <color:gray>Generated 2026-04-25 10:35</color>
 
 participant "Host"
 participant "Participant\nAlice"
 participant "Participant\nBob"
-participant "Railway"
 participant "Daemon"
+participant "Railway"
 participant "GDrive"
 
 == Participant opens a slide ==

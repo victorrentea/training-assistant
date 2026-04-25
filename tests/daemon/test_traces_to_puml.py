@@ -344,7 +344,7 @@ def test_async_edges_do_not_activate():
 
 
 def test_named_participants_appear_in_canonical_position():
-    """Named participants (Participant\\nAlice) sit between Host and Railway."""
+    """Canonical order: Host, named participants, Daemon, Railway, GDrive, Addons."""
     from scripts.traces_to_puml import generate_puml
 
     with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
@@ -375,4 +375,4 @@ def test_named_participants_appear_in_canonical_position():
     alice_idx = next(i for i, p in enumerate(parts) if "Alice" in p)
     railway_idx = next(i for i, p in enumerate(parts) if "Railway" in p)
     daemon_idx = next(i for i, p in enumerate(parts) if "Daemon" in p)
-    assert alice_idx < railway_idx < daemon_idx, f"order wrong: {parts}"
+    assert alice_idx < daemon_idx < railway_idx, f"order wrong: {parts}"

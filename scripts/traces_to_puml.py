@@ -286,7 +286,7 @@ def generate_puml(traces_path: str, family: str, output: str,
     # Named participants ("Participant\\nAlice") use the literal two-character
     # sequence backslash+n as PlantUML's line-break marker — match that prefix.
     named_pax = sorted(a for a in all_actors if a.startswith("Participant\\n"))
-    _CANONICAL_ORDER = ["Host"] + (named_pax or (["Participant"] if "Participant" in all_actors else [])) + ["Railway", "Daemon", "GDrive", "Addons"]
+    _CANONICAL_ORDER = ["Host"] + (named_pax or (["Participant"] if "Participant" in all_actors else [])) + ["Daemon", "Railway", "GDrive", "Addons"]
     participants = [p for p in _CANONICAL_ORDER if p in all_actors]
     for e in edges:
         for p in (e[0], e[1]):
