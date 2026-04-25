@@ -19,21 +19,18 @@ class HostPage:
         import json as _json
         # Ensure Poll tab is active and activity set on daemon (awaited via JS)
         self._page.evaluate("async () => { await switchTab('poll'); }")
-        # Build proper dict options {id, text} as daemon expects
-        dict_options = [{"id": chr(65 + i), "text": t} for i, t in enumerate(options)]
-        payload: dict = {"question": question, "options": dict_options, "multi": multi}
+        # Daemon CreatePollRequest expects options as a list of strings.
+        payload: dict = {"question": question, "options": list(options), "multi": multi}
         if correct_count is not None:
             payload["correct_count"] = correct_count
-        # Use JS fetch to POST to daemon API — page already has SESSION_ID and API() helper
+        # POST /poll/manual/submit auto-opens the poll on the daemon side.
         self._page.evaluate(f"""async () => {{
-            const resp = await fetch(API('/poll'), {{
+            const resp = await fetch(API('/poll/manual/submit'), {{
                 method: 'POST',
                 headers: {{'Content-Type': 'application/json'}},
                 body: JSON.stringify({_json.dumps(payload)})
             }});
             if (!resp.ok) throw new Error('Poll create failed: ' + resp.status);
-            const open_resp = await fetch(API('/poll/open'), {{ method: 'POST' }});
-            if (!open_resp.ok) throw new Error('Poll open failed: ' + open_resp.status);
         }}""")
         # Wait for poll to be created & opened (poll-question appears in DOM)
         self._page.wait_for_selector("#poll-display.voting-active", timeout=5000)
@@ -45,11 +42,18 @@ class HostPage:
         self._page.fill("#quiz-topic", text)
 
     def close_poll(self) -> None:
-        # Close poll via daemon REST API (same pattern as create_poll/open_poll)
-        # Avoids flakiness from DOM button visibility depending on activeTimer state
+        # Close poll via daemon REST API and force a re-fetch so per-option vote
+        # counts are reflected on the host UI (the vote_update WS message only
+        # carries the total, not the per-option breakdown).
+        # The 250 ms settle gives any in-flight participant votes time to land
+        # on the daemon before we fetch — castVote() on the participant is
+        # fire-and-forget, so the local "Vote registered" toast appears before
+        # the server has acked.
         self._page.evaluate("""async () => {
-            const resp = await fetch(API('/poll/close'), { method: 'POST' });
+            const resp = await fetch(API('/poll/end'), { method: 'POST' });
             if (!resp.ok) throw new Error('Poll close failed: ' + resp.status);
+            await new Promise(r => setTimeout(r, 250));
+            if (typeof fetchPollState === 'function') await fetchPollState();
         }""")
         # Poll closed: #poll-display no longer has .voting-active
         self._page.wait_for_function(
@@ -78,13 +82,19 @@ class HostPage:
             self._page.locator(f".result-row:has-text('{text}')").click()
 
     def reveal_correct(self, correct_ids: list[str]) -> None:
-        """Reveal correct answers and award scores via daemon API."""
+        """Reveal correct answers and award scores via daemon API.
+
+        Accepts letter IDs ("A", "B", ...) for backwards compatibility with
+        existing tests; the daemon's PUT /poll/correct now expects integer
+        indices, so we convert here.
+        """
         import json as _json
+        indices = [ord(s) - 65 for s in correct_ids]
         self._page.evaluate(f"""async () => {{
             const resp = await fetch(API('/poll/correct'), {{
                 method: 'PUT',
                 headers: {{'Content-Type': 'application/json'}},
-                body: JSON.stringify({{correct_ids: {_json.dumps(correct_ids)}}})
+                body: JSON.stringify({{correct_indices: {_json.dumps(indices)}}})
             }});
             if (!resp.ok) throw new Error('Reveal correct failed: ' + resp.status);
         }}""")
@@ -253,6 +263,26 @@ class HostPage:
                 if pct_text and int(pct_text) > 0:
                     result[i + 1] = int(pct_text)
         return result
+
+    def get_vote_count_for(self, option_text: str) -> int:
+        """Read the live vote count shown on the host poll result row for an option."""
+        row = self._page.locator(f".result-row:has-text('{option_text}')")
+        if row.count() == 0:
+            return 0
+        return int(row.first.locator(".pct").inner_text().strip() or "0")
+
+    def get_voted_count(self) -> int:
+        """Return how many participants have voted (live indicator while poll is open).
+
+        Reads the #vote-progress-label which is rendered as 'N of M voted'.
+        Returns 0 when the poll is closed (label not present).
+        """
+        import re as _re
+        label = self._page.locator("#vote-progress-label")
+        if label.count() == 0 or not label.is_visible():
+            return 0
+        m = _re.match(r"(\d+) of", label.inner_text().strip())
+        return int(m.group(1)) if m else 0
 
     def get_participant_scores(self) -> dict[str, int]:
         """Return {name: score} from the participant list."""

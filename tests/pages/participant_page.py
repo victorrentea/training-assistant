@@ -166,7 +166,7 @@ class ParticipantPage:
 
     def get_score(self) -> int:
         """Read displayed score, return 0 if hidden. Format: '⭐ X pts'."""
-        el = self._page.locator("#my-score")
+        el = self._page.locator("#activity-score-badge")
         if not el.is_visible():
             return 0
         text = el.inner_text().strip()

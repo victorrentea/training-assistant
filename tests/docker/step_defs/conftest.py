@@ -130,13 +130,13 @@ def _scenario_has_seq_tag(scenario) -> bool:
 def _capture_participant_uuids() -> None:
     """Read participant UUIDs from page localStorage into the session map.
 
-    Step-def modules register live ParticipantPage objects in module-level
-    `_participants` dicts. We harvest UUID→name mappings while the pages
-    are still alive (i.e. during after-scenario, before browser teardown).
+    Any step-def module may expose a module-level `_participants` dict that maps
+    name → ParticipantPage. We harvest UUID→name mappings from every such
+    module while the pages are still alive (i.e. during after-scenario, before
+    browser teardown). Feature-agnostic by design — adding a new
+    `step_defs/test_*.py` with its own registry "just works".
     """
-    for mod_name, mod in list(sys.modules.items()):
-        if not mod_name.endswith(".test_slides") and mod_name != "test_slides":
-            continue
+    for mod in list(sys.modules.values()):
         pax_dict = getattr(mod, "_participants", None)
         if not isinstance(pax_dict, dict):
             continue
