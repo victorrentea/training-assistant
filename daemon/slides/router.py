@@ -132,12 +132,12 @@ def _railway_auth_header() -> str:
 
 
 def download_on_railway(slug: str, drive_export_url: str) -> dict:
-    """Call Railway REST to download PDF from Google Drive and cache it.
+    """Call Railway REST to refresh the cached PDF for slug from Google Drive.
 
     Returns dict with {status, sha256, size} on success.
     Raises on failure (HTTP error, timeout, etc.).
     """
-    url = f"{_railway_base_url()}/api/slides/download-from-gdrive/{slug}"
+    url = f"{_railway_base_url()}/api/slides/refresh/{slug}"
     body = json.dumps({"drive_export_url": drive_export_url}).encode()
     req = urllib.request.Request(
         url, method="POST",
@@ -315,7 +315,6 @@ async def list_slides(session_id: str):
 
 class PptxUpdateDetectedRequest(BaseModel):
     slug: str
-    session_id: str
 
 
 @participant_router.post("/test/pptx-update-detected")
@@ -325,8 +324,9 @@ async def simulate_pptx_update_detected(req: PptxUpdateDetectedRequest):
     Mirrors what daemon/slides/upload.py::_notify_railway_invalidate does
     in production after a real file change is observed and a fresh PDF
     has been published to Drive: POST the slug + drive_export_url to
-    Railway's invalidate endpoint, which re-downloads from Drive and
-    pushes a slide_log message back over WS.
+    Railway's refresh endpoint, which re-downloads from Drive and pushes
+    a slide_log message back over WS that the daemon turns into a
+    decks_updated broadcast.
     """
     drive_export_url = misc_state.slides_catalog.get(req.slug, {}).get("drive_export_url", "")
     if not drive_export_url:
@@ -334,23 +334,7 @@ async def simulate_pptx_update_detected(req: PptxUpdateDetectedRequest):
             {"status": "error", "detail": f"slug {req.slug} not in catalog"},
             status_code=404,
         )
-    url = f"{_railway_base_url()}/api/{req.session_id}/api/slides/invalidate/{req.slug}"
-    body = json.dumps({"drive_export_url": drive_export_url}).encode()
-    request = urllib.request.Request(
-        url,
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": _railway_auth_header(),
-        },
-        data=body,
-    )
-    await asyncio.to_thread(_invoke_railway_invalidate, request)
-    return {"status": "invalidate_requested", "slug": req.slug}
-
-
-def _invoke_railway_invalidate(request: urllib.request.Request) -> None:
-    with urllib.request.urlopen(request, timeout=10, context=_ssl_context()) as resp:
-        resp.read()
+    await asyncio.to_thread(download_on_railway, req.slug, drive_export_url)
+    return {"status": "refresh_requested", "slug": req.slug}
 
 

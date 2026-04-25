@@ -75,57 +75,19 @@ paths:
         '400':
           description: Bad request (non-PDF, empty body, etc.)
       x-feature: slides
-  /api/{session_id}/api/slides/invalidate/{slug}:
+  /api/slides/refresh/{slug}:
     post:
       tags:
       - slides
-      summary: Invalidate cached PDF and re-download from Drive
+      summary: Refresh slide PDF cache from Google Drive
       description: >
-        Daemon's PPTX watcher calls this after detecting a .pptx file change
-        and confirming Drive has the updated PDF. Railway deletes the old
-        cached file, marks status=stale, then spawns a background task to
-        re-download from Drive. On completion broadcasts decks_updated so
-        connected participants auto-reload the active slide.
-      operationId: invalidate_slide
-      security:
-      - basicAuth: []
-      parameters:
-      - name: session_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: slug
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SlideInvalidateRequest'
-      responses:
-        '200':
-          description: Invalidation queued (download runs async)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SlideInvalidateResponse'
-        '422':
-          description: drive_export_url not provided and not in Railway state
-      x-feature: slides
-  /api/slides/download-from-gdrive/{slug}:
-    post:
-      tags:
-      - slides
-      summary: Download Slide PDF from Google Drive
-      description: >
-        Daemon asks Railway to fetch a PDF export from Google Drive and cache
-        it locally on Railway. Railway downloads the file, caches it, and
-        returns the SHA-256 hash so the daemon can detect content changes.
-      operationId: download_from_gdrive
+        Unified entry point for both the participant cache-miss path and the
+        daemon's PPTX-watcher path. Marks the slug stale, deletes the old
+        cached PDF, downloads from Drive, and returns the new SHA256.
+        Per-slug deduplication: parallel calls for the same slug share one
+        in-flight fetch. The daemon receives a slide_log "completed" event
+        over WS and broadcasts decks_updated to participants.
+      operationId: refresh_slide
       security:
       - basicAuth: []
       parameters:
@@ -140,14 +102,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DownloadFromGdriveRequest'
+              $ref: '#/components/schemas/RefreshSlideRequest'
       responses:
         '200':
           description: PDF cached successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DownloadFromGdriveResponse'
+                $ref: '#/components/schemas/RefreshSlideResponse'
         '422':
           description: drive_export_url missing or invalid
         '502':
@@ -305,7 +267,7 @@ components:
           description: Current active session ID, or null if no session is active.
       required:
       - session_id
-    DownloadFromGdriveRequest:
+    RefreshSlideRequest:
       type: object
       properties:
         drive_export_url:
@@ -313,7 +275,7 @@ components:
           description: Google Drive PDF export URL for the slide deck.
       required:
       - drive_export_url
-    DownloadFromGdriveResponse:
+    RefreshSlideResponse:
       type: object
       properties:
         status:
@@ -344,26 +306,6 @@ components:
           type: string
       required:
       - session_id
-    SlideInvalidateRequest:
-      type: object
-      properties:
-        drive_export_url:
-          type: string
-          description: >
-            Google Drive PDF export URL for the deck. Optional — if omitted
-            Railway falls back to whatever URL it last knew for this slug.
-      required: []
-    SlideInvalidateResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          description: Always "invalidating"; the actual download runs async.
-        slug:
-          type: string
-      required:
-      - status
-      - slug
     UploadSlidePdfRequest:
       type: object
       properties:

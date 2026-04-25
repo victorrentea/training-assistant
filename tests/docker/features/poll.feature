@@ -6,6 +6,7 @@ Feature: Live Poll
     Given a fresh session
     And a host and participant are connected
 
+  @seq
   Scenario: Full poll lifecycle
     When the host creates a poll "Best language?" with options "Python,Java,Go"
     Then the participant sees poll question "Best language?"

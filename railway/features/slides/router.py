@@ -14,90 +14,84 @@ from railway.features.slides.upload import (
     _uploaded_slides_dir,
 )
 from railway.features.ws.proxy_bridge import proxy_to_daemon
-from railway.shared.state import state
 
 router = APIRouter()
 public_router = APIRouter()
 daemon_router = APIRouter()  # global daemon-facing endpoints (no session prefix)
 logger = logging.getLogger(__name__)
 
-# Tracks the single active invalidation task per slug; new saves cancel the old one.
-_pending_invalidate_tasks: dict[str, asyncio.Task] = {}
+# Per-slug deduplication: parallel refresh requests for the same slug share
+# one in-flight fetch instead of racing each other to the cache file.
+_pending_refresh: dict[str, asyncio.Future] = {}
 
 
-class SlideInvalidateRequest(BaseModel):
-    drive_export_url: str = ""
-
-
-@router.post("/api/slides/invalidate/{slug}")
-async def invalidate_slide(slug: str, body: SlideInvalidateRequest | None = None):
-    """Force Railway to re-download and cache-bust the PDF for slug.
-
-    Called by the slides upload daemon after it detects a PPTX was saved and
-    Google Drive has the updated PDF. Railway deletes the old cached file,
-    re-downloads from Drive, then broadcasts slides_updated with
-    refreshed_slugs so connected participants auto-reload the active slide.
-    """
-    from railway.features.slides.cache import _cache_path, _set_status, do_invalidate_download
-
-    drive_export_url = (body.drive_export_url if body else "").strip()
-    if not drive_export_url:
-        for slide in (state.slides or []):
-            if isinstance(slide, dict) and slide.get("slug") == slug:
-                drive_export_url = str(slide.get("drive_export_url", "")).strip()
-                break
-    if not drive_export_url:
-        raise HTTPException(status_code=422, detail=f"No drive_export_url found for slug={slug!r}")
-
-    # Delete cached file and mark stale so any concurrent /check will re-download
-    cached = _cache_path(slug)
-    if cached.exists():
-        cached.unlink(missing_ok=True)
-    _set_status(slug, "stale")
-
-    # Cancel any in-flight invalidation for this slug — keep only the most recent save.
-    existing = _pending_invalidate_tasks.get(slug)
-    if existing and not existing.done():
-        logger.info("[slides] cancelling superseded invalidation task for slug=%s", slug)
-        existing.cancel()
-
-    task = asyncio.create_task(do_invalidate_download(slug, drive_export_url))
-    _pending_invalidate_tasks[slug] = task
-    task.add_done_callback(lambda t: _pending_invalidate_tasks.pop(slug, None))
-    return {"status": "invalidating", "slug": slug}
-
-
-class DownloadFromGdriveRequest(BaseModel):
+class RefreshSlideRequest(BaseModel):
     drive_export_url: str
 
 
-class DownloadFromGdriveResponse(BaseModel):
+class RefreshSlideResponse(BaseModel):
     status: str
     sha256: str = ""
     size: int = 0
 
 
-@daemon_router.post("/api/slides/download-from-gdrive/{slug}", response_model=DownloadFromGdriveResponse)
-async def download_from_gdrive(slug: str, body: DownloadFromGdriveRequest):
-    """Download PDF from Google Drive, cache it, return SHA256 hash.
+@daemon_router.post("/api/slides/refresh/{slug}", response_model=RefreshSlideResponse)
+async def refresh_slide(slug: str, body: RefreshSlideRequest):
+    """Ensure cache_dir/{slug}.pdf is the latest version from Google Drive.
 
-    Called by the daemon to populate or refresh Railway's PDF cache.
-    The daemon uses the returned hash to detect content changes.
+    Unifies the previous /api/slides/download-from-gdrive (called on
+    participant cache miss) and /api/slides/invalidate (called when the
+    daemon's PPTX watcher detects a file change). Both did the same
+    underlying work — fetch from Drive, write to cache, notify daemon —
+    just with different sync/async transport choices.
+
+    Behavior:
+    - Marks status=stale up front so concurrent /check callers wait
+      instead of serving the old PDF.
+    - Per-slug deduplication: parallel calls for the same slug share one
+      in-flight fetch (e.g. participant cache miss + PPTX-watcher
+      invalidate firing simultaneously).
+    - Deletes the cache file (no-op when absent — covers cache-miss too).
+    - Calls do_download which sends slide_log "completed" to the daemon;
+      the daemon broadcasts decks_updated to participants.
+    - Returns SHA256 + size so the caller can detect content changes.
+
+    Synchronous: the caller awaits the response when it needs the SHA
+    (cache-miss path) or fire-and-forgets when it doesn't (PPTX update).
     """
-    from railway.features.slides.cache import _file_sha256, do_download
+    from railway.features.slides.cache import _cache_path, _file_sha256, _set_status, do_download
 
-    drive_export_url = body.drive_export_url.strip()
+    drive_export_url = (body.drive_export_url or "").strip()
     if not drive_export_url:
         raise HTTPException(status_code=422, detail="drive_export_url is required")
 
+    existing = _pending_refresh.get(slug)
+    if existing is not None and not existing.done():
+        try:
+            return await asyncio.shield(existing)
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    fut: asyncio.Future = asyncio.get_event_loop().create_future()
+    _pending_refresh[slug] = fut
     try:
+        _set_status(slug, "stale")
+        cached = _cache_path(slug)
+        if cached.exists():
+            cached.unlink(missing_ok=True)
         path = await do_download(slug, drive_export_url)
         sha = _file_sha256(path)
         size = path.stat().st_size
-        return DownloadFromGdriveResponse(status="cached", sha256=sha, size=size)
+        result = RefreshSlideResponse(status="cached", sha256=sha, size=size)
+        fut.set_result(result)
+        return result
     except Exception as exc:
-        logger.exception("[slides] download-from-gdrive failed for slug=%s", slug)
+        if not fut.done():
+            fut.set_exception(exc)
+        logger.exception("[slides] refresh failed for slug=%s", slug)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    finally:
+        _pending_refresh.pop(slug, None)
 
 
 

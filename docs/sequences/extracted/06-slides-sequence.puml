@@ -1,7 +1,7 @@
 @startuml
 hide footbox
 title Feature: Slides Catalog, Viewing, and Follow Mode
-caption <color:gray>Generated 2026-04-25 18:39</color>
+caption <color:gray>Generated 2026-04-25 20:01</color>
 
 participant "Host"
 participant "Participant\nAlice"
@@ -13,23 +13,23 @@ participant "GDrive"
 
 == Participant opens a slide and sees rendered content ==
 group #F5F5F5 init
-  "Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#1F77B4>[1]</color>
-  "Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#D62728>[2]</color>
-  "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#2CA02C>[3]</color>
-  "Participant\nAlice" [#gray]-> "Daemon": POST /api/participant/register <color:#FF7F0E>[4]</color>
+  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#1F77B4>[1]</color>
+  "Host" -> "Daemon": GET /host/{session_id} <color:#D62728>[2]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#2CA02C>[3]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#FF7F0E>[4]</color>
   activate "Daemon"
-  "Daemon" [#gray]--> "Host": participant_list_updated <color:#FF7F0E>[4]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#FF7F0E>[4]</color>
   deactivate "Daemon"
-  "Participant\nAlice" [#gray]-> "Daemon": GET /api/participant/state <color:#9467BD>[5]</color>
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#17BECF>[6]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#17BECF>[6]</color>
+  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#9467BD>[5]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#17BECF>[6]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#17BECF>[6]</color>
 end
 "Participant\nAlice" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#BCBD22>[7]</color>
 activate "Daemon"
 "Daemon" --> "Participant\nAlice": decks_updated <color:#BCBD22>[7]</color>
 "Daemon" -> "Daemon": step:download_via_railway <color:#BCBD22>[7]</color>
 activate "Daemon"
-"Daemon" -> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#BCBD22>[7]</color>
+"Daemon" -> "Railway": POST /api/slides/refresh/{slug} <color:#BCBD22>[7]</color>
 activate "Railway"
 "Railway" -> "GDrive": GET clean-code.pdf <color:#BCBD22>[7]</color>
 "Daemon" --> "Participant\nAlice": decks_updated <color:#BCBD22>[7]</color>
@@ -39,34 +39,34 @@ deactivate "Daemon"
 
 == Second participant gets cached slide with at most 1 Drive call ==
 group #F5F5F5 init
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#E377C2>[8]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#E377C2>[8]</color>
-  "Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#8C564B>[9]</color>
-  "Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#7F7F7F>[10]</color>
-  "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#1F77B4>[11]</color>
-  "Participant\nAlice" [#gray]-> "Daemon": POST /api/participant/register <color:#D62728>[12]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#E377C2>[8]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#E377C2>[8]</color>
+  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#8C564B>[9]</color>
+  "Host" -> "Daemon": GET /host/{session_id} <color:#7F7F7F>[10]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#1F77B4>[11]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#D62728>[12]</color>
   activate "Daemon"
-  "Daemon" [#gray]--> "Host": participant_list_updated <color:#D62728>[12]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#D62728>[12]</color>
   deactivate "Daemon"
-  "Participant\nAlice" [#gray]-> "Daemon": GET /api/participant/state <color:#2CA02C>[13]</color>
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#FF7F0E>[14]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#FF7F0E>[14]</color>
-  "Daemon" [#gray]--> "Host": participant_list_updated <color:#9467BD>[15]</color>
-  "Participant\nBob" [#gray]-> "Daemon": POST /api/participant/register <color:#17BECF>[16]</color>
+  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#2CA02C>[13]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#FF7F0E>[14]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#FF7F0E>[14]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#9467BD>[15]</color>
+  "Participant\nBob" -> "Daemon": POST /api/participant/register <color:#17BECF>[16]</color>
   activate "Daemon"
-  "Daemon" [#gray]--> "Host": participant_list_updated <color:#17BECF>[16]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#17BECF>[16]</color>
   deactivate "Daemon"
-  "Participant\nBob" [#gray]-> "Daemon": GET /api/participant/state <color:#BCBD22>[17]</color>
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#E377C2>[18]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#E377C2>[18]</color>
-  "Daemon" [#gray]--> "Host": participant_list_updated <color:#8C564B>[19]</color>
+  "Participant\nBob" -> "Daemon": GET /api/participant/state <color:#BCBD22>[17]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#E377C2>[18]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#E377C2>[18]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#8C564B>[19]</color>
 end
 "Participant\nAlice" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#7F7F7F>[20]</color>
 activate "Daemon"
 "Daemon" --> "Participant\nAlice": decks_updated <color:#7F7F7F>[20]</color>
 "Daemon" -> "Daemon": step:download_via_railway <color:#7F7F7F>[20]</color>
 activate "Daemon"
-"Daemon" -> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#7F7F7F>[20]</color>
+"Daemon" -> "Railway": POST /api/slides/refresh/{slug} <color:#7F7F7F>[20]</color>
 activate "Railway"
 "Railway" -> "GDrive": GET design-patterns.pdf <color:#7F7F7F>[20]</color>
 "Daemon" --> "Participant\nAlice": decks_updated <color:#7F7F7F>[20]</color>
@@ -77,47 +77,47 @@ deactivate "Daemon"
 
 == Navigating back to a slide resumes at the last viewed page ==
 group #F5F5F5 init
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#D62728>[22]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#D62728>[22]</color>
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#2CA02C>[23]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#2CA02C>[23]</color>
-  "Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#FF7F0E>[24]</color>
-  "Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#9467BD>[25]</color>
-  "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#17BECF>[26]</color>
-  "Participant\nAlice" [#gray]-> "Daemon": POST /api/participant/register <color:#BCBD22>[27]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#D62728>[22]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#D62728>[22]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#2CA02C>[23]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#2CA02C>[23]</color>
+  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#FF7F0E>[24]</color>
+  "Host" -> "Daemon": GET /host/{session_id} <color:#9467BD>[25]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#17BECF>[26]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#BCBD22>[27]</color>
   activate "Daemon"
-  "Daemon" [#gray]--> "Host": participant_list_updated <color:#BCBD22>[27]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#BCBD22>[27]</color>
   deactivate "Daemon"
-  "Participant\nAlice" [#gray]-> "Daemon": GET /api/participant/state <color:#E377C2>[28]</color>
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[29]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#8C564B>[29]</color>
-  "Daemon" [#gray]--> "Host": participant_list_updated <color:#7F7F7F>[30]</color>
+  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#E377C2>[28]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[29]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#8C564B>[29]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#7F7F7F>[30]</color>
 end
 "Participant\nAlice" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#1F77B4>[31]</color>
 "Participant\nAlice" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#D62728>[32]</color>
 
 == Participant viewing a slide is auto-refreshed when host updates it ==
 group #F5F5F5 init
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#2CA02C>[33]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#2CA02C>[33]</color>
-  "Host" [#gray]-> "Daemon": DELETE /api/{session_id}/host/scores <color:#FF7F0E>[34]</color>
-  "Host" [#gray]-> "Daemon": GET /host/{session_id} <color:#9467BD>[35]</color>
-  "Host" [#gray]-> "Daemon": GET /api/{session_id}/host/state <color:#17BECF>[36]</color>
-  "Participant\nAlice" [#gray]-> "Daemon": POST /api/participant/register <color:#BCBD22>[37]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#2CA02C>[33]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#2CA02C>[33]</color>
+  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#FF7F0E>[34]</color>
+  "Host" -> "Daemon": GET /host/{session_id} <color:#9467BD>[35]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#17BECF>[36]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#BCBD22>[37]</color>
   activate "Daemon"
-  "Daemon" [#gray]--> "Host": participant_list_updated <color:#BCBD22>[37]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#BCBD22>[37]</color>
   deactivate "Daemon"
-  "Participant\nAlice" [#gray]-> "Daemon": GET /api/participant/state <color:#E377C2>[38]</color>
-  "Daemon" [#gray]--> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[39]</color>
-  "Daemon" [#gray]--> "Participant\nBob": active_participants_count_updated <color:#8C564B>[39]</color>
-  "Daemon" [#gray]--> "Host": participant_list_updated <color:#7F7F7F>[40]</color>
+  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#E377C2>[38]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[39]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#8C564B>[39]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#7F7F7F>[40]</color>
 end
 "Participant\nAlice" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#1F77B4>[41]</color>
 activate "Daemon"
 "Daemon" --> "Participant\nAlice": decks_updated <color:#1F77B4>[41]</color>
 "Daemon" -> "Daemon": step:download_via_railway <color:#1F77B4>[41]</color>
 activate "Daemon"
-"Daemon" -> "Railway": POST /api/slides/download-from-gdrive/{slug} <color:#1F77B4>[41]</color>
+"Daemon" -> "Railway": POST /api/slides/refresh/{slug} <color:#1F77B4>[41]</color>
 activate "Railway"
 "Railway" -> "GDrive": GET architecture.pdf <color:#1F77B4>[41]</color>
 "Daemon" --> "Participant\nAlice": decks_updated <color:#1F77B4>[41]</color>
@@ -126,13 +126,13 @@ deactivate "Daemon"
 deactivate "Daemon"
 "FileSystem" -> "Daemon": POST /test/pptx-update-detected <color:#D62728>[42]</color>
 activate "Daemon"
-"Daemon" -> "Railway": POST /api/{session_id}/api/slides/invalidate/{slug} <color:#D62728>[42]</color>
+"Daemon" -> "Railway": POST /api/slides/refresh/{slug} <color:#D62728>[42]</color>
 activate "Railway"
 "Railway" -> "GDrive": GET architecture.pdf <color:#D62728>[42]</color>
 "Daemon" --> "Participant\nAlice": decks_updated <color:#D62728>[42]</color>
 "Daemon" --> "Participant\nBob": decks_updated <color:#D62728>[42]</color>
-deactivate "Daemon"
 deactivate "Railway"
+deactivate "Daemon"
 
 
 @enduml

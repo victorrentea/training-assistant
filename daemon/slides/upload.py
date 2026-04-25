@@ -143,25 +143,23 @@ def sync_slides_list(config: SlidesDaemonConfig, daemon_state: dict, metadata: d
 
 
 def _notify_railway_invalidate(config: SlidesDaemonConfig, slug: str, drive_export_url: str) -> None:
-    """Notify Railway to invalidate and re-download its cached PDF for slug.
+    """Notify Railway to refresh its cached PDF for slug from Drive.
 
-    Called after a fresh PDF has been confirmed on Google Drive.  Failure is
-    logged as a warning and never raises — the upload itself already succeeded.
+    Called after a fresh PDF has been confirmed on Google Drive. Failure is
+    logged as a warning and never raises — the upload itself already
+    succeeded. Uses the unified /api/slides/refresh/{slug} endpoint that's
+    also called for the participant cache-miss path.
     """
     try:
-        sid = get_active_session_id(config.server_url)
-        if not sid:
-            log.info("slides", f"No active session — skipping Railway PDF invalidate for slug={slug}")
-            return
         _post_json(
-            f"{config.server_url}/{sid}/api/slides/invalidate/{slug}",
+            f"{config.server_url}/api/slides/refresh/{slug}",
             {"drive_export_url": drive_export_url},
             config.host_username,
             config.host_password,
         )
-        log.info("slides", f"Railway PDF cache invalidated for slug={slug}")
+        log.info("slides", f"Railway PDF cache refreshed for slug={slug}")
     except Exception as exc:
-        log.info("slides", f"Railway invalidate notification failed for slug={slug}: {exc}")
+        log.info("slides", f"Railway refresh notification failed for slug={slug}: {exc}")
 
 
 def process_one_file(

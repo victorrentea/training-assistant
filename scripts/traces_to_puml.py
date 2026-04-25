@@ -380,14 +380,13 @@ def generate_puml(traces_path: str, family: str, output: str,
     def _render_edge(e: tuple) -> str:
         f, t, label, _ts, _end, phase, tid, is_async = e
         arrow = "-->" if is_async else "->"
-        color = "[#gray]" if phase == "given" else ""
         tag = trace_tags.get(tid)
         if tag:
             tag_label, tag_color = tag
             trace_tag = f" <color:{tag_color}>[{tag_label}]</color>"
         else:
             trace_tag = ""
-        return f'"{f}" {color}{arrow} "{t}": {label}{trace_tag}'
+        return f'"{f}" {arrow} "{t}": {label}{trace_tag}'
 
     def _interleave_activations(edge_list: list[tuple], indent: str = "") -> list[str]:
         """Render edges with activate/deactivate brackets per Rule 9.

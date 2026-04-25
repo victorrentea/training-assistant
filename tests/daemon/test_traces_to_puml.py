@@ -212,8 +212,9 @@ def test_collapse_broadcast_relay():
     assert "Participant" in content
 
 
-def test_given_phase_renders_gray():
-    """Spans with bdd.phase=given produce gray arrows."""
+def test_given_phase_arrows_not_colored():
+    """Given-phase arrows are not gray-tinted; the init group's gray
+    background already conveys the phase."""
     from scripts.traces_to_puml import generate_puml
 
     with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False, mode="w") as f:
@@ -232,12 +233,7 @@ def test_given_phase_renders_gray():
     generate_puml(path, family="", output=out)
     content = Path(out).read_text()
 
-    # Given phase arrow should be gray
-    assert "[#gray]" in content
-    # When phase arrow should NOT be gray (broadcast prefix removed, just "poll_opened")
-    lines = content.split("\n")
-    broadcast_line = [line for line in lines if "poll_opened" in line][0]
-    assert "[#gray]" not in broadcast_line
+    assert "[#gray]" not in content
 
 
 def test_no_phase_renders_default():
@@ -282,12 +278,9 @@ def test_scenarios_parameter_colors_by_trace_id():
     generate_puml(path, family="", output=out, scenarios=scenarios)
     content = Path(out).read_text()
 
-    # Given-phase arrow should be gray
-    register_line = [line for line in content.split("\n") if "register" in line][0]
-    assert "[#gray]" in register_line
-    # When-phase arrow should NOT be gray
-    broadcast_line = [line for line in content.split("\n") if "slides_updated" in line][0]
-    assert "[#gray]" not in broadcast_line
+    # Arrows are no longer gray-tinted in any phase; the init group's gray
+    # background carries that signal instead.
+    assert "[#gray]" not in content
     # Scenario separator should be present
     assert "== Open slide ==" in content
 

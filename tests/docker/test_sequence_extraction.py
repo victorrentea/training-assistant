@@ -359,7 +359,7 @@ def test_slides_sequence_diagram_extraction():
             #   FileSystem -> Daemon -> Railway -> GDrive
             # rather than skipping the daemon hop.
             _api("POST", "/test/pptx-update-detected",
-                 data={"slug": "architecture", "session_id": sc.session_id},
+                 data={"slug": "architecture"},
                  actor="FileSystem")
             sc.participant()._page.wait_for_timeout(3000)
         scenarios.append(sc.result)

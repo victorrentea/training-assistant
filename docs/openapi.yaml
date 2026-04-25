@@ -2472,13 +2472,9 @@ components:
         slug:
           type: string
           title: Slug
-        session_id:
-          type: string
-          title: Session Id
       type: object
       required:
       - slug
-      - session_id
       title: PptxUpdateDetectedRequest
     QAQuestionRaw:
       properties:
