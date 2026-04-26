@@ -230,6 +230,25 @@ def test_vote_counts_dirty_flag():
     assert ps._vote_counts_dirty is False
 
 
+def test_awarded_points_initialized_empty():
+    ps = PollState()
+    assert ps.awarded_points == {}
+
+
+def test_awarded_points_reset_by_create_poll():
+    ps = PollState()
+    ps.awarded_points = {"alice": 1000, "bob": 500}
+    ps.create_poll("Q?", ["A", "B"])
+    assert ps.awarded_points == {}
+
+
+def test_awarded_points_reset_by_clear():
+    ps = PollState()
+    ps.awarded_points = {"alice": 1000}
+    ps.clear()
+    assert ps.awarded_points == {}
+
+
 def test_append_to_poll_md(tmp_path):
     ps = PollState()
     _make_poll(ps)

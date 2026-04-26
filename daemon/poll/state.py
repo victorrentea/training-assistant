@@ -17,6 +17,7 @@ class PollState:
         self.poll_timer_started_at: datetime | None = None
         self._vote_counts_dirty: bool = True
         self._vote_counts_cache: list[int] | None = None
+        self.awarded_points: dict[str, int] = {}  # pid → points awarded by most recent reveal_correct
 
     def create_poll(self, question: str, options: list[str], multi: bool = False,
                     correct_count: int | None = None) -> dict:
@@ -35,6 +36,7 @@ class PollState:
         self.poll_timer_seconds = None
         self.poll_timer_started_at = None
         self._vote_counts_dirty = True
+        self.awarded_points = {}
         return dict(self.poll)
 
     def open_poll(self, scores_snapshot_fn) -> None:
@@ -158,6 +160,7 @@ class PollState:
         self.poll_timer_started_at = None
         self._vote_counts_dirty = True
         self._vote_counts_cache = None
+        self.awarded_points = {}
 
     def vote_counts(self) -> list[int]:
         if not self._vote_counts_dirty and self._vote_counts_cache is not None:
