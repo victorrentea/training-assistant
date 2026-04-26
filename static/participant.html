@@ -219,11 +219,13 @@ body{visibility:hidden}
 <span class="text-base">Slides</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 </span>
-<button onclick="event.stopPropagation(); _jumpToHostSlide()" title="Jump to host slide" class="ml-auto inline-flex items-center rounded-full px-2 py-0.5 cursor-pointer transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);background:none;font-size:1rem;line-height:1;">🎯</button>
-<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 text-base font-medium whitespace-nowrap cursor-pointer rounded-full px-2 py-0.5 transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);">
-<input id="slides-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onFollowChange(this.checked)" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
+<span class="ml-auto inline-flex items-center gap-1">
+<button onclick="event.stopPropagation(); _jumpToHostSlide()" title="Jump to host slide" class="inline-flex items-center rounded-full px-1.5 py-0.5 cursor-pointer transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);background:none;font-size:0.85rem;line-height:1;">🎯</button>
+<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer rounded-full px-1.5 py-0.5 transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);">
+<input id="slides-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onFollowChange(this.checked)" style="width:0.7rem;height:0.7rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
 <span>Follow</span>
 </label>
+</span>
 </a>
 <div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="topics-list mx-2 rounded-xl bg-surface-container-high">
 <div class="overflow-y-auto h-full">
