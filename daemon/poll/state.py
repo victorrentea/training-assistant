@@ -79,13 +79,19 @@ class PollState:
 
     def reveal_correct(self, correct_indices: list[int], scores_obj) -> dict:
         correct_set = set(correct_indices)
-        already_revealed = self.poll_correct_indices is not None
         n = len(self.poll["options"]) if self.poll else 0
         all_indices = set(range(n))
         wrong_set = all_indices - correct_set
         multi = self.poll.get("multi", False) if self.poll else False
         now = datetime.now(timezone.utc)
         opened_at = self.poll_opened_at or now
+
+        # Reverse the awards from the previous reveal_correct (if any). This makes
+        # reveal_correct idempotent: when the host changes which option is correct,
+        # points flow off prior winners before flowing onto new winners.
+        for pid, prev_pts in self.awarded_points.items():
+            scores_obj.add_score(pid, -prev_pts)
+        self.awarded_points = {}
 
         correct_voters = set()
         for pid, vote in self.votes.items():
@@ -131,8 +137,9 @@ class PollState:
                 decay = 0.0
             speed_pts = round(_MAX_POINTS - (_MAX_POINTS - _MIN_POINTS) * decay)
             pts = round(speed_pts * ratio)
-            if pts > 0 and not already_revealed:
+            if pts > 0:
                 scores_obj.add_score(pid, pts)
+                self.awarded_points[pid] = pts
 
         self.poll_correct_indices = list(correct_set)
         self._append_to_poll_md(correct_set)

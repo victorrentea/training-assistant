@@ -248,6 +248,83 @@ def test_awarded_points_reset_by_clear():
     assert ps.awarded_points == {}
 
 
+def test_reveal_correct_twice_single_select_moves_points():
+    """Second reveal with a different option must zero the first voter and award the new one."""
+    ps = PollState()
+    ps.create_poll("Q?", ["A", "B", "C"])
+    ps.open_poll(lambda: None)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    ps.poll_opened_at = base_time
+    vote_time = (base_time + timedelta(seconds=1)).isoformat()
+    ps.votes = {
+        "alice": {"option_indices": [0], "voted_at": vote_time},   # voted A
+        "bob":   {"option_indices": [1], "voted_at": vote_time},   # voted B
+    }
+    scores = MockScores()
+
+    # First reveal: A is correct → Alice gets 1000, Bob gets 0.
+    ps.reveal_correct([0], scores)
+    assert scores.scores.get("alice") == _MAX_POINTS
+    assert scores.scores.get("bob", 0) == 0
+    assert ps.awarded_points == {"alice": _MAX_POINTS}
+
+    # Second reveal: B is correct → Alice goes back to 0, Bob gets 1000.
+    ps.reveal_correct([1], scores)
+    assert scores.scores.get("alice", 0) == 0
+    assert scores.scores.get("bob") == _MAX_POINTS
+    assert ps.awarded_points == {"bob": _MAX_POINTS}
+
+
+def test_reveal_correct_twice_multi_select_partial_credit():
+    """In multi-select polls, the partial-credit amount is what gets reversed."""
+    ps = PollState()
+    ps.create_poll("Q?", ["A", "B", "C", "D"], multi=True, correct_count=3)
+    ps.open_poll(lambda: None)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    ps.poll_opened_at = base_time
+    vote_time = (base_time + timedelta(seconds=1)).isoformat()
+    # Alice picks A,B,D. Bob picks C,D.
+    ps.votes = {
+        "alice": {"option_indices": [0, 1, 3], "voted_at": vote_time},
+        "bob":   {"option_indices": [2, 3], "voted_at": vote_time},
+    }
+    scores = MockScores()
+
+    # First reveal correct = {A,B,C}. Alice: R=2,W=1,ratio=(2-1)/3 → ~333. Bob: R=1,W=1,ratio=0 → 0.
+    ps.reveal_correct([0, 1, 2], scores)
+    alice_first = scores.scores.get("alice", 0)
+    assert alice_first > 0
+    assert scores.scores.get("bob", 0) == 0
+    assert ps.awarded_points == {"alice": alice_first}
+
+    # Second reveal correct = {C,D}. Alice: voted A,B,D → R=1,W=2,ratio=max(0,-1/2)=0 → 0.
+    # Bob: voted C,D → R=2,W=0,ratio=2/2=1 → 1000.
+    ps.reveal_correct([2, 3], scores)
+    assert scores.scores.get("alice", 0) == 0
+    assert scores.scores.get("bob") == _MAX_POINTS
+    assert ps.awarded_points == {"bob": _MAX_POINTS}
+
+
+def test_reveal_correct_twice_empty_set_reverses_all():
+    """If the host marks no options correct on the second reveal, all prior awards must be reversed."""
+    ps = PollState()
+    ps.create_poll("Q?", ["A", "B"])
+    ps.open_poll(lambda: None)
+    base_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    ps.poll_opened_at = base_time
+    vote_time = (base_time + timedelta(seconds=1)).isoformat()
+    ps.votes = {"alice": {"option_indices": [0], "voted_at": vote_time}}
+    scores = MockScores()
+
+    ps.reveal_correct([0], scores)
+    assert scores.scores["alice"] == _MAX_POINTS
+
+    ps.reveal_correct([], scores)
+    assert scores.scores.get("alice", 0) == 0
+    assert ps.awarded_points == {}
+    assert ps.poll_correct_indices == []
+
+
 def test_append_to_poll_md(tmp_path):
     ps = PollState()
     _make_poll(ps)
