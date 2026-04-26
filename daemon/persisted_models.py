@@ -44,6 +44,7 @@ class PersistedPollState(PersistedModel):
     end_timer_seconds: int | None = None
     end_timer_started_at: str | None = None
     votes: dict[str, Any] = Field(default_factory=dict, description="participant_uuid → chosen option ID(s)")
+    awarded_points: dict[str, int] = Field(default_factory=dict, description="participant_uuid → points awarded by most recent reveal_correct")
 
 
 class PersistedWordCloudState(PersistedModel):
