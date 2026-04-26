@@ -1,6 +1,24 @@
 {
   "dsl_relationships_used": [
     {
+      "source_component": "wsBridge",
+      "source_module": "railway.features.ws",
+      "target_component": "sharedCore",
+      "target_module": "railway.shared"
+    },
+    {
+      "source_component": "pageRoutes",
+      "source_module": "railway.features.pages.router",
+      "target_component": "sharedCore",
+      "target_module": "railway.shared"
+    },
+    {
+      "source_component": "slidesBridge",
+      "source_module": "railway.features.slides",
+      "target_component": "sharedCore",
+      "target_module": "railway.shared"
+    },
+    {
       "source_component": "slidesBridge",
       "source_module": "railway.features.slides",
       "target_component": "wsBridge",
@@ -9,8 +27,26 @@
     {
       "source_component": "uploadsBridge",
       "source_module": "railway.features.upload",
+      "target_component": "sharedCore",
+      "target_module": "railway.shared"
+    },
+    {
+      "source_component": "uploadsBridge",
+      "source_module": "railway.features.upload",
       "target_component": "wsBridge",
       "target_module": "railway.features.ws"
+    },
+    {
+      "source_component": "staticSync",
+      "source_module": "railway.features.internal.router",
+      "target_component": "sharedCore",
+      "target_module": "railway.shared"
+    },
+    {
+      "source_component": "inboxBridge",
+      "source_module": "railway.features.inbox.router",
+      "target_component": "sharedCore",
+      "target_module": "railway.shared"
     },
     {
       "source_component": "wsBridge",
@@ -19,9 +55,44 @@
       "target_module": "railway.features.slides"
     }
   ],
-  "generated_contract_count": 17,
+  "generated_contract_count": 39,
   "generated_contracts": [
     {
+      "source_module": "railway.features.inbox.router",
+      "target_module": "railway.features.internal.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.inbox.router",
+      "target_module": "railway.features.pages.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.inbox.router",
+      "target_module": "railway.features.slides",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.inbox.router",
+      "target_module": "railway.features.telemetry.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.inbox.router",
+      "target_module": "railway.features.upload",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.inbox.router",
+      "target_module": "railway.features.ws",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.internal.router",
+      "target_module": "railway.features.inbox.router",
+      "type": "forbidden"
+    },
+    {
       "source_module": "railway.features.internal.router",
       "target_module": "railway.features.pages.router",
       "type": "forbidden"
@@ -29,6 +100,11 @@
     {
       "source_module": "railway.features.internal.router",
       "target_module": "railway.features.slides",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.internal.router",
+      "target_module": "railway.features.telemetry.router",
       "type": "forbidden"
     },
     {
@@ -43,12 +119,22 @@
     },
     {
       "source_module": "railway.features.pages.router",
+      "target_module": "railway.features.inbox.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.pages.router",
       "target_module": "railway.features.internal.router",
       "type": "forbidden"
     },
     {
       "source_module": "railway.features.pages.router",
       "target_module": "railway.features.slides",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.pages.router",
+      "target_module": "railway.features.telemetry.router",
       "type": "forbidden"
     },
     {
@@ -63,6 +149,11 @@
     },
     {
       "source_module": "railway.features.slides",
+      "target_module": "railway.features.inbox.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.slides",
       "target_module": "railway.features.internal.router",
       "type": "forbidden"
     },
@@ -73,7 +164,47 @@
     },
     {
       "source_module": "railway.features.slides",
+      "target_module": "railway.features.telemetry.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.slides",
       "target_module": "railway.features.upload",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.telemetry.router",
+      "target_module": "railway.features.inbox.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.telemetry.router",
+      "target_module": "railway.features.internal.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.telemetry.router",
+      "target_module": "railway.features.pages.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.telemetry.router",
+      "target_module": "railway.features.slides",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.telemetry.router",
+      "target_module": "railway.features.upload",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.telemetry.router",
+      "target_module": "railway.features.ws",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.upload",
+      "target_module": "railway.features.inbox.router",
       "type": "forbidden"
     },
     {
@@ -92,6 +223,16 @@
       "type": "forbidden"
     },
     {
+      "source_module": "railway.features.upload",
+      "target_module": "railway.features.telemetry.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.ws",
+      "target_module": "railway.features.inbox.router",
+      "type": "forbidden"
+    },
+    {
       "source_module": "railway.features.ws",
       "target_module": "railway.features.internal.router",
       "type": "forbidden"
@@ -99,6 +240,11 @@
     {
       "source_module": "railway.features.ws",
       "target_module": "railway.features.pages.router",
+      "type": "forbidden"
+    },
+    {
+      "source_module": "railway.features.ws",
+      "target_module": "railway.features.telemetry.router",
       "type": "forbidden"
     },
     {
@@ -109,42 +255,45 @@
   ],
   "resolved_components": [
     {
-      "code_path": "features/pages/router.py",
+      "code_path": "railway/features/inbox/router.py",
+      "id": "inboxBridge",
+      "module": "railway.features.inbox.router"
+    },
+    {
+      "code_path": "railway/features/pages/router.py",
       "id": "pageRoutes",
       "module": "railway.features.pages.router"
     },
     {
-      "code_path": "features/slides/*",
+      "code_path": "railway/shared/*",
+      "id": "sharedCore",
+      "module": "railway.shared"
+    },
+    {
+      "code_path": "railway/features/slides/*",
       "id": "slidesBridge",
       "module": "railway.features.slides"
     },
     {
-      "code_path": "features/internal/router.py",
+      "code_path": "railway/features/internal/router.py",
       "id": "staticSync",
       "module": "railway.features.internal.router"
     },
     {
-      "code_path": "features/upload/*",
+      "code_path": "railway/features/telemetry/router.py",
+      "id": "telemetryReceiver",
+      "module": "railway.features.telemetry.router"
+    },
+    {
+      "code_path": "railway/features/upload/*",
       "id": "uploadsBridge",
       "module": "railway.features.upload"
     },
     {
-      "code_path": "features/ws/*",
+      "code_path": "railway/features/ws/*",
       "id": "wsBridge",
       "module": "railway.features.ws"
     }
   ],
-  "unresolved_components": [
-    {
-      "code_path": "features/session/notes_router.py",
-      "id": "publicNotes",
-      "module": "railway.features.session.notes_router",
-      "reason": "module_not_found"
-    },
-    {
-      "code_path": "shared/*",
-      "id": "sharedCore",
-      "reason": "unsupported_code_path"
-    }
-  ]
+  "unresolved_components": []
 }
