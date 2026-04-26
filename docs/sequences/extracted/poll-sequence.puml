@@ -1,7 +1,7 @@
 @startuml
 hide footbox
 title Feature: Live Poll
-caption <color:gray>Generated 2026-04-25 21:35</color>
+caption <color:gray>Generated 2026-04-26 05:05</color>
 
 participant "Host"
 participant "Participant\nAlice"
@@ -11,263 +11,248 @@ participant "Daemon"
 
 == Marking correct options ==
 group #F5F5F5 init
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#1F77B4>[1]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#1F77B4>[1]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#1F77B4>[1]</color>
-  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#D62728>[2]</color>
-  "Host" -> "Daemon": GET /host/{session_id} <color:#2CA02C>[3]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#FF7F0E>[4]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#9467BD>[5]</color>
-  "Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#17BECF>[6]</color>
+  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#1F77B4>[1]</color>
+  "Host" -> "Daemon": GET /host/{session_id} <color:#D62728>[2]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#2CA02C>[3]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#FF7F0E>[4]</color>
+  "Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#9467BD>[5]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": activity_updated <color:#17BECF>[6]</color>
-  "Daemon" --> "Participant\nBob": activity_updated <color:#17BECF>[6]</color>
-  "Daemon" --> "Participant\nDave": activity_updated <color:#17BECF>[6]</color>
+  "Daemon" --> "Participant\nAlice": activity_updated <color:#9467BD>[5]</color>
+  "Daemon" --> "Participant\nBob": activity_updated <color:#9467BD>[5]</color>
+  "Daemon" --> "Participant\nDave": activity_updated <color:#9467BD>[5]</color>
   deactivate "Daemon"
-  "Host" -> "Daemon": POST /api/{session_id}/host/poll/manual/submit <color:#BCBD22>[7]</color>
+  "Host" -> "Daemon": POST /api/{session_id}/host/poll/manual/submit <color:#17BECF>[6]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": poll_opened <color:#BCBD22>[7]</color>
-  "Daemon" --> "Participant\nBob": poll_opened <color:#BCBD22>[7]</color>
-  "Daemon" --> "Participant\nDave": poll_opened <color:#BCBD22>[7]</color>
-  "Daemon" --> "Host": poll_opened <color:#BCBD22>[7]</color>
+  "Daemon" --> "Participant\nAlice": poll_opened <color:#17BECF>[6]</color>
+  "Daemon" --> "Participant\nBob": poll_opened <color:#17BECF>[6]</color>
+  "Daemon" --> "Participant\nDave": poll_opened <color:#17BECF>[6]</color>
+  "Daemon" --> "Host": poll_opened <color:#17BECF>[6]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#E377C2>[8]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#BCBD22>[7]</color>
   activate "Daemon"
-  "Daemon" --> "Host": participant_list_updated <color:#E377C2>[8]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#BCBD22>[7]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#8C564B>[9]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#7F7F7F>[10]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#7F7F7F>[10]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#7F7F7F>[10]</color>
-  "Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#1F77B4>[11]</color>
+  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#E377C2>[8]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[9]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#8C564B>[9]</color>
+  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#8C564B>[9]</color>
+  "Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#7F7F7F>[10]</color>
   activate "Daemon"
-  "Daemon" --> "Host": participant_list_updated <color:#1F77B4>[11]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#7F7F7F>[10]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": POST /api/participant/poll/vote <color:#D62728>[12]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/poll/vote <color:#1F77B4>[11]</color>
   activate "Daemon"
-  "Daemon" --> "Host": vote_update <color:#D62728>[12]</color>
+  "Daemon" --> "Host": vote_update <color:#1F77B4>[11]</color>
   deactivate "Daemon"
-  "Host" -> "Daemon": POST /api/{session_id}/host/poll/end <color:#2CA02C>[13]</color>
+  "Host" -> "Daemon": POST /api/{session_id}/host/poll/end <color:#D62728>[12]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": poll_ended <color:#2CA02C>[13]</color>
-  "Daemon" --> "Participant\nBob": poll_ended <color:#2CA02C>[13]</color>
-  "Daemon" --> "Participant\nDave": poll_ended <color:#2CA02C>[13]</color>
-  "Daemon" --> "Host": poll_ended <color:#2CA02C>[13]</color>
+  "Daemon" --> "Participant\nAlice": poll_ended <color:#D62728>[12]</color>
+  "Daemon" --> "Participant\nBob": poll_ended <color:#D62728>[12]</color>
+  "Daemon" --> "Participant\nDave": poll_ended <color:#D62728>[12]</color>
+  "Daemon" --> "Host": poll_ended <color:#D62728>[12]</color>
   deactivate "Daemon"
+  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#2CA02C>[13]</color>
   "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#FF7F0E>[14]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#9467BD>[15]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#17BECF>[16]</color>
 end
-"Host" -> "Daemon": PUT /api/{session_id}/host/poll/correct <color:#BCBD22>[17]</color>
+"Host" -> "Daemon": PUT /api/{session_id}/host/poll/correct <color:#9467BD>[15]</color>
 activate "Daemon"
-"Daemon" --> "Participant\nAlice": poll_correct_revealed <color:#BCBD22>[17]</color>
-"Daemon" --> "Participant\nBob": poll_correct_revealed <color:#BCBD22>[17]</color>
-"Daemon" --> "Participant\nDave": poll_correct_revealed <color:#BCBD22>[17]</color>
-"Daemon" --> "Participant\nAlice": scores_updated <color:#BCBD22>[17]</color>
-"Daemon" --> "Participant\nBob": scores_updated <color:#BCBD22>[17]</color>
-"Daemon" --> "Participant\nDave": scores_updated <color:#BCBD22>[17]</color>
-"Daemon" --> "Host": poll_correct_revealed <color:#BCBD22>[17]</color>
-"Daemon" --> "Host": scores_updated <color:#BCBD22>[17]</color>
+"Daemon" --> "Participant\nAlice": poll_correct_revealed <color:#9467BD>[15]</color>
+"Daemon" --> "Participant\nBob": poll_correct_revealed <color:#9467BD>[15]</color>
+"Daemon" --> "Participant\nDave": poll_correct_revealed <color:#9467BD>[15]</color>
+"Daemon" --> "Participant\nAlice": scores_updated <color:#9467BD>[15]</color>
+"Daemon" --> "Participant\nBob": scores_updated <color:#9467BD>[15]</color>
+"Daemon" --> "Participant\nDave": scores_updated <color:#9467BD>[15]</color>
+"Daemon" --> "Host": poll_correct_revealed <color:#9467BD>[15]</color>
+"Daemon" --> "Host": scores_updated <color:#9467BD>[15]</color>
 deactivate "Daemon"
 
 == Score persists after participant refreshes the page ==
 group #F5F5F5 init
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#BCBD22>[77]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#BCBD22>[77]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#BCBD22>[77]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#E377C2>[78]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#E377C2>[78]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#E377C2>[78]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[79]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#8C564B>[79]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#8C564B>[79]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#7F7F7F>[80]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#7F7F7F>[80]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#7F7F7F>[80]</color>
-  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#1F77B4>[81]</color>
-  "Host" -> "Daemon": GET /host/{session_id} <color:#D62728>[82]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#2CA02C>[83]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#FF7F0E>[84]</color>
-  "Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#9467BD>[85]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#17BECF>[16]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#17BECF>[16]</color>
+  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#17BECF>[16]</color>
+  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#BCBD22>[17]</color>
+  "Host" -> "Daemon": GET /host/{session_id} <color:#E377C2>[18]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#8C564B>[19]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#7F7F7F>[20]</color>
+  "Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#1F77B4>[21]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": activity_updated <color:#9467BD>[85]</color>
-  "Daemon" --> "Participant\nBob": activity_updated <color:#9467BD>[85]</color>
-  "Daemon" --> "Participant\nDave": activity_updated <color:#9467BD>[85]</color>
+  "Daemon" --> "Participant\nAlice": activity_updated <color:#1F77B4>[21]</color>
+  "Daemon" --> "Participant\nBob": activity_updated <color:#1F77B4>[21]</color>
+  "Daemon" --> "Participant\nDave": activity_updated <color:#1F77B4>[21]</color>
   deactivate "Daemon"
-  "Host" -> "Daemon": POST /api/{session_id}/host/poll/manual/submit <color:#17BECF>[86]</color>
+  "Host" -> "Daemon": POST /api/{session_id}/host/poll/manual/submit <color:#D62728>[22]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": poll_opened <color:#17BECF>[86]</color>
-  "Daemon" --> "Participant\nBob": poll_opened <color:#17BECF>[86]</color>
-  "Daemon" --> "Participant\nDave": poll_opened <color:#17BECF>[86]</color>
-  "Daemon" --> "Host": poll_opened <color:#17BECF>[86]</color>
+  "Daemon" --> "Participant\nAlice": poll_opened <color:#D62728>[22]</color>
+  "Daemon" --> "Participant\nBob": poll_opened <color:#D62728>[22]</color>
+  "Daemon" --> "Participant\nDave": poll_opened <color:#D62728>[22]</color>
+  "Daemon" --> "Host": poll_opened <color:#D62728>[22]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#BCBD22>[87]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#2CA02C>[23]</color>
   activate "Daemon"
-  "Daemon" --> "Host": participant_list_updated <color:#BCBD22>[87]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#2CA02C>[23]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#E377C2>[88]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[89]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#8C564B>[89]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#8C564B>[89]</color>
-  "Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#7F7F7F>[90]</color>
+  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#FF7F0E>[24]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#9467BD>[25]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#9467BD>[25]</color>
+  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#9467BD>[25]</color>
+  "Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#17BECF>[26]</color>
   activate "Daemon"
-  "Daemon" --> "Host": participant_list_updated <color:#7F7F7F>[90]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#17BECF>[26]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": POST /api/participant/poll/vote <color:#1F77B4>[91]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/poll/vote <color:#BCBD22>[27]</color>
   activate "Daemon"
-  "Daemon" --> "Host": vote_update <color:#1F77B4>[91]</color>
+  "Daemon" --> "Host": vote_update <color:#BCBD22>[27]</color>
   deactivate "Daemon"
-  "Host" -> "Daemon": POST /api/{session_id}/host/poll/end <color:#D62728>[92]</color>
+  "Host" -> "Daemon": POST /api/{session_id}/host/poll/end <color:#E377C2>[28]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": poll_ended <color:#D62728>[92]</color>
-  "Daemon" --> "Participant\nBob": poll_ended <color:#D62728>[92]</color>
-  "Daemon" --> "Participant\nDave": poll_ended <color:#D62728>[92]</color>
-  "Daemon" --> "Host": poll_ended <color:#D62728>[92]</color>
+  "Daemon" --> "Participant\nAlice": poll_ended <color:#E377C2>[28]</color>
+  "Daemon" --> "Participant\nBob": poll_ended <color:#E377C2>[28]</color>
+  "Daemon" --> "Participant\nDave": poll_ended <color:#E377C2>[28]</color>
+  "Daemon" --> "Host": poll_ended <color:#E377C2>[28]</color>
   deactivate "Daemon"
-  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#2CA02C>[93]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#FF7F0E>[94]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#9467BD>[95]</color>
-  "Host" -> "Daemon": PUT /api/{session_id}/host/poll/correct <color:#17BECF>[96]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#8C564B>[29]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#7F7F7F>[30]</color>
+  "Host" -> "Daemon": PUT /api/{session_id}/host/poll/correct <color:#1F77B4>[31]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": poll_correct_revealed <color:#17BECF>[96]</color>
-  "Daemon" --> "Participant\nBob": poll_correct_revealed <color:#17BECF>[96]</color>
-  "Daemon" --> "Participant\nDave": poll_correct_revealed <color:#17BECF>[96]</color>
-  "Daemon" --> "Participant\nAlice": scores_updated <color:#17BECF>[96]</color>
-  "Daemon" --> "Participant\nBob": scores_updated <color:#17BECF>[96]</color>
-  "Daemon" --> "Participant\nDave": scores_updated <color:#17BECF>[96]</color>
-  "Daemon" --> "Host": poll_correct_revealed <color:#17BECF>[96]</color>
-  "Daemon" --> "Host": scores_updated <color:#17BECF>[96]</color>
+  "Daemon" --> "Participant\nAlice": poll_correct_revealed <color:#1F77B4>[31]</color>
+  "Daemon" --> "Participant\nBob": poll_correct_revealed <color:#1F77B4>[31]</color>
+  "Daemon" --> "Participant\nDave": poll_correct_revealed <color:#1F77B4>[31]</color>
+  "Daemon" --> "Participant\nAlice": scores_updated <color:#1F77B4>[31]</color>
+  "Daemon" --> "Participant\nBob": scores_updated <color:#1F77B4>[31]</color>
+  "Daemon" --> "Participant\nDave": scores_updated <color:#1F77B4>[31]</color>
+  "Daemon" --> "Host": poll_correct_revealed <color:#1F77B4>[31]</color>
+  "Daemon" --> "Host": scores_updated <color:#1F77B4>[31]</color>
   deactivate "Daemon"
 end
-"Participant\nAlice" -> "Daemon": POST /api/participant/rejoin <color:#BCBD22>[97]</color>
-"Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#E377C2>[98]</color>
-"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[99]</color>
-"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#8C564B>[99]</color>
-"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#8C564B>[99]</color>
-"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#7F7F7F>[100]</color>
-"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#7F7F7F>[100]</color>
-"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#7F7F7F>[100]</color>
+"Participant\nAlice" -> "Daemon": POST /api/participant/rejoin <color:#D62728>[32]</color>
+"Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#2CA02C>[33]</color>
+"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#FF7F0E>[34]</color>
+"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#FF7F0E>[34]</color>
+"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#FF7F0E>[34]</color>
+"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#9467BD>[35]</color>
+"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#9467BD>[35]</color>
+"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#9467BD>[35]</color>
 
 == Late joiner can still vote in an open poll ==
 group #F5F5F5 init
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#1F77B4>[101]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#1F77B4>[101]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#1F77B4>[101]</color>
-  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#D62728>[102]</color>
-  "Host" -> "Daemon": GET /host/{session_id} <color:#2CA02C>[103]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#FF7F0E>[104]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#9467BD>[105]</color>
-  "Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#17BECF>[106]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#17BECF>[36]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#17BECF>[36]</color>
+  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#17BECF>[36]</color>
+  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#BCBD22>[37]</color>
+  "Host" -> "Daemon": GET /host/{session_id} <color:#E377C2>[38]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#8C564B>[39]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#7F7F7F>[40]</color>
+  "Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#1F77B4>[41]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": activity_updated <color:#17BECF>[106]</color>
-  "Daemon" --> "Participant\nBob": activity_updated <color:#17BECF>[106]</color>
-  "Daemon" --> "Participant\nDave": activity_updated <color:#17BECF>[106]</color>
+  "Daemon" --> "Participant\nAlice": activity_updated <color:#1F77B4>[41]</color>
+  "Daemon" --> "Participant\nBob": activity_updated <color:#1F77B4>[41]</color>
+  "Daemon" --> "Participant\nDave": activity_updated <color:#1F77B4>[41]</color>
   deactivate "Daemon"
-  "Host" -> "Daemon": POST /api/{session_id}/host/poll/manual/submit <color:#BCBD22>[107]</color>
+  "Host" -> "Daemon": POST /api/{session_id}/host/poll/manual/submit <color:#D62728>[42]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": poll_opened <color:#BCBD22>[107]</color>
-  "Daemon" --> "Participant\nBob": poll_opened <color:#BCBD22>[107]</color>
-  "Daemon" --> "Participant\nDave": poll_opened <color:#BCBD22>[107]</color>
-  "Daemon" --> "Host": poll_opened <color:#BCBD22>[107]</color>
+  "Daemon" --> "Participant\nAlice": poll_opened <color:#D62728>[42]</color>
+  "Daemon" --> "Participant\nBob": poll_opened <color:#D62728>[42]</color>
+  "Daemon" --> "Participant\nDave": poll_opened <color:#D62728>[42]</color>
+  "Daemon" --> "Host": poll_opened <color:#D62728>[42]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#E377C2>[108]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#2CA02C>[43]</color>
   activate "Daemon"
-  "Daemon" --> "Host": participant_list_updated <color:#E377C2>[108]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#2CA02C>[43]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#8C564B>[109]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#7F7F7F>[110]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#7F7F7F>[110]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#7F7F7F>[110]</color>
+  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#FF7F0E>[44]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#9467BD>[45]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#9467BD>[45]</color>
+  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#9467BD>[45]</color>
 end
-"Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#1F77B4>[111]</color>
+"Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#17BECF>[46]</color>
 activate "Daemon"
-"Daemon" --> "Host": participant_list_updated <color:#1F77B4>[111]</color>
+"Daemon" --> "Host": participant_list_updated <color:#17BECF>[46]</color>
 deactivate "Daemon"
-"Participant\nDave" -> "Daemon": POST /api/participant/register <color:#D62728>[112]</color>
+"Participant\nDave" -> "Daemon": POST /api/participant/register <color:#BCBD22>[47]</color>
 activate "Daemon"
-"Daemon" --> "Host": participant_list_updated <color:#D62728>[112]</color>
+"Daemon" --> "Host": participant_list_updated <color:#BCBD22>[47]</color>
 deactivate "Daemon"
-"Participant\nDave" -> "Daemon": GET /api/participant/state <color:#2CA02C>[113]</color>
-"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#FF7F0E>[114]</color>
-"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#FF7F0E>[114]</color>
-"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#FF7F0E>[114]</color>
-"Participant\nDave" -> "Daemon": PUT /api/participant/name <color:#9467BD>[115]</color>
+"Participant\nDave" -> "Daemon": GET /api/participant/state <color:#E377C2>[48]</color>
+"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#8C564B>[49]</color>
+"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#8C564B>[49]</color>
+"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#8C564B>[49]</color>
+"Participant\nDave" -> "Daemon": PUT /api/participant/name <color:#7F7F7F>[50]</color>
 activate "Daemon"
-"Daemon" --> "Host": participant_list_updated <color:#9467BD>[115]</color>
+"Daemon" --> "Host": participant_list_updated <color:#7F7F7F>[50]</color>
 deactivate "Daemon"
-"Participant\nDave" -> "Daemon": POST /api/participant/poll/vote <color:#17BECF>[116]</color>
+"Participant\nDave" -> "Daemon": POST /api/participant/poll/vote <color:#1F77B4>[51]</color>
 activate "Daemon"
-"Daemon" --> "Host": vote_update <color:#17BECF>[116]</color>
+"Daemon" --> "Host": vote_update <color:#1F77B4>[51]</color>
 deactivate "Daemon"
-"Host" -> "Daemon": POST /api/{session_id}/host/poll/end <color:#BCBD22>[117]</color>
+"Host" -> "Daemon": POST /api/{session_id}/host/poll/end <color:#D62728>[52]</color>
 activate "Daemon"
-"Daemon" --> "Participant\nAlice": poll_ended <color:#BCBD22>[117]</color>
-"Daemon" --> "Participant\nBob": poll_ended <color:#BCBD22>[117]</color>
-"Daemon" --> "Participant\nDave": poll_ended <color:#BCBD22>[117]</color>
-"Daemon" --> "Host": poll_ended <color:#BCBD22>[117]</color>
+"Daemon" --> "Participant\nAlice": poll_ended <color:#D62728>[52]</color>
+"Daemon" --> "Participant\nBob": poll_ended <color:#D62728>[52]</color>
+"Daemon" --> "Participant\nDave": poll_ended <color:#D62728>[52]</color>
+"Daemon" --> "Host": poll_ended <color:#D62728>[52]</color>
 deactivate "Daemon"
-"Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#E377C2>[118]</color>
-"Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#8C564B>[119]</color>
-"Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#7F7F7F>[120]</color>
-"Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#1F77B4>[121]</color>
+"Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#2CA02C>[53]</color>
+"Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#FF7F0E>[54]</color>
+"Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#9467BD>[55]</color>
 
 == Host sees live voted-count update as votes arrive ==
 group #F5F5F5 init
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#D62728>[122]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#D62728>[122]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#D62728>[122]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#2CA02C>[123]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#2CA02C>[123]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#2CA02C>[123]</color>
-  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#FF7F0E>[124]</color>
-  "Host" -> "Daemon": GET /host/{session_id} <color:#9467BD>[125]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#17BECF>[126]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#BCBD22>[127]</color>
-  "Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#E377C2>[128]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#17BECF>[56]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#17BECF>[56]</color>
+  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#17BECF>[56]</color>
+  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#BCBD22>[57]</color>
+  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#BCBD22>[57]</color>
+  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#BCBD22>[57]</color>
+  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#E377C2>[58]</color>
+  "Host" -> "Daemon": GET /host/{session_id} <color:#8C564B>[59]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#7F7F7F>[60]</color>
+  "Host" -> "Daemon": GET /api/{session_id}/host/poll <color:#1F77B4>[61]</color>
+  "Host" -> "Daemon": PUT /api/{session_id}/host/activity <color:#D62728>[62]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": activity_updated <color:#E377C2>[128]</color>
-  "Daemon" --> "Participant\nBob": activity_updated <color:#E377C2>[128]</color>
-  "Daemon" --> "Participant\nDave": activity_updated <color:#E377C2>[128]</color>
+  "Daemon" --> "Participant\nAlice": activity_updated <color:#D62728>[62]</color>
+  "Daemon" --> "Participant\nBob": activity_updated <color:#D62728>[62]</color>
+  "Daemon" --> "Participant\nDave": activity_updated <color:#D62728>[62]</color>
   deactivate "Daemon"
-  "Host" -> "Daemon": POST /api/{session_id}/host/poll/manual/submit <color:#8C564B>[129]</color>
+  "Host" -> "Daemon": POST /api/{session_id}/host/poll/manual/submit <color:#2CA02C>[63]</color>
   activate "Daemon"
-  "Daemon" --> "Participant\nAlice": poll_opened <color:#8C564B>[129]</color>
-  "Daemon" --> "Participant\nBob": poll_opened <color:#8C564B>[129]</color>
-  "Daemon" --> "Participant\nDave": poll_opened <color:#8C564B>[129]</color>
-  "Daemon" --> "Host": poll_opened <color:#8C564B>[129]</color>
+  "Daemon" --> "Participant\nAlice": poll_opened <color:#2CA02C>[63]</color>
+  "Daemon" --> "Participant\nBob": poll_opened <color:#2CA02C>[63]</color>
+  "Daemon" --> "Participant\nDave": poll_opened <color:#2CA02C>[63]</color>
+  "Daemon" --> "Host": poll_opened <color:#2CA02C>[63]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#7F7F7F>[130]</color>
+  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#FF7F0E>[64]</color>
   activate "Daemon"
-  "Daemon" --> "Host": participant_list_updated <color:#7F7F7F>[130]</color>
+  "Daemon" --> "Host": participant_list_updated <color:#FF7F0E>[64]</color>
   deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#1F77B4>[131]</color>
+  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#9467BD>[65]</color>
 end
-"Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#D62728>[132]</color>
+"Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#17BECF>[66]</color>
 activate "Daemon"
-"Daemon" --> "Host": participant_list_updated <color:#D62728>[132]</color>
+"Daemon" --> "Host": participant_list_updated <color:#17BECF>[66]</color>
 deactivate "Daemon"
-"Participant\nAlice" -> "Daemon": POST /api/participant/poll/vote <color:#2CA02C>[133]</color>
+"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#BCBD22>[67]</color>
+"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#BCBD22>[67]</color>
+"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#BCBD22>[67]</color>
+"Participant\nAlice" -> "Daemon": POST /api/participant/poll/vote <color:#E377C2>[68]</color>
 activate "Daemon"
-"Daemon" --> "Host": vote_update <color:#2CA02C>[133]</color>
+"Daemon" --> "Host": vote_update <color:#E377C2>[68]</color>
 deactivate "Daemon"
-"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#FF7F0E>[134]</color>
-"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#FF7F0E>[134]</color>
-"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#FF7F0E>[134]</color>
-"Participant\nBob" -> "Daemon": POST /api/participant/register <color:#9467BD>[135]</color>
+"Participant\nBob" -> "Daemon": POST /api/participant/register <color:#8C564B>[69]</color>
 activate "Daemon"
-"Daemon" --> "Host": participant_list_updated <color:#9467BD>[135]</color>
+"Daemon" --> "Host": participant_list_updated <color:#8C564B>[69]</color>
 deactivate "Daemon"
-"Participant\nBob" -> "Daemon": GET /api/participant/state <color:#17BECF>[136]</color>
-"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#BCBD22>[137]</color>
-"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#BCBD22>[137]</color>
-"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#BCBD22>[137]</color>
-"Participant\nBob" -> "Daemon": PUT /api/participant/name <color:#E377C2>[138]</color>
+"Participant\nBob" -> "Daemon": GET /api/participant/state <color:#7F7F7F>[70]</color>
+"Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#1F77B4>[71]</color>
+"Daemon" --> "Participant\nBob": active_participants_count_updated <color:#1F77B4>[71]</color>
+"Daemon" --> "Participant\nDave": active_participants_count_updated <color:#1F77B4>[71]</color>
+"Participant\nBob" -> "Daemon": PUT /api/participant/name <color:#D62728>[72]</color>
 activate "Daemon"
-"Daemon" --> "Host": participant_list_updated <color:#E377C2>[138]</color>
+"Daemon" --> "Host": participant_list_updated <color:#D62728>[72]</color>
 deactivate "Daemon"
-"Participant\nBob" -> "Daemon": POST /api/participant/poll/vote <color:#8C564B>[139]</color>
+"Participant\nBob" -> "Daemon": POST /api/participant/poll/vote <color:#2CA02C>[73]</color>
 activate "Daemon"
-"Daemon" --> "Host": vote_update <color:#8C564B>[139]</color>
+"Daemon" --> "Host": vote_update <color:#2CA02C>[73]</color>
 deactivate "Daemon"
 
 

@@ -42,18 +42,17 @@ class HostPage:
         self._page.fill("#quiz-topic", text)
 
     def close_poll(self) -> None:
-        # Close poll via daemon REST API and force a re-fetch so per-option vote
-        # counts are reflected on the host UI (the vote_update WS message only
-        # carries the total, not the per-option breakdown).
-        # The 250 ms settle gives any in-flight participant votes time to land
-        # on the daemon before we fetch — castVote() on the participant is
+        # Close poll via daemon REST API. The host's poll_ended WS handler
+        # (host.js:344) calls fetchPollState() on its own when the message
+        # arrives, so we don't need to do it here. The 250 ms settle gives any
+        # in-flight participant votes time to land on the daemon before that
+        # WS-driven re-fetch runs — castVote() on the participant is
         # fire-and-forget, so the local "Vote registered" toast appears before
         # the server has acked.
         self._page.evaluate("""async () => {
             const resp = await fetch(API('/poll/end'), { method: 'POST' });
             if (!resp.ok) throw new Error('Poll close failed: ' + resp.status);
             await new Promise(r => setTimeout(r, 250));
-            if (typeof fetchPollState === 'function') await fetchPollState();
         }""")
         # Poll closed: #poll-display no longer has .voting-active
         self._page.wait_for_function(
