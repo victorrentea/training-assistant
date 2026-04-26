@@ -221,6 +221,7 @@ def _build_runtime_session_snapshot(
             "timer_seconds": poll_state.poll_timer_seconds,
             "timer_started_at": poll_timer_started_at,
             "votes": dict(poll_state.votes),
+            "awarded_points": dict(poll_state.awarded_points),
         },
         "qa_questions": qa_payload,
         "wordcloud": {

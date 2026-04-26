@@ -651,3 +651,21 @@ def test_apply_snapshot_restore_accepts_nested_activity_state():
     assert debate_state.round_index == 1
     assert debate_state.round_timer_seconds == 30
     assert debate_state.round_timer_started_at is not None
+
+
+def test_runtime_snapshot_includes_awarded_points():
+    """The snapshot writer must surface poll_state.awarded_points so it round-trips to disk."""
+    from daemon.__main__ import _build_runtime_session_snapshot
+    from daemon.poll.state import poll_state
+
+    poll_state.clear()
+    poll_state.create_poll("Q?", ["A", "B"])
+    poll_state.open_poll(lambda: None)
+    poll_state.awarded_points = {"alice": 750, "bob": 200}
+
+    snap = _build_runtime_session_snapshot(active_session_id="sid-test", session_name="Test Session")
+
+    assert "poll" in snap
+    assert snap["poll"].get("awarded_points") == {"alice": 750, "bob": 200}
+
+    poll_state.clear()
