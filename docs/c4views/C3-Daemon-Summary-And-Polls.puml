@@ -1,0 +1,40 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - Training Daemon</size>\n<size:24>Daemon slice for file-driven summary helpers and the host poll queue.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+System(Hostsessionfiles, "Host session files", $descr="Session folders, normalized transcripts, ai-summary.md, uploaded files, and slide manifests on the trainer's Mac.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, "Host APIs", $techn="daemon/session/router.py + daemon/activity/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/quiz/queue_router.py + daemon/{poll,qa,debate,codereview,wordcloud,misc}/router.py (host sub-routers)", $descr="Local host-side routers for session lifecycle, activity switching, leaderboard, host state snapshot, poll queue, and per-feature host actions.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Pollqueue, "Poll queue", $techn="daemon/quiz/queue.py + daemon/quiz/queue_router.py", $descr="In-memory queue of pre-submitted poll questions for one-at-a-time firing by the host.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Railway bridge", $techn="daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py + daemon/ws_messages.py", $descr="Persistent /ws/daemon client, proxy response handling, typed broadcasts/notify_host, upload handoff, and static sync trigger.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Session persistence", $techn="daemon/session_state.py + daemon/persisted_models.py", $descr="Persists global-state.json, session-state.json, session metadata, key points, and slide manifests.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Summaryhelpers, "Summary helpers", $techn="daemon/summary/loop.py", $descr="File-driven helpers that read ai-summary.md and surface its mtime; consumed by misc routes and host snapshots.", $tags="", $link="")
+  }
+
+}
+
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes host-driven updates through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Persists and restores session files through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Summaryhelpers, "Reads ai-summary.md state through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Pollqueue, "Manages queued poll questions through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Reads session metadata for sync payloads from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Summaryhelpers, Hostsessionfiles, "Reads ai-summary.md and mtime from", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

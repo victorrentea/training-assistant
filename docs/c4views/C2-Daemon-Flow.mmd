@@ -6,35 +6,40 @@ graph LR
 
     1["<div style='font-weight: bold'>Host</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Runs the workshop, controls<br />activities, and monitors the<br />live session.</div>"]
     style 1 fill:#0b3d2c,stroke:#072a1e,color:#ffffff
-    3["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used by the daemon for<br />quiz generation/refinement<br />and debate cleanup.</div>"]
+    3["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used by the daemon for<br />debate AI cleanup and<br />code-review smart paste<br />extraction.</div>"]
     style 3 fill:#1d6f42,stroke:#144d2e,color:#ffffff
     4["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Local Mac bridge that emits<br />slide events and receives<br />emoji/session notifications.</div>"]
     style 4 fill:#1d6f42,stroke:#144d2e,color:#ffffff
     6["<div style='font-weight: bold'>Google Drive</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts exported slide PDFs<br />consumed by the Railway<br />cache.</div>"]
     style 6 fill:#1d6f42,stroke:#144d2e,color:#ffffff
-    7["<div style='font-weight: bold'>Host session files</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Session folders, normalized<br />transcripts, ai-summary.md,<br />uploaded files, and slide<br />manifests on the trainer's<br />Mac.</div>"]
+    7["<div style='font-weight: bold'>AgentMail</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosted inbox/email service:<br />delivers participant feedback<br />notifications and routes<br />incoming Claude email<br />webhooks.</div>"]
     style 7 fill:#1d6f42,stroke:#144d2e,color:#ffffff
-    8["<div style='font-weight: bold'>Local ChromaDB store</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>~/.workshop-rag/chroma</div>"]
+    8["<div style='font-weight: bold'>Host session files</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Session folders, normalized<br />transcripts, ai-summary.md,<br />uploaded files, and slide<br />manifests on the trainer's<br />Mac.</div>"]
     style 8 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    9["<div style='font-weight: bold'>Local ChromaDB store</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>~/.workshop-rag/chroma —<br />background-indexed local<br />materials.</div>"]
+    style 9 fill:#1d6f42,stroke:#144d2e,color:#ffffff
 
-    subgraph 9 ["Workshop Live Interaction Tool"]
-      style 9 fill:#ffffff,stroke:#144d2e,color:#144d2e
+    subgraph 10 ["Workshop Live Interaction Tool"]
+      style 10 fill:#ffffff,stroke:#144d2e,color:#144d2e
 
-      11["<div style='font-weight: bold'>Host SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Host control panel served<br />from the daemon host server<br />on localhost.</div>"]
-      style 11 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      12["<div style='font-weight: bold'>Railway Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>Thin session-aware bridge for<br />participants, slides,<br />uploads, and daemon sync.</div>"]
+      12["<div style='font-weight: bold'>Host SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Host control panel served<br />from the daemon host server<br />on localhost.</div>"]
       style 12 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      21["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
-      style 21 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      13["<div style='font-weight: bold'>Railway Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>Thin session-aware bridge for<br />participants, slides,<br />uploads, daemon sync, inbox<br />webhooks, and telemetry.</div>"]
+      style 13 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      23["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
+      style 23 fill:#5aa05a,stroke:#3e703e,color:#ffffff
     end
 
-    1-. "<div>Uses in browser</div><div style='font-size: 70%'></div>" .->11
-    11-. "<div>Calls host REST and proxied<br />WebSocket APIs on localhost</div><div style='font-size: 70%'></div>" .->21
-    21-. "<div>Synchronizes active session,<br />participant events, uploads,<br />and generated static assets</div><div style='font-size: 70%'></div>" .->12
-    21-. "<div>Requests quiz<br />generation/refinement and<br />debate cleanup</div><div style='font-size: 70%'></div>" .->3
-    21-. "<div>Receives slide events and<br />sends emoji/session<br />notifications</div><div style='font-size: 70%'></div>" .->4
-    21-. "<div>Reads and writes session<br />folders and summary files</div><div style='font-size: 70%'></div>" .->7
-    21-. "<div>Indexes and queries local<br />materials</div><div style='font-size: 70%'></div>" .->8
-    12-. "<div>Downloads slide PDFs into<br />cache</div><div style='font-size: 70%'></div>" .->6
+    1-. "<div>Uses in browser</div><div style='font-size: 70%'></div>" .->12
+    12-. "<div>Calls host REST and proxied<br />WebSocket APIs on localhost</div><div style='font-size: 70%'></div>" .->23
+    23-. "<div>Synchronizes active session,<br />participant events, uploads,<br />and generated static assets</div><div style='font-size: 70%'></div>" .->13
+    23-. "<div>Requests debate cleanup and<br />code-review smart-paste<br />extraction</div><div style='font-size: 70%'></div>" .->3
+    23-. "<div>Receives slide events and<br />sends emoji/session<br />notifications</div><div style='font-size: 70%'></div>" .->4
+    23-. "<div>Sends best-effort email<br />notifications via AgentMail<br />SDK</div><div style='font-size: 70%'></div>" .->7
+    23-. "<div>Reads and writes session<br />folders, transcripts, and<br />summary files</div><div style='font-size: 70%'></div>" .->8
+    23-. "<div>Indexes local materials in<br />the background</div><div style='font-size: 70%'></div>" .->9
+    13-. "<div>Downloads slide PDFs into<br />cache</div><div style='font-size: 70%'></div>" .->6
+    13-. "<div>Receives signed AgentMail<br />webhooks for incoming Claude<br />email</div><div style='font-size: 70%'></div>" .->7
+    13-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->23
 
   end

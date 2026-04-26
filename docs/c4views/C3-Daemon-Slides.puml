@@ -21,17 +21,22 @@ System(Hostsessionfiles, "Host session files", $descr="Session folders, normaliz
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
   Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
-    Component(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, "Orchestrator", $techn="daemon/__main__.py", $descr="Starts the lock/heartbeat, host server, daemon WS client, addons bridge, slide runner, summary loop, and the 1-second main loop.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, "Host APIs", $techn="daemon/session/router.py + daemon/activity/router.py + daemon/quiz/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/misc/router.py + daemon/poll/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/wordcloud/router.py", $descr="Local host-side routers for session lifecycle, activity switching, quiz requests, leaderboard control, host state, uploads, and feature administration.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Railway bridge", $techn="daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py", $descr="Persistent /ws/daemon client, proxy response handling, typed broadcasts, upload handoff, and static sync.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, "Orchestrator", $techn="daemon/__main__.py", $descr="Starts OTel tracing, the lock/heartbeat, host server, daemon WS client, addons bridge, slide runner, transcript probes, and the 1-second main loop.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, "Host APIs", $techn="daemon/session/router.py + daemon/activity/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/quiz/queue_router.py + daemon/{poll,qa,debate,codereview,wordcloud,misc}/router.py (host sub-routers)", $descr="Local host-side routers for session lifecycle, activity switching, leaderboard, host state snapshot, poll queue, and per-feature host actions.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Railway bridge", $techn="daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py + daemon/ws_messages.py", $descr="Persistent /ws/daemon client, proxy response handling, typed broadcasts/notify_host, upload handoff, and static sync trigger.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Session persistence", $techn="daemon/session_state.py + daemon/persisted_models.py", $descr="Persists global-state.json, session-state.json, session metadata, key points, and slide manifests.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Slides and upload pipeline", $techn="daemon/slides/*", $descr="Loads catalogs, tracks current slide, converts decks, invalidates Railway cache, and pushes slide metadata/files.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Addons bridge", $techn="daemon/addon_bridge_client.py + daemon/adapters/*", $descr="Receives slide events from victor-macos-addons and forwards emoji/session notifications back.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Slides and upload pipeline", $techn="daemon/slides/*", $descr="Loads catalogs, tracks current slide, converts decks, invalidates Railway cache, scans PPTX mtimes, and pushes slide metadata/files.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Addons bridge", $techn="daemon/addon_bridge_client.py + daemon/adapters/*", $descr="Receives slide events and slides_viewed deltas from victor-macos-addons and forwards emoji/session notifications back.", $tags="", $link="")
   }
 
-  Container(WorkshopLiveInteractionTool.RailwayBackend, "Railway Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="Thin session-aware bridge for participants, slides, uploads, and daemon sync.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.RailwayBackend, "Railway Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="Thin session-aware bridge for participants, slides, uploads, daemon sync, inbox webhooks, and telemetry.", $tags="", $link="")
 }
 
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes host-driven updates through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Persists and restores session files through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, WorkshopLiveInteractionTool.RailwayBackend, "Connects over /ws/daemon and host-auth REST", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Reads session metadata for sync payloads from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, Hostsessionfiles, "Reads slide catalogs and generated PDFs from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes slide metadata/files through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, WorkshopLiveInteractionTool.RailwayBackend, "Uses cache and upload helpers on", $techn="", $tags="", $link="")
@@ -42,11 +47,6 @@ Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInterac
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Loads and flushes state through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Triggers", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Starts", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes host-driven updates through", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Persists and restores session files through", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Triggers", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, WorkshopLiveInteractionTool.RailwayBackend, "Connects over /ws/daemon and host-auth REST", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Reads session metadata for sync payloads from", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

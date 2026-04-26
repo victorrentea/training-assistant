@@ -1,0 +1,41 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - Training Daemon</size>\n<size:24>Daemon slice for Claude-backed AI features (debate cleanup + code-review smart paste).</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used by the daemon for debate AI cleanup and code-review smart paste extraction.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, "Participant APIs", $techn="daemon/participant/router.py + daemon/poll/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py", $descr="Authoritative participant REST handlers for identity, polls, Q&A, debate, code review, misc actions, slides, emoji, and word cloud.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, "Host APIs", $techn="daemon/session/router.py + daemon/activity/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/quiz/queue_router.py + daemon/{poll,qa,debate,codereview,wordcloud,misc}/router.py (host sub-routers)", $descr="Local host-side routers for session lifecycle, activity switching, leaderboard, host state snapshot, poll queue, and per-feature host actions.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Railway bridge", $techn="daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py + daemon/ws_messages.py", $descr="Persistent /ws/daemon client, proxy response handling, typed broadcasts/notify_host, upload handoff, and static sync trigger.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, "Debate AI cleanup", $techn="daemon/debate/ai_cleanup.py + daemon/llm/adapter.py", $descr="Claude-backed argument dedupe, cleanup, and new-suggestion generation.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, "Code-review smart paste", $techn="daemon/codereview/router.py + daemon/llm/adapter.py", $descr="Claude Haiku call that extracts a code snippet and language from pasted LLM output.", $tags="", $link="")
+  }
+
+}
+
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes participant updates through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, "Triggers Claude smart-paste extraction (host create path)", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes host-driven updates through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, AnthropicClaudeAPI, "Requests cleanup suggestions from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes cleanup results through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, AnthropicClaudeAPI, "Requests code/language extraction from", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

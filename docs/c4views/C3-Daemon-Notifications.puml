@@ -1,0 +1,33 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - Training Daemon</size>\n<size:24>Daemon slice for email notifications via AgentMail.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+System(AgentMail, "AgentMail", $descr="Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, "Participant APIs", $techn="daemon/participant/router.py + daemon/poll/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py", $descr="Authoritative participant REST handlers for identity, polls, Q&A, debate, code review, misc actions, slides, emoji, and word cloud.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Emailnotifications, "Email notifications", $techn="daemon/email_notify.py", $descr="Best-effort AgentMail-backed notifications for participant paste/feedback events.", $tags="", $link="")
+  }
+
+}
+
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Emailnotifications, AgentMail, "Sends notification emails via AgentMail SDK", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Emailnotifications, "Triggers paste/feedback notifications through", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

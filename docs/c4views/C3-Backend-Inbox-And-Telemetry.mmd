@@ -4,6 +4,9 @@ graph LR
   subgraph diagram ["Component View: Workshop Live Interaction Tool - Railway Backend"]
     style diagram fill:#ffffff,stroke:#ffffff
 
+    7["<div style='font-weight: bold'>AgentMail</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosted inbox/email service:<br />delivers participant feedback<br />notifications and routes<br />incoming Claude email<br />webhooks.</div>"]
+    style 7 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+
     subgraph 10 ["Workshop Live Interaction Tool"]
       style 10 fill:#ffffff,stroke:#144d2e,color:#144d2e
 
@@ -14,28 +17,24 @@ graph LR
         style 14 fill:#d6e8c8,stroke:#95a28c,color:#10210f
         15["<div style='font-weight: bold'>Shared Core</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/shared/*]</div><div style='font-size: 80%; margin-top:10px'>AppState, auth, session<br />registry/guard, throttling,<br />metrics, messaging, and<br />version helpers.</div>"]
         style 15 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        16["<div style='font-weight: bold'>WebSocket bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/features/ws/*]</div><div style='font-size: 80%; margin-top:10px'>Daemon auth, session-scoped<br />browser sockets, participant<br />proxy bridge, and broadcast<br />fan-out.</div>"]
-        style 16 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        17["<div style='font-weight: bold'>Page routes</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/features/pages/router.py]</div><div style='font-size: 80%; margin-top:10px'>Landing, participant, and<br />host static page routing.</div>"]
-        style 17 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        21["<div style='font-weight: bold'>Inbox webhook bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/features/inbox/router.py]</div><div style='font-size: 80%; margin-top:10px'>Verifies AgentMail (Svix)<br />webhooks for incoming Claude<br />email and forwards events to<br />the connected claude-inbox<br />WebSocket listener.</div>"]
+        style 21 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        22["<div style='font-weight: bold'>Telemetry receiver</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/features/telemetry/router.py]</div><div style='font-size: 80%; margin-top:10px'>Receives browser OTel spans<br />(POST /api/telemetry/spans)<br />and appends them to the<br />shared traces file.</div>"]
+        style 22 fill:#d6e8c8,stroke:#95a28c,color:#10210f
       end
 
       11["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from Railway session routes.</div>"]
       style 11 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      12["<div style='font-weight: bold'>Host SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Host control panel served<br />from the daemon host server<br />on localhost.</div>"]
-      style 12 fill:#5aa05a,stroke:#3e703e,color:#ffffff
       23["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
       style 23 fill:#5aa05a,stroke:#3e703e,color:#ffffff
     end
 
-    12-. "<div>Calls host REST and proxied<br />WebSocket APIs on localhost</div><div style='font-size: 70%'></div>" .->23
-    11-. "<div>Loads participant pages</div><div style='font-size: 70%'></div>" .->17
-    11-. "<div>Connects as participant and<br />forwards REST commands via<br />the daemon proxy</div><div style='font-size: 70%'></div>" .->16
+    23-. "<div>Sends best-effort email<br />notifications via AgentMail<br />SDK</div><div style='font-size: 70%'></div>" .->7
+    11-. "<div>Posts browser OTel spans<br />(test/diagnostic mode)</div><div style='font-size: 70%'></div>" .->22
     14-. "<div>Initializes</div><div style='font-size: 70%'></div>" .->15
-    14-. "<div>Registers</div><div style='font-size: 70%'></div>" .->16
-    14-. "<div>Registers</div><div style='font-size: 70%'></div>" .->17
-    16-. "<div>Reads auth, session, and<br />connection state from</div><div style='font-size: 70%'></div>" .->15
-    17-. "<div>Uses auth/session helpers<br />from</div><div style='font-size: 70%'></div>" .->15
+    14-. "<div>Registers</div><div style='font-size: 70%'></div>" .->21
+    14-. "<div>Registers when<br />OTEL_TRACES_FILE is set</div><div style='font-size: 70%'></div>" .->22
+    21-. "<div>Stores the connected<br />claude-inbox WebSocket on</div><div style='font-size: 70%'></div>" .->15
     14-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->23
 
   end

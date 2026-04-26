@@ -11,21 +11,22 @@ graph LR
     6["<div style='font-weight: bold'>Google Drive</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts exported slide PDFs<br />consumed by the Railway<br />cache.</div>"]
     style 6 fill:#1d6f42,stroke:#144d2e,color:#ffffff
 
-    subgraph 9 ["Workshop Live Interaction Tool"]
-      style 9 fill:#ffffff,stroke:#144d2e,color:#144d2e
+    subgraph 10 ["Workshop Live Interaction Tool"]
+      style 10 fill:#ffffff,stroke:#144d2e,color:#144d2e
 
-      10["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from Railway session routes.</div>"]
-      style 10 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      12["<div style='font-weight: bold'>Railway Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>Thin session-aware bridge for<br />participants, slides,<br />uploads, and daemon sync.</div>"]
-      style 12 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      21["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
-      style 21 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      11["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from Railway session routes.</div>"]
+      style 11 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      13["<div style='font-weight: bold'>Railway Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>Thin session-aware bridge for<br />participants, slides,<br />uploads, daemon sync, inbox<br />webhooks, and telemetry.</div>"]
+      style 13 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      23["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
+      style 23 fill:#5aa05a,stroke:#3e703e,color:#ffffff
     end
 
-    2-. "<div>Uses in browser</div><div style='font-size: 70%'></div>" .->10
-    10-. "<div>Calls session-scoped REST and<br />WebSocket APIs</div><div style='font-size: 70%'></div>" .->12
-    10-. "<div>Reverse geocodes optional<br />location</div><div style='font-size: 70%'></div>" .->5
-    21-. "<div>Synchronizes active session,<br />participant events, uploads,<br />and generated static assets</div><div style='font-size: 70%'></div>" .->12
-    12-. "<div>Downloads slide PDFs into<br />cache</div><div style='font-size: 70%'></div>" .->6
+    2-. "<div>Uses in browser</div><div style='font-size: 70%'></div>" .->11
+    11-. "<div>Calls session-scoped REST and<br />WebSocket APIs</div><div style='font-size: 70%'></div>" .->13
+    11-. "<div>Reverse geocodes optional<br />location</div><div style='font-size: 70%'></div>" .->5
+    23-. "<div>Synchronizes active session,<br />participant events, uploads,<br />and generated static assets</div><div style='font-size: 70%'></div>" .->13
+    13-. "<div>Downloads slide PDFs into<br />cache</div><div style='font-size: 70%'></div>" .->6
+    13-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->23
 
   end

@@ -18,11 +18,10 @@ left to right direction
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
   Container_Boundary("WorkshopLiveInteractionTool.RailwayBackend_boundary", "Railway Backend", $tags="") {
-    Component(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, "Bootstrap", $techn="railway/app.py", $descr="Registers route ordering, session guards, and startup stamping.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Shared Core", $techn="shared/*", $descr="AppState, auth, session registry/guard, metrics, messaging, and version helpers.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, "WebSocket bridge", $techn="features/ws/*", $descr="Daemon auth, session-scoped browser sockets, participant proxy bridge, and broadcast fan-out.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, "Page routes", $techn="features/pages/router.py", $descr="Landing, participant, notes, quiz history, and remote host pages.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Public notes and key points", $techn="features/session/notes_router.py", $descr="Session-scoped summary and notes endpoints.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, "Bootstrap", $techn="railway/app.py", $descr="Registers route ordering, OTel instrumentation, session guards, and startup stamping (version.js / deploy-info.json).", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Shared Core", $techn="railway/shared/*", $descr="AppState, auth, session registry/guard, throttling, metrics, messaging, and version helpers.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, "WebSocket bridge", $techn="railway/features/ws/*", $descr="Daemon auth, session-scoped browser sockets, participant proxy bridge, and broadcast fan-out.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, "Page routes", $techn="railway/features/pages/router.py", $descr="Landing, participant, and host static page routing.", $tags="", $link="")
   }
 
   Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from Railway session routes.", $tags="", $link="")
@@ -31,16 +30,14 @@ System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interacti
 }
 
 Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.TrainingDaemon, "Calls host REST and proxied WebSocket APIs on localhost", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, "Loads participant and notes pages", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, "Connects as participant", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Reads notes and key points", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, "Loads participant pages", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, "Connects as participant and forwards REST commands via the daemon proxy", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Initializes", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, "Registers", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, "Registers", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Registers", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Reads auth, session, and connection state from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Uses auth/session helpers from", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Reads mirrored summary state from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.TrainingDaemon, "Configures OTel tracing and FastAPI instrumentation through (Railway side)", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

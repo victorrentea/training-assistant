@@ -15,21 +15,25 @@ left to right direction
 !include <C4/C4_Context>
 !include <C4/C4_Container>
 
-System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used by the daemon for quiz generation/refinement and debate cleanup.", $tags="", $link="")
+System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used by the daemon for debate AI cleanup and code-review smart paste extraction.", $tags="", $link="")
 System(victormacosaddons, "victor-macos-addons", $descr="Local Mac bridge that emits slide events and receives emoji/session notifications.", $tags="", $link="")
+System(AgentMail, "AgentMail", $descr="Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks.", $tags="", $link="")
 System(Hostsessionfiles, "Host session files", $descr="Session folders, normalized transcripts, ai-summary.md, uploaded files, and slide manifests on the trainer's Mac.", $tags="", $link="")
-System(LocalChromaDBstore, "Local ChromaDB store", $descr="~/.workshop-rag/chroma", $tags="", $link="")
+System(LocalChromaDBstore, "Local ChromaDB store", $descr="~/.workshop-rag/chroma — background-indexed local materials.", $tags="", $link="")
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
-  Container(WorkshopLiveInteractionTool.RailwayBackend, "Railway Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="Thin session-aware bridge for participants, slides, uploads, and daemon sync.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.RailwayBackend, "Railway Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="Thin session-aware bridge for participants, slides, uploads, daemon sync, inbox webhooks, and telemetry.", $tags="", $link="")
   Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI + embedded FastAPI", $descr="Local source of truth for host control, live state, persistence, and AI-assisted jobs.", $tags="", $link="")
 }
 
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, WorkshopLiveInteractionTool.RailwayBackend, "Synchronizes active session, participant events, uploads, and generated static assets", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon, AnthropicClaudeAPI, "Requests quiz generation/refinement and debate cleanup", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, AnthropicClaudeAPI, "Requests debate cleanup and code-review smart-paste extraction", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, victormacosaddons, "Receives slide events and sends emoji/session notifications", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon, Hostsessionfiles, "Reads and writes session folders and summary files", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon, LocalChromaDBstore, "Indexes and queries local materials", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, AgentMail, "Sends best-effort email notifications via AgentMail SDK", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, Hostsessionfiles, "Reads and writes session folders, transcripts, and summary files", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, LocalChromaDBstore, "Indexes local materials in the background", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend, AgentMail, "Receives signed AgentMail webhooks for incoming Claude email", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend, WorkshopLiveInteractionTool.TrainingDaemon, "Configures OTel tracing and FastAPI instrumentation through (Railway side)", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

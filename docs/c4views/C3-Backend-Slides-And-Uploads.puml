@@ -1,5 +1,5 @@
 @startuml
-title <size:24>Component View: Workshop Live Interaction Tool - Railway Backend</size>\n<size:24>Public notes, slides, uploads, and static sync slice.</size>
+title <size:24>Component View: Workshop Live Interaction Tool - Railway Backend</size>\n<size:24>Slides, uploads, and static sync slice.</size>
 
 set separator none
 left to right direction
@@ -18,30 +18,27 @@ left to right direction
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
   Container_Boundary("WorkshopLiveInteractionTool.RailwayBackend_boundary", "Railway Backend", $tags="") {
-    Component(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, "Bootstrap", $techn="railway/app.py", $descr="Registers route ordering, session guards, and startup stamping.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Shared Core", $techn="shared/*", $descr="AppState, auth, session registry/guard, metrics, messaging, and version helpers.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Public notes and key points", $techn="features/session/notes_router.py", $descr="Session-scoped summary and notes endpoints.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Slides cache and file serving", $techn="features/slides/*", $descr="Public slide catalog/current slide, Google Drive cache, and host upload/invalidate helpers.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, "Temporary upload bridge", $techn="features/upload/*", $descr="Streams participant uploads into temporary storage and lets the daemon fetch and acknowledge them.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, "Static sync endpoints", $techn="features/internal/router.py", $descr="Allows the daemon to upload and delete generated files under static/.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, "Bootstrap", $techn="railway/app.py", $descr="Registers route ordering, OTel instrumentation, session guards, and startup stamping (version.js / deploy-info.json).", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Shared Core", $techn="railway/shared/*", $descr="AppState, auth, session registry/guard, throttling, metrics, messaging, and version helpers.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Slides cache and file serving", $techn="railway/features/slides/*", $descr="Public slide catalog/current slide, Google Drive cache, and host upload/invalidate helpers.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, "Temporary upload bridge", $techn="railway/features/upload/*", $descr="Streams participant uploads into temporary storage and lets the daemon fetch and acknowledge them.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, "Static sync endpoints", $techn="railway/features/internal/router.py", $descr="Allows the daemon to upload and delete generated files under static/.", $tags="", $link="")
   }
 
   Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from Railway session routes.", $tags="", $link="")
   Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI + embedded FastAPI", $descr="Local source of truth for host control, live state, persistence, and AI-assisted jobs.", $tags="", $link="")
 }
 
-Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Reads notes and key points", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Reads slides and downloads PDFs", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, "Uploads participant files", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Initializes", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, "Registers", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Registers", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, "Registers", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, "Registers", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.RailwayBackend.Publicnotesandkeypoints, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Reads mirrored summary state from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Reads slide/current-session state from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Associates uploads with active participants from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Uses host auth from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.TrainingDaemon, "Configures OTel tracing and FastAPI instrumentation through (Railway side)", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

@@ -1,0 +1,38 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Workshop Live Interaction Tool - Training Daemon"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    3["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used by the daemon for<br />debate AI cleanup and<br />code-review smart paste<br />extraction.</div>"]
+    style 3 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+
+    subgraph 10 ["Workshop Live Interaction Tool"]
+      style 10 fill:#ffffff,stroke:#144d2e,color:#144d2e
+
+      subgraph 23 ["Training Daemon"]
+        style 23 fill:#ffffff,stroke:#3e703e,color:#3e703e
+
+        26["<div style='font-weight: bold'>Participant APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/participant/router.py + daemon/poll/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py]</div><div style='font-size: 80%; margin-top:10px'>Authoritative participant<br />REST handlers for identity,<br />polls, Q&A, debate, code<br />review, misc actions, slides,<br />emoji, and word cloud.</div>"]
+        style 26 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        27["<div style='font-weight: bold'>Host APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session/router.py + daemon/activity/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/quiz/queue_router.py + daemon/{poll,qa,debate,codereview,wordcloud,misc}/router.py (host sub-routers)]</div><div style='font-size: 80%; margin-top:10px'>Local host-side routers for<br />session lifecycle, activity<br />switching, leaderboard, host<br />state snapshot, poll queue,<br />and per-feature host actions.</div>"]
+        style 27 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        30["<div style='font-weight: bold'>Railway bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py + daemon/ws_messages.py]</div><div style='font-size: 80%; margin-top:10px'>Persistent /ws/daemon client,<br />proxy response handling,<br />typed broadcasts/notify_host,<br />upload handoff, and static<br />sync trigger.</div>"]
+        style 30 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        32["<div style='font-weight: bold'>Debate AI cleanup</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/debate/ai_cleanup.py + daemon/llm/adapter.py]</div><div style='font-size: 80%; margin-top:10px'>Claude-backed argument<br />dedupe, cleanup, and<br />new-suggestion generation.</div>"]
+        style 32 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        33["<div style='font-weight: bold'>Code-review smart paste</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/codereview/router.py + daemon/llm/adapter.py]</div><div style='font-size: 80%; margin-top:10px'>Claude Haiku call that<br />extracts a code snippet and<br />language from pasted LLM<br />output.</div>"]
+        style 33 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+      end
+
+    end
+
+    26-. "<div>Publishes participant updates<br />through</div><div style='font-size: 70%'></div>" .->30
+    26-. "<div>Triggers Claude smart-paste<br />extraction (host create path)</div><div style='font-size: 70%'></div>" .->33
+    27-. "<div>Publishes host-driven updates<br />through</div><div style='font-size: 70%'></div>" .->30
+    27-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->32
+    32-. "<div>Requests cleanup suggestions<br />from</div><div style='font-size: 70%'></div>" .->3
+    32-. "<div>Publishes cleanup results<br />through</div><div style='font-size: 70%'></div>" .->30
+    33-. "<div>Requests code/language<br />extraction from</div><div style='font-size: 70%'></div>" .->3
+
+  end

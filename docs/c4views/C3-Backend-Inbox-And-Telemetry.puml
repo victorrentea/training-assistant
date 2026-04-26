@@ -1,0 +1,43 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - Railway Backend</size>\n<size:24>Inbox webhook + browser telemetry receivers.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Container>
+!include <C4/C4_Component>
+
+System(AgentMail, "AgentMail", $descr="Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.RailwayBackend_boundary", "Railway Backend", $tags="") {
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, "Bootstrap", $techn="railway/app.py", $descr="Registers route ordering, OTel instrumentation, session guards, and startup stamping (version.js / deploy-info.json).", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Shared Core", $techn="railway/shared/*", $descr="AppState, auth, session registry/guard, throttling, metrics, messaging, and version helpers.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Inboxwebhookbridge, "Inbox webhook bridge", $techn="railway/features/inbox/router.py", $descr="Verifies AgentMail (Svix) webhooks for incoming Claude email and forwards events to the connected claude-inbox WebSocket listener.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.RailwayBackend.Telemetryreceiver, "Telemetry receiver", $techn="railway/features/telemetry/router.py", $descr="Receives browser OTel spans (POST /api/telemetry/spans) and appends them to the shared traces file.", $tags="", $link="")
+  }
+
+  Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from Railway session routes.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI + embedded FastAPI", $descr="Local source of truth for host control, live state, persistence, and AI-assisted jobs.", $tags="", $link="")
+}
+
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, AgentMail, "Sends best-effort email notifications via AgentMail SDK", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend.Telemetryreceiver, "Posts browser OTel spans (test/diagnostic mode)", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Initializes", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Inboxwebhookbridge, "Registers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Telemetryreceiver, "Registers when OTEL_TRACES_FILE is set", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Inboxwebhookbridge, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Stores the connected claude-inbox WebSocket on", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.TrainingDaemon, "Configures OTel tracing and FastAPI instrumentation through (Railway side)", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml
