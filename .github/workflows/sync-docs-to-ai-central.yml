@@ -1,0 +1,31 @@
+name: Sync docs to ai-central
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - docs/**
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone ai-central
+        run: git clone https://x-access-token:${{ secrets.AI_CENTRAL_PAT }}@github.com/victorrentea/ai-central.git /tmp/ai-central
+
+      - name: Copy docs
+        run: |
+          mkdir -p /tmp/ai-central/projects/training-assistant/docs
+          rsync -a --delete docs/ /tmp/ai-central/projects/training-assistant/docs/
+
+      - name: Commit and push
+        run: |
+          cd /tmp/ai-central
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add projects/training-assistant/docs/
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "sync: training-assistant docs"
+          git push
