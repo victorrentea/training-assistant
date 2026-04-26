@@ -3,6 +3,18 @@
     "superpowers@claude-plugins-official": true
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git -C \"$AI_CENTRAL_PATH\" pull --ff-only 2>&1 || true",
+            "statusMessage": "Syncing ai-central...",
+            "async": true
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
