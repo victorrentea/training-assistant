@@ -1,9 +1,8 @@
 """Tests for daemon/poll/state.py — PollState singleton."""
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
-from daemon.poll.state import PollState, _MAX_POINTS, _MIN_POINTS, _SLOWEST_MULTIPLIER
+from daemon.poll.state import _MAX_POINTS, PollState
 
 
 class MockScores:
@@ -150,7 +149,7 @@ def test_reveal_correct_speed_scoring():
         "slow": {"option_indices": [0], "voted_at": (base_time + timedelta(seconds=8)).isoformat()},
     }
     scores = MockScores()
-    result = ps.reveal_correct([0], scores)
+    ps.reveal_correct([0], scores)
     assert scores.scores["fast"] > scores.scores["slow"]
     assert scores.scores["fast"] == _MAX_POINTS
 
