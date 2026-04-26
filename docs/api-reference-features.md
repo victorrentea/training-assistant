@@ -19,7 +19,6 @@ Canonical `x-feature` IDs used for generated `API.md` grouping.
 - `notes_summary`
 - `feedback`
 - `transcription`
-- `reload`
 - `infrastructure` — Internal daemon↔railway transport plumbing (proxy, ping, session identity, code timestamp, broadcast/send_to_host wrappers)
 
 ## Usage
