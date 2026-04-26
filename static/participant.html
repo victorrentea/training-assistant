@@ -31,7 +31,7 @@ body{visibility:hidden}
 .nav-active:hover{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important}
 .topic-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
 </style>
-<script>document.fonts.ready.then(function(){document.body.style.visibility='visible'})</script>
+<script>document.fonts.ready.then(function(){var s=function(){document.body.style.visibility='visible'};if(document.body)s();else document.addEventListener('DOMContentLoaded',s)})</script>
 <script src="/static/emoji-float.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
