@@ -1,14 +1,14 @@
 {
   "typeCheckingMode": "basic",
   "pythonVersion": "3.12",
-  "include": ["railway", "daemon"],
+  "include": ["railway", "daemon", "tests"],
   "exclude": [
-    "tests",
     "scripts",
     "daemon/email_notify.py",
     "daemon/rag/indexer.py",
     "railway/healthcheck.py"
   ],
+  "ignore": ["tests"],
   "venvPath": ".",
   "venv": ".venv"
 }
