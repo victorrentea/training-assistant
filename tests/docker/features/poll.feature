@@ -90,3 +90,15 @@ Feature: Live Poll
     Then  the host sees 1 vote received
     When  a participant "Bob" selects "Python"
     Then  the host sees 2 votes received
+
+  @seq
+  Scenario: Host changes the correct option, points re-flow
+    Given a participant "Alice" selects "Java"
+    And   a participant "Bob" selects "Python"
+    And   the host closes the poll
+    And   the host marks "Java" as correct option
+    And   Alice is awarded 1000 points
+    And   Bob is awarded 0 points
+    When  the host marks "Python" as correct option
+    Then  Alice is awarded 0 points
+    And   Bob is awarded 1000 points

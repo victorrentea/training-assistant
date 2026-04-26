@@ -340,6 +340,7 @@ def participant_awarded(n):
 
 
 @then(parsers.re(r"^(?P<name>[A-Z][a-zA-Z]+) is awarded (?P<n>\d+) points$"))
+@given(parsers.re(r"^(?P<name>[A-Z][a-zA-Z]+) is awarded (?P<n>\d+) points$"))
 def named_awarded(name, n):
     _wait_for_score(_participants[name], int(n))
 
