@@ -47,6 +47,52 @@
     .empty { color: var(--muted); }
     .updated { font-size: .75rem; color: var(--muted); text-align: right; margin-top: .5rem; }
     #points.summary-md-content { font-size: 1rem; }
+    .code-block {
+      position: relative;
+      background: #1e1e2e;
+      border: 1px solid var(--border, #444);
+      border-radius: 6px;
+      margin: .5rem 0;
+    }
+    .code-block pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: .92rem;
+      line-height: 1.5;
+      color: #cdd6f4;
+      margin: 0;
+      padding: .75rem 2.6rem .75rem .9rem;
+      background: transparent;
+    }
+    .copy-btn {
+      position: absolute;
+      top: .4rem;
+      right: .4rem;
+      background: transparent;
+      border: 1px solid #555;
+      border-radius: 4px;
+      color: #aaa;
+      cursor: pointer;
+      padding: .25rem .35rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      gap: .2rem;
+      font-size: .72rem;
+      transition: color .15s, border-color .15s, background .15s;
+    }
+    .copy-btn:hover { color: #fff; border-color: #aaa; background: rgba(255,255,255,.08); }
+    .copy-btn.copied { color: #a6e3a1; border-color: #a6e3a1; }
+    code.inline-code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: .92em;
+      background: var(--surface);
+      border: 1px solid var(--border, #444);
+      border-radius: 3px;
+      padding: .1em .35em;
+      color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -54,7 +100,7 @@
   <p style="font-size:.8rem; color:var(--text-muted);">Refresh this page to get the latest data.</p>
 
   <h2>Session Notes <button id="downloadBtn" class="download-btn" style="display:none" onclick="downloadNotes()"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false" style="width:1em;height:1em;fill:currentColor;vertical-align:-.15em;margin-right:.3em;"><path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path><path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path></svg> Download .txt</button></h2>
-  <pre id="notes" class="notes-pre empty">Loading...</pre>
+  <div id="notes" class="notes-pre empty">Loading...</div>
 
   <h2>Key Points</h2>
   <div id="points" class="summary-md-content"><p class="empty">Loading…</p></div>
@@ -69,6 +115,30 @@
 
     function linkify(html) {
       return html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--accent)">$1</a>');
+    }
+
+    const COPY_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>`;
+
+    function copyCode(btn) {
+      const code = btn.nextElementSibling.textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.classList.add('copied');
+        btn.title = 'Copied!';
+        setTimeout(() => { btn.classList.remove('copied'); btn.title = 'Copy'; }, 1500);
+      });
+    }
+
+    function renderNotes(text) {
+      const parts = text.split(/(```[\s\S]*?```)/g);
+      return parts.map(part => {
+        if (part.startsWith('```') && part.endsWith('```')) {
+          const code = part.slice(3, -3).replace(/^\n/, '');
+          return `<div class="code-block"><button class="copy-btn" onclick="copyCode(this)" title="Copy">${COPY_ICON} copy</button><pre>${escHtml(code)}</pre></div>`;
+        }
+        let html = escHtml(part);
+        html = html.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
+        return linkify(html);
+      }).join('');
     }
 
     let notesText = '';
@@ -98,7 +168,7 @@
         const notesEl = document.getElementById('notes');
         if (data.content) {
           notesText = data.content;
-          notesEl.innerHTML = linkify(escHtml(data.content));
+          notesEl.innerHTML = renderNotes(data.content);
           notesEl.classList.remove('empty');
           document.getElementById('downloadBtn').style.display = '';
         } else {
