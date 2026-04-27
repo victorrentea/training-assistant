@@ -76,6 +76,11 @@ body {
 .host-footer .badge:hover { background: var(--badge-fill); }
 #pax-badge { transition: background 1.5s ease; }
 #pax-badge.flash { background: #ffd16688; transition: none; }
+@keyframes gdrive-blink {
+  0%, 100% { background: #ff6b6b22; box-shadow: none; }
+  50%       { background: #ff6b6bcc; box-shadow: 0 0 8px 2px #ff6b6b88; }
+}
+#gdrive-badge.disconnected { animation: gdrive-blink 0.7s ease-in-out infinite; }
 #summary-badge { border-color: var(--accent2) !important; color: var(--accent2); --badge-fill: #48cfad44; }
 .host-footer-right .footer-neutral-badge {
   border-color: var(--muted) !important;
