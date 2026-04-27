@@ -204,26 +204,17 @@ def host_closes_poll():
 
 @when(parsers.parse("the host closes the poll with a {seconds:d} second timer via the slider"))
 def host_closes_via_slider(seconds):
-    """Drive the host's timer slider; wait for the daemon to actually close the poll.
+    """Drive the host's timer slider; wait for the host UI to reflect closure.
 
-    We bound the wait to a generous multiple of the slider value because the
-    timer fires on the host browser's clock, which is subject to setInterval
-    drift in headless mode. The daemon's poll_running flag flips once endPoll()
-    POSTs back, so polling /poll is the canonical readiness signal.
+    Watching `#poll-display.voting-active` (the class `renderPollDisplay`
+    toggles when the poll opens/closes) keeps the test purely UI-driven and
+    avoids the noise of an HTTP polling loop in the captured trace.
     """
     _host().start_timer_via_slider(seconds)
-    deadline = time.monotonic() + seconds + 5
-    while time.monotonic() < deadline:
-        running = _host()._page.evaluate("""async () => {
-            const r = await fetch(API('/poll'));
-            if (!r.ok) return null;
-            const data = await r.json();
-            return data.poll_running;
-        }""")
-        if running is False:
-            return
-        time.sleep(0.1)
-    raise AssertionError(f"Poll did not close within {seconds + 5}s of timer start")
+    _host()._page.wait_for_function(
+        "() => !document.querySelector('#poll-display.voting-active')",
+        timeout=(seconds + 5) * 1000,
+    )
 
 
 @when(parsers.parse('the host fires a second poll "{question}" with options "{options}"'))
