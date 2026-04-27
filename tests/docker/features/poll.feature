@@ -92,6 +92,14 @@ Feature: Live Poll
     Then  the host sees 2 votes received
 
   @seq
+  Scenario: Participant can vote in next poll after previous closed by timer
+    When the host closes the poll with a 1 second timer via the slider
+    And  the host fires a second poll "Best framework?" with options "Spring;Quarkus"
+    And  the participant selects "Spring"
+    Then the vote is recorded
+    And  the host sees 1 vote received
+
+  @seq
   Scenario: Host changes the correct option, points re-flow
     Given a participant "Alice" selects "Java"
     And   a participant "Bob" selects "Python"

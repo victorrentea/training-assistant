@@ -202,6 +202,58 @@ def host_closes_poll():
     _host().close_poll()
 
 
+@when(parsers.parse("the host closes the poll with a {seconds:d} second timer via the slider"))
+def host_closes_via_slider(seconds):
+    """Drive the host's timer slider; wait for the daemon to actually close the poll.
+
+    We bound the wait to a generous multiple of the slider value because the
+    timer fires on the host browser's clock, which is subject to setInterval
+    drift in headless mode. The daemon's poll_running flag flips once endPoll()
+    POSTs back, so polling /poll is the canonical readiness signal.
+    """
+    _host().start_timer_via_slider(seconds)
+    deadline = time.monotonic() + seconds + 5
+    while time.monotonic() < deadline:
+        running = _host()._page.evaluate("""async () => {
+            const r = await fetch(API('/poll'));
+            if (!r.ok) return null;
+            const data = await r.json();
+            return data.poll_running;
+        }""")
+        if running is False:
+            return
+        time.sleep(0.1)
+    raise AssertionError(f"Poll did not close within {seconds + 5}s of timer start")
+
+
+@when(parsers.parse('the host fires a second poll "{question}" with options "{options}"'))
+def host_fires_second_poll(browser, session_id, question, options):
+    """Create another poll while a previous one was just closed.
+
+    Reuses the same host browser session so the bug under test (host UI state
+    bleeding from one poll into the next) can manifest. Note: we deliberately
+    do NOT wait for `#poll-display.voting-active` — the bug instantly auto-ends
+    the new poll in the host UI, so that selector flaps. We sleep briefly to
+    give any client-side races time to settle before the vote step runs, so a
+    failing vote indicates the daemon-visible bug, not a missed window.
+    """
+    new_options = [o.strip() for o in options.split(";")]
+    import json as _json
+    payload = {"question": question, "options": new_options, "multi": False}
+    _host()._page.evaluate(f"""async () => {{
+        const resp = await fetch(API('/poll/manual/submit'), {{
+            method: 'POST',
+            headers: {{'Content-Type': 'application/json'}},
+            body: JSON.stringify({_json.dumps(payload)})
+        }});
+        if (!resp.ok) throw new Error('Second poll create failed: ' + resp.status);
+    }}""")
+    _ctx["options"] = new_options
+    # Allow up to ~600ms for any auto-end races (host countdown ticks at 200ms)
+    # to fire — without this, the test could vote before the bug closes the poll.
+    time.sleep(0.6)
+
+
 def _reveal(option_texts: list[str]) -> None:
     ids = [_option_id(t) for t in option_texts]
     _host().reveal_correct(ids)

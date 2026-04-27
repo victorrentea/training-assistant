@@ -71,6 +71,23 @@ class HostPage:
             if (!resp.ok) throw new Error('Timer start failed: ' + resp.status);
         }}""")
 
+    def start_timer_via_slider(self, seconds: int) -> None:
+        """Drive the host UI timer slider — same code path as a real release.
+
+        The slider is rendered with `min="5"`, but the bug we want to reproduce
+        is independent of the minimum value. Test code lowers `min` so we can
+        send 1s and keep the test fast; the click handler invoked
+        (`startTimer(+this.value)`) is identical to a human release.
+        """
+        self._page.evaluate(f"""() => {{
+            const s = document.getElementById('timer-slider');
+            if (!s) throw new Error('Timer slider not visible — poll must be open with no active timer');
+            s.min = '1';
+            s.value = '{seconds}';
+            s.dispatchEvent(new Event('input', {{bubbles: true}}));
+            s.dispatchEvent(new Event('mouseup', {{bubbles: true}}));
+        }}""")
+
     def reopen_poll(self) -> None:
         self._page.locator("button[onclick='setPollStatus(true)']").click(force=True)
         self._page.wait_for_selector("#poll-display.voting-active", timeout=5000)

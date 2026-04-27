@@ -48,6 +48,11 @@ class PollState:
 
     def close_poll(self) -> dict:
         self.poll_active = False
+        # Once the poll is closed, any pending end-timer is meaningless. Leaving
+        # these fields set lets a host that re-fetches /poll re-apply a stale
+        # timer to the *next* poll on this client.
+        self.poll_timer_seconds = None
+        self.poll_timer_started_at = None
         counts = self.vote_counts()
         return {"vote_counts": counts}
 

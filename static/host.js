@@ -330,6 +330,11 @@
       }
       if (msg.type === 'poll_opened') {
         currentPoll = msg.poll || currentPoll;
+        // Clear any timer state from the *previous* poll. Without this, the
+        // stale activeTimer from a timer-closed prior poll causes
+        // renderPollDisplay() below to start a new countdown that fires
+        // endPoll() immediately, ending the just-opened poll.
+        _clearTimer();
         pollActive = true;
         voteCounts = [];
         totalVotes = 0;
