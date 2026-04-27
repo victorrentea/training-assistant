@@ -179,7 +179,10 @@ body{visibility:hidden}
 .multi-warning { margin-top: .5rem; text-align: center; font-size: .9rem; font-weight: 700; color: #f0a500; }
 @keyframes poll-warn-blink { 0%, 100% { opacity: 1; } 40% { opacity: 0; } }
 .blink { animation: poll-warn-blink .6s ease-in-out 3; }
-.pax-countdown { text-align: center; font-size: 1.6rem; font-weight: 700; margin-top: .75rem; min-height: 2rem; letter-spacing: .02em; }
+.pax-countdown { margin-top: .75rem; min-height: 2rem; }
+.countdown-bar-wrap { position: relative; border-radius: 8px; height: 2.5rem; overflow: hidden; background: rgba(255,255,255,0.08); }
+.countdown-bar { position: absolute; left: 0; top: 0; height: 100%; border-radius: 8px; transition: width .2s linear; }
+.countdown-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 700; color: #fff; letter-spacing: .02em; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
 #share-location-btn:hover { color: var(--warn); opacity: 1; }
 .closed-banner {
   margin-top: 1rem; padding: .6rem 1rem;
@@ -2341,14 +2344,22 @@ function _renderActivityPoll() {
   _refreshCountdownDisplay();
 }
 
+function _renderCountdown(el, remaining, total) {
+  var pct = total > 0 ? (remaining / total) * 100 : 0;
+  var color = remaining <= 5 ? 'var(--danger)' : 'var(--warn)';
+  el.innerHTML = '<div class="countdown-bar-wrap">' +
+    '<div class="countdown-bar" style="width:' + pct.toFixed(1) + '%;background:' + color + '"></div>' +
+    '<span class="countdown-text">\u23F1 ' + Math.ceil(remaining) + 's</span>' +
+    '</div>';
+}
+
 function _refreshCountdownDisplay() {
   if (!_activeTimer) return;
   var el = document.getElementById('pax-countdown');
   if (!el) return;
   var elapsed = (Date.now() - _activeTimer.startedAt) / 1000;
   var remaining = Math.max(0, _activeTimer.seconds - elapsed);
-  el.textContent = '\u23F1 ' + Math.ceil(remaining) + 's';
-  el.style.color = remaining <= 5 ? 'var(--danger)' : 'var(--warn)';
+  _renderCountdown(el, remaining, _activeTimer.seconds);
 }
 
 function _startParticipantCountdown() {
@@ -2359,14 +2370,14 @@ function _startParticipantCountdown() {
     if (!el || !_activeTimer) { clearInterval(_timerInterval); return; }
     var elapsed = (Date.now() - _activeTimer.startedAt) / 1000;
     var remaining = Math.max(0, _activeTimer.seconds - elapsed);
-    el.textContent = '\u23F1 ' + Math.ceil(remaining) + 's';
-    el.style.color = remaining <= 5 ? 'var(--danger)' : 'var(--warn)';
     if (remaining <= 0) {
       clearInterval(_timerInterval);
       _timerInterval = null;
       _activeTimer = null;
-      el.textContent = '';
+      el.innerHTML = '';
+      return;
     }
+    _renderCountdown(el, remaining, _activeTimer.seconds);
   }, 200);
 }
 
