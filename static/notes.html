@@ -84,15 +84,6 @@
     }
     .copy-btn:hover { color: #fff; border-color: #aaa; background: rgba(255,255,255,.08); }
     .copy-btn.copied { color: #a6e3a1; border-color: #a6e3a1; }
-    code.inline-code {
-      font-family: 'Courier New', Courier, monospace;
-      font-size: .92em;
-      background: var(--surface);
-      border: 1px solid var(--border, #444);
-      border-radius: 3px;
-      padding: .1em .35em;
-      color: var(--accent);
-    }
   </style>
 </head>
 <body>
@@ -128,16 +119,20 @@
       });
     }
 
+    function makeCodeBlock(code) {
+      return `<div class="code-block"><button class="copy-btn" onclick="copyCode(this)" title="Copy">${COPY_ICON} copy</button><pre>${escHtml(code)}</pre></div>`;
+    }
+
     function renderNotes(text) {
-      const parts = text.split(/(```[\s\S]*?```)/g);
+      const parts = text.split(/(```[\s\S]*?```|`[^`\n]+`)/g);
       return parts.map(part => {
         if (part.startsWith('```') && part.endsWith('```')) {
-          const code = part.slice(3, -3).replace(/^\n/, '');
-          return `<div class="code-block"><button class="copy-btn" onclick="copyCode(this)" title="Copy">${COPY_ICON} copy</button><pre>${escHtml(code)}</pre></div>`;
+          return makeCodeBlock(part.slice(3, -3).replace(/^\n/, ''));
         }
-        let html = escHtml(part);
-        html = html.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
-        return linkify(html);
+        if (part.startsWith('`') && part.endsWith('`')) {
+          return makeCodeBlock(part.slice(1, -1));
+        }
+        return linkify(escHtml(part));
       }).join('');
     }
 
