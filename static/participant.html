@@ -174,7 +174,7 @@ body{visibility:hidden}
 .multi-check { margin-right: .5rem; width: 1.1em; height: 1.1em; accent-color: var(--color-primary, #4555ba); pointer-events: none; vertical-align: middle; flex-shrink: 0; }
 .vote-msg { margin-top: 1rem; text-align: center; font-size: .85rem; color: #48cfad; }
 .vote-anon-hint { margin-top: .75rem; text-align: center; font-size: .78rem; color: var(--color-on-surface-variant, #566166); letter-spacing: .01em; }
-.multi-hint { color: #f0a500; font-size: .85em; opacity: .8; }
+.multi-hint { color: #f0a500; font-size: .9rem; opacity: .8; }
 .poll-multi-subtitle { font-size: .9rem; color: #f0a500; margin: -.25rem 0 .75rem; text-align: center; }
 .multi-warning { margin-top: .5rem; text-align: center; font-size: .9rem; font-weight: 700; color: #f0a500; }
 @keyframes poll-warn-blink { 0%, 100% { opacity: 1; } 40% { opacity: 0; } }
@@ -2309,7 +2309,7 @@ function _renderActivityPoll() {
     var selCount = _myVote instanceof Set ? _myVote.size : 0;
     var correctCount = _currentPoll.correct_count;
     var multiHint = correctCount
-      ? 'Select exactly ' + correctCount + ' answer' + (correctCount > 1 ? 's' : '')
+      ? 'Select ' + correctCount + ' answer' + (correctCount > 1 ? 's' : '')
       : 'Multiple answers may be correct';
     var atLimitNow = correctCount && selCount >= correctCount;
     var warning = '';
@@ -2333,7 +2333,6 @@ function _renderActivityPoll() {
   section.innerHTML =
     '<div class="poll-card">' +
       '<h2>' + _escHtml(_currentPoll.question) + '</h2>' +
-      (multi && _currentPoll.correct_count ? '<p class="poll-multi-subtitle">(select ' + _currentPoll.correct_count + ' correct answer' + (_currentPoll.correct_count !== 1 ? 's' : '') + ')</p>' : '') +
       optionsHTML +
       footer +
       anonMsg +
