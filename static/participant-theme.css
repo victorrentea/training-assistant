@@ -8,6 +8,8 @@
 
 /* ── Light palette (matches hardcoded values in tailwind.css) ── */
 :root {
+  --warn:   #ffd166;
+  --danger: #ff6b6b;
   --color-primary:                    rgb(69 85 186);
   --color-primary-dim:                rgb(56 72 173);
   --color-primary-container:          rgb(223 224 255);
@@ -27,6 +29,8 @@
 /* ── Dark palette (MD3 standard dark tone mapping, blue/indigo hue) ── */
 @media (prefers-color-scheme: dark) {
   :root {
+    --warn:   #c89400;
+    --danger: #d94f4f;
     --color-primary:                    rgb(188 196 255);
     --color-primary-dim:                rgb(160 168 230);
     --color-primary-container:          rgb(39 54 154);
