@@ -2307,7 +2307,7 @@ function _renderActivityPoll() {
 
   var footer = '';
   if (!_pollActive) {
-    footer = '<div class="closed-banner">Voting is closed &mdash; final results shown above</div>';
+    footer = '<div class="closed-banner">Voting ended.</div>';
   } else if (multi) {
     var selCount = _myVote instanceof Set ? _myVote.size : 0;
     var correctCount = _currentPoll.correct_count;
