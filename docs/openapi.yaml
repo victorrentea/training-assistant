@@ -2178,6 +2178,26 @@ components:
         score:
           type: integer
           title: Score
+        avatar:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Avatar
+        letter:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Letter
+        color:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Color
+        universe:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Universe
       type: object
       required:
       - rank

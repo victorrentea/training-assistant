@@ -8,11 +8,21 @@ from daemon.scores import scores
 from daemon.ws_messages import LeaderboardRevealedMsg, ScoresUpdatedMsg
 from daemon.ws_publish import broadcast, notify_host
 
+_AVATAR_COLORS = ['#e74c3c','#e67e22','#f1c40f','#27ae60','#16a085','#2980b9','#8e44ad','#c0392b']
+
+
+def _entry_color(pid: str) -> str:
+    return _AVATAR_COLORS[sum(ord(c) for c in pid) % len(_AVATAR_COLORS)]
+
 
 class LeaderboardPosition(BaseModel):
     rank: int
     name: str
     score: int
+    avatar: str | None = None
+    letter: str | None = None
+    color: str | None = None
+    universe: str | None = None
 
 
 class ShowLeaderboardResponse(BaseModel):
@@ -37,7 +47,15 @@ async def show_leaderboard():
     total = len([s for s in all_scores.values() if s > 0])
     leaderboard_state.show(raw_entries, total)
     entries = [
-        LeaderboardPosition(rank=i + 1, name=e["name"], score=e["score"])
+        LeaderboardPosition(
+            rank=i + 1,
+            name=e["name"],
+            score=e["score"],
+            avatar=participant_state.participant_avatars.get(e["uuid"]),
+            letter=(e["name"][0].upper() if e["name"] else "?"),
+            color=_entry_color(e["uuid"]),
+            universe=participant_state.participant_universes.get(e["uuid"]) or None,
+        )
         for i, e in enumerate(raw_entries)
     ]
     broadcast(LeaderboardRevealedMsg(positions=[e.model_dump() for e in entries]))

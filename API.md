@@ -319,7 +319,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | - | `entries: list[LeaderboardPosition{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`rank:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`score:int`<br>`}]` |
+| Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | - | `entries: list[LeaderboardPosition{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`rank:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`score:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`avatar?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`letter?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`color?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`universe?:string`<br>`}]` |
 | Reset Scores<br>`DELETE /api/{session_id}/host/scores` | - | - |
 
 ## Feature: Emoji Reactions
