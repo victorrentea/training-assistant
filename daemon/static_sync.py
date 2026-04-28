@@ -7,6 +7,7 @@ from daemon import log
 from daemon.http import _post_json
 
 _EXCLUDED = {"version.js", "deploy-info.json", "work-hours.js"}
+_EXCLUDED_PATTERNS = {".DS_Store", "Thumbs.db", ".gitkeep"}
 
 
 def compute_local_hashes(static_dir: Path) -> dict[str, str]:
@@ -14,7 +15,7 @@ def compute_local_hashes(static_dir: Path) -> dict[str, str]:
     hashes = {}
     if static_dir.is_dir():
         for f in static_dir.rglob("*"):
-            if f.is_file() and f.name not in _EXCLUDED:
+            if f.is_file() and f.name not in _EXCLUDED and f.name not in _EXCLUDED_PATTERNS and not f.name.startswith("."):
                 rel = str(f.relative_to(static_dir))
                 md5 = hashlib.md5(f.read_bytes()).hexdigest()
                 hashes[rel] = md5
