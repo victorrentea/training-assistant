@@ -907,6 +907,7 @@ def run() -> None:
     server_disconnected = False
     last_detected_date: date | None = None
     last_heartbeat_at = 0.0
+    last_ws_ping_at = 0.0
     last_session_check_at = 0.0
     last_transcript_stats_at = 0.0
     last_transcript_line_count = -1
@@ -1070,6 +1071,10 @@ def run() -> None:
                 if now - last_heartbeat_at >= _HEARTBEAT_INTERVAL:
                     write_lock()
                     last_heartbeat_at = now
+                _WS_APP_PING_INTERVAL = 25.0  # keep Railway proxy from closing idle WS
+                if now - last_ws_ping_at >= _WS_APP_PING_INTERVAL:
+                    ws_client.send({"type": "daemon_ping"})
+                    last_ws_ping_at = now
 
                 # ── Read git activity from file ──
                 # ── Check for session management requests ──
