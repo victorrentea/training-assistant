@@ -898,7 +898,8 @@ def run() -> None:
                 participant_join_link = f"{config.server_url}/{active_id}"
                 log.info("addons   ", f"→ active session {participant_join_link}")
                 from daemon import addon_bridge_client
-                addon_bridge_client.send_session_started(participant_join_link)
+                session_folder_str = str(config.session_folder) if config.session_folder else None
+                addon_bridge_client.send_session_started(participant_join_link, session_folder_str)
 
     _bridge.set_on_connection_change(_on_addon_connection_change)
     _bridge.start()
@@ -1160,7 +1161,8 @@ def run() -> None:
                         )
                         # Notify addons of session start
                         from daemon import addon_bridge_client
-                        addon_bridge_client.send_session_started(participant_join_link)
+                        session_folder_str = str(config.session_folder) if config.session_folder else None
+                        addon_bridge_client.send_session_started(participant_join_link, session_folder_str)
                         log.info("addons   ", f"→ started session {participant_join_link}")
                         log.info(
                             "session",
@@ -1244,7 +1246,8 @@ def run() -> None:
                             else f"{config.server_url}/"
                         )
                         from daemon import addon_bridge_client
-                        addon_bridge_client.send_session_started(participant_join_link)
+                        session_folder_str = str(config.session_folder) if config.session_folder else None
+                        addon_bridge_client.send_session_started(participant_join_link, session_folder_str)
                         log.info("addons   ", f"→ started session {participant_join_link}")
                         log.info("session", f"Session: {session_name}")
                     if action:

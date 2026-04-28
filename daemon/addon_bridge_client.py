@@ -50,9 +50,15 @@ class AddonBridgeClient:
         """Forward an emoji reaction to the overlay. Best-effort; never raises."""
         return self._send({"type": "display_emoji", "emoji": emoji, "count": 1})
 
-    def send_session_started(self, participant_url: str) -> bool:
-        """Notify addons that a session has started with the participant join URL."""
-        msg = {"type": "session_started", "participant_url": participant_url}
+    def send_session_started(self, participant_url: str, session_folder: str | None = None) -> bool:
+        """Notify addons that a session has started with the participant join URL.
+
+        session_folder: absolute path to the active session folder; addons use it to
+        save artefacts (e.g. screenshots) into the session.
+        """
+        msg: dict = {"type": "session_started", "participant_url": participant_url}
+        if session_folder:
+            msg["session_folder"] = session_folder
         return self._send(msg)
 
     def send_session_ended(self) -> bool:
@@ -213,9 +219,9 @@ def send_emoji(emoji: str) -> bool:
     return _client is not None and _client.send_emoji(emoji)
 
 
-def send_session_started(participant_url: str) -> bool:
+def send_session_started(participant_url: str, session_folder: str | None = None) -> bool:
     """Best-effort session_started message to addons. Returns True if sent."""
-    return _client is not None and _client.send_session_started(participant_url)
+    return _client is not None and _client.send_session_started(participant_url, session_folder)
 
 
 def send_session_ended() -> bool:
