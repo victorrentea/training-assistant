@@ -82,14 +82,14 @@ def test_cast_vote_single_select():
     assert "voted_at" in ps.votes["pid1"]
 
 
-def test_cast_vote_single_select_final():
-    """Second vote from same pid must be rejected."""
+def test_cast_vote_single_select_overwrites():
+    """Per CLAUDE.md, votes are mutable: a second vote from the same pid replaces the first."""
     ps = PollState()
     _make_poll(ps)
     ps.cast_vote("pid1", option_indices=[0])
     result = ps.cast_vote("pid1", option_indices=[1])
-    assert result is False
-    assert ps.votes["pid1"]["option_indices"] == [0]
+    assert result is True
+    assert ps.votes["pid1"]["option_indices"] == [1]
 
 
 def test_cast_vote_multi_select():
@@ -100,14 +100,15 @@ def test_cast_vote_multi_select():
     assert ps.votes["pid1"]["option_indices"] == [0, 1]
 
 
-def test_cast_vote_multi_select_toggle():
-    """Multi-select votes are final — second attempt rejected."""
+def test_cast_vote_multi_select_overwrites():
+    """Multi-select participants toggle checkboxes — each click resends the full set,
+    so subsequent votes must replace the previous selection."""
     ps = PollState()
     _make_poll(ps, multi=True, correct_count=2)
     ps.cast_vote("pid1", option_indices=[0, 1])
     result = ps.cast_vote("pid1", option_indices=[1, 2])
-    assert result is False
-    assert ps.votes["pid1"]["option_indices"] == [0, 1]
+    assert result is True
+    assert ps.votes["pid1"]["option_indices"] == [1, 2]
 
 
 def test_cast_vote_multi_select_over_limit():

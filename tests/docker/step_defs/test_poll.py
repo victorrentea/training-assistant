@@ -94,8 +94,6 @@ def _vote(pax: ParticipantPage, *options: str) -> None:
             headers: {{'Content-Type':'application/json','X-Participant-ID':_myUUID}},
             body: JSON.stringify({{options: {_json.dumps(indices)}}})
         }});
-        // 409 means "already voted" — surface it so the test fails meaningfully
-        // instead of silently accepting the previous vote.
         if (!r.ok) throw new Error('Vote failed: ' + r.status);
     }}""")
 

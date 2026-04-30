@@ -59,8 +59,6 @@ class PollState:
     def cast_vote(self, pid: str, option_indices: list[int] | None = None) -> bool:
         if not self.poll or not self.poll_active:
             return False
-        if pid in self.votes:
-            return False
         if option_indices is None or not isinstance(option_indices, list):
             return False
         if not option_indices:
