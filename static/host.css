@@ -652,9 +652,6 @@ body {
 
 
 /* Voting-in-progress overlay */
-#poll-display.voting-active .poll-question {
-  opacity: .35;
-}
 .bars-container {
   position: relative;
 }
