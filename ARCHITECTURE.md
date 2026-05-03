@@ -271,7 +271,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 - Persistent daemon files are managed by [`daemon/session_state.py`](daemon/session_state.py):
   - `global-state.json` for global daemon stack/session metadata
   - `session-state.json` per session folder
-  - session artifacts such as `ai-summary.md`, `transcript_discussion.md`, slide manifests, uploads, and normalized transcripts
+  - session artifacts such as `ai-summary.md`, slide manifests, uploads, and normalized transcripts
 - The current summary path is file-backed. [`daemon/summary/loop.py`](daemon/summary/loop.py) primarily republishes key points from `ai-summary.md`, while legacy/fallback summary content can still exist in the session folder; it does not currently call Claude itself.
 - Claude-backed paths are currently:
   - [`daemon/quiz/generator.py`](daemon/quiz/generator.py) for quiz generation and refinement
@@ -310,7 +310,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 | Daemon live feature state | `daemon/*/state.py` modules | In memory inside the daemon process | `participant_state`, `poll_state`, `wordcloud_state`, `qa_state`, `codereview_state`, `debate_state`, `misc_state`, `leaderboard_state`, and session stack helpers. |
 | Daemon persisted session state | [`daemon/session_state.py`](daemon/session_state.py) | Session folders under `SESSIONS_FOLDER` | `global-state.json`, `session-state.json`, session metadata, uploads, key points, slide manifests. |
 | Transcript inputs | Host filesystem | Normalized `YYYY-MM-DD transcription.txt` files under `TRANSCRIPTION_FOLDER` | Current consumers read normalized files only; raw transcript normalization is not implemented in this repo anymore. |
-| Summary inputs | Host filesystem | `ai-summary.md` and `transcript_discussion.md` in the session folder | Summary publication primarily reads `ai-summary.md` today, while legacy/fallback summary content can still exist in the session folder. |
+| Summary inputs | Host filesystem | `ai-summary.md` in the session folder | Summary publication reads `ai-summary.md`. |
 | Local materials index | [`daemon/rag/indexer.py`](daemon/rag/indexer.py), [`daemon/rag/retriever.py`](daemon/rag/retriever.py) | `~/.workshop-rag/chroma` | Local ChromaDB index used to enrich quiz generation. |
 
 ---

@@ -71,8 +71,7 @@ SessionAPI -> Pending: put(session_request=end)
 Loop -> Pending: pop(end)
 Loop -> SessionState: force-flush runtime snapshot to session-state.json
 note right of SessionState
-Summary and key-point files such as transcript_discussion.md
-and ai-summary.md are persisted separately in the session folder.
+Summary file ai-summary.md is persisted separately in the session folder.
 end note
 Loop -> GlobalState: persist global-state.json with empty active_session_id
 Loop -> RailwayWS: send set_session_id with no session_id
