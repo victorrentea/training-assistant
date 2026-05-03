@@ -176,6 +176,14 @@ body{visibility:hidden}
 .vote-anon-hint { margin-top: .75rem; text-align: center; font-size: .78rem; color: var(--color-on-surface-variant, #566166); letter-spacing: .01em; }
 .multi-hint { color: #f0a500; font-size: .9rem; opacity: .8; }
 .poll-multi-subtitle { font-size: .9rem; color: #f0a500; margin: -.25rem 0 .75rem; text-align: center; }
+.poll-card h2 code,
+.option-btn code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: rgba(127,127,127,0.15);
+  border-radius: 4px;
+  padding: .05em .35em;
+  font-size: .92em;
+}
 .multi-warning { margin-top: .5rem; text-align: center; font-size: .9rem; font-weight: 700; color: #f0a500; }
 @keyframes poll-warn-blink { 0%, 100% { opacity: 1; } 40% { opacity: 0; } }
 .blink { animation: poll-warn-blink .6s ease-in-out 3; }
@@ -2260,6 +2268,21 @@ function _escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function _escHtmlWithCode(s) {
+  var str = String(s);
+  var out = [];
+  var re = /`([^`]+)`/g;
+  var lastIdx = 0;
+  var m;
+  while ((m = re.exec(str)) !== null) {
+    out.push(_escHtml(str.slice(lastIdx, m.index)));
+    out.push('<code>' + _escHtml(m[1]) + '</code>');
+    lastIdx = m.index + m[0].length;
+  }
+  out.push(_escHtml(str.slice(lastIdx)));
+  return out.join('');
+}
+
 
 function _applyPollState(msg) {
   if (msg.poll !== undefined) {
@@ -2338,7 +2361,7 @@ function _renderActivityPoll() {
     }
     var checkbox = multi ? '<input type="checkbox" class="multi-check" ' + (isSelected ? 'checked' : '') + ' tabindex="-1" aria-hidden="true"> ' : '';
     return '<button class="option-btn ' + selected + '" ' + disabled + ' onclick="castVote(' + idx + ')">' +
-      checkbox + '<span>' + _escHtml(text) + '</span>' +
+      checkbox + '<span>' + _escHtmlWithCode(text) + '</span>' +
       resultIcon +
       '</button>';
   }).join('');
@@ -2377,7 +2400,7 @@ function _renderActivityPoll() {
 
   section.innerHTML =
     '<div class="poll-card">' +
-      '<h2>' + _escHtml(_currentPoll.question) + '</h2>' +
+      '<h2>' + _escHtmlWithCode(_currentPoll.question) + '</h2>' +
       optionsHTML +
       footer +
       anonMsg +

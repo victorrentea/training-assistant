@@ -3,6 +3,22 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+/** HTML-escape a string and render `backticked` substrings as <code>…</code>. Unmatched backticks are kept literal. */
+function escHtmlWithCode(s) {
+  const str = String(s);
+  const out = [];
+  const re = /`([^`]+)`/g;
+  let lastIdx = 0;
+  let m;
+  while ((m = re.exec(str)) !== null) {
+    out.push(escHtml(str.slice(lastIdx, m.index)));
+    out.push('<code>' + escHtml(m[1]) + '</code>');
+    lastIdx = m.index + m[0].length;
+  }
+  out.push(escHtml(str.slice(lastIdx)));
+  return out.join('');
+}
+
 /** Send a typed message over WebSocket */
 function sendWS(type, payload) {
   if (ws && ws.readyState === WebSocket.OPEN) {

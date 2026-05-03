@@ -1579,6 +1579,7 @@
   }
 
   const RANDOM_POLLS = [
+    'What does `List<String>` represent in Java?\n\nA generic list of `String` elements\nA raw array of strings\nA `Map<String,String>` alias\nA primitive type',
     'What is the largest planet in our solar system?\n\nJupiter\nSaturn\nNeptune\nUranus',
     'Which element has the chemical symbol "Au"?\n\nGold\nSilver\nAluminum\nArgon',
     'How many bones does an adult human body have?\n\n206\n198\n212\n256',
@@ -1606,12 +1607,18 @@
     'In what year was the first iPhone released?\n\n2007\n2005\n2008\n2010',
   ];
   let _lastRandomIndex = -1;
+  let _testOnePollClicks = 0;
 
   initComposer('Which is the primary benefit of the Circuit Breaker pattern?\n\nPrevents cascading failures across services\nImproves response time under normal load\nReduces the number of network calls\nEnables automatic service discovery');
 
   window.testOnePoll = () => {
     let idx;
-    do { idx = Math.floor(Math.random() * RANDOM_POLLS.length); } while (idx === _lastRandomIndex && RANDOM_POLLS.length > 1);
+    if (_testOnePollClicks === 0) {
+      idx = 0;
+    } else {
+      do { idx = Math.floor(Math.random() * RANDOM_POLLS.length); } while (idx === _lastRandomIndex && RANDOM_POLLS.length > 1);
+    }
+    _testOnePollClicks++;
     _lastRandomIndex = idx;
     initComposer(RANDOM_POLLS[idx]);
     const cc = document.getElementById('correct-count');
@@ -1799,7 +1806,7 @@
       return `
         <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${idx}" ${clickable}>
           <div class="result-label">
-            <span>${escHtml(text)}${isCorrect ? ' ✅' : ''}${queueHint ? ' <span class="queue-hint-check">✅</span>' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
+            <span>${escHtmlWithCode(text)}${isCorrect ? ' ✅' : ''}${queueHint ? ' <span class="queue-hint-check">✅</span>' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
             <span class="pct">${count}</span>
           </div>
           <div class="bar-track">
@@ -1838,13 +1845,13 @@
 
     const mainContent = pollActive
       ? `<div class="options-plain">${currentPoll.options.map(text =>
-          `<div class="option-text-only">${escHtml(text)}</div>`).join('')}</div>
+          `<div class="option-text-only">${escHtmlWithCode(text)}</div>`).join('')}</div>
          ${voteProgressSection}`
       : `<div class="bars-container"><div class="bars-wrapper">${bars}</div></div>
          <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}`;
 
     el.innerHTML = `
-      <p class="poll-question">${escHtml(currentPoll.question)}</p>
+      <p class="poll-question">${escHtmlWithCode(currentPoll.question)}</p>
       ${currentPoll.multi && currentPoll.correct_count ? `<p class="poll-multi-subtitle">(select ${currentPoll.correct_count} correct answer${currentPoll.correct_count !== 1 ? 's' : ''})</p>` : ''}
       ${mainContent}${pollActive ? '' : '</p>'}
       ${currentPoll.source ? `<p class="poll-source-ref">📖 ${escHtml(currentPoll.source)}${currentPoll.page ? `, p. ${escHtml(currentPoll.page)}` : ''}</p>` : ''}
@@ -1888,7 +1895,7 @@
         const qHints = canMarkNow ? getQueueHints(currentPoll.question) : null;
         const llmHint = hints && hints.includes(idx) && !isCorrect;
         const queueHint = qHints && qHints.includes(idx) && !isCorrect;
-        labelSpan.innerHTML = escHtml(text) + (isCorrect ? ' ✅' : '') +
+        labelSpan.innerHTML = escHtmlWithCode(text) + (isCorrect ? ' ✅' : '') +
           (queueHint ? ' <span class="queue-hint-check">✅</span>' : '') +
           (llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : '');
       }

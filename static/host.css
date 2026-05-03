@@ -1013,6 +1013,16 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 /* ── Current poll display ── */
 .poll-question { font-size: 2.6rem; font-weight: 600; color: #fff; margin-bottom: .25rem; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; }
 .poll-multi-subtitle { font-size: 1.3rem; color: #f0a500; margin: 0 0 .75rem; }
+.poll-question code,
+.result-label code,
+.option-text-only code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--surface2);
+  border-radius: 4px;
+  padding: .05em .35em;
+  font-size: .9em;
+  color: var(--accent2);
+}
 .result-row { margin-bottom: .75rem; border-radius: 6px; padding: .1rem .3rem; }
 .result-row.markable { cursor: pointer; }
 .result-row.markable:hover { background: var(--surface2); }
