@@ -1011,8 +1011,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 
 /* ── Current poll display ── */
-.poll-question { font-size: 2rem; font-weight: 600; color: #fff; margin-bottom: .25rem; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; }
-.poll-multi-subtitle { font-size: 1rem; color: #f0a500; margin: 0 0 .75rem; }
+.poll-question { font-size: 2.6rem; font-weight: 600; color: #fff; margin-bottom: .25rem; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; }
+.poll-multi-subtitle { font-size: 1.3rem; color: #f0a500; margin: 0 0 .75rem; }
 .result-row { margin-bottom: .75rem; border-radius: 6px; padding: .1rem .3rem; }
 .result-row.markable { cursor: pointer; }
 .result-row.markable:hover { background: var(--surface2); }
@@ -1020,7 +1020,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .result-row.correct .result-label span:first-child { color: var(--accent2); }
 .result-label {
   display: flex; justify-content: space-between;
-  font-size: 1.5rem; margin-bottom: .3rem;
+  font-size: 1.95rem; margin-bottom: .3rem;
 }
 .result-label .pct { color: var(--accent2); }
 .bar-track {
