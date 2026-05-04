@@ -6,10 +6,16 @@
       "drive_export_url": "https://docs.google.com/presentation/d/1Fc0AmD8Gzx6MSUi_K5iY8B_oZL6q3w2k/export/pdf"
     },
     {
-      "title": "AI Coding 🔥",
+      "title": "Agentic Engineering 🔥",
       "group": "AI",
-      "source": "/Users/victorrentea/My Drive/Cursuri/CleanCode/AI Coding.pptx",
+      "source": "/Users/victorrentea/My Drive/Cursuri/AI/Agentic Engineering.pptx",
       "drive_export_url": "https://docs.google.com/presentation/d/1SxjaM0f97P1EjPJUxrjQ7fU2KKF_CD-N/export/pdf"
+    },
+    {
+      "title": "Agentic Patterns",
+      "group": "AI",
+      "source": "/Users/victorrentea/My Drive/Cursuri/AI/Agentic Patterns.pptx",
+      "drive_export_url": "https://docs.google.com/presentation/d/1vj4Vwgh3x4jSgR9xXfFxlcYl7vHH10IH/export/pdf"
     },
     {
       "title": "Clean Architecture",
