@@ -192,6 +192,10 @@ class SlidesRunner:
             slug = str(entry.get("slug") or "").strip()
             if not slug:
                 continue
+            # Skip orphan slugs (in state file but no longer in catalog) — they have no
+            # status field in misc_state.slides_updated, which would break DecksUpdatedMsg.
+            if slug not in misc_state.slides_catalog:
+                continue
             pptx_mtime = entry.get("pptx_mtime")
             if pptx_mtime is None:
                 continue
