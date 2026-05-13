@@ -2728,12 +2728,26 @@ function _handleWsMessage(msg) {
           if (activeRefreshed) {
             var activeSlide = _slidesCatalog.find(function(s) { return s.slug === activeSlug; });
             if (activeSlide) {
-              var currentPage = _getCurrentSlidesPage() || 1;
               var freshDAt = (_slidesCacheStatus[activeSlug] || {}).downloaded_at || null;
-              window.loadPdf(activeSlide.url, activeSlug, freshDAt, currentPage).then(function() {
-                _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
-                if (refreshOverlay) refreshOverlay.style.display = 'none';
-              });
+              var frontReady = !!(window.Slides && window.Slides.front && window.Slides.front.pdfDoc);
+              if (frontReady && window.prefetchInto) {
+                window.prefetchInto({
+                  url: activeSlide.url,
+                  slug: activeSlug,
+                  downloadedAt: freshDAt,
+                  // JIT: read user's latest scroll position right before swap.
+                  getPage: function() { return _getCurrentSlidesPage() || 1; },
+                }).then(function() {
+                  _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+                  // prefetchInto manages slide-refresh-overlay; nothing to clear here.
+                });
+              } else if (window.loadPdf) {
+                var currentPage = _getCurrentSlidesPage() || 1;
+                window.loadPdf(activeSlide.url, activeSlug, freshDAt, currentPage).then(function() {
+                  _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
+                  if (refreshOverlay) refreshOverlay.style.display = 'none';
+                });
+              }
             }
           }
         }).catch(function() {});
