@@ -676,6 +676,28 @@ var PdfCache = (function() {
     updatePageInfo();
   }
 
+  function swap() {
+    if (Slides.state === 'SWAPPING') return; // re-entrance guard
+    Slides.state = 'SWAPPING';
+    // Flip classes atomically — one paint
+    Slides.front.el.classList.replace('buf-front', 'buf-back');
+    Slides.back .el.classList.replace('buf-back',  'buf-front');
+    // Swap references so Slides.front always points at the visible buffer
+    const oldFront = Slides.front;
+    Slides.front = Slides.back;
+    Slides.back  = oldFront;
+    // Dispose the now-hidden previous doc and empty its DOM
+    if (Slides.back.pdfDoc) {
+      try { Slides.back.pdfDoc.destroy(); } catch (_) {}
+      Slides.back.pdfDoc = null;
+    }
+    Slides.back.slug = null;
+    Slides.back.dAt  = null;
+    Slides.back.el.replaceChildren();
+    Slides.state = 'IDLE';
+    updatePageInfo();
+  }
+
   function updatePageInfo() {
     const infoEl = document.getElementById('pdf-page-info');
     if (!infoEl) return;
