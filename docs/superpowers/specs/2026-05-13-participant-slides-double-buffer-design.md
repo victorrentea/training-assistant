@@ -99,7 +99,7 @@ Rule: **latest target wins.** If a new trigger arrives during `PREFETCHING`, the
 3. Fetch PDF bytes through `PdfCache` (existing IndexedDB cache) or via `fetch(url, { signal: abort.signal })`; on success, persist to cache.
 4. `pdfjsLib.getDocument({ data })` → `localPdfDoc`. Store `loadTask` on `Slides`.
 5. `renderAllPagesInto(Slides.back, localPdfDoc, currentScale)` — same rendering code as today, parameterized on container and doc.
-6. Read just-in-time target page (for mtime case: `_getCurrentSlidesPage()` on `Slides.front` right before swap).
+6. Resolve target page right before swap. For host-follow and manual click, this is fixed at trigger time. For the mtime same-deck case, re-read `_getCurrentSlidesPage()` on `Slides.front` so the participant's latest scroll position wins (they may have scrolled during the prefetch).
 7. Synchronously set `Slides.back.el.scrollTop` to that page's section offset.
 8. **Swap** (see below).
 9. `state = 'IDLE'`; hide `#slide-refresh-overlay`.
@@ -122,19 +122,20 @@ function swap() {
 
 ## Error handling
 
+All `await` points in `prefetchInto` are wrapped in a single `try / catch`. The `catch` checks `Slides.wasAborted`: if true, the failure is from a newer trigger taking over — no toast, no state change (the newer trigger has already set its own state). Otherwise:
+
 | Failure                              | Behavior                                                                          |
 | ------------------------------------ | --------------------------------------------------------------------------------- |
-| `fetch` rejects (network / 404)      | Front buffer untouched. Toast: "Slides nu s-au putut încărca. Reia când vrei."    |
+| `fetch` rejects (network / 404)      | Front buffer untouched. Toast via existing `showToast(...)`: "Slides nu s-au putut încărca. Reia când vrei." |
 | `getDocument` rejects (corrupt)      | Same as above.                                                                    |
 | `render` rejects                     | Same as above.                                                                    |
-| Aborted by newer trigger             | Silent. `wasAborted` flag suppresses any toast.                                   |
 | `state === 'SWAPPING'` re-entrance   | Queue with `queueMicrotask` — guaranteed completion in next microtask.            |
 
-No automatic retries. No timeout — browser default `fetch` timeout (~30s) is sufficient; the badge stays visible to signal "still working." User can always click the topic to re-trigger.
+On any caught error (non-aborted): hide `#slide-refresh-overlay`, clear `Slides.back.el`, dispose `loadTask`, set `state = 'IDLE'`. No automatic retries. No timeout — browser default `fetch` timeout (~30s) is sufficient; the badge stays visible to signal "still working." User can always click the topic to re-trigger.
 
 ## Edge cases
 
-- **First-time slides view, no front `pdfDoc`:** keep the existing `#pdf-check-overlay` centered loader. Render directly into `Slides.front.el`. Double-buffer only activates once `Slides.front.pdfDoc` is set.
+- **First-time slides view, no front `pdfDoc`:** keep the existing `#pdf-check-overlay` centered loader. Render directly into `Slides.front.el` and, on success, set `Slides.front.pdfDoc`, `Slides.front.slug`, `Slides.front.dAt`. Double-buffer only activates on subsequent triggers once `Slides.front.pdfDoc` is non-null.
 - **User on non-slides view (notes/summary) during host change:** `_applyHostSlideFollow` exits early (already true today). No prefetch starts. When the user returns to slides view, the existing reconciliation logic triggers a prefetch — front buffer still shows the previous slide instantly.
 - **Session reload (`reload` / `redirect` WS):** abort + destroy both buffers' pdfDocs before navigating.
 - **Same-deck mtime case, user scrolling during prefetch:** target page is read **just before swap**, not at prefetch start. The user's latest scroll wins.
