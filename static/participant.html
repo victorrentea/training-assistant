@@ -600,7 +600,6 @@ var PdfCache = (function() {
     state: 'IDLE',       // 'IDLE' | 'PREFETCHING' | 'SWAPPING'
     abort: null,
     loadTask: null,
-    wasAborted: false,
   };
   window.Slides = Slides; // exposed so non-module script (triggers) can read state
 
@@ -704,11 +703,12 @@ var PdfCache = (function() {
    *   participant's latest scroll (mtime case) wins.
    */
   async function prefetchInto(target) {
-    // If a prefetch is in flight, cancel it.
+    // If a prefetch is in flight, cancel it and disown it.
     if (Slides.state === 'PREFETCHING') {
-      Slides.wasAborted = true;
       if (Slides.abort) { try { Slides.abort.abort(); } catch (_) {} }
       if (Slides.loadTask) { try { Slides.loadTask.destroy(); } catch (_) {} }
+      Slides.abort = null;       // disown: aborted invocation's finally now sees Slides.abort !== myAbort
+      Slides.loadTask = null;
       Slides.back.el.replaceChildren();
       if (Slides.back.pdfDoc) {
         try { Slides.back.pdfDoc.destroy(); } catch (_) {}
@@ -720,9 +720,11 @@ var PdfCache = (function() {
       await Promise.resolve();
     }
 
+    // Identity stamp: Slides.abort === myAbort means "I am the current owner."
+    const myAbort = new AbortController();
     Slides.state = 'PREFETCHING';
-    Slides.wasAborted = false;
-    Slides.abort = new AbortController();
+    Slides.abort = myAbort;
+    Slides.loadTask = null;
     var overlay = document.getElementById('slide-refresh-overlay');
     if (overlay) overlay.style.display = '';
 
@@ -732,7 +734,7 @@ var PdfCache = (function() {
         ? await PdfCache.get(target.slug, target.downloadedAt)
         : null;
       if (!buffer) {
-        const resp = await fetch(target.url, { signal: Slides.abort.signal });
+        const resp = await fetch(target.url, { signal: myAbort.signal });
         if (!resp.ok) throw new Error('PDF fetch failed: ' + resp.status);
         buffer = await resp.arrayBuffer();
         if (target.slug && target.downloadedAt) {
@@ -742,14 +744,21 @@ var PdfCache = (function() {
 
       // 2. Parse PDF
       const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+      // If I was disowned during the fetch, drop the new loadingTask and bail.
+      if (Slides.abort !== myAbort) {
+        try { loadingTask.destroy(); } catch (_) {}
+        return;
+      }
       Slides.loadTask = loadingTask;
       const localPdfDoc = await loadingTask.promise;
+      if (Slides.abort !== myAbort) return;
 
       // 3. Render into back buffer
       Slides.back.pdfDoc = localPdfDoc;
       Slides.back.slug   = target.slug || null;
       Slides.back.dAt    = target.downloadedAt || null;
       await renderAllPagesInto(Slides.back.el, localPdfDoc, Slides.scale);
+      if (Slides.abort !== myAbort) return;
 
       // 4. Resolve target page just before swap
       const targetPage = Math.max(1, Number((target.getPage && target.getPage()) || 1));
@@ -766,25 +775,23 @@ var PdfCache = (function() {
       swap();
 
     } catch (e) {
-      if (Slides.wasAborted || (e && e.name === 'AbortError')) {
-        // Newer trigger took over — silent.
-        return;
-      }
+      if (Slides.abort !== myAbort) return; // I'm not the current owner — silent
+      if (e && e.name === 'AbortError') return;
       console.error('Slides prefetch error', e);
       // Front buffer untouched; clean up back.
       try { if (Slides.back.pdfDoc) Slides.back.pdfDoc.destroy(); } catch (_) {}
       Slides.back.pdfDoc = null;
       Slides.back.el.replaceChildren();
       if (typeof window.showToast === 'function') {
-        window.showToast('Slides nu s-au putut incarca. Reia cand vrei.');
+        window.showToast('Slides nu s-au putut încărca. Reia când vrei.');
       }
     } finally {
-      if (!Slides.wasAborted) {
+      if (Slides.abort === myAbort) {
         Slides.state = 'IDLE';
         if (overlay) overlay.style.display = 'none';
+        Slides.abort = null;
+        Slides.loadTask = null;
       }
-      Slides.abort = null;
-      Slides.loadTask = null;
     }
   }
   window.prefetchInto = prefetchInto;  // expose for triggers in non-module script
