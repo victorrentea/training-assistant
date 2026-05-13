@@ -47,8 +47,11 @@ def normalize_session_name(name: str) -> str:
 
 
 def _generate_session_id() -> str:
-    """Generate a new 6-char alphanumeric session ID."""
-    return ''.join(random.choices('abcdefghijkmnopqrstuvwxyz0123456789', k=6))
+    """Generate a new 6-char alphanumeric session ID.
+
+    Excludes visually confusable chars: l (looks like 1), o/O (looks like 0), 0 (looks like o/O).
+    """
+    return ''.join(random.choices('abcdefghijkmnpqrstuvwxyz123456789', k=6))
 
 
 def _resolve_session_id_for_folder(folder_name: str) -> str:

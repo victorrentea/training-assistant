@@ -34,8 +34,11 @@ class AppState:
             shutil.rmtree(upload_dir, ignore_errors=True)
 
     def generate_session_id(self) -> str:
-        """Generate a new 6-char alphanumeric session ID."""
-        self.session_id = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
+        """Generate a new 6-char alphanumeric session ID.
+
+        Excludes visually confusable chars: l (looks like 1), o/O (looks like 0), 0 (looks like o/O).
+        """
+        self.session_id = ''.join(random.choices('abcdefghijkmnpqrstuvwxyz123456789', k=6))
         return self.session_id
 
     def touch_daemon(self):
