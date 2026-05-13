@@ -172,3 +172,7 @@ That's the entire surface area. Estimated diff size: ~150 lines added / ~50 line
 - Double-buffered zoom.
 - Pre-warming: prefetching the host's currently-pinned deck on participant connect, before any explicit trigger. Out of scope; would benefit cold loads.
 - Telemetry: log swap timing histograms (prefetch duration, render duration) to OTel. Out of scope.
+
+## Implementation status
+
+Implemented and deployed to production on 2026-05-14. Implementation plan: [`docs/superpowers/plans/2026-05-13-participant-slides-double-buffer.md`](../plans/2026-05-13-participant-slides-double-buffer.md). Manual verification screenshots: `docs/superpowers/specs/screenshots/dbuf-task-*.png`.

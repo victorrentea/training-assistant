@@ -594,8 +594,8 @@ var PdfCache = (function() {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
   const Slides = {
-    front: { el: null, pdfDoc: null, slug: null, dAt: null },
-    back:  { el: null, pdfDoc: null, slug: null, dAt: null },
+    front: { el: null, pdfDoc: null, slug: null, downloadedAt: null },
+    back:  { el: null, pdfDoc: null, slug: null, downloadedAt: null },
     scale: 1.5,
     state: 'IDLE',       // 'IDLE' | 'PREFETCHING' | 'SWAPPING'
     abort: null,
@@ -691,7 +691,7 @@ var PdfCache = (function() {
       Slides.back.pdfDoc = null;
     }
     Slides.back.slug = null;
-    Slides.back.dAt  = null;
+    Slides.back.downloadedAt  = null;
     Slides.back.el.replaceChildren();
     Slides.state = 'IDLE';
     updatePageInfo();
@@ -756,7 +756,7 @@ var PdfCache = (function() {
       // 3. Render into back buffer
       Slides.back.pdfDoc = localPdfDoc;
       Slides.back.slug   = target.slug || null;
-      Slides.back.dAt    = target.downloadedAt || null;
+      Slides.back.downloadedAt    = target.downloadedAt || null;
       await renderAllPagesInto(Slides.back.el, localPdfDoc, Slides.scale);
       if (Slides.abort !== myAbort) return;
 
@@ -855,7 +855,7 @@ var PdfCache = (function() {
       if (Slides.front.pdfDoc) Slides.front.pdfDoc.destroy();
       Slides.front.pdfDoc = newDoc;
       Slides.front.slug = slug || null;
-      Slides.front.dAt  = downloadedAt || null;
+      Slides.front.downloadedAt  = downloadedAt || null;
       await renderAllPagesInto(Slides.front.el, newDoc, Slides.scale);
       var page = (targetPage && targetPage > 1) ? targetPage : 1;
       if (page > 1) {
@@ -1764,6 +1764,10 @@ async function selectTopic(el, event, slide, targetPageOverride) {
 
     var frontReady = !!(window.Slides && window.Slides.front && window.Slides.front.pdfDoc);
     if (frontReady && window.prefetchInto) {
+      // Defensive: if a concurrent first-time load made the front ready during our
+      // check-endpoint fetch, the centered overlay may still be visible. Hide it.
+      var _earlyOverlay = document.getElementById('pdf-check-overlay');
+      if (_earlyOverlay) _earlyOverlay.style.display = 'none';
       // Double-buffer path: old slide stays visible, new loads in back.
       // We DO await so callers (_applyHostSlideFollow, _openSlideFromHistory)
       // that chain follow-up actions (like _scrollSlidesToPage) see the swap done.
@@ -2694,7 +2698,7 @@ function _handleWsMessage(msg) {
           + ' modified_at=' + (_ad.modified_at ? new Date(_ad.modified_at).toLocaleString() : 'n/a')
           + ' downloaded_at=' + (newDownloadedAt ? new Date(newDownloadedAt).toLocaleString() : 'null')
           + ' (prev=' + (prevDownloadedAt ? new Date(prevDownloadedAt).toLocaleString() : 'null') + ')');
-        var activeRefreshed = activeSlug && incomingDecks && window.loadPdf &&
+        var activeRefreshed = activeSlug && incomingDecks && (window.loadPdf || window.prefetchInto) &&
           newDownloadedAt && (newDownloadedAt !== prevDownloadedAt);
         // Invalidate IDB cache for slugs whose downloaded_at changed.
         // Must run BEFORE the merge below overwrites _slidesCacheStatus.
