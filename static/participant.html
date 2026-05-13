@@ -698,6 +698,97 @@ var PdfCache = (function() {
     updatePageInfo();
   }
 
+  /**
+   * target = { url, slug, downloadedAt, getPage }
+   *   getPage: () => number  — resolved just before swap, so the
+   *   participant's latest scroll (mtime case) wins.
+   */
+  async function prefetchInto(target) {
+    // If a prefetch is in flight, cancel it.
+    if (Slides.state === 'PREFETCHING') {
+      Slides.wasAborted = true;
+      if (Slides.abort) { try { Slides.abort.abort(); } catch (_) {} }
+      if (Slides.loadTask) { try { Slides.loadTask.destroy(); } catch (_) {} }
+      Slides.back.el.replaceChildren();
+      if (Slides.back.pdfDoc) {
+        try { Slides.back.pdfDoc.destroy(); } catch (_) {}
+        Slides.back.pdfDoc = null;
+      }
+    }
+    if (Slides.state === 'SWAPPING') {
+      // Defer to next microtask — swap completes synchronously
+      await Promise.resolve();
+    }
+
+    Slides.state = 'PREFETCHING';
+    Slides.wasAborted = false;
+    Slides.abort = new AbortController();
+    var overlay = document.getElementById('slide-refresh-overlay');
+    if (overlay) overlay.style.display = '';
+
+    try {
+      // 1. Fetch bytes (IndexedDB cache first, then network)
+      let buffer = target.slug
+        ? await PdfCache.get(target.slug, target.downloadedAt)
+        : null;
+      if (!buffer) {
+        const resp = await fetch(target.url, { signal: Slides.abort.signal });
+        if (!resp.ok) throw new Error('PDF fetch failed: ' + resp.status);
+        buffer = await resp.arrayBuffer();
+        if (target.slug && target.downloadedAt) {
+          await PdfCache.put(target.slug, target.downloadedAt, buffer);
+        }
+      }
+
+      // 2. Parse PDF
+      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+      Slides.loadTask = loadingTask;
+      const localPdfDoc = await loadingTask.promise;
+
+      // 3. Render into back buffer
+      Slides.back.pdfDoc = localPdfDoc;
+      Slides.back.slug   = target.slug || null;
+      Slides.back.dAt    = target.downloadedAt || null;
+      await renderAllPagesInto(Slides.back.el, localPdfDoc, Slides.scale);
+
+      // 4. Resolve target page just before swap
+      const targetPage = Math.max(1, Number((target.getPage && target.getPage()) || 1));
+      const section = Slides.back.el.querySelector('section[data-page="' + targetPage + '"]');
+      if (section) {
+        // Use scrollTop = section.offsetTop directly (no animation, instant) so the
+        // user sees the right page on the first paint after swap.
+        Slides.back.el.scrollTop = section.offsetTop;
+      } else {
+        Slides.back.el.scrollTop = 0;
+      }
+
+      // 5. Atomic swap
+      swap();
+
+    } catch (e) {
+      if (Slides.wasAborted || (e && e.name === 'AbortError')) {
+        // Newer trigger took over — silent.
+        return;
+      }
+      console.error('Slides prefetch error', e);
+      // Front buffer untouched; clean up back.
+      try { if (Slides.back.pdfDoc) Slides.back.pdfDoc.destroy(); } catch (_) {}
+      Slides.back.pdfDoc = null;
+      Slides.back.el.replaceChildren();
+      if (typeof window.showToast === 'function') {
+        window.showToast('Slides nu s-au putut incarca. Reia cand vrei.');
+      }
+    } finally {
+      if (!Slides.wasAborted) {
+        Slides.state = 'IDLE';
+        if (overlay) overlay.style.display = 'none';
+      }
+      Slides.abort = null;
+      Slides.loadTask = null;
+    }
+  }
+  window.prefetchInto = prefetchInto;  // expose for triggers in non-module script
+
   function updatePageInfo() {
     const infoEl = document.getElementById('pdf-page-info');
     if (!infoEl) return;
