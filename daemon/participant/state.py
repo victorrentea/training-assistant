@@ -54,16 +54,25 @@ class ParticipantState:
         self.emoji_counters: dict[str, int] = {}
 
     def accumulate_git_file(self, url: str, branch: str, file: str, file_url: str | None = None) -> None:
-        """Add a git file-open event to the session's accumulated git activity."""
+        """Add a git file-open event to the session's accumulated git activity.
+
+        The macOS addon sends `"(none)"` when IntelliJ has a project open but no
+        file selected. Treat it as "branch active, no file" — ensure the branch
+        entry exists, but don't store the sentinel in `files`.
+        """
+        is_placeholder = not file or not file.strip() or file == "(none)"
         for entry in self.git_repos:
             if entry.url == url and entry.branch == branch:
-                if file not in entry.files:
+                if not is_placeholder and file not in entry.files:
                     entry.files.append(file)
-                if file_url:
+                if not is_placeholder and file_url:
                     entry.file_urls[file] = file_url
                 return
-        urls = {file: file_url} if file_url else {}
-        self.git_repos.append(GitRepoActivity(url=url, branch=branch, files=[file], file_urls=urls))
+        if is_placeholder:
+            self.git_repos.append(GitRepoActivity(url=url, branch=branch, files=[], file_urls={}))
+        else:
+            urls = {file: file_url} if file_url else {}
+            self.git_repos.append(GitRepoActivity(url=url, branch=branch, files=[file], file_urls=urls))
 
     def sync_from_restore(self, data: dict):
         """Update cache from state_restore or session_sync data.
@@ -140,7 +149,10 @@ class ParticipantState:
                 for item in raw_git_repos:
                     if isinstance(item, dict):
                         try:
-                            self.git_repos.append(GitRepoActivity.model_validate(item))
+                            entry = GitRepoActivity.model_validate(item)
+                            entry.files = [f for f in entry.files if f and f.strip() and f != "(none)"]
+                            entry.file_urls = {k: v for k, v in entry.file_urls.items() if k in entry.files}
+                            self.git_repos.append(entry)
                         except Exception:
                             pass
             raw_emoji_counters = data.get("emoji_counters")
