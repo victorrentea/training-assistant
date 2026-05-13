@@ -593,9 +593,16 @@ var PdfCache = (function() {
   import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
-  let pdfDoc = null;
-  let currentScale = 1.5;
-  let totalPages = 0;
+  const Slides = {
+    front: { el: null, pdfDoc: null, slug: null, dAt: null },
+    back:  { el: null, pdfDoc: null, slug: null, dAt: null },
+    scale: 1.5,
+    state: 'IDLE',       // 'IDLE' | 'PREFETCHING' | 'SWAPPING'
+    abort: null,
+    loadTask: null,
+    wasAborted: false,
+  };
+  window.Slides = Slides; // exposed so non-module script (triggers) can read state
 
   async function renderAllPagesInto(container, localPdfDoc, scale) {
     container.replaceChildren();
@@ -672,7 +679,9 @@ var PdfCache = (function() {
   function updatePageInfo() {
     const infoEl = document.getElementById('pdf-page-info');
     if (!infoEl) return;
-    const container = document.getElementById('pdf-pages');
+    const container = Slides.front.el;
+    const doc = Slides.front.pdfDoc;
+    if (!container || !doc) { infoEl.textContent = '— / —'; return; }
     const sections = container.querySelectorAll('section[data-page]');
     const scrollTop = container.scrollTop;
     const midY = scrollTop + container.clientHeight / 2;
@@ -680,25 +689,34 @@ var PdfCache = (function() {
     sections.forEach(function(s) {
       if (s.offsetTop <= midY) current = parseInt(s.dataset.page);
     });
-    infoEl.textContent = current + ' / ' + totalPages;
+    infoEl.textContent = current + ' / ' + doc.numPages;
   }
 
   (function init() {
-    document.getElementById('pdf-pages').addEventListener('scroll', function() {
+    Slides.front.el = document.getElementById('pdf-pages');
+    Slides.back.el  = document.getElementById('pdf-pages-buf');
+    function onScroll() {
+      if (this !== Slides.front.el) return;
       updatePageInfo();
       var page = _getCurrentSlidesPage();
-      if (page && _activeSlideSlug) {
-        localStorage.setItem('workshop_slide_page:' + _activeSlideSlug, page);
+      // Persist using Slides.front.slug (currently visible deck), NOT _activeSlideSlug
+      // (which is updated immediately on click, before swap — would mis-attribute scroll
+      // position to the new deck while the old one is still visible).
+      var visibleSlug = Slides.front.slug;
+      if (page && visibleSlug) {
+        localStorage.setItem('workshop_slide_page:' + visibleSlug, page);
       }
-    });
+    }
+    Slides.front.el.addEventListener('scroll', onScroll);
+    Slides.back.el .addEventListener('scroll', onScroll);
     const infoEl = document.getElementById('pdf-page-info');
     if (infoEl) infoEl.textContent = '— / —';
   })();
 
   window.pdfZoom = async function(delta) {
-    if (!pdfDoc) return;
-    currentScale = Math.max(0.5, Math.min(3, currentScale + delta));
-    await renderAllPagesInto(document.getElementById('pdf-pages'), pdfDoc, currentScale);
+    if (!Slides.front.pdfDoc) return;
+    Slides.scale = Math.max(0.5, Math.min(3, Slides.scale + delta));
+    await renderAllPagesInto(Slides.front.el, Slides.front.pdfDoc, Slides.scale);
   };
 
   window.loadPdf = async function(url, slug, downloadedAt, targetPage) {
@@ -712,13 +730,16 @@ var PdfCache = (function() {
         buffer = await resp.arrayBuffer();
         if (slug && downloadedAt) await PdfCache.put(slug, downloadedAt, buffer);
       }
-      pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
-      totalPages = pdfDoc.numPages;
-      await renderAllPagesInto(document.getElementById('pdf-pages'), pdfDoc, currentScale);
+      const newDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+      // Dispose previous front doc if any (first-time path replaces).
+      if (Slides.front.pdfDoc) Slides.front.pdfDoc.destroy();
+      Slides.front.pdfDoc = newDoc;
+      Slides.front.slug = slug || null;
+      Slides.front.dAt  = downloadedAt || null;
+      await renderAllPagesInto(Slides.front.el, newDoc, Slides.scale);
       var page = (targetPage && targetPage > 1) ? targetPage : 1;
       if (page > 1) {
-        var container = document.getElementById('pdf-pages');
-        var section = container.querySelector('section[data-page="' + page + '"]');
+        var section = Slides.front.el.querySelector('section[data-page="' + page + '"]');
         if (section) section.scrollIntoView({ behavior: 'instant', block: 'start' });
       }
     } catch(e) {
@@ -894,7 +915,9 @@ function _findSlideBySlug(slug) {
 }
 function _scrollSlidesToPage(page) {
   var targetPage = Math.max(1, Number(page || 1));
-  var container = document.getElementById('pdf-pages');
+  var container = (window.Slides && window.Slides.front && window.Slides.front.el)
+    ? window.Slides.front.el
+    : document.getElementById('pdf-pages');
   if (!container) return false;
   var section = container.querySelector('section[data-page="' + targetPage + '"]');
   if (!section) return false;
