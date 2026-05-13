@@ -1556,7 +1556,9 @@ function scheduleHideOverflow() {
   }, 120);
 }
 var VIEWS = ['activity', 'slides', 'summary', 'notes', 'agenda', 'feedback', 'upload-paste'];
+var _suppressScrollSave = new Set();
 function saveScroll(name, el) {
+  if (_suppressScrollSave.has(name)) return;
   LS.setScroll(name, el.scrollTop);
 }
 function toggleSlidesMenu() {
@@ -2683,6 +2685,9 @@ async function loadAgenda() {
   if (!_agendaDirty) return;
   _agendaDirty = false;
   const el = document.getElementById('agenda-content');
+  const viewEl = document.getElementById('agenda-view');
+  const priorScroll = viewEl.scrollTop || parseInt(LS.getScroll('agenda') || '0', 10);
+  _suppressScrollSave.add('agenda');
   el.textContent = 'Loading…';
   try {
     const data = await fetch(`/${_sessionId}/api/participant/agenda`).then(r => r.ok ? r.json() : Promise.reject('not found'));
@@ -2697,12 +2702,13 @@ async function loadAgenda() {
     }).replace(/<a /g, '<a target="_blank" rel="noopener" ');
     el.innerHTML = cleanHtml;
     addAgendaProgress(el);
-    var viewEl = document.getElementById('agenda-view');
-    var saved = LS.getScroll('agenda');
-    if (saved) viewEl.scrollTop = parseInt(saved, 10);
+    if (priorScroll) viewEl.scrollTop = priorScroll;
+    LS.setScroll('agenda', viewEl.scrollTop);
   } catch (e) {
     el.textContent = 'Failed to load agenda.';
     _agendaDirty = true;
+  } finally {
+    _suppressScrollSave.delete('agenda');
   }
 }
 
@@ -2794,6 +2800,11 @@ async function loadNotes() {
   if (!_notesDirty) return;
   _notesDirty = false;
   const el = document.getElementById('notes-content');
+  const viewEl = document.getElementById('notes-scroll');
+  // Capture scrollTop BEFORE the 'Loading…' placeholder shrinks content height —
+  // otherwise the browser-fired scroll event clobbers LS with 0.
+  const priorScroll = viewEl.scrollTop || parseInt(LS.getScroll('notes') || '0', 10);
+  _suppressScrollSave.add('notes');
   el.textContent = 'Loading…';
   try {
     const data = await fetch(`/${_sessionId}/api/participant/notes`).then(r => r.ok ? r.json() : Promise.reject('not found'));
@@ -2803,12 +2814,13 @@ async function loadNotes() {
     } else {
       el.textContent = 'No notes yet.';
     }
-    var viewEl = document.getElementById('notes-scroll');
-    var saved = LS.getScroll('notes');
-    if (saved) viewEl.scrollTop = parseInt(saved, 10);
+    if (priorScroll) viewEl.scrollTop = priorScroll;
+    LS.setScroll('notes', viewEl.scrollTop);
   } catch (e) {
     el.textContent = 'Failed to load notes.';
     _notesDirty = true;
+  } finally {
+    _suppressScrollSave.delete('notes');
   }
 }
 
@@ -2816,6 +2828,9 @@ async function loadSummary() {
   if (!_summaryDirty) return;
   _summaryDirty = false;
   const el = document.getElementById('summary-content');
+  const viewEl = document.getElementById('summary-scroll');
+  const priorScroll = viewEl.scrollTop || parseInt(LS.getScroll('summary') || '0', 10);
+  _suppressScrollSave.add('summary');
   el.textContent = 'Loading…';
   try {
     const data = await fetch(`/${_sessionId}/api/participant/summary`).then(r => r.ok ? r.json() : Promise.reject('not found'));
@@ -2839,12 +2854,13 @@ async function loadSummary() {
     } else {
       el.textContent = 'No summary yet.';
     }
-    var viewEl = document.getElementById('summary-scroll');
-    var saved = LS.getScroll('summary');
-    if (saved) viewEl.scrollTop = parseInt(saved, 10);
+    if (priorScroll) viewEl.scrollTop = priorScroll;
+    LS.setScroll('summary', viewEl.scrollTop);
   } catch (e) {
     el.textContent = 'Failed to load summary.';
     _summaryDirty = true;
+  } finally {
+    _suppressScrollSave.delete('summary');
   }
 }
 
