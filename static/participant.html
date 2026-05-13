@@ -763,13 +763,18 @@ var PdfCache = (function() {
       // 4. Resolve target page just before swap
       const targetPage = Math.max(1, Number((target.getPage && target.getPage()) || 1));
       const section = Slides.back.el.querySelector('section[data-page="' + targetPage + '"]');
+      // Force instant scroll: the buffers have scroll-smooth (CSS scroll-behavior:smooth)
+      // for user-triggered navigation, which would also animate this programmatic
+      // scrollTop assignment — the animation would continue after swap, making the
+      // participant see pdf.js scrolling to the page. Temporarily switch to auto.
+      const prevBehavior = Slides.back.el.style.scrollBehavior;
+      Slides.back.el.style.scrollBehavior = 'auto';
       if (section) {
-        // Use scrollTop = section.offsetTop directly (no animation, instant) so the
-        // user sees the right page on the first paint after swap.
         Slides.back.el.scrollTop = section.offsetTop;
       } else {
         Slides.back.el.scrollTop = 0;
       }
+      Slides.back.el.style.scrollBehavior = prevBehavior;
 
       // 5. Atomic swap
       swap();
