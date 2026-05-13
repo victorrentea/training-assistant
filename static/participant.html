@@ -597,11 +597,11 @@ var PdfCache = (function() {
   let currentScale = 1.5;
   let totalPages = 0;
 
-  async function renderAllPages(scale) {
-    const container = document.getElementById('pdf-pages');
-    container.innerHTML = '';
-    for (let i = 1; i <= totalPages; i++) {
-      const page = await pdfDoc.getPage(i);
+  async function renderAllPagesInto(container, localPdfDoc, scale) {
+    container.replaceChildren();
+    const numPages = localPdfDoc.numPages;
+    for (let i = 1; i <= numPages; i++) {
+      const page = await localPdfDoc.getPage(i);
       const viewport = page.getViewport({ scale });
       const section = document.createElement('section');
       section.className = 'relative group';
@@ -611,7 +611,7 @@ var PdfCache = (function() {
       canvas.height = viewport.height;
       canvas.className = 'w-full whisper-shadow rounded-2xl';
       section.appendChild(canvas);
-      if (i === totalPages) section.classList.add('pb-32');
+      if (i === numPages) section.classList.add('pb-32');
       container.appendChild(section);
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
       const annotations = await page.getAnnotations({ intent: 'display' });
@@ -648,10 +648,10 @@ var PdfCache = (function() {
             link.addEventListener('click', async (ev) => {
               ev.preventDefault();
               try {
-                const dest = Array.isArray(ann.dest) ? ann.dest : await pdfDoc.getDestination(ann.dest);
+                const dest = Array.isArray(ann.dest) ? ann.dest : await localPdfDoc.getDestination(ann.dest);
                 if (!dest || !dest[0]) return;
                 const pageRef = dest[0];
-                const pageIndex = await pdfDoc.getPageIndex(pageRef);
+                const pageIndex = await localPdfDoc.getPageIndex(pageRef);
                 const targetPage = pageIndex + 1;
                 const targetSection = container.querySelector(`section[data-page="${targetPage}"]`);
                 if (targetSection) targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -698,7 +698,7 @@ var PdfCache = (function() {
   window.pdfZoom = async function(delta) {
     if (!pdfDoc) return;
     currentScale = Math.max(0.5, Math.min(3, currentScale + delta));
-    await renderAllPages(currentScale);
+    await renderAllPagesInto(document.getElementById('pdf-pages'), pdfDoc, currentScale);
   };
 
   window.loadPdf = async function(url, slug, downloadedAt, targetPage) {
@@ -714,7 +714,7 @@ var PdfCache = (function() {
       }
       pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
       totalPages = pdfDoc.numPages;
-      await renderAllPages(currentScale);
+      await renderAllPagesInto(document.getElementById('pdf-pages'), pdfDoc, currentScale);
       var page = (targetPage && targetPage > 1) ? targetPage : 1;
       if (page > 1) {
         var container = document.getElementById('pdf-pages');
