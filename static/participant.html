@@ -15,6 +15,9 @@ body{visibility:hidden}
 @keyframes badge-blink{0%,100%{opacity:1}50%{opacity:0}}
 .badge-blink{animation:badge-blink 0.35s ease-in-out 3}
 #past-slides-badge{background:#9ca3af;transition:background-color 3s ease}
+.pdf-buffer { position: absolute; inset: 0; }
+.buf-front  { opacity: 1; pointer-events: auto; z-index: 2; }
+.buf-back   { opacity: 0; pointer-events: none; z-index: 1; }
 #notes-badge,#summary-badge{background:#9ca3af}
 .badge-alert{background:#ef4444!important}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -475,8 +478,11 @@ body{visibility:hidden}
 <span class="material-symbols-outlined">download</span>
 </a>
 </div>
-<!-- Slides Container -->
-<div id="pdf-pages" class="flex-grow overflow-y-auto scroll-smooth py-8 px-8 space-y-4 h-full"></div>
+<!-- Slides Container (double-buffer stack) -->
+<div id="pdf-stack" class="flex-grow relative h-full">
+  <div id="pdf-pages"     class="pdf-buffer buf-front overflow-y-auto scroll-smooth py-8 px-8 space-y-4"></div>
+  <div id="pdf-pages-buf" class="pdf-buffer buf-back  overflow-y-auto scroll-smooth py-8 px-8 space-y-4" aria-hidden="true"></div>
+</div>
 <!-- Hidden page info element updated by JS — read by tests -->
 <span id="pdf-page-info" hidden></span>
 </div><!-- end slides-view -->
