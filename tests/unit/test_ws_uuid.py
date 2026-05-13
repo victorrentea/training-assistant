@@ -18,7 +18,7 @@ def clean_state():
     _msg._participant_update_throttle._last_run = 0.0
     _msg._participant_update_throttle._pending_handle = None
     state.reset()
-    state.generate_session_id()
+    state.session_id = "e2etst"
     yield
     state.reset()
 

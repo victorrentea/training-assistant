@@ -175,17 +175,9 @@ if os.environ.get("OTEL_TRACES_FILE"):
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-# ── Minimal session bootstrap endpoints (used by e2e test setup when daemon is not running) ──
-
-@app.post("/api/session/start", dependencies=[Depends(require_host_auth)])
-async def session_start():
-    """Generate a session_id. Used by conftest when daemon is not running."""
-    return {"session_id": state.generate_session_id()}
-
-
 @app.get("/api/session/active")
 async def session_active():
-    """Return current session_id. Fallback used by conftest."""
+    """Return current session_id (set on Railway only by the daemon's set_session_id WS push)."""
     return {"session_id": state.session_id}
 
 

@@ -42,7 +42,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Active Session ID, daemon calls on startup to discover if a session is already active on Railway; returns the current session_id or null if no session is active.<br>`GET /api/session/active` | - | `session_id: any  # Current active session ID, or null if no session is active.` |
-| Generate a new session_id (test bootstrap), used by hermetic test setup when the daemon is not running; generates a fresh session_id on Railway directly; production sessions are created on the daemon, not here.<br>`POST /api/session/start` | - | `session_id: string` |
 
 ### Railway WS
 | Message | Payload |

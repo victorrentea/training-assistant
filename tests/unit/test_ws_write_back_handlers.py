@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -9,7 +9,7 @@ from railway.shared.state import state
 @pytest.fixture(autouse=True)
 def clean_state():
     state.reset()
-    state.generate_session_id()
+    state.session_id = "e2etst"
     yield
     state.reset()
 

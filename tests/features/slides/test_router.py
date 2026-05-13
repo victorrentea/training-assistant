@@ -16,7 +16,7 @@ _HOST_AUTH_HEADERS = {
 
 def setup_function():
     state.reset()
-    state.generate_session_id()
+    state.session_id = "e2etst"
 
 
 def teardown_function():

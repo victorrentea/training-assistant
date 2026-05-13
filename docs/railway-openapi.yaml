@@ -26,26 +26,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActiveSessionResponse'
       x-feature: session_management
-  /api/session/start:
-    post:
-      tags:
-      - session
-      summary: Generate a new session_id (test bootstrap)
-      description: >
-        Used by hermetic test setup when the daemon is not running.
-        Generates a fresh session_id on Railway directly. Production sessions
-        are created on the daemon, not here.
-      operationId: session_start
-      security:
-      - basicAuth: []
-      responses:
-        '200':
-          description: Generated session
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SessionStartResponse'
-      x-feature: session_management
   /api/slides/upload:
     post:
       tags:
@@ -299,13 +279,6 @@ components:
           description: Absolute local path where the daemon saved the file.
       required:
       - disk_path
-    SessionStartResponse:
-      type: object
-      properties:
-        session_id:
-          type: string
-      required:
-      - session_id
     UploadSlidePdfRequest:
       type: object
       properties:

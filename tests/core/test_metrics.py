@@ -64,7 +64,7 @@ def test_ws_connection_increments_gauge():
     """WebSocket connect should increment ws_connections_active."""
     _reset_throttle()
     state.reset()
-    state.generate_session_id()
+    state.session_id = "e2etst"
     client = TestClient(app)
     before = _get_metric_value("ws_connections_active", {"role": "participant"}) or 0
     with client.websocket_connect(f"/ws/{state.session_id}/test-metrics-participant") as ws:
@@ -83,7 +83,7 @@ def test_ws_messages_tracked_by_type():
     """Every WS message should increment ws_messages_total with type label."""
     _reset_throttle()
     state.reset()
-    state.generate_session_id()
+    state.session_id = "e2etst"
     client = TestClient(app)
     before = _get_metric_value("ws_messages_total", {"type": "ping"}) or 0
     with client.websocket_connect(f"/ws/{state.session_id}/test-metrics-msg") as ws:

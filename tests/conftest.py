@@ -10,8 +10,8 @@ import os
 import re
 import subprocess
 import sys
-import time
 import threading
+import time
 from typing import TYPE_CHECKING
 
 # Ensure project root and tests dir are on sys.path
@@ -21,9 +21,10 @@ for _p in (_project_root, _tests_dir):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import json
-import requests
-import pytest
+import json  # noqa: E402
+
+import pytest  # noqa: E402
+import requests  # noqa: E402
 
 if TYPE_CHECKING:
     from pages.host_page import HostPage
@@ -118,15 +119,6 @@ def server_url(tmp_path_factory):
 
     base_url = f"http://127.0.0.1:{port}"
 
-    # Start a session so participant routes are accessible
-    r = requests.post(
-        f"{base_url}/api/session/start",
-        auth=(HOST_USER, HOST_PASS),
-        json={"name": "e2e-test", "type": "workshop"},
-    )
-    r.raise_for_status()
-    _cached_session_id[0] = r.json().get("session_id")
-
     _server_port["port"] = port
 
     # ── Start daemon host server alongside Railway ──
@@ -153,9 +145,11 @@ def server_url(tmp_path_factory):
             time.sleep(0.2)
 
     # Start WS client so daemon↔Railway broadcasts and proxy work
-    from daemon.ws_client import DaemonWsClient
-    from daemon.proxy_handler import handle_proxy_request
+    import daemon.session.router as _daemon_session_router
+    import daemon.session_state as _daemon_session_state
     import daemon.ws_publish as _ws_publish
+    from daemon.proxy_handler import handle_proxy_request
+    from daemon.ws_client import DaemonWsClient
     _ws_client = DaemonWsClient()
     _ws_client.register_handler(
         "proxy_request",
@@ -164,6 +158,35 @@ def server_url(tmp_path_factory):
     )
     _ws_client.start()
     _ws_publish.set_ws_client(_ws_client)
+    _daemon_session_state.set_ws_client(_ws_client)
+    _daemon_session_router.set_ws_client(_ws_client)
+
+    # Wait for the daemon↔Railway WS to actually connect, so that
+    # announce_session_id() below reaches Railway (it no-ops when disconnected).
+    _deadline = time.time() + 10
+    while time.time() < _deadline and not _ws_client.connected:
+        time.sleep(0.05)
+    assert _ws_client.connected, "daemon↔Railway WS never connected in conftest"
+
+    # Create the test session via the daemon (the only path that generates
+    # session IDs in production). The daemon synchronously broadcasts
+    # set_session_id over WS, which Railway's handler writes to state.session_id.
+    r = requests.post(
+        f"{_daemon_base}/api/session/create",
+        json={"name": "e2e-test", "type": "workshop"},
+    )
+    r.raise_for_status()
+    _cached_session_id[0] = r.json().get("session_id")
+
+    # Wait for Railway to receive the WS announcement and populate state.session_id.
+    _deadline = time.time() + 5
+    while time.time() < _deadline:
+        rs = requests.get(f"{base_url}/api/session/active", timeout=1)
+        if rs.ok and rs.json().get("session_id") == _cached_session_id[0]:
+            break
+        time.sleep(0.05)
+    else:
+        raise RuntimeError("Railway did not pick up session_id from daemon WS within 5s")
 
     _daemon_url[0] = _daemon_base
 

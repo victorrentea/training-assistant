@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 
 from railway.app import app, state
 
-
 _HOST_AUTH_HEADERS = {
     "Authorization": "Basic " + base64.b64encode(
         f"{os.environ.get('HOST_USERNAME', 'host')}:{os.environ.get('HOST_PASSWORD', 'host')}".encode()
@@ -15,7 +14,7 @@ _HOST_AUTH_HEADERS = {
 
 def setup_function():
     state.reset()
-    state.generate_session_id()
+    state.session_id = "e2etst"
 
 
 def teardown_function():
