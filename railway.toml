@@ -2,4 +2,4 @@
 watchPatterns = ["/railway/**", "/pyproject.toml", "/uv.lock", "/.python-version", "/railway.toml"]
 
 [deploy]
-startCommand = "python3 -m uvicorn railway.app:app --host 0.0.0.0 --port $PORT"
+startCommand = "python3 -m uvicorn railway.app:app --host 0.0.0.0 --port $PORT --ws-ping-interval 20 --ws-ping-timeout 60"

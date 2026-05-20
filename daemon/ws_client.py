@@ -130,10 +130,13 @@ class DaemonWsClient:
         headers = {"Authorization": f"Basic {creds}"}
 
         _ping_interval = float(os.environ.get("DAEMON_WS_PING_INTERVAL_SECONDS", "20"))
+        # Keep ping_timeout wider than ping_interval so a single lost pong
+        # (Railway edge jitter) doesn't tear the connection down.
+        _ping_timeout = float(os.environ.get("DAEMON_WS_PING_TIMEOUT_SECONDS", "60"))
         ws_kwargs = {
             "open_timeout": 10,
             "ping_interval": _ping_interval,
-            "ping_timeout": _ping_interval,
+            "ping_timeout": _ping_timeout,
         }
         if url.startswith("wss://"):
             ws_kwargs["ssl"] = _ssl_context()
@@ -157,6 +160,7 @@ class DaemonWsClient:
             except Exception as e:
                 log.error("railway", f"on_connect error: {e}")
 
+        close_info = "no-close-frame"
         try:
             for raw in ws:
                 if self._stop.is_set():
@@ -170,6 +174,7 @@ class DaemonWsClient:
                     log.debug("railway", f"↓ {self._msg_name(data)}")
                 if msg_type == "kicked":
                     log.info("railway", "Kicked by server (new daemon connected)")
+                    close_info = "kicked"
                     break
                 if msg_type in self._handlers:
                     if msg_type in self._inline_handlers:
@@ -213,12 +218,12 @@ class DaemonWsClient:
                                 _otel_ctx.detach(_token)
                         else:
                             _broadcast_slides_updated()
-        except ConnectionClosed:
-            pass
+        except ConnectionClosed as e:
+            close_info = f"code={e.code} reason={e.reason!r}"
         finally:
             with self._ws_lock:
                 self._ws = None
-            log.info("railway", "Disconnected")
+            log.info("railway", f"Disconnected ({close_info})")
 
     @staticmethod
     def _msg_name(msg: dict) -> str:
