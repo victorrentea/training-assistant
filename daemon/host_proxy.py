@@ -116,7 +116,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
                         data = await client_ws.receive_text()
                         daemon_log.debug("railway", f"↑ /ws/{path} {_msg_name(data)}")
                         await upstream.send(data)
-                except WebSocketDisconnect:
+                except (WebSocketDisconnect, ConnectionClosed):
                     pass
 
             async def upstream_to_client():
@@ -126,7 +126,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
                             await client_ws.send_bytes(message)
                         else:
                             await client_ws.send_text(message)
-                except ConnectionClosed:
+                except (ConnectionClosed, WebSocketDisconnect):
                     pass
 
             done, pending = await asyncio.wait(
@@ -136,6 +136,13 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
             )
             for task in pending:
                 task.cancel()
+            # Drain done tasks so any unexpected exception is "retrieved"
+            # (otherwise asyncio prints "Task exception was never retrieved").
+            for task in done:
+                try:
+                    task.result()
+                except (WebSocketDisconnect, ConnectionClosed):
+                    pass
 
     except Exception as e:
         logger.warning("WS proxy error for /ws/%s: %s", path, e)
