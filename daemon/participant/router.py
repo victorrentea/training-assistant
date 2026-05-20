@@ -10,6 +10,7 @@ import ssl
 import urllib.parse
 import urllib.request
 from types import SimpleNamespace
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import certifi
 from fastapi import APIRouter, Request, status
@@ -122,6 +123,23 @@ def _country_from_timezone(tz: str) -> str:
     address = rows[0].get("address") if isinstance(rows[0], dict) else {}
     code = str((address or {}).get("country_code") or "").strip().upper()
     return code if len(code) == 2 else ""
+
+
+def _apply_browser_tz(pid: str, tz_raw: str | None) -> bool:
+    """Store browser-reported IANA timezone for pid. Returns True if the stored value changed."""
+    if not tz_raw:
+        return False
+    tz = str(tz_raw).strip()[:64]
+    if not tz:
+        return False
+    try:
+        ZoneInfo(tz)
+    except (ZoneInfoNotFoundError, ValueError):
+        return False
+    if participant_state.location_timezones.get(pid) == tz:
+        return False
+    participant_state.location_timezones[pid] = tz
+    return True
 
 
 async def _resolve_location_metadata(loc: str) -> tuple[str, str, str]:

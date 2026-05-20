@@ -292,7 +292,13 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
         # Participant registered via daemon REST — broadcast presence
         name = state.participant_names.get(pid, "")
         logger.info(f"WS connected: {pid} name={name!r} ({len(state.participants)} total)")
-        await push_to_daemon({"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": True})
+        presence_msg: dict = {"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": True}
+        # Browser-reported IANA timezone — piggybacks on the WS join so the host
+        # sees a participant's local clock without requiring location sharing.
+        tz = websocket.query_params.get("tz", "").strip()[:64]
+        if tz:
+            presence_msg["tz"] = tz
+        await push_to_daemon(presence_msg)
         broadcast_participant_update()
 
     try:

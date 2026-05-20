@@ -230,6 +230,36 @@ class TestSetLocation:
         assert resp.status_code == 400
 
 
+class TestApplyBrowserTz:
+    def test_valid_iana_tz_stored(self, fresh_state):
+        from daemon.participant.router import _apply_browser_tz
+        assert _apply_browser_tz("uuid1", "Asia/Kolkata") is True
+        assert fresh_state.location_timezones["uuid1"] == "Asia/Kolkata"
+
+    def test_invalid_tz_ignored(self, fresh_state):
+        from daemon.participant.router import _apply_browser_tz
+        assert _apply_browser_tz("uuid1", "Mars/Olympus") is False
+        assert "uuid1" not in fresh_state.location_timezones
+
+    def test_blank_tz_ignored(self, fresh_state):
+        from daemon.participant.router import _apply_browser_tz
+        assert _apply_browser_tz("uuid1", "") is False
+        assert _apply_browser_tz("uuid1", None) is False
+        assert _apply_browser_tz("uuid1", "   ") is False
+        assert "uuid1" not in fresh_state.location_timezones
+
+    def test_unchanged_returns_false(self, fresh_state):
+        from daemon.participant.router import _apply_browser_tz
+        fresh_state.location_timezones["uuid1"] = "Europe/Bucharest"
+        assert _apply_browser_tz("uuid1", "Europe/Bucharest") is False
+
+    def test_overrides_existing_on_change(self, fresh_state):
+        from daemon.participant.router import _apply_browser_tz
+        fresh_state.location_timezones["uuid1"] = "Europe/Bucharest"
+        assert _apply_browser_tz("uuid1", "Asia/Kolkata") is True
+        assert fresh_state.location_timezones["uuid1"] == "Asia/Kolkata"
+
+
 class TestParticipantState:
     def test_state_does_not_include_participant_count(self, client, fresh_state):
         fresh_state.participant_names["uuid1"] = "Alice"

@@ -372,7 +372,8 @@ paths:
           description: Successful Response
       x-feature: poll
       x-doc-notes:
-      - Votes are final once submitted; re-vote is rejected.
+      - 'Votes are mutable while the poll is open: re-submitting overwrites the prior
+        selection and updates voted_at.'
   /api/{session_id}/host/poll/manual/submit:
     post:
       tags:

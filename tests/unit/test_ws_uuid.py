@@ -55,6 +55,21 @@ def test_ws_notifies_daemon_about_presence_changes():
         assert {"type": "participant_presence", "uuid": "presence-uuid", "online": False} in sent_messages
 
 
+def test_ws_forwards_browser_tz_query_param_to_daemon():
+    """Browser timezone passed via WS query string is included in the daemon presence push."""
+    client = TestClient(app)
+    with patch("railway.features.ws.router.push_to_daemon", new=AsyncMock(return_value=True)) as push_mock:
+        with client.websocket_connect(f"/ws/{state.session_id}/tz-uuid?tz=Asia/Kolkata") as ws:
+            assert ws.receive_json().get("type") == "active_participants_count_updated"
+
+        online_msgs = [
+            call.args[0] for call in push_mock.await_args_list
+            if call.args[0].get("type") == "participant_presence" and call.args[0].get("online") is True
+        ]
+        assert online_msgs, "expected an online presence push"
+        assert online_msgs[0].get("tz") == "Asia/Kolkata"
+
+
 def test_ws_participant_count_uses_connected_participants():
     """Count reflects currently connected (live WS) non-host participants, not offline known names.
 

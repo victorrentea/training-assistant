@@ -2343,6 +2343,10 @@ function _bindNameEdit() {
 }
 
 // Registration
+function _browserTimezone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }
+  catch (e) { return ''; }
+}
 async function _registerRailway(payload) {
   var body = Object.assign({}, payload || {});
   return fetch('/' + _sessionId + '/api/participant/register', {
@@ -2993,6 +2997,8 @@ function _connectWS() {
   if (!_sessionId) return;
   var proto = location.protocol === 'https:' ? 'wss' : 'ws';
   var url = proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_myUUID);
+  var tz = _browserTimezone();
+  if (tz) url += '?tz=' + encodeURIComponent(tz);
   _ws = new WebSocket(url);
   _ws.onopen = function() {
     // Show access duration toast after 10 seconds if not in onboarding

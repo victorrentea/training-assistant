@@ -59,6 +59,9 @@ components:
             description: Participant UUID
           online:
             type: boolean
+          tz:
+            type: string
+            description: Browser-reported IANA timezone (only sent on online=true)
 
     daemon_state_push:
       summary: Railway pushes current online participant list to newly connected daemon

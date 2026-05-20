@@ -757,6 +757,7 @@ def run() -> None:
             pass
 
     def _handle_participant_presence(data: dict) -> None:
+        from daemon.participant.router import _apply_browser_tz
         from daemon.participant.state import participant_state as _participant_state
 
         pid = str(data.get("uuid", "")).strip()
@@ -765,6 +766,7 @@ def run() -> None:
 
         if bool(data.get("online")):
             _participant_state.online_participants.add(pid)
+            _apply_browser_tz(pid, data.get("tz"))
         else:
             _participant_state.online_participants.discard(pid)
         _push_host_participant_list()

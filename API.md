@@ -83,7 +83,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Railway WS
 | Message | Payload |
 | --- | --- |
-| Participant connected or disconnected from Railway<br>`participant_presence` | `uuid: string  # Participant UUID`<br>`online: bool` |
+| Participant connected or disconnected from Railway<br>`participant_presence` | `uuid: string  # Participant UUID`<br>`online: bool`<br>`tz?: string  # Browser-reported IANA timezone (only sent on online=true)` |
 | Railway pushes current online participant list to newly connected daemon<br>`daemon_state_push` | `online_participants: list[string]  # UUIDs of currently online participants` |
 
 ## Feature: Participant State
@@ -167,7 +167,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Participant casts a vote. Votes are final once submitted; re-vote is rejected.<br>`POST /api/participant/poll/vote` | `options: list[int]` | - |
+| Participant casts a vote. Votes are mutable while the poll is open: re-submitting overwrites the prior selection and updates voted_at.<br>`POST /api/participant/poll/vote` | `options: list[int]` | - |
 
 ### Participant WS
 | Message | Payload |
