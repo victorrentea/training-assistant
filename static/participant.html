@@ -1113,7 +1113,7 @@ function _findSlideForHostCurrent(slidesCurrent) {
 function _findSlideBySlug(slug) {
   return _slidesCatalog.find(function(s) { return s.slug === slug; }) || null;
 }
-function _scrollSlidesToPage(page) {
+function _scrollSlidesToPage(page, opts) {
   var targetPage = Math.max(1, Number(page || 1));
   var container = (window.Slides && window.Slides.front && window.Slides.front.el)
     ? window.Slides.front.el
@@ -1121,7 +1121,14 @@ function _scrollSlidesToPage(page) {
   if (!container) return false;
   var section = container.querySelector('section[data-page="' + targetPage + '"]');
   if (!section) return false;
-  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (opts && opts.instant) {
+    var prevBehavior = container.style.scrollBehavior;
+    container.style.scrollBehavior = 'auto';
+    container.scrollTop = section.offsetTop;
+    container.style.scrollBehavior = prevBehavior;
+  } else {
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   return true;
 }
 function _getCurrentSlidesPage() {
@@ -1142,15 +1149,17 @@ async function _openSlideFromHistory(slug, page, focusEl) {
   var targetPage = Math.max(1, Number(page || 1));
   var sameSlideAlreadyOpen = (_activeSlideId && slide._id === _activeSlideId);
   if (!sameSlideAlreadyOpen) {
+    // Cross-deck: selectTopic -> prefetchInto loads new deck in back buffer,
+    // instant-scrolls it to targetPage, then atomically swaps. No visible scroll.
     await selectTopic(topicEl || document.querySelector('.topic-item'), null, slide, targetPage);
   }
   var currentPage = _getCurrentSlidesPage();
   if (currentPage === targetPage) {
     return true;
   }
-  if (!_scrollSlidesToPage(targetPage)) {
-    // If rendering is still settling, retry briefly.
-    setTimeout(function() { _scrollSlidesToPage(targetPage); }, 200);
+  // Same-deck (or post-swap safety net): jump instantly, no smooth-scroll animation.
+  if (!_scrollSlidesToPage(targetPage, { instant: true })) {
+    setTimeout(function() { _scrollSlidesToPage(targetPage, { instant: true }); }, 200);
   }
   if (focusEl && typeof focusEl.focus === 'function') {
     setTimeout(function() {
