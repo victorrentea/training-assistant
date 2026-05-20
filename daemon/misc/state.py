@@ -166,6 +166,7 @@ class MiscState:
             self.talk_presentation_name = None
             self.talk_presentation_url = None
             self.talk_presentation_slug = None
+            self.agenda_docx_path = None
 
 
 misc_state = MiscState()

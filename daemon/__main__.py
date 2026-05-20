@@ -1147,6 +1147,14 @@ def run() -> None:
                                 notes_lines = len(notes_file.read_text(encoding="utf-8", errors="replace").splitlines())
                                 log.info("session", f"Notes found ({notes_lines} lines): {notes_file.name}")
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
+                            # Refresh agenda for new session
+                            _agenda_path = _find_agenda_docx(folder)
+                            if _agenda_path:
+                                _misc_state.agenda_docx_path = _agenda_path
+                                log.info("session", f"Agenda refreshed: {_agenda_path.name}")
+                            else:
+                                _misc_state.agenda_docx_path = None
+                                log.info("session", "No agenda found in new session folder")
                             if _active_session_id:
                                 announce_session_id(_active_session_id)
                             did_sync_in_create = True
