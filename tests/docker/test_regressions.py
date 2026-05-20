@@ -18,13 +18,10 @@ import urllib.request
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
-import pytest
-from playwright.sync_api import sync_playwright, expect
-
-from pages.participant_page import ParticipantPage
 from pages.host_page import HostPage
+from pages.participant_page import ParticipantPage
+from playwright.sync_api import expect, sync_playwright
 from session_utils import fresh_session
-
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
@@ -158,7 +155,7 @@ def test_participant_header_shows_session_name():
         pax = ParticipantPage(pax_page)
         pax.auto_join()
 
-        # Wait for WS to deliver session_name (overrides hardcoded default "Event-Driven Architectures")
+        # Wait for state fetch / WS to deliver session_name (title is empty until then)
         pax_page.wait_for_function(
             f"() => {{ const el = document.getElementById('session-title'); return el && el.textContent.includes('{session_prefix}'); }}",
             timeout=10000,

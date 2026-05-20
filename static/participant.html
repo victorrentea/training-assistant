@@ -332,7 +332,7 @@ body{visibility:hidden}
 <div class="space-y-4">
 <div class="flex items-center gap-1 min-w-0">
 <div class="flex-1 min-w-0">
-<h1 id="session-title" class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate">Event-Driven Architectures</h1>
+<h1 id="session-title" class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate"></h1>
 <p class="text-base font-medium text-primary flex items-center justify-between">
 <span id="session-org"></span>
 <span id="pax-count-display" class="flex items-center gap-1" style="display:none">👥 <span id="pax-count">0</span></span>
@@ -2444,9 +2444,24 @@ async function _refreshParticipantState() {
     _connectWS();
 
     var _pollWsSeqBeforeFetch = _pollWsSeq;
-    var state = await fetch('/' + _sessionId + '/api/participant/state', {
-      headers: { 'X-Participant-ID': _myUUID }
-    }).then(function(r) { return r.json(); });
+    // Retry the state fetch indefinitely with exponential backoff. The loading
+    // screen stays visible until we get a real response — better than leaking
+    // stale placeholders if the daemon-Railway WS is temporarily broken.
+    var state = null;
+    var _stateDelay = 1000;
+    while (state === null) {
+      try {
+        var _r = await fetch('/' + _sessionId + '/api/participant/state', {
+          headers: { 'X-Participant-ID': _myUUID }
+        });
+        if (!_r.ok) throw new Error('HTTP ' + _r.status);
+        state = await _r.json();
+      } catch (_stateErr) {
+        console.warn('[participant] state fetch failed, retrying in ' + _stateDelay + 'ms:', _stateErr);
+        await new Promise(function(res) { setTimeout(res, _stateDelay); });
+        _stateDelay = Math.min(_stateDelay * 2, 10000);
+      }
+    }
     console.log('[participant] state:', state);
 
     // Apply name/avatar from state
