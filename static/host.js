@@ -162,9 +162,9 @@
 
   function _formatParticipantLocation(participant) {
     const rawLoc = participant?.location || '';
-    if (!rawLoc) return '';
     const tz = String(participant?.location_tz || _extractTimezone(rawLoc) || '').trim();
     const cc = String(participant?.location_country || '').trim().toUpperCase();
+    if (!rawLoc && !tz && !cc) return '';
     const flagHtml = cc ? `<span title="${escHtml(_countryCodeToName(cc))}" style="cursor:default">${_countryCodeToFlag(cc)}</span>` : '';
     if (tz) {
       const hhmm = _formatClockForTimezone(tz);
@@ -1289,7 +1289,7 @@
       const loc = participant.location || '';
       const pts = scores[pid] || 0;
       const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" onclick="resetOneScore('${escHtml(pid)}','${escHtml(name)}',${pts})">⭐ ${pts} pts</span>` : '';
-      const locLabel = loc ? _formatParticipantLocation(participant) : null;
+      const locLabel = _formatParticipantLocation(participant) || null;
       const tzForColor = String(participant?.location_tz || _extractTimezone(loc) || '').trim();
       const hhmmForColor = tzForColor ? _rawHhmmForTimezone(tzForColor) : '';
       const _ohc = _offHoursClass(hhmmForColor);
