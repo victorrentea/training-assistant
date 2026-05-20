@@ -99,9 +99,11 @@ def _country_from_coords(lat: str, lon: str) -> tuple[str, str]:
 
 
 def _timezone_from_coords(lat: str, lon: str) -> str:
+    # Without timezone=auto, Open-Meteo always returns "GMT" for the timezone field.
     url = (
         "https://api.open-meteo.com/v1/forecast"
-        f"?latitude={urllib.parse.quote(lat)}&longitude={urllib.parse.quote(lon)}&current=temperature_2m"
+        f"?latitude={urllib.parse.quote(lat)}&longitude={urllib.parse.quote(lon)}"
+        "&current=temperature_2m&timezone=auto"
     )
     data = _http_get_json(url)
     tz = str(data.get("timezone") or "").strip()
