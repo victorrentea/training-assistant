@@ -199,7 +199,18 @@ body{visibility:hidden}
         #access-duration-toast .close-btn:hover {
           background: rgba(0, 0, 0, 0.1);
         }
-    </style>
+        #access-duration-toast a {
+          color: #78350f;
+          text-decoration: underline;
+          font-weight: 700;
+        }
+        #access-duration-toast a:hover {
+          color: #451a03;
+        }
+        #access-duration-toast-gdrive {
+          margin-top: 0.5rem;
+        }
+</style>
 <style>
 /* ── Poll card styles ── */
 #activity-poll-section { width: 100%; max-width: 41.6rem; }
@@ -2106,6 +2117,14 @@ function _hideAccessToast() {
   toast.classList.remove('show');
 }
 
+function _applyGdriveToast(url) {
+  var wrap = document.getElementById('access-duration-toast-gdrive');
+  var link = document.getElementById('access-duration-toast-gdrive-link');
+  if (!wrap || !link) return;
+  if (url) { link.href = url; wrap.style.display = ''; }
+  else { wrap.style.display = 'none'; }
+}
+
 document.addEventListener('click', function (e) {
   if (_onboardingStep === 1) {
     var bar = document.getElementById('emoji-main-bar');
@@ -2472,6 +2491,7 @@ async function _refreshParticipantState() {
     var gdriveNav = document.getElementById('gdrive-nav');
     if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveNav.style.display = ''; }
     else { gdriveNav.style.display = 'none'; }
+    _applyGdriveToast(state.gdrive_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
     var saved = LS.getView();
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
@@ -2539,6 +2559,7 @@ function _applyState(msg) {
     var gdriveNav = document.getElementById('gdrive-nav');
     if (msg.gdrive_url) { gdriveNav.href = msg.gdrive_url; gdriveNav.style.display = ''; }
     else { gdriveNav.style.display = 'none'; }
+    _applyGdriveToast(msg.gdrive_url);
   }
   if (msg.has_agenda !== undefined) {
     document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
@@ -3255,7 +3276,10 @@ function downloadSummaryPdf() {
 <div id="access-duration-toast">
   <button class="close-btn" onclick="_hideAccessToast()" aria-label="Close">&times;</button>
   <div style="padding-right: 1.5rem;">
-    This tool is available for the duration of training only. You will receive everything you can access through the tool via email after the end of the training.
+    This tool is available for the duration of training only. You will receive everything you can access through the tool via email after the end of the training. You can also access the slides anytime at <a href="https://victorrentea.ro/slides/" target="_blank" rel="noopener">victorrentea.ro/slides/</a>.
+    <div id="access-duration-toast-gdrive" style="display:none">
+      Resources for this session: <a id="access-duration-toast-gdrive-link" href="#" target="_blank" rel="noopener">Google Drive</a>.
+    </div>
   </div>
 </div>
 </body></html>
