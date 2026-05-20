@@ -186,6 +186,10 @@ components:
             type: string
             nullable: true
             description: UUID of the participant who made the original request
+          timeout:
+            type: number
+            nullable: true
+            description: Seconds Railway will wait for proxy_response; daemon uses this (plus a small buffer) as the local HTTP timeout so slow endpoints (e.g. slides/check) don't time out prematurely.
 
     set_session_id:
       summary: Daemon announces current active session to Railway on connect or session change

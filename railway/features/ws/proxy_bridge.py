@@ -40,6 +40,7 @@ async def proxy_to_daemon(method: str, path: str, body: bytes | None,
         "headers": {k: v for k, v in headers.items()
                     if k.lower() not in ("host", "content-length")},
         "participant_id": participant_id,
+        "timeout": timeout,
     }
 
     # Inject trace context from the current HTTP request span

@@ -27,6 +27,13 @@ def _process_proxy_request(data: dict, ws_client):
     path = data.get("path", "/")
     body = data.get("body")
     headers = data.get("headers", {})
+    # Honor the timeout Railway told us it was waiting for, plus a small buffer
+    # so the daemon's local HTTP call doesn't give up just before Railway does.
+    try:
+        railway_timeout = float(data.get("timeout") or 0.0)
+    except (TypeError, ValueError):
+        railway_timeout = 0.0
+    local_timeout = max(railway_timeout + 5.0, 10.0)
 
     url = f"http://127.0.0.1:{DAEMON_HOST_PORT}{path}"
 
@@ -49,7 +56,7 @@ def _process_proxy_request(data: dict, ws_client):
             url=url,
             headers=headers,
             content=body.encode("utf-8") if body else None,
-            timeout=10.0,
+            timeout=local_timeout,
         )
     except Exception as e:
         logger.error("Proxy request failed: %s %s — %s", method, path, e)
