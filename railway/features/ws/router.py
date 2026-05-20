@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import binascii
 import hashlib as _hashlib_mod
@@ -35,6 +36,12 @@ from railway.shared.state import state
 router = APIRouter()
 session_router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Grace period before kicking participants after a daemon WS drop. The daemon
+# reconnects in ~3s on transient network blips; only evict clients if the
+# daemon is still absent after this window.
+_DAEMON_DISCONNECT_GRACE_SECONDS = float(os.environ.get("DAEMON_DISCONNECT_GRACE_SECONDS", "5"))
+_pending_kick_task: asyncio.Task | None = None
 
 
 async def _kick_old_connection(pid: str):
@@ -152,6 +159,43 @@ _DAEMON_MSG_HANDLERS = {
 }
 
 
+def _cancel_pending_kick():
+    """Cancel any scheduled eviction task. Safe to call when none is pending."""
+    global _pending_kick_task
+    task = _pending_kick_task
+    _pending_kick_task = None
+    if task is not None and not task.done():
+        task.cancel()
+
+
+async def _evict_all_clients_after_grace(old_session_id: str | None):
+    """Kick participants/host if the daemon stays disconnected past the grace window."""
+    try:
+        await asyncio.sleep(_DAEMON_DISCONNECT_GRACE_SECONDS)
+    except asyncio.CancelledError:
+        return
+    if state.daemon_ws is not None:
+        # Daemon reconnected during the grace window — nothing to do.
+        return
+    logger.info("Daemon still absent after %.1fs grace; evicting clients", _DAEMON_DISCONNECT_GRACE_SECONDS)
+    for pid, ws in list(state.participants.items()):
+        if pid.startswith("__") and pid != "__host__":
+            continue
+        if pid == "__host__":
+            target_url = f"/host/{state.session_id}" if state.session_id else "/host"
+            close_code = 1000
+        else:
+            target_url = f"/?session_id={quote(str(old_session_id or ''))}"
+            close_code = 1008
+        try:
+            await ws.send_text(json.dumps({"type": "redirect", "url": target_url}))
+            await ws.close(close_code)
+        except Exception:
+            pass
+        state.participants.pop(pid, None)
+    await broadcast_slides_updated()
+
+
 @router.websocket("/ws/daemon")
 async def daemon_websocket_endpoint(websocket: WebSocket):
     if not _is_host_authorized_for_ws(websocket):
@@ -159,6 +203,9 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         return
 
     await websocket.accept()
+
+    # Cancel any pending eviction from a recent daemon WS drop — daemon is back in time.
+    _cancel_pending_kick()
 
     # Kick old daemon connection if present.
     old_ws = state.daemon_ws
@@ -208,24 +255,12 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         if state.daemon_ws is websocket:
             state.daemon_ws = None
         logger.info("Daemon WS disconnected")
-        # Kick all participant/host connections — daemon is gone, session is effectively dead
-        old_id = state.session_id
-        for pid, ws in list(state.participants.items()):
-            if pid.startswith("__") and pid != "__host__":
-                continue
-            if pid == "__host__":
-                target_url = f"/host/{state.session_id}" if state.session_id else "/host"
-                close_code = 1000
-            else:
-                target_url = f"/?session_id={quote(str(old_id or ''))}"
-                close_code = 1008
-            try:
-                await ws.send_text(json.dumps({"type": "redirect", "url": target_url}))
-                await ws.close(close_code)
-            except Exception:
-                pass
-            state.participants.pop(pid, None)
-        await broadcast_slides_updated()
+        # Defer kicking clients: transient daemon WS drops (keepalive timeouts,
+        # brief network blips) reconnect in ~3s. Only evict if the daemon stays
+        # gone past the grace window.
+        _cancel_pending_kick()
+        global _pending_kick_task
+        _pending_kick_task = asyncio.create_task(_evict_all_clients_after_grace(state.session_id))
 
 
 async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool):
