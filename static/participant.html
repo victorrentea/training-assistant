@@ -207,8 +207,11 @@ body{visibility:hidden}
         #access-duration-toast a:hover {
           color: #451a03;
         }
-        #access-duration-toast-gdrive {
-          margin-top: 0.5rem;
+        #access-duration-toast p {
+          margin: 0 0 0.5rem 0;
+        }
+        #access-duration-toast p:last-child {
+          margin-bottom: 0;
         }
 </style>
 <style>
@@ -3276,10 +3279,10 @@ function downloadSummaryPdf() {
 <div id="access-duration-toast">
   <button class="close-btn" onclick="_hideAccessToast()" aria-label="Close">&times;</button>
   <div style="padding-right: 1.5rem;">
-    This tool is available for the duration of training only. You will receive everything you can access through the tool via email after the end of the training. You can also access the slides anytime at <a href="https://victorrentea.ro/slides/" target="_blank" rel="noopener">victorrentea.ro/slides/</a>.
-    <div id="access-duration-toast-gdrive" style="display:none">
-      Resources for this session: <a id="access-duration-toast-gdrive-link" href="#" target="_blank" rel="noopener">Google Drive</a>.
-    </div>
+    <p>This tool is available only during the training.</p>
+    <p>You can get slides anytime at: <a href="https://victorrentea.ro/slides/" target="_blank" rel="noopener">victorrentea.ro/slides</a>.</p>
+    <p id="access-duration-toast-gdrive" style="display:none">All resources of this session (notes, agenda, summary) are here: <a id="access-duration-toast-gdrive-link" href="#" target="_blank" rel="noopener">Google Drive</a>.</p>
+    <p>Don't worry &mdash; you'll also get all resources via email after the training.</p>
   </div>
 </div>
 </body></html>
