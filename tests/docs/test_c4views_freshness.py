@@ -39,6 +39,10 @@ def _export(fmt: str, output_dir: Path) -> None:
     subprocess.run(
         [
             "docker", "run", "--rm",
+            # Spring Boot in the structurizr image unpacks nested jars under
+            # /tmp; the default Docker-Desktop /tmp on macOS is mounted noexec,
+            # which makes the unpack fail. Mount /tmp as exec-capable tmpfs.
+            "--tmpfs", "/tmp:exec",
             "-v", f"{ROOT}:/usr/local/structurizr",
             IMAGE,
             "export",
