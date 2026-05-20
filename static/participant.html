@@ -138,6 +138,67 @@ body{visibility:hidden}
         }
         body.onboarding-active .absolute.bottom-6.right-6 { z-index: 50; }
         body.onboarding-phase2 #profile-card { position: relative; z-index: 50; }
+        #onboarding-overlay.blocking { pointer-events: auto; }
+
+        /* Emoji blink animation */
+        @keyframes emoji-blink {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.15); }
+        }
+        @keyframes emoji-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(69, 85, 186, 0.7); }
+          50% { box-shadow: 0 0 0 8px rgba(69, 85, 186, 0); }
+        }
+        body.onboarding-active #emoji-main-bar button {
+          animation: emoji-blink 1s ease-in-out infinite, emoji-pulse 1.5s ease-in-out infinite;
+        }
+
+        /* Access duration toast */
+        #access-duration-toast {
+          position: fixed;
+          top: 1.5rem;
+          right: 1.5rem;
+          background: #fbbf24;
+          border: 2px solid #f59e0b;
+          border-radius: 12px;
+          padding: 1rem 1.25rem;
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #78350f;
+          max-width: 400px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+          z-index: 9998;
+          opacity: 0;
+          transform: translateY(-20px);
+          transition: opacity 0.4s ease, transform 0.4s ease;
+          pointer-events: none;
+        }
+        #access-duration-toast.show {
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+        }
+        #access-duration-toast .close-btn {
+          position: absolute;
+          top: 0.5rem;
+          right: 0.5rem;
+          background: transparent;
+          border: none;
+          font-size: 1.25rem;
+          font-weight: bold;
+          color: #78350f;
+          cursor: pointer;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+          transition: background 0.2s;
+        }
+        #access-duration-toast .close-btn:hover {
+          background: rgba(0, 0, 0, 0.1);
+        }
     </style>
 <style>
 /* ── Poll card styles ── */
@@ -1994,7 +2055,7 @@ function _showOnboarding() {
   overlay.classList.remove('hidden');
   tooltip.classList.remove('hidden');
   requestAnimationFrame(function () {
-    overlay.classList.add('visible');
+    overlay.classList.add('visible', 'blocking');
     tooltip.classList.add('visible');
   });
 }
@@ -2003,7 +2064,7 @@ function _advanceOnboardingToStep2() {
   _onboardingStep = 2;
   var overlay = document.getElementById('onboarding-overlay');
   var tooltip1 = document.getElementById('onboarding-tooltip');
-  if (overlay) overlay.classList.remove('visible');
+  if (overlay) overlay.classList.remove('visible', 'blocking');
   if (tooltip1) tooltip1.classList.remove('visible');
   setTimeout(function () {
     if (overlay) overlay.classList.add('hidden');
@@ -2016,6 +2077,8 @@ function _advanceOnboardingToStep2() {
       tooltip2.classList.remove('hidden');
       requestAnimationFrame(function () { tooltip2.classList.add('visible'); });
     }
+    // Show access duration toast after unblocking
+    _showAccessToast();
   }, 300);
 }
 
@@ -2029,6 +2092,18 @@ function _completeOnboarding() {
     tooltip2.classList.remove('visible');
     setTimeout(function () { tooltip2.classList.add('hidden'); }, 300);
   }
+}
+
+function _showAccessToast() {
+  var toast = document.getElementById('access-duration-toast');
+  if (!toast) return;
+  toast.classList.add('show');
+}
+
+function _hideAccessToast() {
+  var toast = document.getElementById('access-duration-toast');
+  if (!toast) return;
+  toast.classList.remove('show');
 }
 
 document.addEventListener('click', function (e) {
@@ -2049,6 +2124,40 @@ document.addEventListener('click', function (e) {
 function _avatarColorFromUuid(uuid) {
   var hash = parseInt((uuid || '').replace(/-/g, '').slice(0, 8), 16);
   return 'hsl(' + (hash % 360) + ', 60%, 40%)';
+}
+
+function _formatRelativeTime(timestamp) {
+  if (!timestamp) return '';
+  var now = Date.now();
+  var then = new Date(timestamp).getTime();
+  var diffMs = now - then;
+  var diffSec = Math.floor(diffMs / 1000);
+  var diffMin = Math.floor(diffSec / 60);
+  var diffHour = Math.floor(diffMin / 60);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return diffMin + 'm ago';
+  if (diffHour < 24) return diffHour + 'h ago';
+  var diffDays = Math.floor(diffHour / 24);
+  return diffDays + 'd ago';
+}
+
+var _notesTimestamp = null;
+var _summaryTimestamp = null;
+var _timestampUpdateInterval = null;
+
+function _startTimestampUpdates() {
+  if (_timestampUpdateInterval) return;
+  _timestampUpdateInterval = setInterval(function() {
+    var notesBadge = document.getElementById('notes-badge');
+    var summaryBadge = document.getElementById('summary-badge');
+    if (_notesTimestamp && notesBadge.style.display !== 'none') {
+      notesBadge.textContent = _formatRelativeTime(_notesTimestamp);
+    }
+    if (_summaryTimestamp && summaryBadge.style.display !== 'none') {
+      summaryBadge.textContent = _formatRelativeTime(_summaryTimestamp);
+    }
+  }, 10000); // Update every 10 seconds
 }
 
 function _applyHostSuffix(name) {
@@ -2334,10 +2443,12 @@ async function _refreshParticipantState() {
     document.querySelector('[data-nav="notes"]').style.display = state.notes_updated_at ? '' : 'none';
     var notesBadge = document.getElementById('notes-badge');
     if (state.notes_updated_at) {
-      var nd = new Date(state.notes_updated_at);
-      notesBadge.textContent = nd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      _notesTimestamp = state.notes_updated_at;
+      notesBadge.textContent = _formatRelativeTime(state.notes_updated_at);
       notesBadge.style.display = '';
+      _startTimestampUpdates();
     } else {
+      _notesTimestamp = null;
       notesBadge.style.display = 'none';
     }
     notesBadge.classList.toggle('badge-alert', LS.isNotesUnread());
@@ -2345,10 +2456,12 @@ async function _refreshParticipantState() {
     summaryNav.style.display = state.summary_updated_at ? '' : 'none';
     var summaryBadge = document.getElementById('summary-badge');
     if (state.summary_updated_at) {
-      var d = new Date(state.summary_updated_at);
-      summaryBadge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      _summaryTimestamp = state.summary_updated_at;
+      summaryBadge.textContent = _formatRelativeTime(state.summary_updated_at);
       summaryBadge.style.display = '';
+      _startTimestampUpdates();
     } else {
+      _summaryTimestamp = null;
       summaryBadge.style.display = 'none';
     }
     summaryBadge.classList.toggle('badge-alert', LS.isSummaryUnread());
@@ -2393,10 +2506,14 @@ function _applyState(msg) {
     document.querySelector('[data-nav="notes"]').style.display = msg.notes_updated_at ? '' : 'none';
     var notesBadge = document.getElementById('notes-badge');
     if (msg.notes_updated_at) {
-      var nd = new Date(msg.notes_updated_at);
-      notesBadge.textContent = nd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      _notesTimestamp = msg.notes_updated_at;
+      notesBadge.textContent = _formatRelativeTime(msg.notes_updated_at);
       notesBadge.style.display = '';
-    } else { notesBadge.style.display = 'none'; }
+      _startTimestampUpdates();
+    } else {
+      _notesTimestamp = null;
+      notesBadge.style.display = 'none';
+    }
     notesBadge.classList.toggle('badge-alert', LS.isNotesUnread());
   }
   if (msg.summary_updated_at !== undefined) {
@@ -2404,10 +2521,14 @@ function _applyState(msg) {
     summaryNav.style.display = msg.summary_updated_at ? '' : 'none';
     var badge = document.getElementById('summary-badge');
     if (msg.summary_updated_at) {
-      var d = new Date(msg.summary_updated_at);
-      badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      _summaryTimestamp = msg.summary_updated_at;
+      badge.textContent = _formatRelativeTime(msg.summary_updated_at);
       badge.style.display = '';
-    } else { badge.style.display = 'none'; }
+      _startTimestampUpdates();
+    } else {
+      _summaryTimestamp = null;
+      badge.style.display = 'none';
+    }
     badge.classList.toggle('badge-alert', LS.isSummaryUnread());
   }
   if (msg.gdrive_url !== undefined) {
@@ -2662,10 +2783,14 @@ function _handleWsMessage(msg) {
       document.querySelector('[data-nav="notes"]').style.display = msg.updated_at ? '' : 'none';
       var notesBadge = document.getElementById('notes-badge');
       if (msg.updated_at) {
-        var nd = new Date(msg.updated_at);
-        notesBadge.textContent = nd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        _notesTimestamp = msg.updated_at;
+        notesBadge.textContent = _formatRelativeTime(msg.updated_at);
         notesBadge.style.display = '';
-      } else { notesBadge.style.display = 'none'; }
+        _startTimestampUpdates();
+      } else {
+        _notesTimestamp = null;
+        notesBadge.style.display = 'none';
+      }
       _notesDirty = true;
       var onNotes = document.getElementById('notes-view').style.display !== 'none';
       _applyNotesBadgeUnread(!onNotes);
@@ -2677,10 +2802,14 @@ function _handleWsMessage(msg) {
       summaryNav.style.display = msg.updated_at ? '' : 'none';
       var badge = document.getElementById('summary-badge');
       if (msg.updated_at) {
-        var d = new Date(msg.updated_at);
-        badge.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        _summaryTimestamp = msg.updated_at;
+        badge.textContent = _formatRelativeTime(msg.updated_at);
         badge.style.display = '';
-      } else { badge.style.display = 'none'; }
+        _startTimestampUpdates();
+      } else {
+        _summaryTimestamp = null;
+        badge.style.display = 'none';
+      }
       _summaryDirty = true;
       var onSummary = document.getElementById('summary-view').style.display !== 'none';
       _applySummaryBadgeUnread(!onSummary);
@@ -2865,6 +2994,14 @@ function _connectWS() {
   var proto = location.protocol === 'https:' ? 'wss' : 'ws';
   var url = proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_myUUID);
   _ws = new WebSocket(url);
+  _ws.onopen = function() {
+    // Show access duration toast after 10 seconds if not in onboarding
+    setTimeout(function() {
+      if (_onboardingStep === 0) {
+        _showAccessToast();
+      }
+    }, 10000);
+  };
   _ws.onmessage = function(e) { try { _handleWsMessage(JSON.parse(e.data)); } catch(err) { console.error('ws msg error', err); } };
   _ws.onclose = function(e) { if (e.code === 1008) { window.location.href = '/'; return; } setTimeout(_connectWS, 3000); };
   _ws.onerror = function(e) { console.error('ws error', e); };
@@ -3107,6 +3244,12 @@ function downloadSummaryPdf() {
     <button id="pax-lb-close" onclick="_hidePaxLb()" aria-label="Close leaderboard">&times;</button>
     <div class="pax-lb-title">Leaderboard</div>
     <div id="pax-lb-entries"></div>
+  </div>
+</div>
+<div id="access-duration-toast">
+  <button class="close-btn" onclick="_hideAccessToast()" aria-label="Close">&times;</button>
+  <div style="padding-right: 1.5rem;">
+    This tool is available for the duration of training only. You will receive everything you can access through the tool via email after the end of the training.
   </div>
 </div>
 </body></html>
