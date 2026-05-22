@@ -1825,10 +1825,9 @@
          </span>`
       : '';
 
-    const countHint = currentPoll.multi && currentPoll.correct_count
-      ? ` · ${currentPoll.correct_count} correct` : '';
-    const modePillHtml =
-      `<span class="mode-pill">${currentPoll.multi ? '☑ Multi-select' : '◉ Single-select'}${countHint}</span>`;
+    const modePillHtml = currentPoll.multi
+      ? `<span class="mode-pill">☑ ${currentPoll.correct_count || ''} correct</span>`.replace(/  +/g, ' ')
+      : `<span class="mode-pill">◉ Single-select</span>`;
 
     const pillsEl = document.getElementById('poll-pills');
     if (pillsEl) pillsEl.innerHTML = '';
@@ -1856,13 +1855,12 @@
       ${mainContent}${pollActive ? '' : '</p>'}
       ${currentPoll.source ? `<p class="poll-source-ref">📖 ${escHtml(currentPoll.source)}${currentPoll.page ? `, p. ${escHtml(currentPoll.page)}` : ''}</p>` : ''}
       <div class="btn-row poll-controls" style="flex-wrap:nowrap;">
-        <span class="badge status-pill ${statusLabel}">${statusText}</span>
         ${modePillHtml}
+        <span class="badge status-pill ${statusLabel}">${statusText}</span>
         ${pollActive && !activeTimer ? `<button class="btn btn-warn" onclick="endPoll()">End</button>` : ''}
         ${pollActive && activeTimer ? `<div class="countdown-display" id="host-countdown"></div>` : ''}
         ${timerBtns}
-        <span style="flex:1"></span>
-        <button class="btn btn-danger" onclick="clearPoll()">Remove</button>
+        <button class="btn btn-danger" onclick="clearPoll()" style="margin-left:auto;">Remove</button>
       </div>`;
 
     if (pollActive && activeTimer) _startHostCountdown();

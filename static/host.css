@@ -217,7 +217,7 @@ body {
 /* 3-column host layout */
 .host-columns {
   display: grid;
-  grid-template-columns: 25% 1fr 25%;
+  grid-template-columns: 25% 1fr 13%;
   gap: 1rem;
   flex: 1;
   min-height: 0;
@@ -1038,9 +1038,12 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 
 .btn-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
+.btn-row.poll-controls { max-width: 100%; min-width: 0; box-sizing: border-box; }
+.btn-row.poll-controls > * { flex-shrink: 0; }
+.btn-row.poll-controls .timer-slider-wrap { flex-shrink: 1; min-width: 0; }
 .timer-slider-wrap { display: flex; align-items: center; gap: .5rem; }
 .timer-val { font-size: .95rem; font-weight: 600; color: var(--warn); min-width: 2.5rem; text-align: right; }
-.timer-slider { -webkit-appearance: none; appearance: none; width: 120px; height: 6px; border-radius: 3px; background: var(--surface2); outline: none; cursor: pointer; }
+.timer-slider { -webkit-appearance: none; appearance: none; width: 100px; min-width: 50px; height: 6px; border-radius: 3px; background: var(--surface2); outline: none; cursor: pointer; flex-shrink: 1; }
 .timer-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--warn); cursor: pointer; }
 .timer-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--warn); cursor: pointer; border: none; }
 .timer-tip { font-size: .8rem; color: var(--warn); opacity: 0; transition: opacity .2s; white-space: nowrap; }
@@ -1093,14 +1096,18 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .status-pill.draft  { background: #6c63ff22; color: var(--accent);  border: 1px solid var(--accent); }
 
 .mode-pill {
-  display: inline-block;
-  padding: .25rem .7rem;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 .7rem;
   border-radius: 20px;
-  font-size: .78rem;
+  font-size: .8rem;
   font-weight: 600;
   background: var(--surface2);
   color: var(--muted);
   border: 1px solid var(--border);
+  box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
