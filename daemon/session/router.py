@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
@@ -32,6 +33,7 @@ from daemon.ws_messages import SlidesCurrentMsg, TalkPdfFailedMsg, TalkPdfReadyM
 from scripts.resolve_gdrive_link import (
     gdrive_view_url_to_presentation_export_url,
     resolve_gdrive_file_url,
+    resolve_gdrive_url as _resolve_gdrive_url_fn,
 )
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
@@ -150,9 +152,6 @@ class GDriveUnavailableResponse(BaseModel):
 @global_router.post("/create", response_model=SessionStartResponse, responses={503: {"model": GDriveUnavailableResponse}})
 async def start_session(body: StartSessionRequest):
     """Host starts a new session (creates folder, assigns session_id, clean slate)."""
-    from fastapi.responses import JSONResponse
-    from scripts.resolve_gdrive_link import resolve_gdrive_url as _resolve_fn
-
     name = normalize_session_name(body.name)
     root = _get_sessions_root()
     folder = root / name if root else None
@@ -160,7 +159,7 @@ async def start_session(body: StartSessionRequest):
     gdrive_url: str | None = None
     if folder is not None:
         try:
-            gdrive_url = _resolve_fn(str(folder))
+            gdrive_url = _resolve_gdrive_url_fn(str(folder))
         except Exception as e:
             daemon_log.error("session", f"GDrive URL resolve error: {e}")
             gdrive_url = None

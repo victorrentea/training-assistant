@@ -1,7 +1,7 @@
 """Tests for daemon/session_transcript.py — session time-range computation."""
 
-from datetime import datetime, date
-import pytest
+from datetime import date, datetime
+
 from daemon.transcript.session import (
     compute_active_windows,
     count_lines_in_windows,

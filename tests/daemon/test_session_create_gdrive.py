@@ -1,9 +1,6 @@
 """Tests for GDrive precondition on POST /api/session/create."""
-import json
-from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
@@ -54,13 +51,11 @@ class TestSessionCreateGdrive:
     def test_returns_503_when_gdrive_unavailable(self, tmp_path):
         """Session create must return 503 with gdrive_unavailable error if GDrive is offline."""
         with patch("daemon.session.router._get_sessions_root", return_value=tmp_path), \
-             patch("daemon.session.router._resolve_fn", return_value=None, create=True):
-            # Patch the resolve function imported inside the endpoint
-            with patch("scripts.resolve_gdrive_link.resolve_gdrive_url", return_value=None):
-                resp = _client().post(
-                    "/api/session/create",
-                    json={"name": "2026-05-22 My Workshop", "type": "workshop"},
-                )
+             patch("daemon.session.router._resolve_gdrive_url_fn", return_value=None):
+            resp = _client().post(
+                "/api/session/create",
+                json={"name": "2026-05-22 My Workshop", "type": "workshop"},
+            )
         assert resp.status_code == 503
         data = resp.json()
         assert data["error"] == "gdrive_unavailable"
@@ -75,7 +70,7 @@ class TestSessionCreateGdrive:
             queued.update(value)
 
         with patch("daemon.session.router._get_sessions_root", return_value=tmp_path), \
-             patch("scripts.resolve_gdrive_link.resolve_gdrive_url", return_value=gdrive_url), \
+             patch("daemon.session.router._resolve_gdrive_url_fn", return_value=gdrive_url), \
              patch("daemon.session.router.session_pending.put", side_effect=fake_put), \
              patch("daemon.session.router.announce_session_id"):
             resp = _client().post(
@@ -94,7 +89,7 @@ class TestSessionCreateGdrive:
         put_calls = []
 
         with patch("daemon.session.router._get_sessions_root", return_value=tmp_path), \
-             patch("scripts.resolve_gdrive_link.resolve_gdrive_url", return_value=None), \
+             patch("daemon.session.router._resolve_gdrive_url_fn", return_value=None), \
              patch("daemon.session.router.session_pending.put", side_effect=put_calls.append), \
              patch("daemon.session.router.announce_session_id") as mock_announce:
             resp = _client().post(
