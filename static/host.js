@@ -1819,9 +1819,9 @@
       ? `<span class="timer-slider-wrap">
            <span id="timer-val" class="timer-val">15s</span>
            <input type="range" id="timer-slider" class="timer-slider" min="5" max="30" value="15"
-             oninput="document.getElementById('timer-val').textContent=this.value+'s'; document.getElementById('timer-tip').style.opacity='1'"
+             oninput="document.getElementById('timer-val').textContent=this.value+'s'"
              onmouseup="startTimer(+this.value)" ontouchend="startTimer(+this.value)" />
-           <span id="timer-tip" class="timer-tip">Release to start countdown</span>
+           <span class="timer-tip">Release to start countdown</span>
          </span>`
       : '';
 
