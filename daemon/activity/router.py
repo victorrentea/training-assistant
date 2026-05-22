@@ -11,7 +11,7 @@ from daemon.ws_publish import broadcast
 
 logger = logging.getLogger(__name__)
 
-_VALID_ACTIVITIES = {"none", "quiz", "wordcloud", "qa", "codereview", "debate"}
+_VALID_ACTIVITIES = {"none", "quiz", "poll", "wordcloud", "qa", "codereview", "debate"}
 
 
 # ── Pydantic models ──

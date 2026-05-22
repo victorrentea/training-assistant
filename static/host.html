@@ -31,7 +31,8 @@
 <div class="host-top-bar">
   <div class="tab-bar">
     <button class="tab-btn" id="tab-slides" onclick="switchTab('none')"><span class="tab-icon">👨🏻‍🏫</span>Slides</button>
-    <button class="tab-btn active" id="tab-quiz" onclick="switchTab('quiz')"><span class="tab-icon">📊</span>Quiz</button>
+    <button class="tab-btn active" id="tab-quiz" onclick="switchTab('quiz')"><span class="tab-icon">☑️</span>Quiz</button>
+    <button class="tab-btn" id="tab-poll" onclick="switchTab('poll')"><span class="tab-icon">👍👎</span>Poll</button>
     <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')"><span class="tab-icon">☁</span>Words</button>
     <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')"><span class="tab-icon">❓</span>Q&A</button>
     <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')"><span class="tab-icon">🕵️</span>Code</button>
@@ -113,6 +114,9 @@
       </div>
       <ol id="queue-list" style="margin:.5rem 0 0 0; padding:.25rem 0 0 1.5rem;"></ol>
     </div>
+
+    <!-- Poll tab content (placeholder) -->
+    <div id="tab-content-poll" class="tab-content" style="display:none;"></div>
 
     <!-- Word Cloud tab content -->
     <div id="tab-content-wordcloud" class="tab-content" style="display:none;">

@@ -2129,13 +2129,13 @@
     const slidesTab = document.getElementById('tab-slides');
     if (slidesTab) slidesTab.classList.toggle('active', currentActivity === 'none');
     if (currentActivity && currentActivity !== 'none') {
-      ['quiz', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
+      ['quiz', 'poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? (t === 'codereview' ? 'flex' : '') : 'none';
       });
     } else {
       // When activity is 'none', deactivate all other tabs
-      ['quiz', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
+      ['quiz', 'poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.remove('active');
         document.getElementById('tab-content-' + t).style.display = 'none';
       });
