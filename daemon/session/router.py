@@ -33,6 +33,8 @@ from daemon.ws_messages import SlidesCurrentMsg, TalkPdfFailedMsg, TalkPdfReadyM
 from scripts.resolve_gdrive_link import (
     gdrive_view_url_to_presentation_export_url,
     resolve_gdrive_file_url,
+)
+from scripts.resolve_gdrive_link import (
     resolve_gdrive_url as _resolve_gdrive_url_fn,
 )
 
