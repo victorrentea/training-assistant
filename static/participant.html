@@ -10,6 +10,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <style>
 body{visibility:hidden}
+:root{--participant-zoom:1}
+#notes-content{font-size:calc(1rem * var(--participant-zoom))}
+#summary-content{font-size:calc(1.2rem * var(--participant-zoom))}
+#agenda-content{font-size:calc(1.2rem * var(--participant-zoom))}
 .badge-new{margin-left:auto;font-size:calc(.6rem + 1pt);font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
 #activity-score-badge{background:#fde047;color:#000}
 @keyframes badge-blink{0%,100%{opacity:1}50%{opacity:0}}
@@ -471,7 +475,7 @@ body{visibility:hidden}
     <div id="notes-content" class="text-on-surface leading-relaxed whitespace-pre-wrap">Loading…</div>
   </div>
 </div>
-<div id="summary-view" style="display:none;font-size:120%" class="relative h-full flex flex-col">
+<div id="summary-view" style="display:none" class="relative h-full flex flex-col">
   <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
     <button onclick="downloadSummaryMd()" class="px-4 py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" title="Download as Markdown">
       <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
@@ -487,7 +491,7 @@ body{visibility:hidden}
   </div>
 </div>
 <!-- Agenda View -->
-<div id="agenda-view" style="display:none;font-size:120%" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
+<div id="agenda-view" style="display:none" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
   <div id="agenda-content" class="text-on-surface text-sm leading-relaxed prose max-w-none">Loading…</div>
 </div>
 <!-- Upload / Paste View -->
