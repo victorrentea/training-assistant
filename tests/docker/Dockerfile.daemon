@@ -44,7 +44,7 @@ COPY tests/docker/test_unique_avatars.py .
 COPY tests/docker/test_follow_mode_slow_drive.py .
 COPY tests/docker/test_slides_check_flow.py .
 COPY tests/docker/test_notes_summary_counts.py .
-COPY tests/docker/test_poll_scoring.py .
+COPY tests/docker/test_quiz_scoring.py .
 COPY tests/docker/test_participant_join_flow.py .
 COPY tests/docker/test_session_end_daemon_reconnect.py .
 COPY tests/docker/test_slides_auto_refresh.py .
