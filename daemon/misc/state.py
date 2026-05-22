@@ -21,7 +21,6 @@ class MiscState:
         # Synced from Railway state (slides + session info)
         self.current_slide: dict | None = None
         self.slides_viewed: list[dict] = []  # [{slug, page, seconds}]
-        self.gdrive_url: str | None = None
         self.agenda_docx_path: Path | None = None
         self.talk_presentation_name: str | None = None
         self.talk_presentation_url: str | None = None
@@ -63,8 +62,6 @@ class MiscState:
                 self.current_slide = data["current_slide"]
             if "slides_viewed" in data:
                 self.slides_viewed = list(data.get("slides_viewed") or [])
-            if "gdrive_url" in data:
-                self.gdrive_url = data["gdrive_url"]
             if "talk_presentation_name" in data:
                 self.talk_presentation_name = data["talk_presentation_name"]
             if "talk_presentation_url" in data:
@@ -162,7 +159,6 @@ class MiscState:
             # (PDF cache + PPTX file timestamps) that survives session changes.
             self.current_slide = None
             self.slides_viewed = []
-            self.gdrive_url = None
             self.talk_presentation_name = None
             self.talk_presentation_url = None
             self.talk_presentation_slug = None

@@ -12,6 +12,7 @@ _lock = threading.Lock()
 _active_session_id: str | None = None
 _active_session_name: str | None = None  # folder name of active session
 _sessions_root: Path | None = None
+_gdrive_url: str | None = None
 
 
 def set_active_session(session_id: str | None, session_name: str | None) -> None:
@@ -29,6 +30,13 @@ def set_sessions_root(root: Path) -> None:
         _sessions_root = root
 
 
+def set_gdrive_url(url: str | None) -> None:
+    """Called by main loop whenever the active session's Google Drive URL changes."""
+    global _gdrive_url
+    with _lock:
+        _gdrive_url = url
+
+
 def get_active_session_id() -> str | None:
     with _lock:
         return _active_session_id
@@ -42,3 +50,8 @@ def get_active_session_name() -> str | None:
 def get_sessions_root() -> Path | None:
     with _lock:
         return _sessions_root
+
+
+def get_gdrive_url() -> str | None:
+    with _lock:
+        return _gdrive_url

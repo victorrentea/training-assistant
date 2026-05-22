@@ -566,7 +566,6 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     debate_state.round_timer_started_at = None
 
     snapshot = _build_runtime_session_snapshot(
-        active_session_id="sid-1",
         session_name="2026-04-09 Demo Session",
     )
 
@@ -663,7 +662,7 @@ def test_runtime_snapshot_includes_awarded_points():
     poll_state.open_poll(lambda: None)
     poll_state.awarded_points = {"alice": 750, "bob": 200}
 
-    snap = _build_runtime_session_snapshot(active_session_id="sid-test", session_name="Test Session")
+    snap = _build_runtime_session_snapshot(session_name="Test Session")
 
     assert "poll" in snap
     assert snap["poll"].get("awarded_points") == {"alice": 750, "bob": 200}

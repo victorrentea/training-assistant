@@ -29,6 +29,7 @@ from daemon.participant.names import (
     refresh_avatar as _refresh_avatar_logic,
 )
 from daemon.participant.state import GitRepoActivity, participant_state
+from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
 from daemon.ws_messages import ParticipantListUpdatedMsg
 from daemon.ws_publish import notify_host
@@ -653,7 +654,7 @@ async def get_participant_state(request: Request):
         "summary_updated_at": summary["updated_at"],
         "slides_history_count": len(misc_state.slides_viewed),
         # Google Drive folder link for session materials
-        "gdrive_url": misc_state.gdrive_url,
+        "gdrive_url": session_shared_state.get_gdrive_url(),
         # Agenda .docx availability
         "has_agenda": misc_state.agenda_docx_path is not None
         and misc_state.agenda_docx_path.exists(),

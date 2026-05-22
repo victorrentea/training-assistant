@@ -53,24 +53,6 @@ from daemon.transcript.state import TranscriptStateManager
 from daemon.upload import handle_file_ready_for_download as _handle_file_download
 from daemon.ws_client import DaemonWsClient
 
-# ── PowerPoint helpers ─────────────────────────────────────────────────────────
-
-_PPT_UNMAPPED_PRESENTATIONS_ALERTED: set[str] = set()
-
-
-def _read_session_id_from_session_folder(folder: Path) -> str | None:
-    path = session_state_path(folder)
-    if not path.exists() or not path.is_file():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    sid = data.get("session_id")
-    if isinstance(sid, str) and sid.strip():
-        return sid.strip()
-    return None
-
 
 def _state_hash(snapshot: dict | None) -> str | None:
     if not isinstance(snapshot, dict):
@@ -149,7 +131,6 @@ def _flush_global_state_backup(
 
 def _build_runtime_session_snapshot(
     *,
-    active_session_id: str | None,
     session_name: str | None,
 ) -> dict:
     from daemon.codereview.state import codereview_state
@@ -250,7 +231,7 @@ def _build_runtime_session_snapshot(
             "round_timer_seconds": debate_snapshot.get("round_timer_seconds"),
             "round_timer_started_at": debate_snapshot.get("round_timer_started_at"),
         },
-        "gdrive_url": misc_state.gdrive_url,
+        "gdrive_url": session_shared_state.get_gdrive_url(),
         "current_slide": misc_state.current_slide,
         "slides_viewed": [dict(sv) for sv in misc_state.slides_viewed],
         "git_repos": [r.model_dump() for r in participant_state.git_repos],
@@ -289,6 +270,8 @@ def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
     misc_state.sync_from_restore(snapshot)
     codereview_state.sync_from_restore(snapshot)
     debate_state.sync_from_restore(snapshot)
+    if "gdrive_url" in snapshot:
+        session_shared_state.set_gdrive_url(snapshot["gdrive_url"])
 
 
 def _schedule_backfill_location_metadata() -> None:
@@ -366,13 +349,6 @@ def _slugify(value: str) -> str:
 
 def _normalize_slide_match_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", Path(str(value or "")).stem.lower())
-
-
-def _presentation_alert_key(value: str) -> str:
-    normalized = _normalize_slide_match_key(value)
-    if normalized:
-        return normalized
-    return str(value or "").strip().lower()
 
 
 def _iter_catalog_items(raw) -> list[dict]:
@@ -463,15 +439,6 @@ def _resolve_presentation_slide_target(
         "target_pdf": f"{Path(presentation_name).stem}.pdf",
         "matched": False,
     }
-
-
-def _send_global_state_saved_ack(
-    ws_client,
-    session_req: dict | None,
-    action: str | None,
-    session_id: str | None,
-) -> None:
-    pass  # global_state_saved removed: Railway no longer tracks ACKs
 
 
 def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
@@ -920,23 +887,23 @@ def run() -> None:
             if startup_session_state:
                 log.info("session", f"Loaded {SESSION_STATE_FILENAME} for restore ({len(startup_session_state)} keys)")
                 _apply_runtime_snapshot_restore(startup_session_state)
-        _startup_folder = (config.session_folder or (sessions_root / session_name)) if session_name else None
         if _active_session_id:
             announce_session_id(_active_session_id)
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
     # Boot-time GDrive URL auto-resolve:
-    # - If session already has a persisted gdrive_url (from _apply_runtime_snapshot_restore), keep it.
+    # - If session already has a persisted gdrive_url (loaded into session_shared_state via _apply_runtime_snapshot_restore), keep it.
     # - If not, attempt one resolution; on success persist into session state file and log INFO.
     # - On failure, log WARN and leave None — next "Start Session" will be blocked until GDrive is up.
     if session_name and config.session_folder:
-        if misc_state.gdrive_url:
-            log.info("session", f"Google Drive: {misc_state.gdrive_url}")
+        _existing_gdrive_url = session_shared_state.get_gdrive_url()
+        if _existing_gdrive_url:
+            log.info("session", f"Google Drive: {_existing_gdrive_url}")
         else:
             _boot_gdrive_url = _resolve_gdrive_url(config.session_folder)
             if _boot_gdrive_url:
-                misc_state.gdrive_url = _boot_gdrive_url
+                session_shared_state.set_gdrive_url(_boot_gdrive_url)
                 _boot_folder = config.session_folder
                 try:
                     _boot_state_raw = load_session_state(_boot_folder)
@@ -1160,7 +1127,6 @@ def run() -> None:
                             # Persist gdrive_url from the create request into session state file
                             _new_gdrive_url = session_req.get("gdrive_url")
                             if _new_gdrive_url:
-                                _misc_state.gdrive_url = _new_gdrive_url
                                 if isinstance(restore_snapshot, dict):
                                     restore_snapshot["gdrive_url"] = _new_gdrive_url
                                 else:
@@ -1215,7 +1181,6 @@ def run() -> None:
 
                     elif action == "end" and session_name:
                         runtime_session_snapshot = _build_runtime_session_snapshot(
-                            active_session_id=_active_session_id,
                             session_name=session_name,
                         )
                         last_session_state_hash, wrote = _flush_session_state_backup(
@@ -1294,8 +1259,6 @@ def run() -> None:
                         addon_bridge_client.send_session_started(participant_join_link, session_folder_str)
                         log.info("addons   ", f"→ started session {participant_join_link}")
                         log.info("session", f"Session: {session_name}")
-                    if action:
-                        _send_global_state_saved_ack(ws_client, session_req, action, _active_session_id)
 
                 except Exception as e:
                     log.error("session", f"Request error: {e}")
@@ -1328,7 +1291,6 @@ def run() -> None:
                     last_persist_poll_at = now
                     if session_name:
                         runtime_session_snapshot = _build_runtime_session_snapshot(
-                            active_session_id=_active_session_id,
                             session_name=session_name,
                         )
                     if pending_global_state is None:
