@@ -589,6 +589,41 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     assert snapshot["debate"]["statement"] == "Tabs vs spaces"
 
 
+def test_runtime_session_snapshot_excludes_participant_online_flag():
+    from daemon.__main__ import _build_runtime_session_snapshot
+    from daemon.participant.state import participant_state
+    from daemon.scores import scores as daemon_scores
+
+    participant_state.reset()
+    daemon_scores.reset()
+
+    participant_state.participant_names["u-online"] = "Alice"
+    participant_state.participant_names["u-offline"] = "Bob"
+    participant_state.online_participants.add("u-online")
+
+    snapshot = _build_runtime_session_snapshot(session_name="Online Flag Test")
+
+    for pid, row in snapshot["participants"].items():
+        assert "online" not in row, f"participant {pid} row leaked online flag: {row}"
+
+
+def test_apply_snapshot_restore_ignores_legacy_participant_online_flag():
+    from daemon.__main__ import _apply_runtime_snapshot_restore
+    from daemon.participant.state import participant_state
+
+    participant_state.reset()
+
+    _apply_runtime_snapshot_restore({
+        "participants": {
+            "u1": {"name": "Alice", "online": True},
+            "u2": {"name": "Bob", "online": True},
+        },
+    })
+
+    assert participant_state.participant_names == {"u1": "Alice", "u2": "Bob"}
+    assert participant_state.online_participants == set()
+
+
 def test_apply_snapshot_restore_accepts_nested_activity_state():
     from daemon.__main__ import _apply_runtime_snapshot_restore
     from daemon.codereview.state import codereview_state

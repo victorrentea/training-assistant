@@ -97,8 +97,6 @@ class ParticipantState:
                     name = raw.get("name")
                     if isinstance(name, str):
                         self.participant_names[str(pid)] = name
-                    if raw.get("online") is True:
-                        self.online_participants.add(str(pid))
                     avatar = raw.get("avatar")
                     if isinstance(avatar, str):
                         self.participant_avatars[str(pid)] = avatar

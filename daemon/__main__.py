@@ -185,8 +185,6 @@ def _build_runtime_session_snapshot(
             row["location_tz"] = participant_state.location_timezones[pid]
         if pid in participant_state.location_countries:
             row["location_country"] = participant_state.location_countries[pid]
-        if pid in participant_state.online_participants:
-            row["online"] = True
         participants_payload[pid] = row
 
     return {
