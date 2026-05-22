@@ -1071,7 +1071,7 @@
       requestAnimationFrame(() => _regenerateAllQRCodes());
     } else {
       rightCol.style.display = '';
-      grid.style.gridTemplateColumns = '25% 1fr 200px';
+      grid.style.gridTemplateColumns = '25% 1fr 250px';
       leftCol.classList.remove('conference-layout');
       if (leftTabsWrapper) leftTabsWrapper.style.display = _currentActivity === 'none' ? 'none' : 'flex';
       if (slidesLeftQR) slidesLeftQR.style.display = _currentActivity === 'none' ? 'flex' : 'none';

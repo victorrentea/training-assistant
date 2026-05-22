@@ -217,7 +217,7 @@ body {
 /* 3-column host layout */
 .host-columns {
   display: grid;
-  grid-template-columns: 25% 1fr 200px;
+  grid-template-columns: 25% 1fr 250px;
   gap: 1rem;
   flex: 1;
   min-height: 0;
