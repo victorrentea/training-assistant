@@ -250,6 +250,7 @@ class ParticipantStateResponse(BaseModel):
     notes_updated_at: str | None = None
     summary_updated_at: str | None = None
     slides_history_count: int
+    git_files_count: int
     gdrive_url: str | None = None
     has_agenda: bool = False
 
@@ -653,6 +654,7 @@ async def get_participant_state(request: Request):
         "notes_updated_at": notes_updated_at,
         "summary_updated_at": summary["updated_at"],
         "slides_history_count": len(misc_state.slides_viewed),
+        "git_files_count": sum(len(r.files) for r in ps.git_repos),
         # Google Drive folder link for session materials
         "gdrive_url": session_shared_state.get_gdrive_url(),
         # Agenda .docx availability

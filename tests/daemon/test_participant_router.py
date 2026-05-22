@@ -283,6 +283,23 @@ class TestParticipantState:
         finally:
             misc_state.slides_viewed = old_slides_viewed
 
+    def test_state_includes_git_files_count(self, client, fresh_state):
+        fresh_state.accumulate_git_file(
+            "https://github.com/foo/bar.git", "main", "src/a.py", "https://github.com/foo/bar/blob/main/src/a.py"
+        )
+        fresh_state.accumulate_git_file(
+            "https://github.com/foo/bar.git", "main", "src/b.py"
+        )
+        fresh_state.accumulate_git_file(
+            "https://github.com/other/repo.git", "develop", "README.md"
+        )
+        # Placeholder file events must not inflate the count.
+        fresh_state.accumulate_git_file("https://github.com/foo/bar.git", "main", "(none)")
+
+        resp = client.get("/api/participant/state", headers={"X-Participant-ID": "uuid1"})
+        assert resp.status_code == 200
+        assert resp.json()["git_files_count"] == 3
+
 
 class TestNoParticipantWriteBackEvents:
     def test_register_does_not_emit_write_back_events(self, client_with_writeback_header):

@@ -2356,6 +2356,9 @@ components:
         slides_history_count:
           type: integer
           title: Slides History Count
+        git_files_count:
+          type: integer
+          title: Git Files Count
         gdrive_url:
           anyOf:
           - type: string
@@ -2378,6 +2381,7 @@ components:
       - codereview
       - debate
       - slides_history_count
+      - git_files_count
       title: ParticipantStateResponse
     PasteEntry:
       properties:
