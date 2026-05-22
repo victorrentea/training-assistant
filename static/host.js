@@ -1826,7 +1826,7 @@
       : '';
 
     const modePillHtml = currentPoll.multi
-      ? `<span class="mode-pill">☑ ${currentPoll.correct_count || ''} correct</span>`.replace(/  +/g, ' ')
+      ? `<span class="mode-pill mode-pill-multi">${currentPoll.correct_count || ''} correct</span>`.replace(/  +/g, ' ')
       : `<span class="mode-pill">◉ Single-select</span>`;
 
     const pillsEl = document.getElementById('poll-pills');
@@ -1851,7 +1851,6 @@
 
     el.innerHTML = `
       <p class="poll-question">${escHtmlWithCode(currentPoll.question)}</p>
-      ${currentPoll.multi && currentPoll.correct_count ? `<p class="poll-multi-subtitle">(select ${currentPoll.correct_count} correct answer${currentPoll.correct_count !== 1 ? 's' : ''})</p>` : ''}
       ${mainContent}${pollActive ? '' : '</p>'}
       ${currentPoll.source ? `<p class="poll-source-ref">📖 ${escHtml(currentPoll.source)}${currentPoll.page ? `, p. ${escHtml(currentPoll.page)}` : ''}</p>` : ''}
       <div class="btn-row poll-controls" style="flex-wrap:nowrap;">

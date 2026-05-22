@@ -1040,8 +1040,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .btn-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
 .btn-row.poll-controls { max-width: 100%; min-width: 0; box-sizing: border-box; }
 .btn-row.poll-controls > * { flex-shrink: 0; }
-.btn-row.poll-controls .timer-slider-wrap { flex: 1 1 auto; min-width: 0; }
-.btn-row.poll-controls .timer-slider { flex: 1 1 auto; width: auto; min-width: 50px; }
+.btn-row.poll-controls .timer-slider-wrap { flex: 1 1 0; min-width: 0; }
+.btn-row.poll-controls .timer-slider { width: 100%; min-width: 50px; flex: 1 1 auto; }
 .timer-slider-wrap { display: flex; align-items: center; gap: .5rem; }
 .timer-val { font-size: .95rem; font-weight: 600; color: var(--warn); min-width: 2.5rem; text-align: right; }
 .timer-slider { -webkit-appearance: none; appearance: none; width: 100px; min-width: 50px; height: 6px; border-radius: 3px; background: var(--surface2); outline: none; cursor: pointer; flex-shrink: 1; }
@@ -1109,6 +1109,11 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   border: 1px solid var(--border);
   box-sizing: border-box;
   white-space: nowrap;
+}
+.mode-pill.mode-pill-multi {
+  color: #f0a500;
+  border-color: #f0a500;
+  background: #f0a50022;
 }
 
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
