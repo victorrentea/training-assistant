@@ -3093,6 +3093,7 @@ function _hidePaxLb() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  _installContentZoom();
   var overlay = document.getElementById('pax-lb-overlay');
   if (overlay) overlay.addEventListener('click', function(e) {
     if (e.target === overlay) _hidePaxLb();
