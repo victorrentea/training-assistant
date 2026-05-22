@@ -8,7 +8,7 @@ def test_inject_adds_traceparent_to_dict():
     provider = TracerProvider()
     tracer = provider.get_tracer("test")
 
-    msg = {"type": "poll_opened", "poll": {}}
+    msg = {"type": "quiz_opened", "quiz": {}}
     with tracer.start_as_current_span("test-span"):
         inject_trace_context(msg)
 

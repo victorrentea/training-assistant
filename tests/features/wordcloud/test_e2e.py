@@ -271,13 +271,13 @@ class TestQAGaps:
 @pytest.mark.usefixtures("clean_all")
 class TestActivitySwitching:
 
-    def test_full_activity_cycle_poll_qa_wc_code(self, server_url, host: HostPage, pax: ParticipantPage):
-        """Switch through all activities: poll → Q&A → word cloud → code review."""
+    def test_full_activity_cycle_quiz_qa_wc_code(self, server_url, host: HostPage, pax: ParticipantPage):
+        """Switch through all activities: quiz → Q&A → word cloud → code review."""
         pax.join("CycleTest")
 
-        # Poll
-        host._page.click("#tab-poll")
-        host.create_poll("Cycle Q?", ["Yes", "No"])
+        # Quiz
+        host._page.click("#tab-quiz")
+        host.create_quiz("Cycle Q?", ["Yes", "No"])
         expect(pax._page.locator(".option-btn")).to_have_count(2, timeout=5000)
 
         # Switch to Q&A
@@ -325,7 +325,7 @@ class TestActivitySwitching:
 class TestEdgeCases:
 
     def test_join_after_voting_closed(self, server_url, playwright):
-        """Participant joins after poll voting is closed — sees results, cannot vote."""
+        """Participant joins after quiz voting is closed — sees results, cannot vote."""
         b_host, ctx_host = host_browser_ctx(server_url, playwright)
         b1, ctx1 = pax_browser_ctx(server_url, playwright)
         b2, ctx2 = pax_browser_ctx(server_url, playwright)
@@ -338,9 +338,9 @@ class TestEdgeCases:
 
         try:
             p1.join("EarlyBird")
-            host.create_poll("Closed poll?", ["X", "Y"])
+            host.create_quiz("Closed quiz?", ["X", "Y"])
             p1.vote_for("X")
-            host.close_poll()
+            host.close_quiz()
 
             # New participant joins after closing
             p2_page = ctx2.new_page()
@@ -348,25 +348,25 @@ class TestEdgeCases:
             p2 = ParticipantPage(p2_page)
             p2.join("LateComer")
 
-            # Should see the poll results (percentages visible)
+            # Should see the quiz results (percentages visible)
             expect(p2._page.locator(".pct").first).to_be_visible(timeout=5000)
             # Should see closed banner
             expect(p2._page.locator(".closed-banner")).to_be_visible(timeout=5000)
         finally:
-            # Clean up poll
-            sapi(server_url, "put", "/poll/status", json={"open": False})
-            sapi(server_url, "delete", "/poll")
+            # Clean up quiz
+            sapi(server_url, "put", "/quiz/status", json={"open": False})
+            sapi(server_url, "delete", "/quiz")
             for ctx in (ctx_host, ctx1, ctx2):
                 ctx.close()
             for b in (b_host, b1, b2):
                 b.close()
 
-    def test_very_long_poll_question_renders(self, host: HostPage, pax: ParticipantPage):
+    def test_very_long_quiz_question_renders(self, host: HostPage, pax: ParticipantPage):
         """200+ char question renders without error."""
         pax.join("LongQ")
-        host._page.click("#tab-poll")
+        host._page.click("#tab-quiz")
         long_question = "What is the best approach to " + "x" * 180 + "?"
-        host.create_poll(long_question, ["A", "B"])
+        host.create_quiz(long_question, ["A", "B"])
         expect(pax._page.locator("#content h2")).to_be_visible(timeout=5000)
         # No crash — question is displayed
         q_text = pax._page.locator("#content h2").inner_text()
@@ -413,11 +413,11 @@ class TestEdgeCases:
             p1.join("Sim1")
             p2.join("Sim2")
             p3.join("Sim3")
-            # Create poll via host UI (API-only doesn't broadcast to participants)
-            host._page.click("#tab-poll")
-            host.create_poll("Simultaneous?", ["Alpha", "Beta"])
+            # Create quiz via host UI (API-only doesn't broadcast to participants)
+            host._page.click("#tab-quiz")
+            host.create_quiz("Simultaneous?", ["Alpha", "Beta"])
 
-            # Wait for poll to be visible on all participants
+            # Wait for quiz to be visible on all participants
             expect(p1._page.locator(".option-btn")).to_have_count(2, timeout=10000)
             expect(p2._page.locator(".option-btn")).to_have_count(2, timeout=5000)
             expect(p3._page.locator(".option-btn")).to_have_count(2, timeout=5000)
@@ -427,13 +427,13 @@ class TestEdgeCases:
             p2.vote_for("Alpha")
             p3.vote_for("Alpha")
 
-            # Close poll so "N total vote" text becomes visible
-            sapi(server_url, "put", "/poll/status", json={"open": False})
+            # Close quiz so "N total vote" text becomes visible
+            sapi(server_url, "put", "/quiz/status", json={"open": False})
             # Host should show 3 total votes
             expect(host._page.locator("text=3 total vote")).to_be_visible(timeout=5000)
         finally:
-            sapi(server_url, "put", "/poll/status", json={"open": False})
-            sapi(server_url, "delete", "/poll")
+            sapi(server_url, "put", "/quiz/status", json={"open": False})
+            sapi(server_url, "delete", "/quiz")
             for ctx in (ctx_host, ctx1, ctx2, ctx3):
                 ctx.close()
             for b in (b_host, b1, b2, b3):

@@ -151,10 +151,10 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(qa_host_router)             # /api/{session_id}/qa/*
 
     from daemon.leaderboard.router import router as leaderboard_router
-    from daemon.poll.router import host_router as poll_host_router
-    from daemon.poll.router import participant_router as poll_participant_router
-    app.include_router(poll_participant_router)   # /api/participant/poll/*
-    app.include_router(poll_host_router)          # /api/{session_id}/poll/*
+    from daemon.quiz.router import host_router as quiz_host_router
+    from daemon.quiz.router import participant_router as quiz_participant_router
+    app.include_router(quiz_participant_router)   # /api/participant/quiz/*
+    app.include_router(quiz_host_router)          # /api/{session_id}/quiz/*
     app.include_router(leaderboard_router)        # /api/{session_id}/leaderboard/*
 
     from daemon.misc.router import host_router as misc_host_router
@@ -162,8 +162,8 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(misc_participant_router)   # /api/participant/misc/*
     app.include_router(misc_host_router)          # /api/{session_id}/misc/*
 
-    from daemon.quiz.queue_router import router as quiz_queue_router
-    app.include_router(quiz_queue_router)         # /api/{session_id}/host/poll/queue
+    from daemon.quiz_queue.router import router as quiz_queue_router
+    app.include_router(quiz_queue_router)         # /api/{session_id}/host/quiz/queue
 
     from daemon.activity.router import host_router as activity_host_router
     from daemon.codereview.router import host_router as codereview_host_router

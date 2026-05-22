@@ -32,7 +32,7 @@ RailwayWS --> Host: activity_updated
 end
 
 group Summary counts and modal fetch
-Loop -> SessionFiles: poll notes + ai-summary.md metadata
+Loop -> SessionFiles: quiz notes + ai-summary.md metadata
 alt Notes or summary counts changed
   Loop -> RailwayWS: broadcast notes_updated
   Loop -> RailwayWS: broadcast summary_updated

@@ -54,7 +54,7 @@ All badges retain their existing tooltip text for discoverability.
 
 ### 2.4 Tab Order Change (both modes)
 
-Move Debate tab to last position: Poll, Words, Q&A, Code, Debate.
+Move Debate tab to last position: Quiz, Words, Q&A, Code, Debate.
 
 ## 3. Participant Changes
 
@@ -83,7 +83,7 @@ These replace the small bottom bar used in workshop mode. Tapping sends emoji to
 
 ### 3.3 Activity Override
 
-When the host launches an activity (poll, word cloud, Q&A, code review), the emoji grid is replaced by the activity UI (full screen on mobile). When the activity ends/closes, the emoji grid returns.
+When the host launches an activity (quiz, word cloud, Q&A, code review), the emoji grid is replaced by the activity UI (full screen on mobile). When the activity ends/closes, the emoji grid returns.
 
 Debate activities are not available in conference mode.
 
@@ -122,7 +122,7 @@ Host-auth protected. Updates `AppState.mode`, triggers full broadcast.
 
 ## 5. What Does NOT Change
 
-- Poll, word cloud, Q&A, code review mechanics — identical
+- Quiz, word cloud, Q&A, code review mechanics — identical
 - Emoji reaction forwarding to overlay — identical
 - Backend scoring engine — still runs (for future leaderboard, issue #49)
 - Status badges (Server, Agent, Transcript, etc.) — still displayed

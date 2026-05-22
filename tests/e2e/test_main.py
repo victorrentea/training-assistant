@@ -31,37 +31,37 @@ HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
 
 # ---------------------------------------------------------------------------
-# TestPollLifecycle
+# TestQuizLifecycle
 # ---------------------------------------------------------------------------
 
-@pytest.mark.usefixtures("clean_poll")
-class TestPollLifecycle:
+@pytest.mark.usefixtures("clean_quiz")
+class TestQuizLifecycle:
 
-    def test_participant_sees_poll_after_host_creates_it(self, host: HostPage, pax: ParticipantPage):
+    def test_participant_sees_quiz_after_host_creates_it(self, host: HostPage, pax: ParticipantPage):
         pax.join("Alice")
-        host.create_poll("Favourite language?", ["Python", "Java", "Go"])
+        host.create_quiz("Favourite language?", ["Python", "Java", "Go"])
         expect(pax._page.locator("#content h2")).to_have_text("Favourite language?", timeout=5000)
         expect(pax._page.locator(".option-btn")).to_have_count(3)
 
     def test_vote_registers_and_host_sees_count(self, host: HostPage, pax: ParticipantPage):
         pax.join("Bob")
-        host.create_poll("Best DB?", ["Postgres", "MySQL", "SQLite"])
+        host.create_quiz("Best DB?", ["Postgres", "MySQL", "SQLite"])
         pax.vote_for("Postgres")
-        host.close_poll()
+        host.close_quiz()
         expect(host._page.locator("text=1 total vote")).to_be_visible(timeout=5000)
 
-    def test_results_shown_after_poll_closed(self, host: HostPage, pax: ParticipantPage):
+    def test_results_shown_after_quiz_closed(self, host: HostPage, pax: ParticipantPage):
         pax.join("Carol")
-        host.create_poll("Best cloud?", ["AWS", "GCP", "Azure"])
+        host.create_quiz("Best cloud?", ["AWS", "GCP", "Azure"])
         pax.vote_for("AWS")
-        host.close_poll()
+        host.close_quiz()
         expect(pax._page.locator(".pct").first).to_be_visible(timeout=5000)
         expect(pax._page.locator(".closed-banner")).to_be_visible(timeout=5000)
 
     def test_zero_votes_shows_zero_percent(self, host: HostPage, pax: ParticipantPage):
         pax.join("Zara")
-        host.create_poll("No votes poll?", ["A", "B", "C"])
-        # Close poll without anyone voting
+        host.create_quiz("No votes quiz?", ["A", "B", "C"])
+        # Close quiz without anyone voting
         host._page.click("text=Close voting")
         expect(host._page.locator("text=Open voting")).to_be_visible(timeout=5000)
         expect(pax._page.locator(".pct").first).to_be_visible(timeout=5000)
@@ -70,9 +70,9 @@ class TestPollLifecycle:
 
     def test_correct_answer_feedback_shown_to_participant(self, host: HostPage, pax: ParticipantPage):
         pax.join("Dave")
-        host.create_poll("Capital of France?", ["Berlin", "Paris", "Rome"])
+        host.create_quiz("Capital of France?", ["Berlin", "Paris", "Rome"])
         pax.vote_for_nth(1)  # Paris
-        host.close_poll()
+        host.close_quiz()
         host.mark_correct("Paris")
         expect(pax._page.locator(".result-icon", has_text="✅")).to_be_visible(timeout=5000)
 
@@ -81,17 +81,17 @@ class TestPollLifecycle:
 # TestMultiSelect
 # ---------------------------------------------------------------------------
 
-@pytest.mark.usefixtures("clean_poll")
+@pytest.mark.usefixtures("clean_quiz")
 class TestMultiSelect:
 
     def test_correct_count_hint_shown_to_participant(self, host: HostPage, pax: ParticipantPage):
         pax.join("Eve")
-        host.create_poll("JVM languages?", ["Java", "Kotlin", "Python", "Scala"], multi=True, correct_count=2)
+        host.create_quiz("JVM languages?", ["Java", "Kotlin", "Python", "Scala"], multi=True, correct_count=2)
         expect(pax._page.locator(".vote-msg").first).to_contain_text("exactly 2", timeout=5000)
 
     def test_participant_cannot_select_more_than_correct_count(self, host: HostPage, pax: ParticipantPage):
         pax.join("Frank")
-        host.create_poll("Pick 2 fruits?", ["Apple", "Banana", "Cherry", "Date"], multi=True, correct_count=2)
+        host.create_quiz("Pick 2 fruits?", ["Apple", "Banana", "Cherry", "Date"], multi=True, correct_count=2)
         pax._page.locator(".option-btn").nth(0).click()
         pax._page.locator(".option-btn").nth(1).click()
         expect(pax._page.locator(".option-btn").nth(2)).to_be_disabled(timeout=3000)
@@ -124,12 +124,12 @@ class TestRegressions:
         browser.close()
 
     def test_participant_page_loads_with_zero_votes(self, host: HostPage, pax: ParticipantPage):
-        """Regression: largestRemainder([0,0,...]) threw TypeError when poll had no votes."""
+        """Regression: largestRemainder([0,0,...]) threw TypeError when quiz had no votes."""
         js_errors = []
         pax._page.on("pageerror", lambda e: js_errors.append(str(e)))
 
         pax.join("Grace")
-        host.create_poll("Zero votes test?", ["Yes", "No", "Maybe", "Skip"])
+        host.create_quiz("Zero votes test?", ["Yes", "No", "Maybe", "Skip"])
 
         expect(pax._page.locator("#content h2")).to_have_text("Zero votes test?", timeout=5000)
         assert js_errors == [], f"JS errors on participant page: {js_errors}"
@@ -262,8 +262,8 @@ class TestWordCloud:
         host.open_wordcloud_tab()
         expect(pax._page.locator("#wc-canvas")).to_be_visible(timeout=5000)
 
-        # Host switches back to poll tab — deactivates word cloud
-        host._page.click("text=Poll")
+        # Host switches back to quiz tab — deactivates word cloud
+        host._page.click("text=Quiz")
         expect(pax._page.locator("#wc-canvas")).not_to_be_visible(timeout=5000)
 
 
@@ -494,55 +494,55 @@ class TestTabPersistence:
         # After reload, Q&A tab should still be active
         expect(page.locator("#tab-qa.active")).to_be_visible(timeout=5000)
         expect(page.locator("#tab-content-qa")).to_be_visible(timeout=5000)
-        expect(page.locator("#tab-content-poll")).to_be_hidden()
+        expect(page.locator("#tab-content-quiz")).to_be_hidden()
 
         ctx.close()
         b.close()
 
 
 # ---------------------------------------------------------------------------
-# TestPollDownload
+# TestQuizDownload
 # ---------------------------------------------------------------------------
 
-@pytest.mark.usefixtures("clean_poll")
-class TestPollDownload:
+@pytest.mark.usefixtures("clean_quiz")
+class TestQuizDownload:
 
-    def test_download_captures_two_polls_with_correct_answers(self, host: HostPage, pax: ParticipantPage):
+    def test_download_captures_two_quizzes_with_correct_answers(self, host: HostPage, pax: ParticipantPage):
         """
-        Create 2 polls, vote, close, mark correct answers.
+        Create 2 quizzes, vote, close, mark correct answers.
         Verify the download text includes both questions with ✅ on correct options.
         """
         pax.join("Zara")
 
-        # Ensure poll tab is active (previous tests may have switched to Q&A)
-        host._page.click("text=Poll")
+        # Ensure quiz tab is active (previous tests may have switched to Q&A)
+        host._page.click("text=Quiz")
 
-        # --- Poll 1: single-select ---
-        host.create_poll("What is 2+2?", ["Three", "Four", "Five"])
+        # --- Quiz 1: single-select ---
+        host.create_quiz("What is 2+2?", ["Three", "Four", "Five"])
         expect(pax._page.locator(".option-btn")).to_have_count(3, timeout=5000)
         pax.vote_for("Four")
-        host.close_poll()
+        host.close_quiz()
         host.mark_correct("Four")
 
-        # Wait for poll history to be recorded in localStorage
+        # Wait for quiz history to be recorded in localStorage
         host._page.wait_for_timeout(500)
-        history = host.get_poll_history()
-        assert len(history) >= 1, f"Expected at least 1 poll in history, got {len(history)}"
+        history = host.get_quiz_history()
+        assert len(history) >= 1, f"Expected at least 1 quiz in history, got {len(history)}"
 
-        # Remove poll to make room for the next one
+        # Remove quiz to make room for the next one
         host._page.click("text=Remove question")
         host._page.wait_for_timeout(500)
 
-        # --- Poll 2: single-select ---
-        host.create_poll("Capital of France?", ["Berlin", "Paris", "Rome", "Madrid"])
+        # --- Quiz 2: single-select ---
+        host.create_quiz("Capital of France?", ["Berlin", "Paris", "Rome", "Madrid"])
         expect(pax._page.locator(".option-btn")).to_have_count(4, timeout=5000)
         pax.vote_for("Paris")
-        host.close_poll()
+        host.close_quiz()
         host.mark_correct("Paris")
 
         host._page.wait_for_timeout(500)
-        history = host.get_poll_history()
-        assert len(history) >= 2, f"Expected at least 2 polls in history, got {len(history)}"
+        history = host.get_quiz_history()
+        assert len(history) >= 2, f"Expected at least 2 quizzes in history, got {len(history)}"
 
         # Verify download text content
         text = host.get_download_text()
@@ -551,17 +551,17 @@ class TestPollDownload:
 
         # Check correct answers are marked with ✅
         lines = text.split("\n")
-        # Poll 1: option B (Four) should have ✅
-        b_line_poll1 = [l for l in lines if l.strip().startswith("B.") and "Four" in l]
-        assert any("✅" in l for l in b_line_poll1), f"Option 'Four' should be marked correct: {b_line_poll1}"
-        # Poll 1: options A (Three), C (Five) should NOT have ✅
-        a_line_poll1 = [l for l in lines if l.strip().startswith("A.") and "Three" in l]
-        assert all("✅" not in l for l in a_line_poll1), f"Option 'Three' should not be marked correct"
+        # Quiz 1: option B (Four) should have ✅
+        b_line_quiz1 = [l for l in lines if l.strip().startswith("B.") and "Four" in l]
+        assert any("✅" in l for l in b_line_quiz1), f"Option 'Four' should be marked correct: {b_line_quiz1}"
+        # Quiz 1: options A (Three), C (Five) should NOT have ✅
+        a_line_quiz1 = [l for l in lines if l.strip().startswith("A.") and "Three" in l]
+        assert all("✅" not in l for l in a_line_quiz1), f"Option 'Three' should not be marked correct"
 
-        # Poll 2: option B (Paris) should have ✅
-        b_line_poll2 = [l for l in lines if l.strip().startswith("B.") and "Paris" in l]
-        assert any("✅" in l for l in b_line_poll2), f"Option 'Paris' should be marked correct: {b_line_poll2}"
-        # Poll 2: options A, C, D should NOT have ✅
+        # Quiz 2: option B (Paris) should have ✅
+        b_line_quiz2 = [l for l in lines if l.strip().startswith("B.") and "Paris" in l]
+        assert any("✅" in l for l in b_line_quiz2), f"Option 'Paris' should be marked correct: {b_line_quiz2}"
+        # Quiz 2: options A, C, D should NOT have ✅
         non_correct = [l for l in lines if any(c in l for c in ["Berlin", "Rome", "Madrid"]) and l.strip().startswith(("A.", "C.", "D."))]
         assert all("✅" not in l for l in non_correct), f"Non-correct options should not be marked: {non_correct}"
 
@@ -612,9 +612,9 @@ class TestProductionSmoke:
         assert resp.status_code == 200
         assert "session_active" in resp.json()
 
-    def test_prod_api_poll_requires_auth(self):
-        # /api/poll is now session-scoped (/api/{session_id}/poll); this path returns 404
-        resp = _prod_request("POST", "/api/poll", json={})
+    def test_prod_api_quiz_requires_auth(self):
+        # /api/quiz is now session-scoped (/api/{session_id}/quiz); this path returns 404
+        resp = _prod_request("POST", "/api/quiz", json={})
         assert resp.status_code in (401, 404)
 
 
@@ -666,12 +666,12 @@ class TestNotifications:
         expect(page.locator("#notif-btn")).to_be_visible(timeout=5000)
         browser.close()
 
-    def test_no_spurious_notification_on_join_mid_poll(self, server_url, playwright):
-        """Joining while a poll is already active must NOT fire a notification
+    def test_no_spurious_notification_on_join_mid_quiz(self, server_url, playwright):
+        """Joining while a quiz is already active must NOT fire a notification
         (first state message seeds tracking state, doesn't trigger)."""
-        _sapi(server_url, "post", "/poll",
+        _sapi(server_url, "post", "/quiz",
              json={"question": "Notif test Q", "options": ["A", "B"]})
-        _sapi(server_url, "put", "/poll/status", json={"open": True})
+        _sapi(server_url, "put", "/quiz/status", json={"open": True})
 
         try:
             browser = playwright.chromium.launch()
@@ -699,12 +699,12 @@ class TestNotifications:
             page = ctx.new_page()
             page.goto(f"{server_url}{_pax_url()}")
             ParticipantPage(page).join("NotifJoinMid")
-            # Wait for the poll to render — proves the state message was processed
+            # Wait for the quiz to render — proves the state message was processed
             expect(page.locator("#content h2")).to_be_visible(timeout=5000)
 
             notif_fired = page.evaluate("window._notifFired")
-            assert not notif_fired, "No notification should fire when joining mid-poll"
+            assert not notif_fired, "No notification should fire when joining mid-quiz"
             browser.close()
         finally:
-            _sapi(server_url, "put", "/poll/status", json={"open": False})
-            _sapi(server_url, "delete", "/poll")
+            _sapi(server_url, "put", "/quiz/status", json={"open": False})
+            _sapi(server_url, "delete", "/quiz")

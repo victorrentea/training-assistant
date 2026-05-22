@@ -54,32 +54,32 @@ class ParticipantListUpdatedMsg(BaseModel):
     participants: list[dict[str, Any]]  # [{uuid, name, score, location, avatar}]
 
 
-# ── Poll ──────────────────────────────────────────────────────────────────────
+# ── Quiz ──────────────────────────────────────────────────────────────────────
 
-class PollQueueUpdatedMsg(BaseModel):
-    type: Literal["poll_queue_updated"] = "poll_queue_updated"
-
-
-class PollOpenedMsg(BaseModel):
-    type: Literal["poll_opened"] = "poll_opened"
-    poll: dict[str, Any]  # {id, question, options[], multi}
+class QuizQueueUpdatedMsg(BaseModel):
+    type: Literal["quiz_queue_updated"] = "quiz_queue_updated"
 
 
-class PollEndedMsg(BaseModel):
-    type: Literal["poll_ended"] = "poll_ended"
+class QuizOpenedMsg(BaseModel):
+    type: Literal["quiz_opened"] = "quiz_opened"
+    quiz: dict[str, Any]  # {id, question, options[], multi}
 
 
-class PollCorrectRevealedMsg(BaseModel):
-    type: Literal["poll_correct_revealed"] = "poll_correct_revealed"
+class QuizEndedMsg(BaseModel):
+    type: Literal["quiz_ended"] = "quiz_ended"
+
+
+class QuizCorrectRevealedMsg(BaseModel):
+    type: Literal["quiz_correct_revealed"] = "quiz_correct_revealed"
     correct_indices: list[int]
 
 
-class PollClearedMsg(BaseModel):
-    type: Literal["poll_cleared"] = "poll_cleared"
+class QuizClearedMsg(BaseModel):
+    type: Literal["quiz_cleared"] = "quiz_cleared"
 
 
-class PollEndCountdownStartedMsg(BaseModel):
-    type: Literal["poll_end_countdown_started"] = "poll_end_countdown_started"
+class QuizEndCountdownStartedMsg(BaseModel):
+    type: Literal["quiz_end_countdown_started"] = "quiz_end_countdown_started"
     seconds: int
     started_at: str
 
@@ -172,7 +172,7 @@ class LeaderboardRevealedMsg(BaseModel):
     positions: list[dict[str, Any]]
 
 
-# ── Host-only: Poll vote tally ────────────────────────────────────────────────
+# ── Host-only: Quiz vote tally ────────────────────────────────────────────────
 
 class VoteUpdateMsg(BaseModel):
     type: Literal["vote_update"] = "vote_update"
@@ -268,12 +268,12 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Identity
     "active_participants_count_updated": ActiveParticipantsCountUpdatedMsg,
     "slides_history_updated": SlidesHistoryCountUpdatedMsg,
-    # Poll
-    "poll_opened": PollOpenedMsg,
-    "poll_ended": PollEndedMsg,
-    "poll_correct_revealed": PollCorrectRevealedMsg,
-    "poll_cleared": PollClearedMsg,
-    "poll_end_countdown_started": PollEndCountdownStartedMsg,
+    # Quiz
+    "quiz_opened": QuizOpenedMsg,
+    "quiz_ended": QuizEndedMsg,
+    "quiz_correct_revealed": QuizCorrectRevealedMsg,
+    "quiz_cleared": QuizClearedMsg,
+    "quiz_end_countdown_started": QuizEndCountdownStartedMsg,
     # Scores
     "scores_updated": ScoresUpdatedMsg,
     # Word Cloud
@@ -303,8 +303,8 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
 HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
     "decks_updated": DecksUpdatedMsg,
-    # Poll
-    "poll_queue_updated": PollQueueUpdatedMsg,
+    # Quiz
+    "quiz_queue_updated": QuizQueueUpdatedMsg,
     "vote_update": VoteUpdateMsg,
     # Word Cloud
     "wordcloud_updated": WordcloudUpdatedMsg,
@@ -340,12 +340,12 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Identity
     "active_participants_count_updated": "identity",
     "slides_history_updated": "slides",
-    # Poll
-    "poll_opened": "poll",
-    "poll_ended": "poll",
-    "poll_correct_revealed": "poll",
-    "poll_cleared": "poll",
-    "poll_end_countdown_started": "poll",
+    # Quiz
+    "quiz_opened": "quiz",
+    "quiz_ended": "quiz",
+    "quiz_correct_revealed": "quiz",
+    "quiz_cleared": "quiz",
+    "quiz_end_countdown_started": "quiz",
     # Scores & Leaderboard
     "scores_updated": "scores_leaderboard",
     "leaderboard_revealed": "scores_leaderboard",
@@ -374,9 +374,9 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
 HOST_MESSAGE_FEATURES: dict[str, str] = {
     # Slides
     "decks_updated": "slides",
-    # Poll
-    "poll_queue_updated": "poll",
-    "vote_update": "poll",
+    # Quiz
+    "quiz_queue_updated": "quiz",
+    "vote_update": "quiz",
     # Word Cloud
     "wordcloud_updated": "wordcloud",
     # Q&A

@@ -28,8 +28,8 @@ Defined in a new module `metrics.py`:
 |---|---|---|---|
 | `ws_connections_active` | Gauge | `role` | Currently open WebSocket connections (labels: `participant`, `host`, `overlay`) |
 | `ws_messages_total` | Counter | `type` | All WebSocket messages received (vote, multi_vote, qa_submit, upvote, set_name, wordcloud_word, debate_pick_side, debate_argument, debate_upvote, codereview_select, codereview_deselect, emoji_reaction, etc.) |
-| `poll_votes_total` | Counter | -- | Total votes cast (incremented in both `vote` and `multi_vote` handlers) |
-| `poll_vote_duration_seconds` | Histogram | -- | Time from poll open to participant vote. Duration = `datetime.now(utc) - state.poll_opened_at`; only observe when `poll_opened_at` is set. |
+| `quiz_votes_total` | Counter | -- | Total votes cast (incremented in both `vote` and `multi_vote` handlers) |
+| `quiz_vote_duration_seconds` | Histogram | -- | Time from quiz open to participant vote. Duration = `datetime.now(utc) - state.quiz_opened_at`; only observe when `quiz_opened_at` is set. |
 | `qa_questions_total` | Counter | -- | Questions submitted |
 | `qa_upvotes_total` | Counter | -- | Upvotes given |
 
@@ -51,7 +51,7 @@ The `Instrumentator().instrument(app)` call must happen after `app = FastAPI(...
 
 Each existing handler gets 1-2 lines added:
 - WebSocket connect/disconnect: `ws_connections_active.labels(role=role).inc()` / `.dec()` (role determined from uuid: `__host__`, `__overlay__`, or `participant`)
-- Vote handler (`vote` + `multi_vote`): `poll_votes_total.inc()` + `poll_vote_duration_seconds.observe(duration)`
+- Vote handler (`vote` + `multi_vote`): `quiz_votes_total.inc()` + `quiz_vote_duration_seconds.observe(duration)`
 - Q&A submit handler: `qa_questions_total.inc()`
 - Upvote handler: `qa_upvotes_total.inc()`
 - Every WS message: `ws_messages_total.labels(type=msg_type).inc()`
@@ -113,7 +113,7 @@ Prometheus does not support environment variable substitution in its config file
 - Pre-configured dashboard "Workshop Live Metrics" with panels:
   - **Request Latency** -- p50/p95/p99 from `http_request_duration_seconds`
   - **Active WebSocket Connections** -- `ws_connections_active` (with role breakdown)
-  - **Votes per Minute** -- `rate(poll_votes_total[1m])`
+  - **Votes per Minute** -- `rate(quiz_votes_total[1m])`
   - **Error Rate** -- `rate(http_requests_total{status=~"4..|5.."}[1m])`
   - **Participation** -- questions, upvotes counters
   - **WebSocket Message Rate** -- `rate(ws_messages_total[1m])` by type

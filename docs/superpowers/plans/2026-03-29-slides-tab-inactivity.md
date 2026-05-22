@@ -39,12 +39,12 @@ with:
 <button class="tab-btn" id="tab-slides" onclick="switchTab('none')"><span class="tab-icon">👨🏻‍🏫</span>Slides</button>
 ```
 
-Note: no `style="display:none"` — Slides tab is always visible. It sits left of Poll, separated by the natural tab order.
+Note: no `style="display:none"` — Slides tab is always visible. It sits left of Quiz, separated by the natural tab order.
 
 - [ ] **1.2 Verify in browser**
 
 Start server: `python3 -m uvicorn main:app --reload --port 8000`
-Open http://localhost:8000/host — confirm 👨🏻‍🏫 Slides tab is visible as the first tab to the left of 📊 Poll.
+Open http://localhost:8000/host — confirm 👨🏻‍🏫 Slides tab is visible as the first tab to the left of 📊 Quiz.
 
 ---
 
@@ -94,7 +94,7 @@ if (helloTab) helloTab.style.display = 'none'; // workshop branch — delete
 
 In browser at http://localhost:8000/host:
 - Click 👨🏻‍🏫 Slides → tab gets the active underline
-- Click 📊 Poll → Poll gets active, Slides loses it
+- Click 📊 Quiz → Quiz gets active, Slides loses it
 - Refresh page (server broadcasts `current_activity = none` on reconnect) → Slides tab should be active on load
 
 ---
@@ -291,7 +291,7 @@ INACTIVITY_WARN_MS  = 5000;   // won't work — const, but you can test by patch
 // Instead: open devtools, add breakpoint, or temporarily change the values in the file to 5000ms
 ```
 
-Better approach — temporarily edit the constants to `5000` and `10000` (5s and 10s), reload, switch to Poll tab, leave mouse idle:
+Better approach — temporarily edit the constants to `5000` and `10000` (5s and 10s), reload, switch to Quiz tab, leave mouse idle:
 - At 5s: modal should appear with 5s countdown
 - Move mouse: modal disappears, timer resets
 - Stay idle for 10s total: `switchTab('none')` fires, Slides tab becomes active
@@ -313,7 +313,7 @@ git push origin victorrentea/slides-tab-inactivity
 - [ ] Clicking Slides tab sets `current_activity = none`, participants can browse slides
 - [ ] Slides tab shows active underline when `current_activity === 'none'`
 - [ ] No Hello tab visible anywhere
-- [ ] During Poll/Q&A/etc.: after 3 min idle, full-screen amber modal appears with countdown
+- [ ] During Quiz/Q&A/etc.: after 3 min idle, full-screen amber modal appears with countdown
 - [ ] Any mouse/key activity dismisses modal and resets full 6-min timer
 - [ ] After 6 min total idle: auto-switches to Slides tab, activity data preserved
 - [ ] No JS console errors in any mode (workshop or conference)

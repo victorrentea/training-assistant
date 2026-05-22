@@ -29,7 +29,7 @@ Updated 2026-03-22. Maps each manual test case to existing e2e coverage across a
 | 2.3 | Participant disconnect/reconnect | COVERED | `test_participant_reconnect_restores_name` |
 | 2.4 | Participant page refresh | COVERED | `test_participant_refresh_preserves_score` |
 | 2.5 | Host multi-tab kick | COVERED | `test_host_multi_tab_kicks_first` |
-| 2.6 | Host page refresh | PARTIAL | `test_host_tab_survives_reload` (tests tab persistence, not poll/vote state) |
+| 2.6 | Host page refresh | PARTIAL | `test_host_tab_survives_reload` (tests tab persistence, not quiz/vote state) |
 
 ## 3. Geolocation
 
@@ -40,29 +40,29 @@ Updated 2026-03-22. Maps each manual test case to existing e2e coverage across a
 | 3.3 | Location retry | **GAP** | |
 | 3.4 | Map view (host) | **GAP** | |
 
-## 4. Live Poll — Single Select
+## 4. Live Quiz — Single Select
 
 | # | Test Case | Status | Covered By |
 |---|-----------|--------|------------|
-| 4.1 | Create and launch poll | COVERED | `test_participant_sees_poll_after_host_creates_it` |
-| 4.2 | Open voting | COVERED | `test_participant_sees_poll_after_host_creates_it` (poll auto-opens on create) |
+| 4.1 | Create and launch quiz | COVERED | `test_participant_sees_quiz_after_host_creates_it` |
+| 4.2 | Open voting | COVERED | `test_participant_sees_quiz_after_host_creates_it` (quiz auto-opens on create) |
 | 4.3 | Cast a vote | COVERED | `test_vote_registers_and_host_sees_count` |
 | 4.4 | Vote is final (single-select) | COVERED | `test_vote_is_final_cannot_change` |
 | 4.5 | Multiple participants vote | COVERED | `test_multiple_participants_vote_correct_counts` |
-| 4.6 | Close voting | COVERED | `test_results_shown_after_poll_closed` |
+| 4.6 | Close voting | COVERED | `test_results_shown_after_quiz_closed` |
 | 4.7 | Mark correct answer | COVERED | `test_correct_answer_feedback_shown_to_participant` |
 | 4.8 | Speed-based scoring | COVERED | `test_speed_based_scoring_faster_gets_more` |
 | 4.9 | Timer | COVERED | `test_timer_countdown_visible`, `test_timer_cleared_on_close` |
-| 4.10 | Delete/clear poll | PARTIAL | `test_download_captures_two_polls_with_correct_answers` (clicks "Remove question") |
-| 4.11 | Poll with 2 options | COVERED | `test_poll_with_2_options` |
-| 4.12 | Poll with 8 options (max) | COVERED | `test_poll_with_8_options` |
-| 4.13 | Poll history | COVERED | `test_download_captures_two_polls_with_correct_answers` |
+| 4.10 | Delete/clear quiz | PARTIAL | `test_download_captures_two_quizzes_with_correct_answers` (clicks "Remove question") |
+| 4.11 | Quiz with 2 options | COVERED | `test_quiz_with_2_options` |
+| 4.12 | Quiz with 8 options (max) | COVERED | `test_quiz_with_8_options` |
+| 4.13 | Quiz history | COVERED | `test_download_captures_two_quizzes_with_correct_answers` |
 
-## 5. Live Poll — Multi-Select
+## 5. Live Quiz — Multi-Select
 
 | # | Test Case | Status | Covered By |
 |---|-----------|--------|------------|
-| 5.1 | Create multi-select poll | COVERED | `test_correct_count_hint_shown_to_participant` |
+| 5.1 | Create multi-select quiz | COVERED | `test_correct_count_hint_shown_to_participant` |
 | 5.2 | Selection cap | COVERED | `test_participant_cannot_select_more_than_correct_count`, `test_multi_select_cap_enforced` |
 | 5.3 | Submit multi-vote | COVERED | `test_multi_vote_submit_and_host_count` |
 | 5.4 | Multi-select scoring | COVERED | `test_multi_select_scoring_all_correct`, `test_multi_select_scoring_partial_zero` |
@@ -121,8 +121,8 @@ Updated 2026-03-22. Maps each manual test case to existing e2e coverage across a
 
 | # | Test Case | Status | Covered By |
 |---|-----------|--------|------------|
-| 9.1 | Switch between activities | COVERED | `test_full_activity_cycle_poll_qa_wc_code` |
-| 9.2 | Activity notification | PARTIAL | `test_no_spurious_notification_on_join_mid_poll` (negative case only) |
+| 9.1 | Switch between activities | COVERED | `test_full_activity_cycle_quiz_qa_wc_code` |
+| 9.2 | Activity notification | PARTIAL | `test_no_spurious_notification_on_join_mid_quiz` (negative case only) |
 | 9.3 | Switch to "none" (idle) | COVERED | `test_close_wordcloud_participant_returns_to_idle` |
 | 9.4 | Rapid activity switching | COVERED | `test_rapid_switching_no_js_errors` |
 
@@ -162,9 +162,9 @@ Updated 2026-03-22. Maps each manual test case to existing e2e coverage across a
 |---|-----------|--------|------------|
 | 13.1 | Server restart mid-session | **GAP** | (requires server restart which breaks the test session) |
 | 13.2 | Simultaneous votes | COVERED | `test_simultaneous_votes_all_counted` |
-| 13.3 | Participant joins mid-activity | COVERED | `test_participant_joins_mid_qa_sees_questions`, `test_participant_joins_mid_wordcloud_sees_canvas`, `test_no_spurious_notification_on_join_mid_poll` |
+| 13.3 | Participant joins mid-activity | COVERED | `test_participant_joins_mid_qa_sees_questions`, `test_participant_joins_mid_wordcloud_sees_canvas`, `test_no_spurious_notification_on_join_mid_quiz` |
 | 13.4 | Participant joins after voting closed | COVERED | `test_join_after_voting_closed` |
-| 13.5 | Very long poll question | COVERED | `test_very_long_poll_question_renders` |
+| 13.5 | Very long quiz question | COVERED | `test_very_long_quiz_question_renders` |
 | 13.6 | Special characters / XSS | COVERED | `test_xss_in_question_escaped`, `test_special_chars_in_wordcloud` |
 | 13.7 | Network latency simulation | **GAP** | (requires network throttling) |
 | 13.8 | Mobile browser | **GAP** | (requires mobile viewport/device emulation) |
@@ -191,7 +191,7 @@ Updated 2026-03-22. Maps each manual test case to existing e2e coverage across a
 | # | Test Case | Status | Covered By |
 |---|-----------|--------|------------|
 | 16.1 | Vote not restored on refresh | **GAP** | |
-| 16.2 | Poll result feedback lost on refresh | **GAP** | |
+| 16.2 | Quiz result feedback lost on refresh | **GAP** | |
 
 ## 17. Conference Mode (NEW)
 
@@ -234,12 +234,12 @@ Updated 2026-03-22. Maps each manual test case to existing e2e coverage across a
 2. **Scoring & Leaderboard** — 7/7 covered (was 0/5)
 3. **Identity edge cases** — 6/6 covered (was 0/6)
 4. **Connection & Reconnection** — 5/6 covered (was 0/6)
-5. **Multi-Select Poll** — 5/5 covered (was 1/5)
+5. **Multi-Select Quiz** — 5/5 covered (was 1/5)
 6. **Word Cloud** — 8/9 covered (was 2/9)
 7. **Q&A** — 12/13 covered (was 8/13)
 8. **Activity Switching** — 4/4 covered (was 1/4)
 
 ### Bugs found and fixed during testing:
 
-1. **Timer not cleared on poll close** — Participant countdown continued after host closed voting. Fixed in `participant.js`: now clears `activeTimer` and stops interval when server sends null timer.
+1. **Timer not cleared on quiz close** — Participant countdown continued after host closed voting. Fixed in `participant.js`: now clears `activeTimer` and stops interval when server sends null timer.
 2. **Leaderboard router not registered** — `routers/leaderboard.py` existed but was not included in `main.py`. Fixed by adding `app.include_router(leaderboard.router)`.

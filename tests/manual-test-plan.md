@@ -81,7 +81,7 @@
 - [P] Join, accumulate some score, then hard-refresh (Cmd+R).
 - [P] Re-enter name and join again.
 - [V] Score is preserved (server kept it by UUID).
-- [V] Current activity state is shown (poll, Q&A, etc.) — not the idle welcome screen (if an activity is active).
+- [V] Current activity state is shown (quiz, Q&A, etc.) — not the idle welcome screen (if an activity is active).
 
 ### 2.5 Host multi-tab kick
 - [H] Open `/host` in tab A. Verify connected.
@@ -91,8 +91,8 @@
 - [V] Tab B is the active host, fully functional.
 
 ### 2.6 Host page refresh
-- [H] Launch a poll, open voting. Refresh host page.
-- [V] Host panel reloads with current state: poll is visible, voting status is preserved.
+- [H] Launch a quiz, open voting. Refresh host page.
+- [V] Host panel reloads with current state: quiz is visible, voting status is preserved.
 - [V] Participant list is accurate. Vote counts are correct.
 
 ---
@@ -120,17 +120,17 @@
 
 ---
 
-## 4. Live Poll — Single Select
+## 4. Live Quiz — Single Select
 
-### 4.1 Create and launch poll
-- [H] On Poll tab, type a question + 4 options in the contenteditable area.
+### 4.1 Create and launch quiz
+- [H] On Quiz tab, type a question + 4 options in the contenteditable area.
 - [H] Click "Launch".
 - [V] Host center panel shows a bar chart with 0 votes per option.
 - [V] Participant still sees idle/welcome (voting not yet open).
 
 ### 4.2 Open voting
 - [H] Click the open/start voting button.
-- [V] Participant sees poll question with clickable option cards.
+- [V] Participant sees quiz question with clickable option cards.
 - [V] "Choose one option" hint is visible.
 
 ### 4.3 Cast a vote
@@ -162,40 +162,40 @@
 - [V] Confetti animation plays for participants who scored.
 
 ### 4.8 Speed-based scoring
-- [P1] Vote immediately after poll opens. [P2] Vote 5 seconds later. Both vote correctly.
+- [P1] Vote immediately after quiz opens. [P2] Vote 5 seconds later. Both vote correctly.
 - [H] Mark the correct answer.
 - [V] P1 gets a higher score than P2 (closer to 1000 vs closer to 500).
 
 ### 4.9 Timer
-- [H] Start a 10-second timer on the poll.
+- [H] Start a 10-second timer on the quiz.
 - [V] Both host and participant see a countdown timer.
 - [V] Timer counts down from 10 to 0.
 - [V] When timer reaches 0, voting closes automatically (or just the timer disappears — verify actual behavior).
 
-### 4.10 Delete/clear poll
-- [H] Click close/delete poll button.
+### 4.10 Delete/clear quiz
+- [H] Click close/delete quiz button.
 - [V] Host center returns to QR code (idle state).
 - [V] Participant returns to welcome/idle screen.
 
-### 4.11 Poll with 2 options (minimum)
-- [H] Create poll with only 2 options.
-- [V] Poll launches correctly. Both options are votable.
+### 4.11 Quiz with 2 options (minimum)
+- [H] Create quiz with only 2 options.
+- [V] Quiz launches correctly. Both options are votable.
 
-### 4.12 Poll with 8 options (maximum)
-- [H] Create poll with 8 options.
+### 4.12 Quiz with 8 options (maximum)
+- [H] Create quiz with 8 options.
 - [V] All 8 options render correctly on both host chart and participant cards.
 
-### 4.13 Poll history
-- [H] Launch and complete several polls throughout the session.
-- [V] Poll history is accessible on the host panel (stored per day in localStorage).
-- [V] Previous polls are searchable by question text.
-- [V] Can re-launch a previous poll from history.
+### 4.13 Quiz history
+- [H] Launch and complete several quizzes throughout the session.
+- [V] Quiz history is accessible on the host panel (stored per day in localStorage).
+- [V] Previous quizzes are searchable by question text.
+- [V] Can re-launch a previous quiz from history.
 
 ---
 
-## 5. Live Poll — Multi-Select
+## 5. Live Quiz — Multi-Select
 
-### 5.1 Create multi-select poll
+### 5.1 Create multi-select quiz
 - [H] Check the "Multi-select" checkbox before launching.
 - [H] Set correct_count (e.g., 2 correct answers out of 4).
 - [H] Click "Launch" and open voting.
@@ -227,7 +227,7 @@
 
 ### 6.1 Activate Q&A
 - [H] Click the Q&A tab.
-- [V] Participant screen switches from idle/poll to Q&A interface.
+- [V] Participant screen switches from idle/quiz to Q&A interface.
 - [V] Participant sees an input field to submit questions.
 
 ### 6.2 Submit question
@@ -394,14 +394,14 @@
 ## 9. Activity Switching
 
 ### 9.1 Switch between activities
-- [H] Start a poll. Then switch to Q&A tab. Then to Word Cloud. Then to Code.
+- [H] Start a quiz. Then switch to Q&A tab. Then to Word Cloud. Then to Code.
 - [V] Each switch changes the participant's screen to the corresponding activity.
-- [V] Previous activity data is preserved (poll results still exist when switching back).
+- [V] Previous activity data is preserved (quiz results still exist when switching back).
 
 ### 9.2 Activity notification
 - [P] Have browser notification permission granted.
 - [H] Switch to a new activity.
-- [V] Participant receives a browser notification (e.g., "New poll!" or "Q&A is open").
+- [V] Participant receives a browser notification (e.g., "New quiz!" or "Q&A is open").
 
 ### 9.3 Switch to "none" (idle)
 - [H] Ensure no activity is active (close all activities).
@@ -409,7 +409,7 @@
 - [V] Host center panel shows QR code.
 
 ### 9.4 Rapid activity switching
-- [H] Rapidly switch between Poll → Q&A → Words → Code → Poll.
+- [H] Rapidly switch between Quiz → Q&A → Words → Code → Quiz.
 - [V] Participant UI keeps up without glitches or stale state.
 - [V] No JavaScript errors in console.
 
@@ -423,7 +423,7 @@
 - [V] Score flash animation plays on increase.
 
 ### 10.2 Score accumulation across activities
-- [P] Earn 100 pts from Q&A, then 200 pts from word cloud, then 800 pts from poll.
+- [P] Earn 100 pts from Q&A, then 200 pts from word cloud, then 800 pts from quiz.
 - [V] Total score = 1100 pts. Score never resets between activities.
 
 ### 10.3 Host participant list shows scores
@@ -437,7 +437,7 @@
 - [V] Participants see their score disappear (or show 0).
 
 ### 10.5 Confetti on score increase
-- [P] Answer a poll correctly.
+- [P] Answer a quiz correctly.
 - [V] Confetti animation plays. Particle count scales logarithmically with points earned.
 
 ---
@@ -485,11 +485,11 @@
 ## 13. Edge Cases & Stress Scenarios
 
 ### 13.1 Server restart mid-session
-- Start a session with active poll and participants.
+- Start a session with active quiz and participants.
 - Restart the server.
-- [V] All in-memory state is lost (votes, scores, poll, names).
+- [V] All in-memory state is lost (votes, scores, quiz, names).
 - [V] Participants auto-reconnect after ~3s.
-- [V] Participants see idle state (no poll, no score).
+- [V] Participants see idle state (no quiz, no score).
 
 ### 13.2 Simultaneous votes from many participants
 - Have 5+ participants vote within 1 second of each other.
@@ -497,17 +497,17 @@
 - [V] Host chart updates smoothly.
 
 ### 13.3 Participant joins mid-activity
-- [H] Start a poll and open voting.
+- [H] Start a quiz and open voting.
 - [P] (new participant) Open `/` and join for the first time.
-- [V] New participant immediately sees the active poll and can vote.
+- [V] New participant immediately sees the active quiz and can vote.
 
 ### 13.4 Participant joins after voting closed
-- [H] Create poll, open voting, close voting.
+- [H] Create quiz, open voting, close voting.
 - [P] (new participant) Join.
-- [V] Participant sees the poll but cannot vote (voting closed).
+- [V] Participant sees the quiz but cannot vote (voting closed).
 
-### 13.5 Very long poll question
-- [H] Create a poll with a very long question (200+ characters).
+### 13.5 Very long quiz question
+- [H] Create a quiz with a very long question (200+ characters).
 - [V] Question text wraps correctly on both host and participant screens.
 
 ### 13.6 Special characters in inputs
@@ -565,13 +565,13 @@
 ## 16. Known Issues to Verify
 
 ### 16.1 Vote not restored on refresh (GitHub #33)
-- [P] Vote in a poll. Clear localStorage. Refresh.
+- [P] Vote in a quiz. Clear localStorage. Refresh.
 - [V] **Expected bug:** Participant appears un-voted (can vote again). Backend has their vote but doesn't send `my_vote` back in state.
 
-### 16.2 Poll result feedback lost on refresh (GitHub #33)
+### 16.2 Quiz result feedback lost on refresh (GitHub #33)
 - [H] Mark correct answers (participant sees green/red result).
 - [P] Refresh page.
-- [V] **Expected bug:** Poll is visible but no green/red result feedback (one-time `result` message was missed).
+- [V] **Expected bug:** Quiz is visible but no green/red result feedback (one-time `result` message was missed).
 
 ---
 
@@ -623,14 +623,14 @@
 
 ---
 
-## 19. Poll Timer
+## 19. Quiz Timer
 
 ### 19.1 Start timer
-- [H] Create and open a poll. POST `/api/poll/timer` with `{"seconds": 10}`.
+- [H] Create and open a quiz. POST `/api/quiz/timer` with `{"seconds": 10}`.
 - [V] Participant sees countdown timer (`#pax-countdown`) showing remaining seconds.
 - [V] Timer color changes to red when <= 5 seconds.
 
-### 19.2 Timer cleared on poll close
+### 19.2 Timer cleared on quiz close
 - [H] Start a 30-second timer. Close voting.
 - [V] Timer stops and clears on participant screen.
 
@@ -661,6 +661,6 @@
 
 ### 21.1 Full session lifecycle with no JS errors
 - [P] Join session. Monitor browser console for errors.
-- [H] Cycle through Q&A → Word Cloud → Poll (vote, close, mark correct) → Leaderboard.
+- [H] Cycle through Q&A → Word Cloud → Quiz (vote, close, mark correct) → Leaderboard.
 - [V] No JavaScript errors in participant console throughout entire lifecycle.
 - [V] Score accumulates correctly across all activities.

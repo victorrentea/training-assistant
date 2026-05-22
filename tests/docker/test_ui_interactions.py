@@ -79,7 +79,7 @@ def test_host_tab_survives_reload():
 
         # Reload the page
         host_page.reload(wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # After reload, check if Q&A tab is still active
         # The active tab is determined by the server's current_activity state
@@ -105,7 +105,7 @@ def test_qr_code_rendered():
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # Wait for QR code to render
         host_page.wait_for_timeout(2000)
@@ -140,7 +140,7 @@ def test_participant_link_displayed():
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # Wait for WS to deliver state and populate participant link
         host_page.wait_for_function(

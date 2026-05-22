@@ -53,16 +53,16 @@ def test_rename_session_stores_request():
     resp = client.patch("/api/session/rename", json={"name": "New Name"}, headers=_HOST_AUTH_HEADERS)
     assert resp.status_code == 200
 
-def test_poll_session_request_returns_and_clears():
+def test_quiz_session_request_returns_and_clears():
     state.reset()
     client = TestClient(app)
     # Store a request first
     client.post("/api/session/start", json={"name": "Test"}, headers=_HOST_AUTH_HEADERS)
-    # Daemon polls it
+    # Daemon quizzes it
     resp = client.get("/api/session/request", headers=_HOST_AUTH_HEADERS)
     assert resp.json()["action"] == "start"
     assert resp.json()["name"] == "Test"
-    # Second poll should be empty (cleared after first read)
+    # Second quiz should be empty (cleared after first read)
     resp2 = client.get("/api/session/request", headers=_HOST_AUTH_HEADERS)
     assert resp2.json()["action"] is None
 
@@ -153,7 +153,7 @@ async def rename_session(body: RenameSessionRequest, _=Depends(require_host)):
 
 
 @router.get("/api/session/request")
-async def poll_session_request(_=Depends(require_host)):
+async def quiz_session_request(_=Depends(require_host)):
     req = state.session_request
     state.session_request = None
     if req:
@@ -196,7 +196,7 @@ Expected: All PASS
 
 ```bash
 git add state.py routers/session.py main.py tests/test_main.py
-git commit -m "feat: session stack endpoints (start/end/rename/sync/poll)"
+git commit -m "feat: session stack endpoints (start/end/rename/sync/quiz)"
 ```
 
 ---
@@ -527,7 +527,7 @@ git commit -m "feat: session key points & daemon state persistence"
 
 ---
 
-### Task 5: Daemon — Session Request Polling & Stack Operations
+### Task 5: Daemon — Session Request Quizing & Stack Operations
 
 **Files:**
 - Modify: `training_daemon.py` (main loop — add session request polling, stack push/pop/rename, replace locked/draft initialization)

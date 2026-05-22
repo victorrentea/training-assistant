@@ -8,7 +8,7 @@ Canonical `x-feature` IDs used for generated `API.md` grouping.
 - `slides`
 - `activity`
 - `identity`
-- `poll`
+- `quiz`
 - `wordcloud`
 - `qa`
 - `codereview`

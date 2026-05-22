@@ -684,7 +684,7 @@ class TestParticipantSubmitWord:
         assert resp.status_code == 400
 
     def test_activity_gate_rejects_when_not_wordcloud(self, participant_client, fresh_participant_state):
-        fresh_participant_state.current_activity = "poll"
+        fresh_participant_state.current_activity = "quiz"
         resp = participant_client.post("/api/participant/wordcloud/word",
                                        json={"word": "test"},
                                        headers={"X-Participant-ID": "uuid1"})

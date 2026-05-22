@@ -11,21 +11,21 @@ Generated: 2026-03-29
 
 ## tests/e2e/test_main.py
 
-### TestPollLifecycle
+### TestQuizLifecycle
 
 | Test | Scenario | Hermetic Status | Notes |
 |------|----------|-----------------|-------|
-| `test_participant_sees_poll_after_host_creates_it` | Host creates poll, participant sees question + options | Already covered | `test_full_poll_lifecycle` in test_poll_flow.py |
-| `test_vote_registers_and_host_sees_count` | Participant votes, host sees vote count | Already covered | `test_full_poll_lifecycle` in test_poll_flow.py |
-| `test_results_shown_after_poll_closed` | Poll closed, participant sees percentages + closed banner | Already covered | `test_full_poll_lifecycle` in test_poll_flow.py |
-| `test_zero_votes_shows_zero_percent` | Close poll with no votes, all options show 0% | Already covered | `test_zero_votes_shows_zero_percent` in test_high_value.py |
+| `test_participant_sees_quiz_after_host_creates_it` | Host creates quiz, participant sees question + options | Already covered | `test_full_quiz_lifecycle` in test_quiz_flow.py |
+| `test_vote_registers_and_host_sees_count` | Participant votes, host sees vote count | Already covered | `test_full_quiz_lifecycle` in test_quiz_flow.py |
+| `test_results_shown_after_quiz_closed` | Quiz closed, participant sees percentages + closed banner | Already covered | `test_full_quiz_lifecycle` in test_quiz_flow.py |
+| `test_zero_votes_shows_zero_percent` | Close quiz with no votes, all options show 0% | Already covered | `test_zero_votes_shows_zero_percent` in test_high_value.py |
 | `test_correct_answer_feedback_shown_to_participant` | Vote correct, see checkmark after host marks correct | Already covered | `test_correct_answer_gives_score` in test_high_value.py |
 
 ### TestMultiSelect
 
 | Test | Scenario | Hermetic Status | Notes |
 |------|----------|-----------------|-------|
-| `test_correct_count_hint_shown_to_participant` | Multi-select poll shows "exactly N" hint | To migrate | Hint text check not in hermetic tests |
+| `test_correct_count_hint_shown_to_participant` | Multi-select quiz shows "exactly N" hint | To migrate | Hint text check not in hermetic tests |
 | `test_participant_cannot_select_more_than_correct_count` | 3rd option disabled after selecting 2 in multi-select | Already covered | `test_multi_select_cap_enforced` in test_high_value.py |
 
 ### TestRegressions
@@ -33,7 +33,7 @@ Generated: 2026-03-29
 | Test | Scenario | Hermetic Status | Notes |
 |------|----------|-----------------|-------|
 | `test_autojoin_with_saved_name_no_js_error` | Auto-join with localStorage name, no JS errors | To migrate | Regression test for auto-join path |
-| `test_participant_page_loads_with_zero_votes` | No JS errors when poll has zero votes (largestRemainder fix) | To migrate | Regression for TypeError in largestRemainder |
+| `test_participant_page_loads_with_zero_votes` | No JS errors when quiz has zero votes (largestRemainder fix) | To migrate | Regression for TypeError in largestRemainder |
 | `test_generate_button_uses_only_transcript_or_topic_labels` | Quiz generate button label changes with topic input | To migrate | UI label test for quiz controls |
 | `test_qa_input_and_button_heights_are_aligned_with_screenshots` | Q&A input and button heights match (visual regression) | Blocked | Visual/layout regression test; needs pixel-level comparison infra |
 | `test_version_tag_shows_elapsed_time_and_updates_under_day` | Version tag shows relative time and updates | Blocked | Depends on version.js which is generated at deploy time; not available in Docker |
@@ -67,11 +67,11 @@ Generated: 2026-03-29
 |------|----------|-----------------|-------|
 | `test_host_tab_survives_reload` | Switch to Q&A tab, reload page, Q&A still active | To migrate | Tab persistence across page reload |
 
-### TestPollDownload
+### TestQuizDownload
 
 | Test | Scenario | Hermetic Status | Notes |
 |------|----------|-----------------|-------|
-| `test_download_captures_two_polls_with_correct_answers` | Download text has 2 polls with correct answer marks | To migrate | Poll history download feature |
+| `test_download_captures_two_quizzes_with_correct_answers` | Download text has 2 quizzes with correct answer marks | To migrate | Quiz history download feature |
 
 ### TestProductionSmoke
 
@@ -81,7 +81,7 @@ Generated: 2026-03-29
 | `test_prod_host_page_requires_auth` | Production host page returns 401 without auth | Blocked | Targets live production URL; not applicable to hermetic |
 | `test_prod_host_page_accessible_with_credentials` | Production host page returns 200 with auth | Blocked | Targets live production URL; not applicable to hermetic |
 | `test_prod_api_status_public` | Production /api/status returns participant data | Blocked | Targets live production URL; not applicable to hermetic |
-| `test_prod_api_poll_requires_auth` | Production /api/poll requires auth | Blocked | Targets live production URL; not applicable to hermetic |
+| `test_prod_api_quiz_requires_auth` | Production /api/quiz requires auth | Blocked | Targets live production URL; not applicable to hermetic |
 
 ### TestNotifications
 
@@ -90,7 +90,7 @@ Generated: 2026-03-29
 | `test_notif_btn_hidden_on_load` | Notification button hidden before join | To migrate | Browser notification permission mocking |
 | `test_notif_btn_hidden_after_fresh_join` | Notification button hidden after fresh join (permission granted) | To migrate | Browser notification permission mocking |
 | `test_notif_btn_visible_for_returning_participant` | Returning participant sees notification button (permission default) | To migrate | Browser notification permission mocking |
-| `test_no_spurious_notification_on_join_mid_poll` | No notification fires when joining mid-poll | To migrate | Notification mock + document.hidden override |
+| `test_no_spurious_notification_on_join_mid_quiz` | No notification fires when joining mid-quiz | To migrate | Notification mock + document.hidden override |
 
 ---
 
@@ -113,7 +113,7 @@ Generated: 2026-03-29
 
 ## tests/e2e/test_remaining_gaps.py
 
-### TestMultiSelectPoll
+### TestMultiSelectQuiz
 
 | Test | Scenario | Hermetic Status | Notes |
 |------|----------|-----------------|-------|
@@ -122,12 +122,12 @@ Generated: 2026-03-29
 | `test_multi_select_scoring_partial_zero` | 1 correct + 1 wrong = 0 points | To migrate | Scoring edge case |
 | `test_multi_select_all_wrong_zero_score` | All wrong options = 0 points (not negative) | To migrate | Scoring edge case |
 
-### TestPollTimer
+### TestQuizTimer
 
 | Test | Scenario | Hermetic Status | Notes |
 |------|----------|-----------------|-------|
 | `test_timer_countdown_visible` | Start timer, participant sees countdown | To migrate | Timer API + participant UI |
-| `test_timer_cleared_on_close` | Timer disappears when poll closed | To migrate | Timer lifecycle |
+| `test_timer_cleared_on_close` | Timer disappears when quiz closed | To migrate | Timer lifecycle |
 
 ### TestLeaderboard
 
@@ -167,7 +167,7 @@ Generated: 2026-03-29
 | `test_participant_joins_mid_wordcloud_sees_canvas` | Late joiner sees wordcloud canvas | To migrate | Late-join wordcloud state |
 | `test_special_chars_in_wordcloud` | Unicode characters in word cloud handled | To migrate | Unicode edge case |
 | `test_multi_select_cap_enforced` | Multi-select 3rd option blocked | Already covered | `test_multi_select_cap_enforced` in test_high_value.py |
-| `test_no_js_errors_during_full_session_lifecycle` | Full lifecycle (Q&A, WC, poll, leaderboard) no JS errors | To migrate | Integration smoke test with JS error tracking |
+| `test_no_js_errors_during_full_session_lifecycle` | Full lifecycle (Q&A, WC, quiz, leaderboard) no JS errors | To migrate | Integration smoke test with JS error tracking |
 
 ---
 
@@ -249,6 +249,6 @@ These target the live production URL (`https://interact.victorrentea.ro`) and ar
 
 2. **Notification permission mocking**: Four notification tests need Playwright's `permissions` context option and `add_init_script` for Notification API mocking. Fully supported in headless Chromium.
 
-3. **Timer API**: Two poll timer tests need `/api/{session_id}/poll/timer` endpoint, which is already available.
+3. **Timer API**: Two quiz timer tests need `/api/{session_id}/quiz/timer` endpoint, which is already available.
 
-4. **Multi-select scoring**: Three scoring tests need poll creation with `correct_count`, voting, closing, and marking correct -- all already supported by the hermetic helpers.
+4. **Multi-select scoring**: Three scoring tests need quiz creation with `correct_count`, voting, closing, and marking correct -- all already supported by the hermetic helpers.

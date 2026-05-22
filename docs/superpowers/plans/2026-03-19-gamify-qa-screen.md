@@ -227,7 +227,7 @@ Also add `_stopQAToasts()` inside the `leave()` function (around line 110) to pr
 4. Verify: toast appears immediately (list is empty)
 5. Wait 15s — verify next toast appears
 6. Submit a question — toast cycle continues
-7. Host switches to Poll activity — verify toast disappears
+7. Host switches to Quiz activity — verify toast disappears
 8. Host switches back to Q&A — verify toasts resume
 
 - [ ] **Step 7: Commit**

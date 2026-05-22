@@ -11,29 +11,29 @@ class HostPage:
     def __init__(self, page: Page):
         self._page = page
 
-    # ── Poll ────────────────────────────────────────────────────────────────
+    # ── Quiz ────────────────────────────────────────────────────────────────
 
-    def create_poll(self, question: str, options: list[str], multi: bool = False,
+    def create_quiz(self, question: str, options: list[str], multi: bool = False,
                     correct_count: int | None = None) -> None:
-        """Create and open a poll via the daemon API directly (bypasses browser UI parsing)."""
+        """Create and open a quiz via the daemon API directly (bypasses browser UI parsing)."""
         import json as _json
-        # Ensure Poll tab is active and activity set on daemon (awaited via JS)
-        self._page.evaluate("async () => { await switchTab('poll'); }")
-        # Daemon CreatePollRequest expects options as a list of strings.
+        # Ensure Quiz tab is active and activity set on daemon (awaited via JS)
+        self._page.evaluate("async () => { await switchTab('quiz'); }")
+        # Daemon CreateQuizRequest expects options as a list of strings.
         payload: dict = {"question": question, "options": list(options), "multi": multi}
         if correct_count is not None:
             payload["correct_count"] = correct_count
-        # POST /poll/manual/submit auto-opens the poll on the daemon side.
+        # POST /quiz/manual/submit auto-opens the quiz on the daemon side.
         self._page.evaluate(f"""async () => {{
-            const resp = await fetch(API('/poll/manual/submit'), {{
+            const resp = await fetch(API('/quiz/manual/submit'), {{
                 method: 'POST',
                 headers: {{'Content-Type': 'application/json'}},
                 body: JSON.stringify({_json.dumps(payload)})
             }});
-            if (!resp.ok) throw new Error('Poll create failed: ' + resp.status);
+            if (!resp.ok) throw new Error('Quiz create failed: ' + resp.status);
         }}""")
-        # Wait for poll to be created & opened (poll-question appears in DOM)
-        self._page.wait_for_selector("#poll-display.voting-active", timeout=5000)
+        # Wait for quiz to be created & opened (quiz-question appears in DOM)
+        self._page.wait_for_selector("#quiz-display.voting-active", timeout=5000)
 
     def expect_generate_button_label(self, label: str) -> None:
         expect(self._page.locator("#gen-quiz-btn")).to_have_text(label, timeout=3000)
@@ -41,29 +41,29 @@ class HostPage:
     def set_quiz_topic(self, text: str) -> None:
         self._page.fill("#quiz-topic", text)
 
-    def close_poll(self) -> None:
-        # Close poll via daemon REST API. The host's poll_ended WS handler
-        # (host.js:344) calls fetchPollState() on its own when the message
+    def close_quiz(self) -> None:
+        # Close quiz via daemon REST API. The host's quiz_ended WS handler
+        # (host.js:344) calls fetchQuizState() on its own when the message
         # arrives, so we don't need to do it here. The 250 ms settle gives any
         # in-flight participant votes time to land on the daemon before that
         # WS-driven re-fetch runs — castVote() on the participant is
         # fire-and-forget, so the local "Vote registered" toast appears before
         # the server has acked.
         self._page.evaluate("""async () => {
-            const resp = await fetch(API('/poll/end'), { method: 'POST' });
-            if (!resp.ok) throw new Error('Poll close failed: ' + resp.status);
+            const resp = await fetch(API('/quiz/end'), { method: 'POST' });
+            if (!resp.ok) throw new Error('Quiz close failed: ' + resp.status);
             await new Promise(r => setTimeout(r, 250));
         }""")
-        # Poll closed: #poll-display no longer has .voting-active
+        # Quiz closed: #quiz-display no longer has .voting-active
         self._page.wait_for_function(
-            "() => !document.querySelector('#poll-display.voting-active')",
+            "() => !document.querySelector('#quiz-display.voting-active')",
             timeout=5000,
         )
 
     def start_timer(self, seconds: int) -> None:
-        """Start a countdown timer to end the poll via daemon API."""
+        """Start a countdown timer to end the quiz via daemon API."""
         self._page.evaluate(f"""async () => {{
-            const resp = await fetch(API('/poll/end/timer'), {{
+            const resp = await fetch(API('/quiz/end/timer'), {{
                 method: 'POST',
                 headers: {{ 'Content-Type': 'application/json' }},
                 body: JSON.stringify({{ seconds: {seconds} }})
@@ -81,16 +81,16 @@ class HostPage:
         """
         self._page.evaluate(f"""() => {{
             const s = document.getElementById('timer-slider');
-            if (!s) throw new Error('Timer slider not visible — poll must be open with no active timer');
+            if (!s) throw new Error('Timer slider not visible — quiz must be open with no active timer');
             s.min = '1';
             s.value = '{seconds}';
             s.dispatchEvent(new Event('input', {{bubbles: true}}));
             s.dispatchEvent(new Event('mouseup', {{bubbles: true}}));
         }}""")
 
-    def reopen_poll(self) -> None:
-        self._page.locator("button[onclick='setPollStatus(true)']").click(force=True)
-        self._page.wait_for_selector("#poll-display.voting-active", timeout=5000)
+    def reopen_quiz(self) -> None:
+        self._page.locator("button[onclick='setQuizStatus(true)']").click(force=True)
+        self._page.wait_for_selector("#quiz-display.voting-active", timeout=5000)
 
     def mark_correct(self, *option_texts: str) -> None:
         """Click result rows to mark options correct (by partial text match)."""
@@ -101,13 +101,13 @@ class HostPage:
         """Reveal correct answers and award scores via daemon API.
 
         Accepts letter IDs ("A", "B", ...) for backwards compatibility with
-        existing tests; the daemon's PUT /poll/correct now expects integer
+        existing tests; the daemon's PUT /quiz/correct now expects integer
         indices, so we convert here.
         """
         import json as _json
         indices = [ord(s) - 65 for s in correct_ids]
         self._page.evaluate(f"""async () => {{
-            const resp = await fetch(API('/poll/correct'), {{
+            const resp = await fetch(API('/quiz/correct'), {{
                 method: 'PUT',
                 headers: {{'Content-Type': 'application/json'}},
                 body: JSON.stringify({{correct_indices: {_json.dumps(indices)}}})
@@ -214,19 +214,19 @@ class HostPage:
             if (!resp.ok) throw new Error('Toggle answered failed: ' + resp.status);
         }}""")
 
-    # ── Poll History / Download ────────────────────────────────────────────
+    # ── Quiz History / Download ────────────────────────────────────────────
 
-    def get_poll_history(self) -> list[dict]:
-        """Return the poll history stored in host localStorage."""
+    def get_quiz_history(self) -> list[dict]:
+        """Return the quiz history stored in host localStorage."""
         return self._page.evaluate("""() => {
-            const key = `host_polls_${new Date().toISOString().slice(0, 10)}`;
+            const key = `host_quizzes_${new Date().toISOString().slice(0, 10)}`;
             try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
         }""")
 
     def get_download_text(self) -> str:
-        """Return the text that downloadPollHistory() would produce."""
+        """Return the text that downloadQuizHistory() would produce."""
         return self._page.evaluate("""() => {
-            const key = `host_polls_${new Date().toISOString().slice(0, 10)}`;
+            const key = `host_quizzes_${new Date().toISOString().slice(0, 10)}`;
             const history = JSON.parse(localStorage.getItem(key) || '[]');
             if (!history.length) return '';
             return history.map((e, n) => {
@@ -281,17 +281,17 @@ class HostPage:
         return result
 
     def get_vote_count_for(self, option_text: str) -> int:
-        """Read the live vote count shown on the host poll result row for an option."""
+        """Read the live vote count shown on the host quiz result row for an option."""
         row = self._page.locator(f".result-row:has-text('{option_text}')")
         if row.count() == 0:
             return 0
         return int(row.first.locator(".pct").inner_text().strip() or "0")
 
     def get_voted_count(self) -> int:
-        """Return how many participants have voted (live indicator while poll is open).
+        """Return how many participants have voted (live indicator while quiz is open).
 
         Reads the #vote-progress-label which is rendered as 'N of M voted'.
-        Returns 0 when the poll is closed (label not present).
+        Returns 0 when the quiz is closed (label not present).
         """
         import re as _re
         label = self._page.locator("#vote-progress-label")

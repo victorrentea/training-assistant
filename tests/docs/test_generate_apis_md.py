@@ -50,9 +50,9 @@ def _asyncapi_messages(path: Path) -> list[str]:
 def test_generator_cli_outputs_feature_sections_and_examples():
     output = _run_generator()
     assert "# API Reference (Generated from Contracts)" in output
-    assert "## Feature: Poll" in output
-    assert "`POST /api/participant/poll/vote`" in output
-    assert "`poll_opened`" in output
+    assert "## Feature: Quiz" in output
+    assert "`POST /api/participant/quiz/vote`" in output
+    assert "`quiz_opened`" in output
     assert "| Endpoint | Request | Response |" in output
 
 
@@ -108,9 +108,9 @@ def test_generator_drops_redundant_ws_summary_notes_but_keeps_extra_notes():
     assert "all known non-host participants in the active session" in participant_count_row.group(0)
     assert "`active_participants_count_updated`" in participant_count_row.group(0)
 
-    poll_opened_row = re.search(r"^\| .*`poll_opened`.*\|$", output, re.MULTILINE)
-    assert poll_opened_row, "Missing WS table row for poll_opened"
-    assert "Participants can vote only while poll is open." in poll_opened_row.group(0)
+    quiz_opened_row = re.search(r"^\| .*`quiz_opened`.*\|$", output, re.MULTILINE)
+    assert quiz_opened_row, "Missing WS table row for quiz_opened"
+    assert "Participants can vote only while quiz is open." in quiz_opened_row.group(0)
 
 
 def test_participant_identity_rows_have_expected_response_shapes():
@@ -134,9 +134,9 @@ def test_generator_pretty_prints_multi_field_shapes_one_per_line():
     assert "`name: string`<br>`type: 'workshop' \\| 'talk'`" in start_session_row.group(0)
     assert "{name: string, type?: string}" not in start_session_row.group(0)
 
-    poll_closed_row = re.search(r"^\| .*`poll_closed`.*\|$", output, re.MULTILINE)
-    assert poll_closed_row, "Missing WS table row for poll_closed"
-    assert "`vote_counts: list[int]  # Vote count per option, indexed by option position`" in poll_closed_row.group(0)
+    quiz_closed_row = re.search(r"^\| .*`quiz_closed`.*\|$", output, re.MULTILINE)
+    assert quiz_closed_row, "Missing WS table row for quiz_closed"
+    assert "`vote_counts: list[int]  # Vote count per option, indexed by option position`" in quiz_closed_row.group(0)
 
 
 def test_generator_expands_referenced_response_types():
@@ -151,10 +151,10 @@ def test_generator_expands_referenced_response_types():
 def test_generator_expands_nested_referenced_types():
     output = _run_generator()
 
-    create_poll_row = re.search(r"^\| .*`POST /api/\{session_id\}/host/poll`.*\|$", output, re.MULTILINE)
-    assert create_poll_row, "Missing table row for POST /api/{session_id}/host/poll"
-    assert "`poll: PollResponse{`" in create_poll_row.group(0)
-    assert "`options:list[string]`" in create_poll_row.group(0)
+    create_quiz_row = re.search(r"^\| .*`POST /api/\{session_id\}/host/quiz`.*\|$", output, re.MULTILINE)
+    assert create_quiz_row, "Missing table row for POST /api/{session_id}/host/quiz"
+    assert "`quiz: QuizResponse{`" in create_quiz_row.group(0)
+    assert "`options:list[string]`" in create_quiz_row.group(0)
 
 
 def test_rest_rows_have_no_any_in_request_or_response_cells():

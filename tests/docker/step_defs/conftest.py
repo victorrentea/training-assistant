@@ -278,7 +278,7 @@ def host_has_opened_qa_tab(browser, session_id):
     )
     page = ctx.new_page()
     page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-    expect(page.locator("#tab-poll")).to_be_visible(timeout=10000)
+    expect(page.locator("#tab-quiz")).to_be_visible(timeout=10000)
     host = HostPage(page)
     host.open_qa_tab()
     return host
@@ -332,7 +332,7 @@ def host_page(browser, session_id):
     )
     page = ctx.new_page()
     page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-    expect(page.locator("#tab-poll")).to_be_visible(timeout=10000)
+    expect(page.locator("#tab-quiz")).to_be_visible(timeout=10000)
     return HostPage(page)
 
 

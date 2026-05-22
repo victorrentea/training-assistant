@@ -15,7 +15,7 @@ Two related features:
 ## Feature 1: Slides Tab
 
 ### Tab definition
-- **Position:** First tab, leftmost, separated from activity tabs (Poll, Words, Q&A, Code, Debate) by a visual divider.
+- **Position:** First tab, leftmost, separated from activity tabs (Quiz, Words, Q&A, Code, Debate) by a visual divider.
 - **Label:** `Slides`
 - **Icon:** 👨🏻‍🏫
 - **HTML id:** `tab-slides`
@@ -25,7 +25,7 @@ Two related features:
 1. Calls `switchTab('none')` — sets backend `current_activity` to `NONE`.
 2. Backend broadcasts state update to all participants.
 3. Participants whose slides were open (or who were following the trainer) return to slide-browsing mode. This is handled by the existing participant-side logic that re-shows the slides panel when `current_activity` becomes `none`.
-4. No activity data is deleted — Q&A questions, poll results, word cloud words, etc. are all preserved.
+4. No activity data is deleted — Q&A questions, quiz results, word cloud words, etc. are all preserved.
 
 ### Tab styling
 - Follows the uniform `.tab-btn` class — transparent background, no border, same hover/active states.

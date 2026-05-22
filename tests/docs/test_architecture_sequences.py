@@ -14,7 +14,7 @@ PRE_PUSH_HOOK = ROOT / "hooks" / "pre-push"
 EXPECTED_SEQUENCE_STEMS = [
     "01-session-lifecycle-and-recovery",
     "02-participant-join-and-geolocation",
-    "03-poll-and-quiz",
+    "03-quiz",
     "04-qa-and-wordcloud",
     "05-code-review-and-debate",
     "06-slides",
@@ -24,7 +24,7 @@ EXPECTED_SEQUENCE_STEMS = [
 EXPECTED_SEQUENCE_TITLES = [
     "Session Lifecycle and Recovery",
     "Participant Join and Geolocation",
-    "Poll and Quiz",
+    "Quiz",
     "Q&A and Word Cloud",
     "Code Review and Debate",
     "Slides Cache and Follow Trainer",
@@ -34,7 +34,7 @@ EXPECTED_SEQUENCE_TITLES = [
 EXPECTED_SEQUENCE_SUMMARIES = [
     "This diagram covers the daemon-first session start, folder resume, disk restore, and Railway reconnect path for the active `session_id`.",
     "This diagram covers UUID-based participant registration, session-scoped state bootstrap, presence updates, and optional location sharing back to the host view.",
-    "This diagram covers Claude-backed quiz draft generation plus the live poll lifecycle from host draft/open through participant votes, close, and score reveal.",
+    "This diagram covers Claude-backed quiz draft generation plus the live quiz lifecycle from host draft/open through participant votes, close, and score reveal.",
     "This diagram covers participant word submissions, anonymous question and upvote flows, host moderation, and the score updates emitted alongside those actions.",
     "This diagram covers host-launched code review and debate activities, participant submissions, scoring, and the Claude cleanup step that now only applies to debate arguments.",
     "This diagram covers slide catalog loading, Railway PDF cache fill and refresh, and the live follow-trainer flow driven by PowerPoint events from the local addons bridge.",
@@ -356,7 +356,7 @@ def test_architecture_md_has_sequence_toc_and_svg_refs():
         "- [Sequence Diagrams](#sequence-diagrams)",
         "  - [Session Lifecycle and Recovery](#session-lifecycle-and-recovery)",
         "  - [Participant Join and Geolocation](#participant-join-and-geolocation)",
-        "  - [Poll and Quiz](#poll-and-quiz)",
+        "  - [Quiz](#quiz)",
         "  - [Q&A and Word Cloud](#qa-and-word-cloud)",
         "  - [Code Review and Debate](#code-review-and-debate)",
         "  - [Slides Cache and Follow Trainer](#slides-cache-and-follow-trainer)",

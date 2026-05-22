@@ -5,7 +5,7 @@
 
 ## Motivation
 
-Today, "Share my location" lives as a call-to-action inside the Activity pane. Moving it to the sidebar menu frees the Activity pane for its real content (poll, welcome, waiting state) and gives location sharing a persistent, discoverable home.
+Today, "Share my location" lives as a call-to-action inside the Activity pane. Moving it to the sidebar menu frees the Activity pane for its real content (quiz, welcome, waiting state) and gives location sharing a persistent, discoverable home.
 
 ## Behavior
 

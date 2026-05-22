@@ -59,7 +59,7 @@ The **daemon** owns session state. This matches the existing architecture where 
 
 **Request flow pattern** (matches existing architecture):
 1. Host clicks "Start New Session" → `POST /api/session/start {name}` → server stores in `state.session_request`
-2. Daemon polls `GET /api/session/request` → picks up pending request, clears flag
+2. Daemon quizzes `GET /api/session/request` → picks up pending request, clears flag
 3. Daemon pushes new session, creates folder, loads key points
 4. Daemon syncs stack to server via `POST /api/session/sync` → server updates AppState, broadcasts
 
@@ -200,7 +200,7 @@ Host                    Server (AppState)           Daemon                  LLM 
  │                           │  set force_requested    │                        │
  │                           │                        │                        │
  │                           │  GET /api/summary/force │                        │
- │                           │<───────────────────────│  (daemon polls)        │
+ │                           │<───────────────────────│  (daemon quizzes)        │
  │                           │  {requested: true}      │                        │
  │                           │───────────────────────>│                        │
  │                           │                        │                        │
@@ -233,7 +233,7 @@ Host                    Server (AppState)           Daemon                  LLM 
  │                           │   name: "Lunch Talk"}   │                        │
  │                           │                        │                        │
  │                           │  GET /api/session/request│                        │
- │                           │<───────────────────────│  (daemon polls)        │
+ │                           │<───────────────────────│  (daemon quizzes)        │
  │                           │  {action: "start", ...} │                        │
  │                           │───────────────────────>│                        │
  │                           │                        │                        │
@@ -256,7 +256,7 @@ Host                    Server (AppState)           Daemon                  LLM 
  │                           │  {action: "end"}        │                        │
  │                           │                        │                        │
  │                           │  GET /api/session/request│                        │
- │                           │<───────────────────────│  (daemon polls)        │
+ │                           │<───────────────────────│  (daemon quizzes)        │
  │                           │───────────────────────>│                        │
  │                           │                        │                        │
  │                           │                        │  set ended_at on current│
@@ -283,7 +283,7 @@ Host                    Server (AppState)           Daemon                  LLM 
 - `POST /api/session/start` — store pending start request (host-only)
 - `POST /api/session/end` — store pending end request (host-only)
 - `PATCH /api/session/rename` — store pending rename request (host-only)
-- `GET /api/session/request` — daemon polls for pending commands, clears flag (host-only)
+- `GET /api/session/request` — daemon quizzes for pending commands, clears flag (host-only)
 - `POST /api/session/sync` — daemon pushes current stack + key points (host-only)
 - `GET /api/session/folders` — list available session folders for UI suggestions (host-only)
 
@@ -295,7 +295,7 @@ Host                    Server (AppState)           Daemon                  LLM 
 - Per-session `key_points.json` read/write
 - Per-session `summary_watermark` tracking
 - Auto-detection of today's session folder on startup
-- Poll `GET /api/session/request` in main loop
+- Quiz `GET /api/session/request` in main loop
 
 ### Summarizer (`daemon/summarizer.py`)
 - New LLM response format: `{updated, new}` instead of flat array

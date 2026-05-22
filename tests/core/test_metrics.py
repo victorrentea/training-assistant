@@ -32,7 +32,7 @@ def test_metrics_endpoint_returns_prometheus_format():
     assert "http_request" in body
     # Custom metrics should be present
     assert "ws_connections_active" in body
-    assert "poll_votes_total" in body
+    assert "quiz_votes_total" in body
     assert "qa_questions_total" in body
 
 def _get_metric_value(name, labels=None):
@@ -40,7 +40,7 @@ def _get_metric_value(name, labels=None):
 
     For Counters, prometheus_client strips '_total' from metric.name but keeps it in
     sample.name.  We match on sample.name so callers can use the full metric name
-    (e.g. 'poll_votes_total') or the base name (e.g. 'ws_connections_active').
+    (e.g. 'quiz_votes_total') or the base name (e.g. 'ws_connections_active').
     Skips '_created' samples automatically.
     """
     for metric in REGISTRY.collect():

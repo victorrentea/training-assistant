@@ -9,7 +9,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Host State](#feature-host-state)
 - [Slides](#feature-slides)
 - [Activity](#feature-activity)
-- [Poll](#feature-poll)
 - [Word Cloud](#feature-word-cloud)
 - [Q&A](#feature-qa)
 - [Code Review](#feature-code-review)
@@ -22,6 +21,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
 - [Infrastructure](#feature-infrastructure)
 - [Intellij](#feature-intellij)
+- [Quiz](#feature-quiz)
 
 ## Feature: Session
 
@@ -91,7 +91,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Participant State, return full personalised state for a participant — used on page load and WS reconnect; returns participant-personalized full state snapshot.<br>`GET /api/participant/state` | - | `mode: string`<br>`my_score: int`<br>`my_name: string`<br>`my_avatar: string`<br>`current_activity: string`<br>`session_name?: string`<br>`wordcloud: WordcloudData{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`words:dict[str, int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`word_order:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`topic:string`<br>`}`<br>`qa_questions: list[QAQuestionRaw{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`text:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`author_uuid:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`upvoter_uuids:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`answered:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`timestamp:number`<br>`}]`<br>`poll?: PollData{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_count?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`end_timer_seconds?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`end_timer_started_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices?:list[int]`<br>`}`<br>`poll_active: bool`<br>`my_voted_indices?: list[int]`<br>`poll_correct_indices?: list[int]`<br>`codereview: CodeReviewParticipantState{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`snippet?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`language?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`phase?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`confirmed_lines?:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`my_selections?:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`line_percentages?:dict[str, int]`<br>`}`<br>`debate: DebateData{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`statement?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`phase?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`my_side?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`my_is_champion:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`side_counts:dict[str, int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`arguments:list[DebateArgumentParticipant{`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`author_uuid:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`side:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`text:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`upvoters:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`ai_generated:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`merged_into?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`is_own:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`has_upvoted:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`}]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`champions:dict[str, string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`auto_assigned:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`first_side?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`round_index?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`round_timer_seconds?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`round_timer_started_at?:string`<br>`}`<br>`slides_current?: CurrentSlide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`page:int`<br>`}`<br>`talk_presentation_slug?: string`<br>`notes_updated_at?: string`<br>`summary_updated_at?: string`<br>`slides_history_count: int`<br>`git_files_count: int`<br>`gdrive_url?: string`<br>`has_agenda?: bool` |
+| Get Participant State, return full personalised state for a participant — used on page load and WS reconnect; returns participant-personalized full state snapshot.<br>`GET /api/participant/state` | - | `mode: string`<br>`my_score: int`<br>`my_name: string`<br>`my_avatar: string`<br>`current_activity: string`<br>`session_name?: string`<br>`wordcloud: WordcloudData{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`words:dict[str, int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`word_order:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`topic:string`<br>`}`<br>`qa_questions: list[QAQuestionRaw{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`text:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`author_uuid:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`upvoter_uuids:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`answered:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`timestamp:number`<br>`}]`<br>`quiz?: QuizData{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_count?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`end_timer_seconds?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`end_timer_started_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices?:list[int]`<br>`}`<br>`quiz_active: bool`<br>`my_voted_indices?: list[int]`<br>`quiz_correct_indices?: list[int]`<br>`codereview: CodeReviewParticipantState{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`snippet?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`language?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`phase?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`confirmed_lines?:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`my_selections?:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`line_percentages?:dict[str, int]`<br>`}`<br>`debate: DebateData{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`statement?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`phase?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`my_side?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`my_is_champion:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`side_counts:dict[str, int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`arguments:list[DebateArgumentParticipant{`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`author_uuid:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`side:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`text:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`upvoters:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`ai_generated:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`merged_into?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`is_own:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`has_upvoted:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`}]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`champions:dict[str, string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`auto_assigned:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`first_side?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`round_index?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`round_timer_seconds?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`round_timer_started_at?:string`<br>`}`<br>`slides_current?: CurrentSlide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`page:int`<br>`}`<br>`talk_presentation_slug?: string`<br>`notes_updated_at?: string`<br>`summary_updated_at?: string`<br>`slides_history_count: int`<br>`git_files_count: int`<br>`gdrive_url?: string`<br>`has_agenda?: bool` |
 
 ## Feature: Host State
 
@@ -154,48 +154,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant WS
 | Message | Payload |
 | --- | --- |
-| `activity_updated` | `current_activity: 'none' \| 'poll' \| 'wordcloud' \| 'qa' \| 'codereview' \| 'debate'` |
+| `activity_updated` | `current_activity: 'none' \| 'quiz' \| 'wordcloud' \| 'qa' \| 'codereview' \| 'debate'` |
 
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Host sets the current activity.<br>`POST /api/{session_id}/host/activity` | `activity: string` | `ok?: bool`<br>`current_activity: string` |
 | Host sets the current activity.<br>`PUT /api/{session_id}/host/activity` | `activity: string` | `ok?: bool`<br>`current_activity: string` |
-
-## Feature: Poll
-
-### Participant REST
-| Endpoint | Request | Response |
-| --- | --- | --- |
-| Participant casts a vote. Votes are mutable while the poll is open: re-submitting overwrites the prior selection and updates voted_at.<br>`POST /api/participant/poll/vote` | `options: list[int]` | - |
-
-### Participant WS
-| Message | Payload |
-| --- | --- |
-| Poll opened for voting<br>Participants can vote only while poll is open.<br>`poll_opened` | `poll: Poll{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]  # Poll options as plain text strings`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>`}` |
-| Voting closed by host<br>`poll_ended` | - |
-| Host revealed correct answers<br>Participants use correct_indices (0-based) to highlight correct options in the UI.<br>`poll_correct_revealed` | `correct_indices: list[int]  # 0-based indices of correct options` |
-| Poll removed by host<br>`poll_cleared` | - |
-| Host started a countdown timer for the poll<br>`poll_end_countdown_started` | `seconds: int`<br>`started_at: string` |
-
-### Host REST
-| Endpoint | Request | Response |
-| --- | --- | --- |
-| Host deletes the current poll.<br>`DELETE /api/{session_id}/host/poll` | - | - |
-| Get Poll State, return full poll state for host poll tab.<br>`GET /api/{session_id}/host/poll` | - | `id?: string`<br>`question?: string`<br>`options?: list[string]`<br>`multi?: bool`<br>`correct_count?: int`<br>`end_timer_seconds?: int`<br>`end_timer_started_at?: string`<br>`correct_indices?: list[int]`<br>`poll_running: bool`<br>`votes: dict[str, HostPollVote{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`option_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`voted_at:string`<br>`}]`<br>`queue: PollQueueStatus{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`pending:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`items:list[QueuedQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`}]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`current?:QueuedQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`}`<br>`}` |
-| Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/poll/correct` | `correct_indices: list[int]` | - |
-| Host ends the poll.<br>`POST /api/{session_id}/host/poll/end` | - | - |
-| Host starts a countdown timer to end the poll.<br>`POST /api/{session_id}/host/poll/end/timer` | `seconds?: int` | - |
-| Create Poll, host manually creates and immediately opens a new poll.<br>`POST /api/{session_id}/host/poll/manual/submit` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`correct_count?: int` | - |
-| Clear Queue<br>`DELETE /api/{session_id}/host/poll/queue` | - | - |
-| Submit Questions, replace the entire poll queue with the submitted questions.<br>`POST /api/{session_id}/host/poll/queue` | `questions: list[PollQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | - |
-| Remove From Queue<br>`DELETE /api/{session_id}/host/poll/queue/{index}` | - | - |
-
-### Host WS
-| Message | Payload |
-| --- | --- |
-| Poll queue changed — host should GET /poll/queue to refresh<br>`poll_queue_updated` | - |
-| Real-time vote tally while poll is open<br>Host-only event; participants do not receive live vote tallies.<br>Only total voted count is sent to avoid influencing participants.<br>`vote_update` | `voted_count: int  # total number of participants who have voted so far` |
 
 ## Feature: Word Cloud
 
@@ -448,3 +413,38 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Currently open file in IntelliJ changed<br>`git_file_opened` | `url: string  # Git remote URL of the project`<br>`branch: string  # Current git branch`<br>`file: string  # Filename of the open file`<br>`file_url?: string  # Full GitHub/GitLab URL to the file (omitted when filename is ambiguous)` |
+
+## Feature: Quiz
+
+### Participant REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Participant casts a vote. Votes are mutable while the quiz is open: re-submitting overwrites the prior selection and updates voted_at.<br>`POST /api/participant/quiz/vote` | `options: list[int]` | - |
+
+### Participant WS
+| Message | Payload |
+| --- | --- |
+| Quiz opened for voting<br>Participants can vote only while quiz is open.<br>`quiz_opened` | `quiz: Quiz{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`id:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]  # Quiz options as plain text strings`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>`}` |
+| Voting closed by host<br>`quiz_ended` | - |
+| Host revealed correct answers<br>Participants use correct_indices (0-based) to highlight correct options in the UI.<br>`quiz_correct_revealed` | `correct_indices: list[int]  # 0-based indices of correct options` |
+| Quiz removed by host<br>`quiz_cleared` | - |
+| Host started a countdown timer for the quiz<br>`quiz_end_countdown_started` | `seconds: int`<br>`started_at: string` |
+
+### Host REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Host deletes the current quiz.<br>`DELETE /api/{session_id}/host/quiz` | - | - |
+| Get Quiz State, return full quiz state for host quiz tab.<br>`GET /api/{session_id}/host/quiz` | - | `id?: string`<br>`question?: string`<br>`options?: list[string]`<br>`multi?: bool`<br>`correct_count?: int`<br>`end_timer_seconds?: int`<br>`end_timer_started_at?: string`<br>`correct_indices?: list[int]`<br>`quiz_running: bool`<br>`votes: dict[str, HostQuizVote{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`option_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`voted_at:string`<br>`}]`<br>`queue: QuizQueueStatus{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`pending:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`items:list[QueuedQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`}]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`current?:QueuedQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`}`<br>`}` |
+| Host reveals correct answers and awards scores.<br>`PUT /api/{session_id}/host/quiz/correct` | `correct_indices: list[int]` | - |
+| Host ends the quiz.<br>`POST /api/{session_id}/host/quiz/end` | - | - |
+| Host starts a countdown timer to end the quiz.<br>`POST /api/{session_id}/host/quiz/end/timer` | `seconds?: int` | - |
+| Create Quiz, host manually creates and immediately opens a new quiz.<br>`POST /api/{session_id}/host/quiz/manual/submit` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`correct_count?: int` | - |
+| Clear Queue<br>`DELETE /api/{session_id}/host/quiz/queue` | - | - |
+| Submit Questions, replace the entire quiz queue with the submitted questions.<br>`POST /api/{session_id}/host/quiz/queue` | `questions: list[QuizQueueQuestion{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`correct_indices:list[int]`<br>`}]` | - |
+| Remove From Queue<br>`DELETE /api/{session_id}/host/quiz/queue/{index}` | - | - |
+
+### Host WS
+| Message | Payload |
+| --- | --- |
+| Quiz queue changed — host should GET /quiz/queue to refresh<br>`quiz_queue_updated` | - |
+| Real-time vote tally while quiz is open<br>Host-only event; participants do not receive live vote tallies.<br>Only total voted count is sent to avoid influencing participants.<br>`vote_update` | `voted_count: int  # total number of participants who have voted so far` |

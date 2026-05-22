@@ -4,7 +4,7 @@
 
 **Goal:** When a push lands on master, GitHub Actions notifies the live server, which broadcasts a blinking "⚠️ Deploy incoming" warning to all connected participant browsers so participants know a restart is imminent.
 
-**Architecture:** The existing `/api/pending-deploy` endpoint in `poll.py` already notifies the host (via state broadcast + `renderPendingDeploy()` in `host.js`). We extend it to also: (1) compare incoming SHA against the server's current `deploy-info.json` to skip duplicate triggers, and (2) broadcast a `deploy_pending` WS message so participants also see a warning. A new GitHub Actions step calls this endpoint on every push to master. No new router file needed.
+**Architecture:** The existing `/api/pending-deploy` endpoint in `quiz.py` already notifies the host (via state broadcast + `renderPendingDeploy()` in `host.js`). We extend it to also: (1) compare incoming SHA against the server's current `deploy-info.json` to skip duplicate triggers, and (2) broadcast a `deploy_pending` WS message so participants also see a warning. A new GitHub Actions step calls this endpoint on every push to master. No new router file needed.
 
 **Tech Stack:** Python/FastAPI, vanilla JS (no build), GitHub Actions (curl step). Endpoint stays unauthenticated (matches existing `start.sh` usage); SHA comparison guards against abuse.
 
@@ -14,7 +14,7 @@
 
 | File | Change |
 |---|---|
-| `routers/poll.py` | **Modify** — add SHA comparison + participant broadcast to `/api/pending-deploy` |
+| `routers/quiz.py` | **Modify** — add SHA comparison + participant broadcast to `/api/pending-deploy` |
 | `.github/workflows/deploy-info.yml` | **Modify** — add `curl` step to notify server on push |
 | `static/participant.js` | **Modify** — handle `deploy_pending` WS message → blinking warning |
 
@@ -26,7 +26,7 @@
 
 - `state.py:96` — `self.pending_deploy: dict | None = None`
 - `messaging.py:300` — serializes `pending_deploy` in host state broadcast
-- `routers/poll.py:219` — `POST /api/pending-deploy` (no auth) sets `state.pending_deploy` + calls `broadcast_state()`
+- `routers/quiz.py:219` — `POST /api/pending-deploy` (no auth) sets `state.pending_deploy` + calls `broadcast_state()`
 - `host.js:198` — calls `renderPendingDeploy(msg.pending_deploy)` on every state message
 - `host.js:635` — `renderPendingDeploy()` shows/hides `#pending-deploy-badge` with red pulse animation
 - `start.sh:110` — local deploy watcher calls `/api/pending-deploy` without auth → must keep working
@@ -36,7 +36,7 @@
 ## Task 1: Extend `/api/pending-deploy` with SHA comparison + participant broadcast
 
 **Files:**
-- Modify: `routers/poll.py`
+- Modify: `routers/quiz.py`
 - Test: `tests/test_main.py`
 
 ### What it does
@@ -45,7 +45,7 @@
 - If different (or sha missing) → existing behavior (`state.pending_deploy = payload; broadcast_state()`) PLUS new: `broadcast({"type": "deploy_pending"})`
 - `start.sh` calls this with `{"sha": "abc12345", "message": "feat: ..."}` — still works (sha is short 8-char prefix which will never match the full sha in deploy-info.json → always broadcasts; this is intentional, start.sh is on the trainer's Mac and its notifications are legitimate)
 
-### Current code at `routers/poll.py:219-224`
+### Current code at `routers/quiz.py:219-224`
 ```python
 @router.post("/api/pending-deploy")
 async def set_pending_deploy(payload: dict):
@@ -86,23 +86,23 @@ def _read_deploy_sha() -> str:
         return ""
 ```
 
-Add import at top of `poll.py` (with existing imports):
+Add import at top of `quiz.py` (with existing imports):
 ```python
 from messaging import broadcast
 ```
 
-Add logger near top of `poll.py`:
+Add logger near top of `quiz.py`:
 ```python
 import logging
 logger = logging.getLogger(__name__)
 ```
 
-(Check if `broadcast` and `logger` are already imported in `poll.py` before adding — avoid duplicates.)
+(Check if `broadcast` and `logger` are already imported in `quiz.py` before adding — avoid duplicates.)
 
-- [ ] **Step 1: Read current `routers/poll.py` imports and top-of-file section**
+- [ ] **Step 1: Read current `routers/quiz.py` imports and top-of-file section**
 
 ```bash
-head -30 routers/poll.py
+head -30 routers/quiz.py
 ```
 
 Note what is already imported to avoid duplicates in Step 3.
@@ -124,7 +124,7 @@ def test_pending_deploy_broadcasts_to_participants(monkeypatch):
         broadcast_calls = []
         async def fake_broadcast(msg, exclude=None):
             broadcast_calls.append(msg)
-        monkeypatch.setattr("routers.poll.broadcast", fake_broadcast)
+        monkeypatch.setattr("routers.quiz.broadcast", fake_broadcast)
 
         client = TestClient(app)
         response = client.post("/api/pending-deploy",
@@ -148,7 +148,7 @@ def test_pending_deploy_same_sha_no_broadcast(monkeypatch):
         broadcast_calls = []
         async def fake_broadcast(msg, exclude=None):
             broadcast_calls.append(msg)
-        monkeypatch.setattr("routers.poll.broadcast", fake_broadcast)
+        monkeypatch.setattr("routers.quiz.broadcast", fake_broadcast)
 
         client = TestClient(app)
         response = client.post("/api/pending-deploy",
@@ -168,7 +168,7 @@ pytest tests/test_main.py -k "pending_deploy" -v
 ```
 Expected: FAIL — `AssertionError` (broadcast not called yet)
 
-- [ ] **Step 4: Implement changes in `routers/poll.py`**
+- [ ] **Step 4: Implement changes in `routers/quiz.py`**
 
 Add `_DEPLOY_INFO`, `_read_deploy_sha()`, and update `set_pending_deploy()` as shown above.
 Add `import logging; logger = logging.getLogger(__name__)` and `from messaging import broadcast` if not already present.
@@ -189,7 +189,7 @@ Expected: all green.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add routers/poll.py tests/test_main.py
+git add routers/quiz.py tests/test_main.py
 git commit -m "feat(deploy): broadcast deploy_pending to participants + SHA dedup guard"
 ```
 

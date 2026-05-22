@@ -47,7 +47,7 @@ def test_participant_name_shown_in_host_ui():
         )
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # Participant navigates to session and auto-joins (daemon assigns LOTR name)
         pax_ctx = browser.new_context()
@@ -86,7 +86,7 @@ def test_participant_count_correct_in_host_ui():
         )
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # Two participants join
         pax1_ctx = browser.new_context()

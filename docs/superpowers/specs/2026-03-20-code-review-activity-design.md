@@ -146,7 +146,7 @@ Use **highlight.js** (CDN, single JS + CSS file). No build step needed.
 
 ### Code Review Tab
 
-A new tab in the host panel, alongside Poll, Word Cloud, Q&A.
+A new tab in the host panel, alongside Quiz, Word Cloud, Q&A.
 
 **Create state**: text area for pasting code, language dropdown (default: "Auto-detect"), "Start Code Review" button.
 

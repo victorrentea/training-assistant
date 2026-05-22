@@ -116,7 +116,7 @@ async def update_summary(body: SummaryUpdate):
 
 In `main.py`, add import:
 ```python
-from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, summary
+from routers import ws, quiz, scores, quiz, pages, wordcloud, activity, qa, summary
 ```
 
 Add after the `qa` router line:
@@ -647,7 +647,7 @@ Rel(quiz_daemon, caddy, "Post summary points", "HTTPS (Basic Auth)")
 
 Update the `quiz_daemon` container description to mention summary generation:
 ```
-Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI (host's machine)", "Long-polls backend for quiz requests.\nPosts AI-generated preview to backend.\nPeriodically synthesizes session key points.")
+Container(quiz_daemon, "Quiz Daemon", "Python 3.12 CLI (host's machine)", "Long-quizzes backend for quiz requests.\nPosts AI-generated preview to backend.\nPeriodically synthesizes session key points.")
 ```
 
 - [ ] **Step 4: Create sequence diagram for summary flow**

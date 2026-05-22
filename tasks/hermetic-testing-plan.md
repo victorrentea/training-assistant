@@ -78,8 +78,8 @@ The slides catalog points to this mock server instead of real Google Drive.
 ## Phase D — Full interaction flows
 
 End-to-end tests with all components:
-- [ ] D1. Poll: host creates poll → 2 participants vote → results update live
-- [ ] D2. Quiz: host requests quiz → daemon generates (mock Claude) → host opens as poll → participants vote
+- [ ] D1. Quiz: host creates quiz → 2 participants vote → results update live
+- [ ] D2. Quiz: host requests quiz → daemon generates (mock Claude) → host opens as quiz → participants vote
 - [ ] D3. Word cloud: host sets topic → participants submit words → cloud renders
 - [ ] D4. Code review: host pastes code → participants select lines → host confirms
 - [ ] D5. Debate: full lifecycle including AI cleanup (mock Claude)

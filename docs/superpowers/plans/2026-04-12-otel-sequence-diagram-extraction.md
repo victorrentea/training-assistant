@@ -190,7 +190,7 @@ def test_inject_adds_traceparent_to_dict():
     provider = TracerProvider()
     tracer = provider.get_tracer("test")
 
-    msg = {"type": "poll_opened", "poll": {}}
+    msg = {"type": "quiz_opened", "quiz": {}}
     with tracer.start_as_current_span("test-span"):
         inject_trace_context(msg)
 
@@ -718,18 +718,18 @@ def test_basic_cross_service_arrows():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/poll/vote", "Participant", span_id="s1",
-                    start_time=1000, attributes={"trace.family": "poll"}),
-        _make_span("POST /api/poll/vote", "Daemon", span_id="s2", parent_span_id="s1",
-                    start_time=1001, attributes={"trace.family": "poll"}),
+        _make_span("POST /api/quiz/vote", "Participant", span_id="s1",
+                    start_time=1000, attributes={"trace.family": "quiz"}),
+        _make_span("POST /api/quiz/vote", "Daemon", span_id="s2", parent_span_id="s1",
+                    start_time=1001, attributes={"trace.family": "quiz"}),
     ])
 
-    generate_puml(path, family="poll", output=out)
+    generate_puml(path, family="quiz", output=out)
     content = Path(out).read_text()
 
     assert "participant Participant" in content or "Participant" in content
     assert "Daemon" in content
-    assert "POST /api/poll/vote" in content
+    assert "POST /api/quiz/vote" in content
     assert "@startuml" in content
     assert "@enduml" in content
 
@@ -743,11 +743,11 @@ def test_skip_internal_spans():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/poll", "Host", span_id="s1",
+        _make_span("POST /api/quiz", "Host", span_id="s1",
                     start_time=1000, attributes={"trace.family": "test"}),
-        _make_span("POST /api/poll", "Daemon", span_id="s2", parent_span_id="s1",
+        _make_span("POST /api/quiz", "Daemon", span_id="s2", parent_span_id="s1",
                     start_time=1001, attributes={"trace.family": "test"}),
-        _make_span("create_poll", "Daemon", span_id="s3", parent_span_id="s2",
+        _make_span("create_quiz", "Daemon", span_id="s3", parent_span_id="s2",
                     start_time=1002, attributes={"trace.family": "test"}),
     ])
 
@@ -755,9 +755,9 @@ def test_skip_internal_spans():
     content = Path(out).read_text()
 
     # Internal Daemon→Daemon span should be skipped
-    assert "create_poll" not in content
+    assert "create_quiz" not in content
     # Cross-service Host→Daemon should be present
-    assert "POST /api/poll" in content
+    assert "POST /api/quiz" in content
 
 
 def test_collapse_proxy_chain():
@@ -769,12 +769,12 @@ def test_collapse_proxy_chain():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/participant/poll/vote", "Participant", span_id="s1",
+        _make_span("POST /api/participant/quiz/vote", "Participant", span_id="s1",
                     start_time=1000, attributes={"trace.family": "proxy"}),
         _make_span("proxy_request", "Railway", span_id="s2", parent_span_id="s1",
-                    start_time=1001, attributes={"proxy.path": "/api/participant/poll/vote",
+                    start_time=1001, attributes={"proxy.path": "/api/participant/quiz/vote",
                                                   "trace.family": "proxy"}),
-        _make_span("POST /api/participant/poll/vote", "Daemon", span_id="s3", parent_span_id="s2",
+        _make_span("POST /api/participant/quiz/vote", "Daemon", span_id="s3", parent_span_id="s2",
                     start_time=1002, attributes={"trace.family": "proxy"}),
     ])
 
@@ -797,11 +797,11 @@ def test_collapse_broadcast_relay():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("broadcast:poll_opened", "Daemon", span_id="s1",
+        _make_span("broadcast:quiz_opened", "Daemon", span_id="s1",
                     start_time=1000, attributes={"trace.family": "bcast"}),
         _make_span("broadcast_fanout", "Railway", span_id="s2", parent_span_id="s1",
                     start_time=1001, attributes={"trace.family": "bcast"}),
-        _make_span("ws_receive:poll_opened", "Participant", span_id="s3", parent_span_id="s2",
+        _make_span("ws_receive:quiz_opened", "Participant", span_id="s3", parent_span_id="s2",
                     start_time=1002, attributes={"trace.family": "bcast"}),
     ])
 
@@ -1071,7 +1071,7 @@ git commit -m "feat(telemetry): enable OTel auto-instrumentation in hermetic tes
 **Files:**
 - Create: `tests/docker/test_sequence_extraction.py`
 
-- [ ] **Step 1: Write the hermetic test for poll sequence extraction**
+- [ ] **Step 1: Write the hermetic test for quiz sequence extraction**
 
 ```python
 # tests/docker/test_sequence_extraction.py
@@ -1104,12 +1104,12 @@ TRACES_FILE = os.environ.get("OTEL_TRACES_FILE", "/tmp/traces.jsonl")
 
 
 @pytest.mark.nightly
-def test_poll_sequence_diagram_extraction():
-    """Exercise poll flow, extract sequence diagram from traces, compare with hand-written."""
+def test_quiz_sequence_diagram_extraction():
+    """Exercise quiz flow, extract sequence diagram from traces, compare with hand-written."""
     # Clear traces
     Path(TRACES_FILE).write_text("")
 
-    session_id = fresh_session("SeqPoll")
+    session_id = fresh_session("SeqQuiz")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -1120,7 +1120,7 @@ def test_poll_sequence_diagram_extraction():
         )
         host_raw = host_ctx.new_page()
         host_raw.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_raw.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_raw.locator("#tab-quiz")).to_be_visible(timeout=10000)
         host = HostPage(host_raw)
 
         # Participant
@@ -1130,13 +1130,13 @@ def test_poll_sequence_diagram_extraction():
         pax = ParticipantPage(pax_raw)
         pax.join("Alice")
 
-        # Exercise poll flow
-        host.create_poll("What is 1+1?", ["1", "2", "3"])
+        # Exercise quiz flow
+        host.create_quiz("What is 1+1?", ["1", "2", "3"])
         expect(pax._page.locator("#content h2")).to_have_text("What is 1+1?", timeout=5000)
 
         pax.vote_for("2")
 
-        host.close_poll()
+        host.close_quiz()
         expect(pax._page.locator(".closed-banner")).to_be_visible(timeout=5000)
 
         host.reveal_correct(["B"])
@@ -1152,8 +1152,8 @@ def test_poll_sequence_diagram_extraction():
     sys.path.insert(0, "/app")
     from scripts.traces_to_puml import generate_puml
 
-    output_path = "/tmp/generated-03-poll-and-quiz.puml"
-    generate_puml(TRACES_FILE, family="poll", output=output_path)
+    output_path = "/tmp/generated-03-quiz.puml"
+    generate_puml(TRACES_FILE, family="quiz", output=output_path)
 
     generated = Path(output_path).read_text()
     print("=== Generated PlantUML ===")
@@ -1172,7 +1172,7 @@ def test_poll_sequence_diagram_extraction():
 
 ```bash
 git add tests/docker/test_sequence_extraction.py
-git commit -m "test(telemetry): add hermetic test for poll sequence diagram extraction"
+git commit -m "test(telemetry): add hermetic test for quiz sequence diagram extraction"
 ```
 
 ---
@@ -1219,18 +1219,18 @@ This task is exploratory — the implementing agent performs it after Task 9 run
 
 - [ ] **Step 1: Read the generated diagram**
 
-Read the generated `.puml` from `docs/sequences/generated/03-poll-and-quiz.puml` (output of the hermetic test in Task 9).
+Read the generated `.puml` from `docs/sequences/generated/03-quiz.puml` (output of the hermetic test in Task 9).
 
 - [ ] **Step 2: Read the hand-written diagram**
 
-Read the existing `docs/sequences/03-poll-and-quiz.puml`.
+Read the existing `docs/sequences/03-quiz.puml`.
 
 - [ ] **Step 3: Identify 3-5 differences**
 
 Compare the two diagrams structurally. Look for:
 - Arrows present in the hand-written diagram but missing from the generated one (suggests missing spans or insufficient instrumentation)
 - Actors in the hand-written diagram that don't appear in the generated one
-- Arrow labels that are too generic in the generated diagram (e.g., `POST /api/participant/poll/vote` vs the hand-written `proxy vote request`)
+- Arrow labels that are too generic in the generated diagram (e.g., `POST /api/participant/quiz/vote` vs the hand-written `proxy vote request`)
 
 Document each difference.
 

@@ -52,7 +52,7 @@ def test_participant_rename_visible_to_host():
         )
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # Participant joins with auto-name
         pax_ctx = browser.new_context()
@@ -86,7 +86,7 @@ def test_avatar_refresh_visible_to_participant_and_host():
         )
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         pax_ctx = browser.new_context()
         pax_page = pax_ctx.new_page()
@@ -152,7 +152,7 @@ def test_emoji_reaction_visible_to_host():
         )
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # Participant joins
         pax_ctx = browser.new_context()

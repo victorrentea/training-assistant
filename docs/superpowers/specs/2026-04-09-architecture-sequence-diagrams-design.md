@@ -36,7 +36,7 @@ Create a new source directory:
 docs/sequences/
   01-session-lifecycle-and-recovery.puml
   02-participant-join-and-geolocation.puml
-  03-poll-and-quiz.puml
+  03-quiz.puml
   04-qa-and-wordcloud.puml
   05-code-review-and-debate.puml
   06-slides-cache-and-follow-trainer.puml
@@ -52,7 +52,7 @@ The eight diagrams map to the old numbered flows like this:
 |---|---|
 | `01-session-lifecycle-and-recovery.puml` | 1, 18, 19 |
 | `02-participant-join-and-geolocation.puml` | 2 |
-| `03-poll-and-quiz.puml` | 3 |
+| `03-quiz.puml` | 3 |
 | `04-qa-and-wordcloud.puml` | 4, 5 |
 | `05-code-review-and-debate.puml` | 6, 7 |
 | `06-slides-cache-and-follow-trainer.puml` | 8, 9, 10 |
@@ -72,7 +72,7 @@ Expected sequence-diagram headings:
 - `## Sequence Diagrams`
 - `### Session Lifecycle and Recovery`
 - `### Participant Join and Geolocation`
-- `### Poll and Quiz`
+- `### Quiz and Quiz`
 - `### Q&A and Word Cloud`
 - `### Code Review and Debate`
 - `### Slides Cache and Follow Trainer`
@@ -112,7 +112,7 @@ Required modes:
 
 ### `--watch`
 
-- Poll `docs/sequences/*.puml` for content or mtime changes every second.
+- Quiz `docs/sequences/*.puml` for content or mtime changes every second.
 - Re-render only changed files.
 - Print one concise line per regenerated SVG.
 

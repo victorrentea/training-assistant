@@ -378,7 +378,7 @@
 - [x] Track follow-up as done in `backlog.md`
 - [x] Run targeted tests
 
-## Backlog item: poll generate button has inconsistent labels
+## Backlog item: quiz generate button has inconsistent labels
 
 - [x] Ensure only two labels are ever used for `#gen-quiz-btn`
 - [x] Align initial HTML label with JS label logic
@@ -556,7 +556,7 @@
 - [x] Run targeted tests and capture non-visual proof logs
 - [x] Mark direct request done in `backlog.md`
 
-## Direct request: regenerate only on source PPTX modified date (5s poll + .lastmodified markers)
+## Direct request: regenerate only on source PPTX modified date (5s quiz + .lastmodified markers)
 
 - [x] Change PPTX daemon polling default to 5 seconds
 - [x] Remove trigger on missing target PDF (no regeneration unless source modified time increased)
@@ -633,7 +633,7 @@
 - Verified with `pytest -q tests/test_main.py -k "slides or quiz_request_reports_has_slides_flag"` (3 passed).
 - Verified with `pytest -q tests/test_quiz_core.py -k "post_status"` (4 passed).
 - Verified with `pytest -q tests/test_daemon_state.py -k "slides_manifest"` (2 passed).
-- Verified with `pytest -q tests/test_e2e_quiz_summary.py -k "update_with_session or poll_after_request"` (2 passed).
+- Verified with `pytest -q tests/test_e2e_quiz_summary.py -k "update_with_session or quiz_after_request"` (2 passed).
 - Frontend syntax check: `node --check static/participant.js`.
 - Proof screenshot: `docs/superpowers/specs/gh67-slides-viewer.png`.
 - Follow-up implemented: `/api/slides` now auto-includes PDFs from local `training-assistant/materials/slides`, and serves them via `/api/slides/file/{slug}` for participant access.

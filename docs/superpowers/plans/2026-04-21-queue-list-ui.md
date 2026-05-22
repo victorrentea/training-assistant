@@ -4,7 +4,7 @@
 
 **Goal:** Replace the Pop/Skip queue buttons with a persistent scrollable list of queued questions below the backstage textarea; host clicks any item to load it, then Send fires it and removes it from the queue.
 
-**Architecture:** Simplify `PollQueue` to a plain list (no advance pointer), add `remove(index)` and expose all items via `GET /host/poll`; add `DELETE /queue/{index}` endpoint; update host HTML/JS to render the list, handle item selection, and wire Send/Clear buttons to the new interaction model.
+**Architecture:** Simplify `QuizQueue` to a plain list (no advance pointer), add `remove(index)` and expose all items via `GET /host/quiz`; add `DELETE /queue/{index}` endpoint; update host HTML/JS to render the list, handle item selection, and wire Send/Clear buttons to the new interaction model.
 
 **Tech Stack:** Python/FastAPI/Pydantic (daemon), vanilla JS + HTML (host UI), pytest + Starlette TestClient (tests)
 
@@ -14,46 +14,46 @@
 
 | File | Change |
 |---|---|
-| `daemon/quiz/queue.py` | Remove `_index`/`advance()`; update `current()` and `pending_count()`; add `remove(index)` |
-| `daemon/quiz/queue_router.py` | Remove `/submit` and `/skip` routes; add `DELETE /{index}` |
-| `daemon/poll/router.py` | Add `QueuedQuestion` model; update `PollQueueStatus`; update `get_poll_state()` |
-| `tests/daemon/quiz/test_poll_queue.py` | New: unit tests for `PollQueue.remove()` |
+| `daemon/quiz_queue/queue.py` | Remove `_index`/`advance()`; update `current()` and `pending_count()`; add `remove(index)` |
+| `daemon/quiz_queue/router.py` | Remove `/submit` and `/skip` routes; add `DELETE /{index}` |
+| `daemon/quiz/router.py` | Add `QueuedQuestion` model; update `QuizQueueStatus`; update `get_quiz_state()` |
+| `tests/daemon/quiz_queue/test_queue.py` | New: unit tests for `QuizQueue.remove()` |
 | `tests/daemon/test_queue_router.py` | New: integration test for `DELETE /queue/{index}` |
 | `static/host.html` | Remove Pop/Skip buttons; add Clear button; add `<ul id="queue-list">` |
-| `static/host.js` | Remove old queue functions; add selection state; update `renderPollQueuePanel`, Send handler, Clear handler |
+| `static/host.js` | Remove old queue functions; add selection state; update `renderQuizQueuePanel`, Send handler, Clear handler |
 
 ---
 
-## Task 1: Simplify PollQueue — remove advance pointer, add remove()
+## Task 1: Simplify QuizQueue — remove advance pointer, add remove()
 
 **Files:**
-- Modify: `daemon/quiz/queue.py`
-- Create: `tests/daemon/quiz/test_poll_queue.py`
+- Modify: `daemon/quiz_queue/queue.py`
+- Create: `tests/daemon/quiz_queue/test_queue.py`
 
 - [ ] **Step 1: Write failing tests**
 
-Create `tests/daemon/quiz/test_poll_queue.py`:
+Create `tests/daemon/quiz_queue/test_queue.py`:
 
 ```python
-"""Unit tests for PollQueue."""
+"""Unit tests for QuizQueue."""
 import pytest
-from daemon.quiz.queue import PollQueue
+from daemon.quiz_queue.queue import QuizQueue
 
 Q1 = {"question": "Q1", "options": ["a", "b"], "correct_indices": [0]}
 Q2 = {"question": "Q2", "options": ["c", "d"], "correct_indices": [1]}
 Q3 = {"question": "Q3", "options": ["e", "f"], "correct_indices": [0]}
 
 
-class TestPollQueueRemove:
+class TestQuizQueueRemove:
     def test_remove_first_item_leaves_second_as_current(self):
-        q = PollQueue()
+        q = QuizQueue()
         q.submit([Q1, Q2])
         q.remove(0)
         assert q.pending_count() == 1
         assert q.current()["question"] == "Q2"
 
     def test_remove_middle_item(self):
-        q = PollQueue()
+        q = QuizQueue()
         q.submit([Q1, Q2, Q3])
         q.remove(1)
         assert q.pending_count() == 2
@@ -61,32 +61,32 @@ class TestPollQueueRemove:
         assert q.all_items()[1]["question"] == "Q3"
 
     def test_remove_last_item_leaves_empty(self):
-        q = PollQueue()
+        q = QuizQueue()
         q.submit([Q1])
         q.remove(0)
         assert q.pending_count() == 0
         assert q.current() is None
 
     def test_remove_invalid_index_raises(self):
-        q = PollQueue()
+        q = QuizQueue()
         q.submit([Q1])
         with pytest.raises(IndexError):
             q.remove(5)
 
     def test_current_returns_first_item(self):
-        q = PollQueue()
+        q = QuizQueue()
         q.submit([Q1, Q2])
         assert q.current()["question"] == "Q1"
 
     def test_all_items_returns_full_list(self):
-        q = PollQueue()
+        q = QuizQueue()
         q.submit([Q1, Q2, Q3])
         items = q.all_items()
         assert len(items) == 3
         assert items[1]["question"] == "Q2"
 
     def test_pending_count_equals_length(self):
-        q = PollQueue()
+        q = QuizQueue()
         q.submit([Q1, Q2, Q3])
         assert q.pending_count() == 3
         q.remove(0)
@@ -97,20 +97,20 @@ class TestPollQueueRemove:
 
 ```bash
 cd /Users/victorrentea/workspace/training-assistant
-uv run --extra dev --extra daemon pytest tests/daemon/quiz/test_poll_queue.py -v --confcutdir=tests/daemon 2>&1 | tail -20
+uv run --extra dev --extra daemon pytest tests/daemon/quiz_queue/test_queue.py -v --confcutdir=tests/daemon 2>&1 | tail -20
 ```
 
-Expected: `AttributeError: 'PollQueue' object has no attribute 'remove'` (or similar)
+Expected: `AttributeError: 'QuizQueue' object has no attribute 'remove'` (or similar)
 
-- [ ] **Step 3: Rewrite `daemon/quiz/queue.py`**
+- [ ] **Step 3: Rewrite `daemon/quiz_queue/queue.py`**
 
 Replace the entire file:
 
 ```python
-"""In-memory poll queue — stores pre-submitted questions for one-at-a-time firing."""
+"""In-memory quiz queue — stores pre-submitted questions for one-at-a-time firing."""
 
 
-class PollQueue:
+class QuizQueue:
     def __init__(self):
         self._questions: list[dict] = []
 
@@ -139,13 +139,13 @@ class PollQueue:
         self._questions = []
 
 
-quiz_queue = PollQueue()
+quiz_queue = QuizQueue()
 ```
 
 - [ ] **Step 4: Run tests to confirm they pass**
 
 ```bash
-uv run --extra dev --extra daemon pytest tests/daemon/quiz/test_poll_queue.py -v --confcutdir=tests/daemon 2>&1 | tail -20
+uv run --extra dev --extra daemon pytest tests/daemon/quiz_queue/test_queue.py -v --confcutdir=tests/daemon 2>&1 | tail -20
 ```
 
 Expected: `7 passed`
@@ -153,24 +153,24 @@ Expected: `7 passed`
 - [ ] **Step 5: Commit**
 
 ```bash
-git add daemon/quiz/queue.py tests/daemon/quiz/test_poll_queue.py
-git commit -m "refactor(queue): simplify PollQueue — remove advance pointer, add remove(index) and all_items()"
+git add daemon/quiz_queue/queue.py tests/daemon/quiz_queue/test_queue.py
+git commit -m "refactor(queue): simplify QuizQueue — remove advance pointer, add remove(index) and all_items()"
 ```
 
 ---
 
-## Task 2: Add QueuedQuestion model and update PollQueueStatus
+## Task 2: Add QueuedQuestion model and update QuizQueueStatus
 
 **Files:**
-- Modify: `daemon/poll/router.py` (lines 51–66 and 167–185)
+- Modify: `daemon/quiz/router.py` (lines 51–66 and 167–185)
 
-- [ ] **Step 1: Add `QueuedQuestion` model and update `PollQueueStatus`**
+- [ ] **Step 1: Add `QueuedQuestion` model and update `QuizQueueStatus`**
 
-In `daemon/poll/router.py`, replace the two classes at lines 51–53 and 55–66:
+In `daemon/quiz/router.py`, replace the two classes at lines 51–53 and 55–66:
 
 ```python
 # Replace this block:
-class PollQueueStatus(BaseModel):
+class QuizQueueStatus(BaseModel):
     pending: int
     current: dict | None = None
 ```
@@ -184,26 +184,26 @@ class QueuedQuestion(BaseModel):
     correct_indices: list[int]
 
 
-class PollQueueStatus(BaseModel):
+class QuizQueueStatus(BaseModel):
     pending: int
     items: list[QueuedQuestion]
     current: QueuedQuestion | None = None  # always items[0] if non-empty
 ```
 
-- [ ] **Step 2: Update `get_poll_state()` to populate `items`**
+- [ ] **Step 2: Update `get_quiz_state()` to populate `items`**
 
-In `daemon/poll/router.py`, replace line 184:
+In `daemon/quiz/router.py`, replace line 184:
 
 ```python
 # Old:
-queue=PollQueueStatus(pending=quiz_queue.pending_count(), current=quiz_queue.current()),
+queue=QuizQueueStatus(pending=quiz_queue.pending_count(), current=quiz_queue.current()),
 ```
 
 With:
 
 ```python
 # New:
-queue=PollQueueStatus(
+queue=QuizQueueStatus(
     pending=quiz_queue.pending_count(),
     items=[QueuedQuestion(**q) for q in quiz_queue.all_items()],
     current=QueuedQuestion(**quiz_queue.current()) if quiz_queue.current() else None,
@@ -214,7 +214,7 @@ queue=PollQueueStatus(
 
 ```bash
 cd /Users/victorrentea/workspace/training-assistant
-uv run --extra dev --extra daemon python -c "from daemon.poll.router import host_router; print('OK')"
+uv run --extra dev --extra daemon python -c "from daemon.quiz.router import host_router; print('OK')"
 ```
 
 Expected: `OK`
@@ -230,8 +230,8 @@ Expected: all pass
 - [ ] **Step 5: Commit**
 
 ```bash
-git add daemon/poll/router.py
-git commit -m "feat(queue): add QueuedQuestion model and items list to PollQueueStatus"
+git add daemon/quiz/router.py
+git commit -m "feat(queue): add QueuedQuestion model and items list to QuizQueueStatus"
 ```
 
 ---
@@ -239,7 +239,7 @@ git commit -m "feat(queue): add QueuedQuestion model and items list to PollQueue
 ## Task 3: Add DELETE /queue/{index} endpoint; remove /submit and /skip
 
 **Files:**
-- Modify: `daemon/quiz/queue_router.py`
+- Modify: `daemon/quiz_queue/router.py`
 - Create: `tests/daemon/test_queue_router.py`
 
 - [ ] **Step 1: Write failing test**
@@ -247,15 +247,15 @@ git commit -m "feat(queue): add QueuedQuestion model and items list to PollQueue
 Create `tests/daemon/test_queue_router.py`:
 
 ```python
-"""Integration tests for poll queue router."""
+"""Integration tests for quiz queue router."""
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from daemon.quiz.queue import PollQueue
-from daemon.quiz.queue_router import router
+from daemon.quiz_queue.queue import QuizQueue
+from daemon.quiz_queue.router import router
 
 Q1 = {"question": "Q1", "options": ["a", "b"], "correct_indices": [0]}
 Q2 = {"question": "Q2", "options": ["c", "d"], "correct_indices": [1]}
@@ -264,13 +264,13 @@ Q3 = {"question": "Q3", "options": ["e", "f"], "correct_indices": [0]}
 
 @pytest.fixture
 def fresh_queue():
-    return PollQueue()
+    return QuizQueue()
 
 
 @pytest.fixture
 def client(fresh_queue):
-    with patch("daemon.quiz.queue_router.quiz_queue", fresh_queue), \
-         patch("daemon.quiz.queue_router.notify_host", AsyncMock()):
+    with patch("daemon.quiz_queue.router.quiz_queue", fresh_queue), \
+         patch("daemon.quiz_queue.router.notify_host", AsyncMock()):
         app = FastAPI()
         app.include_router(router)
         yield TestClient(app), fresh_queue
@@ -280,13 +280,13 @@ class TestDeleteQueueItem:
     def test_delete_first_item_returns_204(self, client):
         tc, q = client
         q.submit([Q1, Q2])
-        resp = tc.delete("/api/test-session/host/poll/queue/0")
+        resp = tc.delete("/api/test-session/host/quiz/queue/0")
         assert resp.status_code == 204
 
     def test_delete_removes_correct_item(self, client):
         tc, q = client
         q.submit([Q1, Q2, Q3])
-        tc.delete("/api/test-session/host/poll/queue/1")
+        tc.delete("/api/test-session/host/quiz/queue/1")
         assert q.pending_count() == 2
         assert q.all_items()[0]["question"] == "Q1"
         assert q.all_items()[1]["question"] == "Q3"
@@ -294,12 +294,12 @@ class TestDeleteQueueItem:
     def test_delete_out_of_range_returns_404(self, client):
         tc, q = client
         q.submit([Q1])
-        resp = tc.delete("/api/test-session/host/poll/queue/5")
+        resp = tc.delete("/api/test-session/host/quiz/queue/5")
         assert resp.status_code == 404
 
     def test_delete_empty_queue_returns_404(self, client):
         tc, q = client
-        resp = tc.delete("/api/test-session/host/poll/queue/0")
+        resp = tc.delete("/api/test-session/host/quiz/queue/0")
         assert resp.status_code == 404
 ```
 
@@ -311,12 +311,12 @@ uv run --extra dev --extra daemon pytest tests/daemon/test_queue_router.py -v --
 
 Expected: `404 Not Found` because the route doesn't exist yet
 
-- [ ] **Step 3: Update `daemon/quiz/queue_router.py`**
+- [ ] **Step 3: Update `daemon/quiz_queue/router.py`**
 
 Replace the entire file:
 
 ```python
-"""Poll queue router — host-only endpoints for pre-submitted poll questions."""
+"""Quiz queue router — host-only endpoints for pre-submitted quiz questions."""
 import logging
 
 from fastapi import APIRouter
@@ -324,8 +324,8 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
-from daemon.quiz.queue import quiz_queue
-from daemon.ws_messages import PollQueueUpdatedMsg
+from daemon.quiz_queue.queue import quiz_queue
+from daemon.ws_messages import QuizQueueUpdatedMsg
 from daemon.ws_publish import notify_host
 
 logger = logging.getLogger(__name__)
@@ -335,28 +335,28 @@ _LOG = "qz-queue"
 
 # ── Pydantic models ──
 
-class PollQueueQuestion(BaseModel):
+class QuizQueueQuestion(BaseModel):
     question: str
     options: list[str]
     correct_indices: list[int]
 
 
 class SubmitQuestionsRequest(BaseModel):
-    questions: list[PollQueueQuestion]
+    questions: list[QuizQueueQuestion]
 
 
 # ── Router ──
 
-router = APIRouter(prefix="/api/{session_id}/host/poll/queue", tags=["poll"])
+router = APIRouter(prefix="/api/{session_id}/host/quiz/queue", tags=["quiz"])
 
 
 @router.post("", status_code=204)
 async def submit_questions(body: SubmitQuestionsRequest):
-    """Replace the entire poll queue with the submitted questions."""
+    """Replace the entire quiz queue with the submitted questions."""
     questions = [q.model_dump() for q in body.questions]
     quiz_queue.submit(questions)
     daemon_log.info(_LOG, f"Queue submitted: {len(questions)} question(s)")
-    await notify_host(PollQueueUpdatedMsg())
+    await notify_host(QuizQueueUpdatedMsg())
     return Response(status_code=204)
 
 
@@ -368,7 +368,7 @@ async def remove_from_queue(index: int):
         quiz_queue.remove(index)
     except IndexError:
         return JSONResponse({"error": f"No item at index {index}"}, status_code=404)
-    await notify_host(PollQueueUpdatedMsg())
+    await notify_host(QuizQueueUpdatedMsg())
     daemon_log.info(_LOG, f"Removed queue item [{index}]: \"{removed['question'][:60]}\" — {quiz_queue.pending_count()} remaining")
     return Response(status_code=204)
 
@@ -377,7 +377,7 @@ async def remove_from_queue(index: int):
 async def clear_queue():
     """Clear the entire quiz queue."""
     quiz_queue.clear()
-    await notify_host(PollQueueUpdatedMsg())
+    await notify_host(QuizQueueUpdatedMsg())
     daemon_log.info(_LOG, "Queue cleared")
     return Response(status_code=204)
 ```
@@ -401,7 +401,7 @@ Expected: all pass
 - [ ] **Step 6: Commit**
 
 ```bash
-git add daemon/quiz/queue_router.py tests/daemon/test_queue_router.py
+git add daemon/quiz_queue/router.py tests/daemon/test_queue_router.py
 git commit -m "feat(queue): add DELETE /queue/{index}; remove /submit and /skip endpoints"
 ```
 
@@ -412,26 +412,26 @@ git commit -m "feat(queue): add DELETE /queue/{index}; remove /submit and /skip 
 **Files:**
 - Modify: `static/host.html` (lines 102–113)
 
-- [ ] **Step 1: Replace the entire poll tab content block**
+- [ ] **Step 1: Replace the entire quiz tab content block**
 
-In `static/host.html`, find the `#tab-content-poll` div and its entire contents (lines 92–115) and replace:
+In `static/host.html`, find the `#tab-content-quiz` div and its entire contents (lines 92–115) and replace:
 
 ```html
-    <!-- Poll tab content -->
-    <div id="tab-content-poll" class="tab-content">
+    <!-- Quiz tab content -->
+    <div id="tab-content-quiz" class="tab-content">
       <!-- Backstage manual entry -->
       <div style="margin-top:.75rem;">
         <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:.5rem;">
           <span style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">Backstage</span>
-          <a href="#" onclick="event.preventDefault(); testOnePoll();" style="font-size:.8rem; color:var(--accent); text-decoration:none;">one</a>
+          <a href="#" onclick="event.preventDefault(); testOneQuiz();" style="font-size:.8rem; color:var(--accent); text-decoration:none;">one</a>
           <a href="#" onclick="event.preventDefault(); pushDummyQueue();" style="font-size:.8rem; color:var(--accent); text-decoration:none;">queue</a>
         </div>
-        <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
+        <div id="quiz-input" class="quiz-composer" contenteditable="true" spellcheck="false"
              data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
         <div style="display:flex; flex-direction:column; gap:.4rem; margin-top:.4rem;">
           <div class="btn-row" style="align-items:center;">
             <button class="btn" id="pop-queue-btn" onclick="popFromQueue()" disabled>⬆ Pop (0)</button>
-            <button class="btn" id="backstage-skip-btn" onclick="pollQueueSkip()" disabled>⏭</button>
+            <button class="btn" id="backstage-skip-btn" onclick="quizQueueSkip()" disabled>⏭</button>
             <label style="display:flex; align-items:center; gap:.4rem; font-size:.9rem; color:var(--text); margin:0 0 0 .25rem;">
               <input type="text" inputmode="numeric" pattern="[0-9]*" id="correct-count" value="1" maxlength="1"
                      style="width:2.8rem; height:34px; box-sizing:border-box; text-align:center; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; font-size:.9rem;" />
@@ -447,16 +447,16 @@ In `static/host.html`, find the `#tab-content-poll` div and its entire contents 
 With:
 
 ```html
-    <!-- Poll tab content -->
-    <div id="tab-content-poll" class="tab-content" style="overflow:hidden; display:flex; flex-direction:column;">
+    <!-- Quiz tab content -->
+    <div id="tab-content-quiz" class="tab-content" style="overflow:hidden; display:flex; flex-direction:column;">
       <!-- Backstage manual entry -->
       <div style="margin-top:.75rem; flex-shrink:0;">
         <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:.5rem;">
           <span style="font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">Backstage</span>
-          <a href="#" onclick="event.preventDefault(); testOnePoll();" style="font-size:.8rem; color:var(--accent); text-decoration:none;">one</a>
+          <a href="#" onclick="event.preventDefault(); testOneQuiz();" style="font-size:.8rem; color:var(--accent); text-decoration:none;">one</a>
           <a href="#" onclick="event.preventDefault(); pushDummyQueue();" style="font-size:.8rem; color:var(--accent); text-decoration:none;">queue</a>
         </div>
-        <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
+        <div id="quiz-input" class="quiz-composer" contenteditable="true" spellcheck="false"
              data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
         <div style="display:flex; flex-direction:column; gap:.4rem; margin-top:.4rem;">
           <div class="btn-row" style="align-items:center;">
@@ -484,26 +484,26 @@ Confirm the left panel loads without JS errors; the queue list area is visible b
 
 ---
 
-## Task 5: Host JS — queue selection state, renderPollQueuePanel, click handler
+## Task 5: Host JS — queue selection state, renderQuizQueuePanel, click handler
 
 **Files:**
 - Modify: `static/host.js`
 
 - [ ] **Step 1: Add selection state variables**
 
-Near line 1527, after `const pollInput = document.getElementById('poll-input');`, add:
+Near line 1527, after `const quizInput = document.getElementById('quiz-input');`, add:
 
 ```javascript
   let selectedQueueIndex = null;   // index of queue item currently loaded into textarea
   let selectedQueueItem = null;    // full {question, options, correct_indices} of selected item
 ```
 
-- [ ] **Step 2: Replace `renderPollQueuePanel` (currently a no-op at line ~1955)**
+- [ ] **Step 2: Replace `renderQuizQueuePanel` (currently a no-op at line ~1955)**
 
 Find and replace:
 
 ```javascript
-  function renderPollQueuePanel(_data) {
+  function renderQuizQueuePanel(_data) {
     // Queue panel removed from UI; Pop button state handled by updatePopButton
   }
 ```
@@ -511,7 +511,7 @@ Find and replace:
 With:
 
 ```javascript
-  function renderPollQueuePanel(queue) {
+  function renderQuizQueuePanel(queue) {
     const list = document.getElementById('queue-list');
     if (!list) return;
     const items = queue?.items || [];
@@ -541,7 +541,7 @@ With:
     if (list) list.querySelectorAll('li').forEach((li, i) => {
       li.style.background = i === index ? 'var(--surface2)' : '';
     });
-    pollInput.focus();
+    quizInput.focus();
   }
 ```
 
@@ -550,17 +550,17 @@ With:
 Delete the following functions entirely:
 - `function updatePopButton(queue) { ... }` (lines ~1900–1906)
 - `async function popFromQueue() { ... }` (lines ~1908–1926)
-- `async function pollQueueFire() { ... }` (lines ~1959–1976)
-- `async function pollQueueSkip() { ... }` (lines ~1978–1995)
+- `async function quizQueueFire() { ... }` (lines ~1959–1976)
+- `async function quizQueueSkip() { ... }` (lines ~1978–1995)
 
-Also remove the `updatePopButton(data.queue)` call in `fetchPollState()` (line ~1741).
+Also remove the `updatePopButton(data.queue)` call in `fetchQuizState()` (line ~1741).
 
-- [ ] **Step 4: Update the poll input listener to remove disabled-re-enable logic**
+- [ ] **Step 4: Update the quiz input listener to remove disabled-re-enable logic**
 
 Find (line ~1614):
 
 ```javascript
-  pollInput.addEventListener('input', () => {
+  quizInput.addEventListener('input', () => {
     reclassifyLines();
     const cc = document.getElementById('correct-count');
     if (cc && cc.disabled) cc.disabled = false;
@@ -570,7 +570,7 @@ Find (line ~1614):
 Replace with:
 
 ```javascript
-  pollInput.addEventListener('input', () => {
+  quizInput.addEventListener('input', () => {
     reclassifyLines();
   });
 ```
@@ -604,7 +604,7 @@ Find the create-btn event listener (line ~1636). Replace it:
 ```javascript
   // Old handler:
   document.getElementById('create-btn').addEventListener('click', async () => {
-    const { question, options } = parsePollInput();
+    const { question, options } = parseQuizInput();
 
     if (!question) { toast('Enter a question'); return; }
     if (options.length < 2) { toast('Add at least 2 options'); return; }
@@ -613,7 +613,7 @@ Find the create-btn event listener (line ~1636). Replace it:
     const correct_count_val = parseInt(correctCountEl.value) || 1;
     const multi = correct_count_val > 1;
     const correct_count = multi ? correct_count_val : null;
-    const res = await fetch(API('/poll/manual/submit'), {
+    const res = await fetch(API('/quiz/manual/submit'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, options, multi, correct_count }),
@@ -623,8 +623,8 @@ Find the create-btn event listener (line ~1636). Replace it:
       localStorage.removeItem('host_correct_' + question);
       localStorage.removeItem('host_llm_hints_' + question);
       correctOptIds = new Set();
-      toast('Poll created & opened ✓');
-      pollInput.innerHTML = '<div><br></div>';
+      toast('Quiz created & opened ✓');
+      quizInput.innerHTML = '<div><br></div>';
       reclassifyLines();
       const cc = document.getElementById('correct-count');
       cc.value = 1; cc.disabled = false;
@@ -639,7 +639,7 @@ With:
 
 ```javascript
   document.getElementById('create-btn').addEventListener('click', async () => {
-    const { question, options } = parsePollInput();
+    const { question, options } = parseQuizInput();
 
     if (!question) { toast('Enter a question'); return; }
     if (options.length < 2) { toast('Add at least 2 options'); return; }
@@ -648,7 +648,7 @@ With:
     const correct_count_val = parseInt(correctCountEl.value) || 1;
     const multi = correct_count_val > 1;
     const correct_count = multi ? correct_count_val : null;
-    const res = await fetch(API('/poll/manual/submit'), {
+    const res = await fetch(API('/quiz/manual/submit'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, options, multi, correct_count }),
@@ -657,10 +657,10 @@ With:
       localStorage.removeItem('host_correct_' + question);
       localStorage.removeItem('host_llm_hints_' + question);
       correctOptIds = new Set();
-      toast('Poll created & opened ✓');
+      toast('Quiz created & opened ✓');
       // If a queue item was selected, remove it from the queue
       if (selectedQueueIndex !== null) {
-        await fetch(API(`/poll/queue/${selectedQueueIndex}`), { method: 'DELETE' });
+        await fetch(API(`/quiz/queue/${selectedQueueIndex}`), { method: 'DELETE' });
         selectedQueueIndex = null;
         selectedQueueItem = null;
       }
@@ -672,7 +672,7 @@ With:
   });
 
   function _resetBackstage() {
-    pollInput.innerHTML = '<div><br></div>';
+    quizInput.innerHTML = '<div><br></div>';
     reclassifyLines();
     const cc = document.getElementById('correct-count');
     if (cc) { cc.value = 1; cc.readOnly = false; }
@@ -700,7 +700,7 @@ Add after `_resetBackstage`:
 2. Click "queue" debug link — queues 2 dummy questions
 3. Confirm two items appear in the bullet list below the button row
 4. Click the first item — confirm textarea fills with question+options, correct-count shows value as readonly
-5. Click Send (▶) — confirm poll opens, item disappears from list, textarea clears, correct-count becomes editable
+5. Click Send (▶) — confirm quiz opens, item disappears from list, textarea clears, correct-count becomes editable
 6. Click second item in list — confirm textarea fills
 7. Click Clear (✕) — confirm textarea clears, correct-count editable, no highlight
 
@@ -738,5 +738,5 @@ Monitor `$WORKSHOP_SERVER_URL` — Railway deploys in ~40-50s after push.
 1. Open `$WORKSHOP_SERVER_URL` host page
 2. Click "queue" link → two items appear in list
 3. Click an item → loads into textarea, correct-count readonly
-4. Send → poll opens, item removed from list
+4. Send → quiz opens, item removed from list
 5. Confirm Clear button resets state correctly

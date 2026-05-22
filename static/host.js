@@ -3,8 +3,8 @@
 
   const UPLOAD_CLEANUP_MINUTES = 5; // hide download icon + delete file after this many minutes
   let ws = null;
-  let currentPoll = null;
-  let pollActive = false;
+  let currentQuiz = null;
+  let quizActive = false;
   let voteCounts = [];
   let totalVotes = 0;
   let totalParticipants = 0;
@@ -12,7 +12,7 @@
   let participantDataById = {};     // uuid -> participant payload
   let participantDebateSides = {};  // uuid -> "for"|"against"|undefined
   let _debateActive = false;
-  let correctOptIds = new Set(); // host-marked correct options for current poll
+  let correctOptIds = new Set(); // host-marked correct options for current quiz
   let scores = {};               // uuid -> score
   let cachedParticipantIds = []; // last known participant uuids
   let summaryPoints = [];
@@ -40,8 +40,8 @@
   window.__versionReloadGuard = versionReloadGuard;
   const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
 
-  // ── Poll history (persisted in localStorage, keyed by today's date) ──
-  const TODAY_KEY = `host_polls_${new Date().toISOString().slice(0, 10)}`;
+  // ── Quiz history (persisted in localStorage, keyed by today's date) ──
+  const TODAY_KEY = `host_quizzes_${new Date().toISOString().slice(0, 10)}`;
   const _FOOTER_BADGE_TOOLTIP_DEFAULTS = {
     'ws-badge': 'Server connection status',
     'overlay-badge': 'Desktop Overlay app',
@@ -176,35 +176,35 @@
     return escHtml(rawLoc);
   }
 
-  function loadPollHistory() {
+  function loadQuizHistory() {
     try { return JSON.parse(localStorage.getItem(TODAY_KEY) || '[]'); } catch { return []; }
   }
 
-  function savePollHistory(history) {
+  function saveQuizHistory(history) {
     localStorage.setItem(TODAY_KEY, JSON.stringify(history));
   }
 
-  function recordPollInHistory(poll, correctIds) {
-    if (!poll) return;
-    const history = loadPollHistory();
+  function recordQuizInHistory(quiz, correctIds) {
+    if (!quiz) return;
+    const history = loadQuizHistory();
     const entry = {
-      question: poll.question,
-      options: poll.options.map((text, idx) => ({
+      question: quiz.question,
+      options: quiz.options.map((text, idx) => ({
         text,
         correct: correctIds.has(idx),
       })),
-      multi: !!poll.multi,
+      multi: !!quiz.multi,
       recorded_at: new Date().toISOString(),
     };
     // Avoid duplicates by question
-    const idx = history.findIndex(e => e.question === poll.question);
+    const idx = history.findIndex(e => e.question === quiz.question);
     if (idx >= 0) history[idx] = entry; else history.push(entry);
-    savePollHistory(history);
+    saveQuizHistory(history);
   }
 
-  function downloadPollHistory() {
-    const history = loadPollHistory();
-    if (!history.length) { toast('No polls recorded today'); return; }
+  function downloadQuizHistory() {
+    const history = loadQuizHistory();
+    if (!history.length) { toast('No quizzes recorded today'); return; }
     const lines = history.map((e, n) => {
       const opts = e.options.map((o, i) => `  ${String.fromCharCode(65+i)}. ${o.text}${o.correct ? ' ✅' : ''}`).join('\n');
       return `${n+1}. ${e.question}\n${opts}`;
@@ -212,7 +212,7 @@
     const blob = new Blob([lines], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `polls_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `quizzes_${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -227,20 +227,20 @@
     localStorage.setItem('host_correct_' + question, JSON.stringify([...correctOptIds]));
   }
   async function toggleCorrect(optId) {
-    if (!currentPoll) return;
+    if (!currentQuiz) return;
     if (correctOptIds.has(optId)) {
       correctOptIds.delete(optId);
     } else {
-      if (!currentPoll.multi && correctOptIds.size > 0) correctOptIds.clear(); // single-select: only one correct
-      const cap = currentPoll.correct_count;
+      if (!currentQuiz.multi && correctOptIds.size > 0) correctOptIds.clear(); // single-select: only one correct
+      const cap = currentQuiz.correct_count;
       if (cap && correctOptIds.size >= cap) return; // multi-select: cap at correct_count
       correctOptIds.add(optId);
     }
-    saveCorrectOpts(currentPoll.question);
+    saveCorrectOpts(currentQuiz.question);
     renderBars();
-    recordPollInHistory(currentPoll, correctOptIds);
+    recordQuizInHistory(currentQuiz, correctOptIds);
     // Post to backend to award points
-    const resp = await fetch(API('/poll/correct'), {
+    const resp = await fetch(API('/quiz/correct'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ correct_indices: [...correctOptIds] }),
@@ -324,51 +324,51 @@
         window.location.href = msg.url;
         return;
       }
-      if (msg.type === 'poll_queue_updated') {
-        if (_currentActivity === 'poll') fetchPollState();
+      if (msg.type === 'quiz_queue_updated') {
+        if (_currentActivity === 'quiz') fetchQuizState();
         return;
       }
-      if (msg.type === 'poll_opened') {
-        currentPoll = msg.poll || currentPoll;
-        // Clear any timer state from the *previous* poll. Without this, the
-        // stale activeTimer from a timer-closed prior poll causes
-        // renderPollDisplay() below to start a new countdown that fires
-        // endPoll() immediately, ending the just-opened poll.
+      if (msg.type === 'quiz_opened') {
+        currentQuiz = msg.quiz || currentQuiz;
+        // Clear any timer state from the *previous* quiz. Without this, the
+        // stale activeTimer from a timer-closed prior quiz causes
+        // renderQuizDisplay() below to start a new countdown that fires
+        // endQuiz() immediately, ending the just-opened quiz.
         _clearTimer();
-        pollActive = true;
+        quizActive = true;
         voteCounts = [];
         totalVotes = 0;
-        updateCenterPanel('poll');
-        renderPollDisplay();
+        updateCenterPanel('quiz');
+        renderQuizDisplay();
         return;
       }
-      if (msg.type === 'poll_ended') {
+      if (msg.type === 'quiz_ended') {
         _clearTimer();
-        pollActive = false;
-        renderPollDisplay();
-        if (_currentActivity === 'poll') fetchPollState();
+        quizActive = false;
+        renderQuizDisplay();
+        if (_currentActivity === 'quiz') fetchQuizState();
         return;
       }
-      if (msg.type === 'poll_correct_revealed') {
+      if (msg.type === 'quiz_correct_revealed') {
         correctOptIds = new Set(msg.correct_indices || []);
-        if (currentPoll) {
-          saveCorrectOpts(currentPoll.question);
-          recordPollInHistory(currentPoll, correctOptIds);
+        if (currentQuiz) {
+          saveCorrectOpts(currentQuiz.question);
+          recordQuizInHistory(currentQuiz, correctOptIds);
         }
         renderBars();
         return;
       }
-      if (msg.type === 'poll_cleared') {
-        currentPoll = null;
-        pollActive = false;
+      if (msg.type === 'quiz_cleared') {
+        currentQuiz = null;
+        quizActive = false;
         _clearTimer();
         voteCounts = [];
         totalVotes = 0;
         correctOptIds = new Set();
-        renderPollDisplay();
+        renderQuizDisplay();
         return;
       }
-      if (msg.type === 'poll_end_countdown_started') {
+      if (msg.type === 'quiz_end_countdown_started') {
         _applyTimer(msg.seconds, msg.started_at);
         _startHostCountdown();
         return;
@@ -383,9 +383,9 @@
       }
       if (msg.type === 'state') {
         versionReloadGuard && versionReloadGuard.check(msg.backend_version);
-        // Only refresh poll state when the host is (or is being switched to)
-        // the poll tab — avoids two GET /poll on every state snapshot.
-        if (msg.current_activity === 'poll') fetchPollState();
+        // Only refresh quiz state when the host is (or is being switched to)
+        // the quiz tab — avoids two GET /quiz on every state snapshot.
+        if (msg.current_activity === 'quiz') fetchQuizState();
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
         ingestParticipants(msg.participants || []);
         totalParticipants = (msg.participants || []).length;
@@ -473,7 +473,7 @@
         updateParticipantCountDisplay(msg.participants || []);
         updatePaxBadge(totalParticipants);
         renderParticipantList(cachedParticipantIds);
-        if (pollActive && currentPoll) renderBars();
+        if (quizActive && currentQuiz) renderBars();
         updateLeaderboardButton();
         // Re-render code review side panel with fresh scores
         if (window._lastCodereviewState && window._lastCodereviewState.phase !== 'idle') {
@@ -1528,18 +1528,18 @@
   });
 
 
-  // ── Poll composer (contenteditable) ──
-  const pollInput = document.getElementById('poll-input');
+  // ── Quiz composer (contenteditable) ──
+  const quizInput = document.getElementById('quiz-input');
   let selectedQueueIndex = null;   // index of queue item currently loaded into textarea
   let selectedQueueItem = null;    // full {question, options, correct_indices} of selected item
 
   // Read plain text lines from contenteditable div
   function getLines() {
     // innerText gives newline-separated lines reliably
-    return (pollInput.innerText || '').split('\n');
+    return (quizInput.innerText || '').split('\n');
   }
 
-  function parsePollInput() {
+  function parseQuizInput() {
     const lines = getLines();
     let question = '';
     const options = [];
@@ -1554,7 +1554,7 @@
 
   // Reclassify child divs (lines) without touching their content
   function reclassifyLines() {
-    const children = Array.from(pollInput.children);
+    const children = Array.from(quizInput.children);
     if (children.length === 0) return;
 
     let questionSeen = false;
@@ -1566,7 +1566,7 @@
       else el.className = 'opt-line';
     });
 
-    const { question, options } = parsePollInput();
+    const { question, options } = parseQuizInput();
     const sendBtn = document.getElementById('create-btn');
     if (sendBtn) sendBtn.disabled = !(question && options.length >= 2);
   }
@@ -1574,11 +1574,11 @@
   // Init with default content using divs (contenteditable line model)
   function initComposer(text) {
     const lines = text.split('\n');
-    pollInput.innerHTML = lines.map(l => `<div>${l || '<br>'}</div>`).join('');
+    quizInput.innerHTML = lines.map(l => `<div>${l || '<br>'}</div>`).join('');
     reclassifyLines();
   }
 
-  const RANDOM_POLLS = [
+  const RANDOM_QUIZZES = [
     'What does `List<String>` represent in Java?\n\nA generic list of `String` elements\nA raw array of strings\nA `Map<String,String>` alias\nA primitive type',
     'What is the largest planet in our solar system?\n\nJupiter\nSaturn\nNeptune\nUranus',
     'Which element has the chemical symbol "Au"?\n\nGold\nSilver\nAluminum\nArgon',
@@ -1607,46 +1607,46 @@
     'In what year was the first iPhone released?\n\n2007\n2005\n2008\n2010',
   ];
   let _lastRandomIndex = -1;
-  let _testOnePollClicks = 0;
+  let _testOneQuizClicks = 0;
 
   initComposer('Which is the primary benefit of the Circuit Breaker pattern?\n\nPrevents cascading failures across services\nImproves response time under normal load\nReduces the number of network calls\nEnables automatic service discovery');
 
-  window.testOnePoll = () => {
+  window.testOneQuiz = () => {
     let idx;
-    if (_testOnePollClicks === 0) {
+    if (_testOneQuizClicks === 0) {
       idx = 0;
     } else {
-      do { idx = Math.floor(Math.random() * RANDOM_POLLS.length); } while (idx === _lastRandomIndex && RANDOM_POLLS.length > 1);
+      do { idx = Math.floor(Math.random() * RANDOM_QUIZZES.length); } while (idx === _lastRandomIndex && RANDOM_QUIZZES.length > 1);
     }
-    _testOnePollClicks++;
+    _testOneQuizClicks++;
     _lastRandomIndex = idx;
-    initComposer(RANDOM_POLLS[idx]);
+    initComposer(RANDOM_QUIZZES[idx]);
     const cc = document.getElementById('correct-count');
     cc.value = 1; cc.readOnly = false;
   };
 
-  pollInput.addEventListener('input', () => {
+  quizInput.addEventListener('input', () => {
     reclassifyLines();
   });
 
   // Intercept paste: always insert as plain text to avoid rich-HTML corruption
-  pollInput.addEventListener('paste', e => {
+  quizInput.addEventListener('paste', e => {
     e.preventDefault();
     const text = (e.clipboardData || window.clipboardData).getData('text/plain');
     // Insert at current cursor position using execCommand (works in all browsers for contenteditable)
     document.execCommand('insertText', false, text);
   });
 
-  pollInput.addEventListener('keydown', e => {
+  quizInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       document.getElementById('create-btn').click();
     }
   });
 
-  // ── Create poll ──
+  // ── Create quiz ──
   document.getElementById('create-btn').addEventListener('click', async () => {
-    const { question, options } = parsePollInput();
+    const { question, options } = parseQuizInput();
 
     if (!question) { toast('Enter a question'); return; }
     if (options.length < 2) { toast('Add at least 2 options'); return; }
@@ -1657,7 +1657,7 @@
     const correct_count = multi ? correct_count_val : null;
     let res;
     try {
-      res = await fetch(API('/poll/manual/submit'), {
+      res = await fetch(API('/quiz/manual/submit'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, options, multi, correct_count }),
@@ -1670,11 +1670,11 @@
       localStorage.removeItem('host_correct_' + question);
       localStorage.removeItem('host_llm_hints_' + question);
       correctOptIds = new Set();
-      toast('Poll created & opened ✓');
+      toast('Quiz created & opened ✓');
       if (selectedQueueIndex !== null) {
         if (selectedQueueItem?.correct_indices?.length)
           localStorage.setItem('host_queue_hints_' + question, JSON.stringify(selectedQueueItem.correct_indices));
-        const deleteRes = await fetch(API(`/poll/queue/${selectedQueueIndex}`), { method: 'DELETE' });
+        const deleteRes = await fetch(API(`/quiz/queue/${selectedQueueIndex}`), { method: 'DELETE' });
         if (!deleteRes.ok) toast('Queue item delete failed — queue may be out of sync');
         selectedQueueIndex = null;
         selectedQueueItem = null;
@@ -1687,7 +1687,7 @@
   });
 
   function _resetBackstage() {
-    pollInput.innerHTML = '<div><br></div>';
+    quizInput.innerHTML = '<div><br></div>';
     reclassifyLines();
     const cc = document.getElementById('correct-count');
     if (cc) { cc.value = 1; cc.readOnly = false; }
@@ -1706,7 +1706,7 @@
   let _timerInterval = null;
 
   async function startTimer(seconds) {
-    const res = await fetch(API('/poll/end/timer'), {
+    const res = await fetch(API('/quiz/end/timer'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ seconds }),
@@ -1716,7 +1716,7 @@
 
   function _applyTimer(seconds, startedAtIso) {
     activeTimer = { seconds, startedAt: new Date(startedAtIso).getTime() };
-    renderPollDisplay();
+    renderQuizDisplay();
   }
 
   function _clearTimer() {
@@ -1735,65 +1735,65 @@
       el.textContent = `⏱ Closing in ${Math.ceil(remaining)}s`;
       if (remaining <= 0) {
         _clearTimer();
-        endPoll();
+        endQuiz();
       }
     }, 200);
   }
 
   // ── End / clear ──
-  async function endPoll() {
-    const res = await fetch(API('/poll/end'), { method: 'POST' });
-    if (res.ok) fetchPollState();
+  async function endQuiz() {
+    const res = await fetch(API('/quiz/end'), { method: 'POST' });
+    if (res.ok) fetchQuizState();
   }
 
-  async function clearPoll() {
-    await fetch(API('/poll'), { method: 'DELETE' });
+  async function clearQuiz() {
+    await fetch(API('/quiz'), { method: 'DELETE' });
   }
 
-  async function fetchPollState() {
-    const resp = await fetch(API('/poll'));
+  async function fetchQuizState() {
+    const resp = await fetch(API('/quiz'));
     if (!resp.ok) return;
     const data = await resp.json();
-    const prevQuestion = currentPoll?.question;
-    const prevPollActive = pollActive;
-    currentPoll = data.id ? {
+    const prevQuestion = currentQuiz?.question;
+    const prevQuizActive = quizActive;
+    currentQuiz = data.id ? {
       id: data.id, question: data.question, options: data.options,
       multi: data.multi, correct_count: data.correct_count,
       end_timer_seconds: data.end_timer_seconds, end_timer_started_at: data.end_timer_started_at,
       correct_indices: data.correct_indices,
     } : null;
-    if (!data.poll_running && prevPollActive) _clearTimer();
-    pollActive = data.poll_running;
+    if (!data.quiz_running && prevQuizActive) _clearTimer();
+    quizActive = data.quiz_running;
     if (data.end_timer_seconds && data.end_timer_started_at) {
       _applyTimer(data.end_timer_seconds, data.end_timer_started_at);
     }
-    if (currentPoll && currentPoll.question !== prevQuestion) loadCorrectOpts(currentPoll.question);
-    const n = currentPoll?.options?.length || 0;
+    if (currentQuiz && currentQuiz.question !== prevQuestion) loadCorrectOpts(currentQuiz.question);
+    const n = currentQuiz?.options?.length || 0;
     voteCounts = Array(n).fill(0);
     const allVotes = Object.values(data.votes || {});
     for (const v of allVotes) for (const idx of v.option_indices) if (idx < n) voteCounts[idx]++;
     totalVotes = allVotes.length;
-    renderPollDisplay();
-    renderPollQueuePanel(data.queue);
+    renderQuizDisplay();
+    renderQuizQueuePanel(data.queue);
   }
 
   // ── Render ──
-  function renderPollDisplay() {
-    const el = document.getElementById('poll-display');
-    if (!currentPoll) {
-      el.innerHTML = `<p class="no-poll">No poll yet.</p>`;
-      const pillsEl = document.getElementById('poll-pills');
+  function renderQuizDisplay() {
+    const el = document.getElementById('quiz-display');
+    if (!currentQuiz) {
+      el.innerHTML = `<p class="no-quiz">No quiz yet.</p>`;
+      const pillsEl = document.getElementById('quiz-pills');
       if (pillsEl) pillsEl.innerHTML = '';
       return;
     }
 
-    const statusLabel = pollActive ? 'open' : (totalVotes > 0 ? 'closed' : 'draft');
-    const statusText  = pollActive ? 'Voting open' : (totalVotes > 0 ? 'Voting closed' : 'Not started');
+    const statusLabel = quizActive ? 'open' : (totalVotes > 0 ? 'closed' : 'draft');
+    const statusText  = quizActive ? 'Voting open' : (totalVotes > 0 ? 'Voting closed' : 'Not started');
 
-    const canMark = !pollActive && totalVotes > 0;
-    const llmHints = canMark ? getLlmHints(currentPoll.question) : null;
-    const queueHints = canMark ? getQueueHints(currentPoll.question) : null;
-    const bars = currentPoll.options.map((text, idx) => {
+    const canMark = !quizActive && totalVotes > 0;
+    const llmHints = canMark ? getLlmHints(currentQuiz.question) : null;
+    const queueHints = canMark ? getQueueHints(currentQuiz.question) : null;
+    const bars = currentQuiz.options.map((text, idx) => {
       const count = voteCounts[idx] || 0;
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
       const maxCount = Math.max(...voteCounts, 0);
@@ -1815,7 +1815,7 @@
         </div>`;
     }).join('');
 
-    const timerBtns = pollActive && !activeTimer
+    const timerBtns = quizActive && !activeTimer
       ? `<span class="timer-slider-wrap">
            <span id="timer-val" class="timer-val">15s</span>
            <input type="range" id="timer-slider" class="timer-slider" min="5" max="30" value="15"
@@ -1825,49 +1825,49 @@
          </span>`
       : '';
 
-    const modePillHtml = currentPoll.multi
-      ? `<span class="mode-pill mode-pill-multi">${currentPoll.correct_count || ''} correct</span>`.replace(/  +/g, ' ')
+    const modePillHtml = currentQuiz.multi
+      ? `<span class="mode-pill mode-pill-multi">${currentQuiz.correct_count || ''} correct</span>`.replace(/  +/g, ' ')
       : `<span class="mode-pill">◉ Single-select</span>`;
 
-    const pillsEl = document.getElementById('poll-pills');
+    const pillsEl = document.getElementById('quiz-pills');
     if (pillsEl) pillsEl.innerHTML = '';
 
-    el.className = pollActive ? 'voting-active' : '';
+    el.className = quizActive ? 'voting-active' : '';
 
     const votePct = activeParticipants > 0 ? Math.round((totalVotes / activeParticipants) * 100) : 0;
-    const voteProgressSection = pollActive ? `
+    const voteProgressSection = quizActive ? `
       <div class="vote-progress-overlay">
         <div class="vote-progress-fill" id="vote-progress-fill" style="width:${votePct}%"></div>
         <span class="vote-progress-label" id="vote-progress-label">${totalVotes} of ${activeParticipants} voted</span>
       </div>
 ` : '';
 
-    const mainContent = pollActive
-      ? `<div class="options-plain">${currentPoll.options.map(text =>
+    const mainContent = quizActive
+      ? `<div class="options-plain">${currentQuiz.options.map(text =>
           `<div class="option-text-only">${escHtmlWithCode(text)}</div>`).join('')}</div>
          ${voteProgressSection}`
       : `<div class="bars-container"><div class="bars-wrapper">${bars}</div></div>
          <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">${totalVotes} total vote${totalVotes!==1?'s':''}`;
 
     el.innerHTML = `
-      <p class="poll-question">${escHtmlWithCode(currentPoll.question)}</p>
-      ${mainContent}${pollActive ? '' : '</p>'}
-      ${currentPoll.source ? `<p class="poll-source-ref">📖 ${escHtml(currentPoll.source)}${currentPoll.page ? `, p. ${escHtml(currentPoll.page)}` : ''}</p>` : ''}
-      <div class="btn-row poll-controls" style="flex-wrap:nowrap;">
+      <p class="quiz-question">${escHtmlWithCode(currentQuiz.question)}</p>
+      ${mainContent}${quizActive ? '' : '</p>'}
+      ${currentQuiz.source ? `<p class="quiz-source-ref">📖 ${escHtml(currentQuiz.source)}${currentQuiz.page ? `, p. ${escHtml(currentQuiz.page)}` : ''}</p>` : ''}
+      <div class="btn-row quiz-controls" style="flex-wrap:nowrap;">
         ${modePillHtml}
         <span class="badge status-pill ${statusLabel}">${statusText}</span>
-        ${pollActive && !activeTimer ? `<button class="btn btn-warn" onclick="endPoll()">End</button>` : ''}
-        ${pollActive && activeTimer ? `<div class="countdown-display" id="host-countdown"></div>` : ''}
+        ${quizActive && !activeTimer ? `<button class="btn btn-warn" onclick="endQuiz()">End</button>` : ''}
+        ${quizActive && activeTimer ? `<div class="countdown-display" id="host-countdown"></div>` : ''}
         ${timerBtns}
-        <button class="btn btn-danger" onclick="clearPoll()" style="margin-left:auto;">Remove</button>
+        <button class="btn btn-danger" onclick="clearQuiz()" style="margin-left:auto;">Remove</button>
       </div>`;
 
-    if (pollActive && activeTimer) _startHostCountdown();
+    if (quizActive && activeTimer) _startHostCountdown();
   }
 
   function renderBars() {
-    if (!currentPoll) return;
-    if (pollActive) {
+    if (!currentQuiz) return;
+    if (quizActive) {
       // During voting: update vote progress overlay only (results hidden)
       const fill = document.getElementById('vote-progress-fill');
       const label = document.getElementById('vote-progress-label');
@@ -1877,20 +1877,20 @@
       return;
     }
     const maxCount = Math.max(...voteCounts, 0);
-    currentPoll.options.forEach((text, idx) => {
+    currentQuiz.options.forEach((text, idx) => {
       const row = document.querySelector(`.result-row[data-id="${idx}"]`);
       if (!row) return;
       const count = voteCounts[idx] || 0;
       const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
       const fill = row.querySelector('.bar-fill');
       const pctEl = row.querySelector('.pct');
-      const canMarkNow = !pollActive && totalVotes > 0;
+      const canMarkNow = !quizActive && totalVotes > 0;
       const isCorrect = canMarkNow && correctOptIds.has(idx);
       row.className = `result-row${isCorrect ? ' correct' : ''}${canMarkNow ? ' markable' : ''}`;
       const labelSpan = row.querySelector('.result-label span:first-child');
       if (labelSpan) {
-        const hints = canMarkNow ? getLlmHints(currentPoll.question) : null;
-        const qHints = canMarkNow ? getQueueHints(currentPoll.question) : null;
+        const hints = canMarkNow ? getLlmHints(currentQuiz.question) : null;
+        const qHints = canMarkNow ? getQueueHints(currentQuiz.question) : null;
         const llmHint = hints && hints.includes(idx) && !isCorrect;
         const queueHint = qHints && qHints.includes(idx) && !isCorrect;
         labelSpan.innerHTML = escHtmlWithCode(text) + (isCorrect ? ' ✅' : '') +
@@ -1903,7 +1903,7 @@
       }
       if (pctEl) pctEl.textContent = `${count}`;
     });
-    const totalEl = document.querySelector('#poll-display p[style]');
+    const totalEl = document.querySelector('#quiz-display p[style]');
     if (totalEl) totalEl.textContent = `${totalVotes} total vote${totalVotes!==1?'s':''}`;
   }
 
@@ -1930,7 +1930,7 @@
     toast(`${name}'s score reset ✓`);
   }
 
-  // ── Poll Queue ──────────────────────────────────────────────────────────────
+  // ── Quiz Queue ──────────────────────────────────────────────────────────────
 
 
   async function pushDummyQueue() {
@@ -1986,21 +1986,21 @@
         correct_indices: [1],
       },
     ];
-    const res = await fetch(API('/poll/queue'), {
+    const res = await fetch(API('/quiz/queue'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questions }),
     });
     if (res.ok) {
       toast('Dummy queue pushed \u2713');
-      await fetchPollState();
+      await fetchQuizState();
     } else {
       const err = await res.json().catch(() => ({}));
       toast(err.detail || 'Failed to push queue');
     }
   }
 
-  function renderPollQueuePanel(queue) {
+  function renderQuizQueuePanel(queue) {
     const list = document.getElementById('queue-list');
     if (!list) return;
     const items = queue?.items || [];
@@ -2019,7 +2019,7 @@
         e.stopPropagation();
         const idx = parseInt(btn.dataset.idx);
         try {
-          const res = await fetch(API(`/poll/queue/${idx}`), { method: 'DELETE' });
+          const res = await fetch(API(`/quiz/queue/${idx}`), { method: 'DELETE' });
           if (res.ok) {
             toast('Removed from queue ✓');
             if (selectedQueueIndex === idx) {
@@ -2028,7 +2028,7 @@
             } else if (selectedQueueIndex > idx) {
               selectedQueueIndex--;
             }
-            await fetchPollState();
+            await fetchQuizState();
           } else {
             toast('Queue remove failed');
           }
@@ -2052,7 +2052,7 @@
     if (list) list.querySelectorAll('li').forEach((li, i) => {
       li.classList.toggle('selected', i === index);
     });
-    pollInput.focus();
+    quizInput.focus();
   }
 
 
@@ -2066,14 +2066,14 @@
 
   async function switchTab(tab) {
     updateCenterPanel(tab);
-    if (tab === 'poll') fetchPollState();
+    if (tab === 'quiz') fetchQuizState();
     await fetch(API('/activity'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ activity: tab }),
     });
     const focusTargets = {
-      poll: 'poll-input',
+      quiz: 'quiz-input',
       qa: 'host-qa-input',
       codereview: 'codereview-snippet',
       debate: 'debate-statement-input',
@@ -2097,20 +2097,20 @@
     _resetInactivityTimer();
     const centerQrPanel = document.getElementById('center-qr');
     if (centerQrPanel) centerQrPanel.classList.toggle('link-only', currentActivity === 'none');
-    ['qr', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
+    ['qr', 'quiz', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {
         el.style.display = currentActivity === 'none' ? 'flex' : 'none';
-      } else if (id === 'poll') {
-        // Show poll panel only when poll is the active participant activity.
-        const show = currentActivity === 'poll';
+      } else if (id === 'quiz') {
+        // Show quiz panel only when quiz is the active participant activity.
+        const show = currentActivity === 'quiz';
         el.style.display = show ? 'flex' : 'none';
-        // Hide the poll results section when no poll is active.
-        const pollResults = document.getElementById('poll-results-section');
-        if (pollResults) pollResults.style.display = currentActivity === 'poll' ? '' : 'none';
-        // Change divider text based on whether a poll exists.
+        // Hide the quiz results section when no quiz is active.
+        const quizResults = document.getElementById('quiz-results-section');
+        if (quizResults) quizResults.style.display = currentActivity === 'quiz' ? '' : 'none';
+        // Change divider text based on whether a quiz exists.
         const divider = el.querySelector('.or-divider span');
-        if (divider) divider.textContent = currentActivity === 'poll' ? 'generate next' : 'generate question';
+        if (divider) divider.textContent = currentActivity === 'quiz' ? 'generate next' : 'generate question';
       } else {
         const showVal = id === 'codereview' ? 'flex' : '';
         el.style.display = currentActivity === id ? showVal : 'none';
@@ -2129,13 +2129,13 @@
     const slidesTab = document.getElementById('tab-slides');
     if (slidesTab) slidesTab.classList.toggle('active', currentActivity === 'none');
     if (currentActivity && currentActivity !== 'none') {
-      ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
+      ['quiz', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? (t === 'codereview' ? 'flex' : '') : 'none';
       });
     } else {
       // When activity is 'none', deactivate all other tabs
-      ['poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
+      ['quiz', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.remove('active');
         document.getElementById('tab-content-' + t).style.display = 'none';
       });
@@ -3055,7 +3055,7 @@ async function toggleLeaderboard() {
     if (!_leaderboardActive) {
         const scoredCount = Object.values(scores || {}).filter(s => s > 0).length;
         if (scoredCount < 1) {
-            showLeaderboardError('No scores yet — run a poll first');
+            showLeaderboardError('No scores yet — run a quiz first');
             return;
         }
         try {

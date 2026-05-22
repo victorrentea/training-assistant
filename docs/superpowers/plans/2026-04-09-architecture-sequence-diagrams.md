@@ -14,7 +14,7 @@
 
 - Create: `docs/sequences/01-session-lifecycle-and-recovery.puml`
 - Create: `docs/sequences/02-participant-join-and-geolocation.puml`
-- Create: `docs/sequences/03-poll-and-quiz.puml`
+- Create: `docs/sequences/03-quiz.puml`
 - Create: `docs/sequences/04-qa-and-wordcloud.puml`
 - Create: `docs/sequences/05-code-review-and-debate.puml`
 - Create: `docs/sequences/06-slides-cache-and-follow-trainer.puml`
@@ -35,8 +35,8 @@
   `static/host-landing.js`, `daemon/session/router.py`, `daemon/session/pending.py`, `daemon/__main__.py`, `daemon/session_state.py`, `railway/features/ws/router.py`
 - Participant join and geolocation:
   `static/participant.js`, `daemon/participant/router.py`, `railway/features/ws/router.py`
-- Poll and quiz:
-  `static/host.js`, `daemon/poll/router.py`, `daemon/quiz/router.py`, `daemon/quiz/generator.py`, `daemon/ws_publish.py`
+- Quiz and quiz:
+  `static/host.js`, `daemon/quiz/router.py`, `daemon/quiz/router.py`, `daemon/quiz/generator.py`, `daemon/ws_publish.py`
 - Q&A and word cloud:
   `static/participant.js`, `daemon/qa/router.py`, `daemon/wordcloud/router.py`, `daemon/ws_publish.py`
 - Code review and debate:
@@ -317,7 +317,7 @@ git commit -m "feat: add puml render check and watch modes"
 **Files:**
 - Create: `docs/sequences/01-session-lifecycle-and-recovery.puml`
 - Create: `docs/sequences/02-participant-join-and-geolocation.puml`
-- Create: `docs/sequences/03-poll-and-quiz.puml`
+- Create: `docs/sequences/03-quiz.puml`
 - Create: `docs/sequences/04-qa-and-wordcloud.puml`
 - Create: `docs/sequences/05-code-review-and-debate.puml`
 - Create: `docs/sequences/06-slides-cache-and-follow-trainer.puml`
@@ -338,7 +338,7 @@ SVG_DIR = SEQUENCES_DIR / "svg"
 EXPECTED = [
     "01-session-lifecycle-and-recovery",
     "02-participant-join-and-geolocation",
-    "03-poll-and-quiz",
+    "03-quiz",
     "04-qa-and-wordcloud",
     "05-code-review-and-debate",
     "06-slides-cache-and-follow-trainer",
@@ -429,7 +429,7 @@ def test_architecture_md_has_sequence_toc_and_svg_refs():
     assert "## Sequence Diagrams" in text
     assert "### Session Lifecycle and Recovery" in text
     assert "![Session lifecycle and recovery](docs/sequences/svg/01-session-lifecycle-and-recovery.svg)" in text
-    assert "![Poll and quiz](docs/sequences/svg/03-poll-and-quiz.svg)" in text
+    assert "![Quiz and quiz](docs/sequences/svg/03-quiz.svg)" in text
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -454,7 +454,7 @@ Expected: FAIL because `ARCHITECTURE.md` has no TOC and no sequence SVG referenc
 - [Sequence Diagrams](#sequence-diagrams)
 - [Session Lifecycle and Recovery](#session-lifecycle-and-recovery)
 - [Participant Join and Geolocation](#participant-join-and-geolocation)
-- [Poll and Quiz](#poll-and-quiz)
+- [Quiz and Quiz](#quiz-and-quiz)
 - [Q&A and Word Cloud](#qa-and-word-cloud)
 - [Code Review and Debate](#code-review-and-debate)
 - [Slides Cache and Follow Trainer](#slides-cache-and-follow-trainer)

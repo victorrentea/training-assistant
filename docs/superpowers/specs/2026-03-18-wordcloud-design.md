@@ -13,7 +13,7 @@ Add a live word cloud activity to the workshop tool. The host opens a word cloud
 ## Constraints & Principles
 
 - One WebSocket connection per participant — no new connections for word cloud
-- One activity at a time: poll and word cloud are mutually exclusive
+- One activity at a time: quiz and word cloud are mutually exclusive
 - No vertical scrolling on the host screen (3-column layout redesign)
 - Participant UI must be mobile-responsive
 - No new infrastructure — reuse existing WS broadcast pattern
@@ -27,13 +27,13 @@ The host panel is redesigned from its current card-stack layout into a fixed 3-c
 | Column | Width | Content |
 |--------|-------|---------|
 | Left | ~25% | Controls (tabs + active tab content + status badges) |
-| Center | ~50% | Current activity (idle: QR · poll: results · wordcloud: cloud) |
+| Center | ~50% | Current activity (idle: QR · quiz: results · wordcloud: cloud) |
 | Right | ~25% | Participant list with scores (always visible) |
 
 ### Left Column
 
-- **Tab switcher** at top: `Poll` | `☁ Word Cloud`
-- **Poll tab:**
+- **Tab switcher** at top: `Quiz` | `☁ Word Cloud`
+- **Quiz tab:**
   - Existing `contenteditable` question composer
   - 🚀 Launch button + Multi-select checkbox + correct count
   - `— or —` horizontal divider
@@ -51,7 +51,7 @@ The host panel is redesigned from its current card-stack layout into a fixed 3-c
 State-driven display:
 
 - `current_activity === "none"` → large QR code (idle state, always useful)
-- `current_activity === "poll"` → existing poll results panel:
+- `current_activity === "quiz"` → existing quiz results panel:
   - Top bar: question title + action buttons grouped: `Close voting` + auto-close timers (5s/10s/15s/20s) + `✕ Remove` at far right
   - Vote bars below
 - `current_activity === "wordcloud"` → live D3-cloud word cloud filling the panel
@@ -72,7 +72,7 @@ from enum import Enum
 
 class ActivityType(str, Enum):
     NONE = "none"
-    POLL = "poll"
+    QUIZ = "quiz"
     WORDCLOUD = "wordcloud"
 ```
 
@@ -82,9 +82,9 @@ current_activity: ActivityType = ActivityType.NONE
 wordcloud_words: dict[str, int] = {}   # normalized_word → submission count
 ```
 
-`poll_active` (voting open/closed within a poll) is **retained** — it controls whether voting is open, independent of `current_activity`. The two concepts are:
-- `current_activity == POLL` → poll is the visible activity
-- `poll_active == True` → voting is currently open within that poll
+`quiz_active` (voting open/closed within a quiz) is **retained** — it controls whether voting is open, independent of `current_activity`. The two concepts are:
+- `current_activity == QUIZ` → quiz is the visible activity
+- `quiz_active == True` → voting is currently open within that quiz
 
 ### `routers/wordcloud.py` — new router
 
@@ -92,14 +92,14 @@ wordcloud_words: dict[str, int] = {}   # normalized_word → submission count
 - Body: `{"active": true|false}`
 - `active=true`: sets `current_activity = WORDCLOUD`, clears `wordcloud_words`, broadcasts state
 - `active=false`: sets `current_activity = NONE`, broadcasts state (client triggers PNG download)
-- Returns 409 if `active=true` and `current_activity != NONE` — this means both an open poll **and** a closed-but-still-displayed poll (`current_activity == POLL`, `poll_active == False`) block opening a word cloud. The host must explicitly remove the poll first. This is intentional.
+- Returns 409 if `active=true` and `current_activity != NONE` — this means both an open quiz **and** a closed-but-still-displayed quiz (`current_activity == QUIZ`, `quiz_active == False`) block opening a word cloud. The host must explicitly remove the quiz first. This is intentional.
 
-### `routers/poll.py` — mutual exclusivity
+### `routers/quiz.py` — mutual exclusivity
 
-- `POST /api/poll` (create poll): returns 409 if `current_activity != NONE`
-- On poll create: sets `current_activity = POLL`
-- On poll delete (`DELETE /api/poll`): sets `current_activity = NONE`
-- `POST /api/poll/status` (close/reopen voting): only changes `poll_active`, does **not** change `current_activity`. Closing voting does not end the poll activity.
+- `POST /api/quiz` (create quiz): returns 409 if `current_activity != NONE`
+- On quiz create: sets `current_activity = QUIZ`
+- On quiz delete (`DELETE /api/quiz`): sets `current_activity = NONE`
+- `POST /api/quiz/status` (close/reopen voting): only changes `quiz_active`, does **not** change `current_activity`. Closing voting does not end the quiz activity.
 
 ### `routers/ws.py` — new message type
 
@@ -210,10 +210,10 @@ Example when idle:
 - Happens client-side, no server involvement
 
 **On close — participant screens:**
-- When `current_activity` returns to `"none"` in the state broadcast, participant screens return to the idle waiting screen. No download, no animation — same transition as removing a poll.
+- When `current_activity` returns to `"none"` in the state broadcast, participant screens return to the idle waiting screen. No download, no animation — same transition as removing a quiz.
 
 **Word Cloud tab — blocked state:**
-- When `current_activity === "poll"` (a poll is active), the Word Cloud tab's Open button is **disabled and visually grayed out**. A tooltip or small label explains: "Remove the current poll first."
+- When `current_activity === "quiz"` (a quiz is active), the Word Cloud tab's Open button is **disabled and visually grayed out**. A tooltip or small label explains: "Remove the current quiz first."
 
 **`build_state_message()` in `messaging.py`:**
 - Add `current_activity` and `wordcloud_words` to the state dict returned by this function so they are included in every broadcast.
@@ -232,8 +232,8 @@ Example when idle:
 - Word normalization: `"  Microservices  "` → `"microservices"`
 - Duplicate word increments count (not deduplicated)
 - Submit word rejected when `current_activity != WORDCLOUD`
-- Cannot open word cloud when poll is active (409)
-- Cannot create poll when word cloud is active (409)
+- Cannot open word cloud when quiz is active (409)
+- Cannot create quiz when word cloud is active (409)
 
 ### `test_e2e.py` (Playwright)
 
@@ -243,7 +243,7 @@ Example when idle:
 - Participant submits word → gets 200 points
 - Host closes word cloud → `current_activity` returns to `none` on all clients
 - PNG download triggered on host browser when word cloud closes
-- Poll tab and word cloud are mutually exclusive (one blocks the other)
+- Quiz tab and word cloud are mutually exclusive (one blocks the other)
 
 ---
 

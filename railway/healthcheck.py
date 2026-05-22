@@ -117,8 +117,8 @@ PARTICIPANT_ELEMENTS = [
 HOST_ELEMENTS = [
     ".host-columns",
     ".tab-bar",
-    "#tab-poll",
-    "#tab-content-poll",
+    "#tab-quiz",
+    "#tab-content-quiz",
     "#create-btn",
     "#center-qr",
     "#pax-count",

@@ -126,7 +126,7 @@ No migration needed. Server restart clears all in-memory state. Old `localStorag
 - `state.py` — all dicts keyed by UUID, add `participant_names` dict, remove `suggested_names`
 - `routers/ws.py` — route `/ws/{uuid}`, handle `set_name` (with enforcement), `qa_submit`, `qa_upvote` messages, remove name-taken logic
 - `routers/qa.py` — remove `POST /api/qa/question` and `POST /api/qa/upvote` REST endpoints
-- `routers/poll.py` — update score calculation to use UUID keys, send per-connection `my_score`
+- `routers/quiz.py` — update score calculation to use UUID keys, send per-connection `my_score`
 - `messaging.py` — build per-participant personalized messages, build host participant list
 - `main.py` — set host cookie on `/host` endpoint
 

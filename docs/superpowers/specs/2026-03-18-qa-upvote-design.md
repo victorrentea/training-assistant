@@ -21,18 +21,18 @@ Increase engagement in tired, bored, or distracted audiences. Real-time points, 
 
 **Tab switch = activity switch.** Clicking a tab on the host panel immediately changes `current_activity` for all participants — no separate Open/Close buttons for Q&A or Word Cloud.
 
-- **Poll tab** → participants see current poll (or idle if none)
+- **Quiz tab** → participants see current quiz (or idle if none)
 - **Word Cloud tab** → participants enter word cloud mode
 - **Q&A tab** → participants enter Q&A mode
 
-Each tab has only a **Clear** button to reset its content. Poll additionally has a **Launch** button to create a new poll.
+Each tab has only a **Clear** button to reset its content. Quiz additionally has a **Launch** button to create a new quiz.
 
 `switchTab()` in `host.js` makes an API call to set the active activity:
 ```
-POST /api/activity  { "activity": "poll" | "wordcloud" | "qa" | "none" }
+POST /api/activity  { "activity": "quiz" | "wordcloud" | "qa" | "none" }
 ```
 
-Each activity (Poll, Word Cloud, Q&A) is **independent** — they have their own routers, state fields, and UI panels. Switching tabs does not clear or affect the other activities' content.
+Each activity (Quiz, Word Cloud, Q&A) is **independent** — they have their own routers, state fields, and UI panels. Switching tabs does not clear or affect the other activities' content.
 
 `POST /api/activity` **replaces** the existing `POST /api/wordcloud/status` endpoint. The word cloud router is updated to remove its own activation logic; `current_activity` is controlled exclusively through `/api/activity`.
 
@@ -133,7 +133,7 @@ POST /api/qa/clear                                    — delete all questions
 
 ### Activity switching (host only, already protected)
 ```
-POST /api/activity              { activity: "poll" | "wordcloud" | "qa" | "none" }
+POST /api/activity              { activity: "quiz" | "wordcloud" | "qa" | "none" }
 ```
 
 ---
@@ -180,7 +180,7 @@ Broadcast is triggered on every Q&A mutation (submit, upvote, edit, delete, answ
 ## UI — Host
 
 **Left column (Q&A tab):**
-- Tab bar: Poll | ☁ Word Cloud | ❓ Q&A
+- Tab bar: Quiz | ☁ Word Cloud | ❓ Q&A
 - When Q&A tab active: just a **Clear** button at bottom
 
 **Center column (when Q&A tab active):**

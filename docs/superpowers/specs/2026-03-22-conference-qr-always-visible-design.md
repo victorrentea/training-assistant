@@ -14,7 +14,7 @@ In conference mode, the left column (`host-col-left`) splits into a CSS grid wit
 
 ### HTML Changes (host.html)
 
-Add a wrapper `<div class="left-tabs-wrapper">` around the tab bar (`.tab-bar`) and all tab content panels (`#tab-content-poll` through `#tab-content-debate`). This gives the grid exactly two meaningful content rows plus the status bar.
+Add a wrapper `<div class="left-tabs-wrapper">` around the tab bar (`.tab-bar`) and all tab content panels (`#tab-content-quiz` through `#tab-content-debate`). This gives the grid exactly two meaningful content rows plus the status bar.
 
 ### CSS Changes (host.css)
 

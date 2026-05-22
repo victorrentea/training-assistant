@@ -28,18 +28,18 @@ def test_basic_cross_service_arrows():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/poll/vote", "Participant", span_id="s1",
-                    start_time=1000, attributes={"trace.family": "poll"}),
-        _make_span("POST /api/poll/vote", "Daemon", span_id="s2", parent_span_id="s1",
-                    start_time=1001, attributes={"trace.family": "poll"}),
+        _make_span("POST /api/quiz/vote", "Participant", span_id="s1",
+                    start_time=1000, attributes={"trace.family": "quiz"}),
+        _make_span("POST /api/quiz/vote", "Daemon", span_id="s2", parent_span_id="s1",
+                    start_time=1001, attributes={"trace.family": "quiz"}),
     ])
 
-    generate_puml(path, family="poll", output=out)
+    generate_puml(path, family="quiz", output=out)
     content = Path(out).read_text()
 
     assert "Participant" in content
     assert "Daemon" in content
-    assert "POST /api/poll/vote" in content
+    assert "POST /api/quiz/vote" in content
     assert "@startuml" in content
     assert "@enduml" in content
 
@@ -57,19 +57,19 @@ def test_internal_spans_render_as_self_messages():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/poll", "Host", span_id="s1",
+        _make_span("POST /api/quiz", "Host", span_id="s1",
                     start_time=1000, attributes={"trace.family": "test"}),
-        _make_span("POST /api/poll", "Daemon", span_id="s2", parent_span_id="s1",
+        _make_span("POST /api/quiz", "Daemon", span_id="s2", parent_span_id="s1",
                     start_time=1001, attributes={"trace.family": "test"}),
-        _make_span("step:create_poll", "Daemon", span_id="s3", parent_span_id="s2",
+        _make_span("step:create_quiz", "Daemon", span_id="s3", parent_span_id="s2",
                     start_time=1002, attributes={"trace.family": "test"}),
     ])
 
     generate_puml(path, family="test", output=out)
     content = Path(out).read_text()
 
-    assert "step:create_poll" in content
-    assert "POST /api/poll" in content
+    assert "step:create_quiz" in content
+    assert "POST /api/quiz" in content
     # The internal span should appear as a Daemon-to-Daemon self-message
     assert '"Daemon" -> "Daemon"' in content
 
@@ -82,12 +82,12 @@ def test_collapse_proxy_chain():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/participant/poll/vote", "Participant", span_id="s1",
+        _make_span("POST /api/participant/quiz/vote", "Participant", span_id="s1",
                     start_time=1000, attributes={"trace.family": "proxy"}),
         _make_span("proxy_request", "Railway", span_id="s2", parent_span_id="s1",
-                    start_time=1001, attributes={"proxy.path": "/api/participant/poll/vote",
+                    start_time=1001, attributes={"proxy.path": "/api/participant/quiz/vote",
                                                   "trace.family": "proxy"}),
-        _make_span("POST /api/participant/poll/vote", "Daemon", span_id="s3", parent_span_id="s2",
+        _make_span("POST /api/participant/quiz/vote", "Daemon", span_id="s3", parent_span_id="s2",
                     start_time=1002, attributes={"trace.family": "proxy"}),
     ])
 
@@ -108,11 +108,11 @@ def test_collapse_proxy_chain_railway_source():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/participant/poll/vote", "Railway", span_id="s1",
+        _make_span("POST /api/participant/quiz/vote", "Railway", span_id="s1",
                     start_time=1000),
         _make_span("proxy_request", "Railway", span_id="s2", parent_span_id="s1",
                     start_time=1001),
-        _make_span("POST /api/participant/poll/vote", "Daemon", span_id="s3", parent_span_id="s2",
+        _make_span("POST /api/participant/quiz/vote", "Daemon", span_id="s3", parent_span_id="s2",
                     start_time=1002),
     ])
 
@@ -134,9 +134,9 @@ def test_infer_host_origin():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/{session_id}/host/poll", "Daemon", span_id="s1",
+        _make_span("POST /api/{session_id}/host/quiz", "Daemon", span_id="s1",
                     start_time=1000),
-        _make_span("POST /api/{session_id}/host/poll/open", "Daemon", span_id="s2",
+        _make_span("POST /api/{session_id}/host/quiz/open", "Daemon", span_id="s2",
                     start_time=2000),
     ])
 
@@ -145,7 +145,7 @@ def test_infer_host_origin():
 
     assert "Host" in content
     assert "Daemon" in content
-    assert "POST /api/{session_id}/host/poll" in content
+    assert "POST /api/{session_id}/host/quiz" in content
 
 
 def test_infer_broadcast_target():
@@ -157,7 +157,7 @@ def test_infer_broadcast_target():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("broadcast:poll_opened", "Daemon", span_id="s1", start_time=1000),
+        _make_span("broadcast:quiz_opened", "Daemon", span_id="s1", start_time=1000),
     ])
 
     generate_puml(path, family="", output=out)
@@ -165,7 +165,7 @@ def test_infer_broadcast_target():
 
     assert "Daemon" in content
     assert "Participant" in content
-    assert "poll_opened" in content
+    assert "quiz_opened" in content
 
 
 def test_infer_notify_host_target():
@@ -177,7 +177,7 @@ def test_infer_notify_host_target():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("notify_host:poll_ai_generated", "Daemon", span_id="s1", start_time=1000),
+        _make_span("notify_host:quiz_ai_generated", "Daemon", span_id="s1", start_time=1000),
     ])
 
     generate_puml(path, family="", output=out)
@@ -185,7 +185,7 @@ def test_infer_notify_host_target():
 
     assert "Daemon" in content
     assert "Host" in content
-    assert "poll_ai_generated" in content
+    assert "quiz_ai_generated" in content
 
 
 def test_collapse_broadcast_relay():
@@ -196,11 +196,11 @@ def test_collapse_broadcast_relay():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("broadcast:poll_opened", "Daemon", span_id="s1",
+        _make_span("broadcast:quiz_opened", "Daemon", span_id="s1",
                     start_time=1000, attributes={"trace.family": "bcast"}),
         _make_span("broadcast_fanout", "Railway", span_id="s2", parent_span_id="s1",
                     start_time=1001, attributes={"trace.family": "bcast"}),
-        _make_span("ws_receive:poll_opened", "Participant", span_id="s3", parent_span_id="s2",
+        _make_span("ws_receive:quiz_opened", "Participant", span_id="s3", parent_span_id="s2",
                     start_time=1002, attributes={"trace.family": "bcast"}),
     ])
 
@@ -222,11 +222,11 @@ def test_given_phase_arrows_not_colored():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/participant/poll/vote", "Participant", span_id="s1",
+        _make_span("POST /api/participant/quiz/vote", "Participant", span_id="s1",
                     start_time=1000, attributes={"bdd.phase": "given"}),
-        _make_span("POST /api/participant/poll/vote", "Daemon", span_id="s2", parent_span_id="s1",
+        _make_span("POST /api/participant/quiz/vote", "Daemon", span_id="s2", parent_span_id="s1",
                     start_time=1001, attributes={"bdd.phase": "given"}),
-        _make_span("broadcast:poll_opened", "Daemon", span_id="s3",
+        _make_span("broadcast:quiz_opened", "Daemon", span_id="s3",
                     start_time=2000, attributes={"bdd.phase": "when"}),
     ])
 
@@ -245,8 +245,8 @@ def test_no_phase_renders_default():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/poll/vote", "Participant", span_id="s1", start_time=1000),
-        _make_span("POST /api/poll/vote", "Daemon", span_id="s2", parent_span_id="s1", start_time=1001),
+        _make_span("POST /api/quiz/vote", "Participant", span_id="s1", start_time=1000),
+        _make_span("POST /api/quiz/vote", "Daemon", span_id="s2", parent_span_id="s1", start_time=1001),
     ])
 
     generate_puml(path, family="", output=out)
@@ -301,9 +301,9 @@ def test_activations_emitted_only_when_span_has_follow_up_arrows():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/{session_id}/host/poll", "Daemon", span_id="s1",
+        _make_span("POST /api/{session_id}/host/quiz", "Daemon", span_id="s1",
                    start_time=1000, end_time=5000),
-        _make_span("step:create_poll", "Daemon", span_id="s2", parent_span_id="s1",
+        _make_span("step:create_quiz", "Daemon", span_id="s2", parent_span_id="s1",
                    start_time=1500, end_time=4500),
     ])
 
@@ -372,14 +372,14 @@ def test_async_edges_do_not_activate():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("broadcast:poll_opened", "Daemon", span_id="s1",
+        _make_span("broadcast:quiz_opened", "Daemon", span_id="s1",
                    start_time=1000, end_time=2000),
     ])
 
     generate_puml(path, family="", output=out)
     content = Path(out).read_text()
 
-    assert "poll_opened" in content
+    assert "quiz_opened" in content
     assert 'activate "Participant"' not in content
 
 
@@ -392,7 +392,7 @@ def test_named_participants_appear_in_canonical_position():
     out = path + ".puml"
 
     _write_spans(path, [
-        _make_span("POST /api/{session_id}/host/poll", "Daemon", span_id="s1",
+        _make_span("POST /api/{session_id}/host/quiz", "Daemon", span_id="s1",
                    start_time=1000, end_time=2000),
         _make_span("GET /api/participant/state", "Participant",
                    span_id="s2", trace_id="t-alice", start_time=1100, end_time=1200,

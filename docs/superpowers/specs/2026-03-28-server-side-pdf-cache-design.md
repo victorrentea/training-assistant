@@ -35,7 +35,7 @@ This **replaces** the existing `slides_meta` message. The backend does NOT read 
 {"type": "slide_log", "slug": "clean-code", "event": "download_started", "detail": "size=2.1MB"}
 ```
 
-The daemon no longer converts PPTX, polls GDrive fingerprints, or uploads PDFs.
+The daemon no longer converts PPTX, quizzes GDrive fingerprints, or uploads PDFs.
 
 ### Backend (Railway FastAPI) — PDF authority
 
@@ -51,7 +51,7 @@ not_cached ──(participant requests)──> downloading ──(success)──
                     │                       ↓                        ↓
                     │                 download_failed              stale
                     │                       │                        │
-                    │            (participant re-requests)  (3s delay, then HEAD poll)
+                    │            (participant re-requests)  (3s delay, then HEAD quiz)
                     │                       ↓                        ↓
                     └───────────────> downloading              polling_drive
                                                               │         │
@@ -79,7 +79,7 @@ not_cached ──(participant requests)──> downloading ──(success)──
 
 ### Per-slug GDrive lock (critical constraint)
 
-**At most ONE in-flight HTTP request to Google Drive per slug at any time.** This is the single most important concurrency rule. No matter what triggers a GDrive call — participant request, fingerprint poll HEAD, invalidation re-download — they all go through one `asyncio.Lock` per slug (`state.slides_gdrive_locks[slug]`). Anyone else wanting GDrive access for that slug awaits the lock.
+**At most ONE in-flight HTTP request to Google Drive per slug at any time.** This is the single most important concurrency rule. No matter what triggers a GDrive call — participant request, fingerprint quiz HEAD, invalidation re-download — they all go through one `asyncio.Lock` per slug (`state.slides_gdrive_locks[slug]`). Anyone else wanting GDrive access for that slug awaits the lock.
 
 This prevents: 20 participants requesting the same slide → 20 parallel GDrive downloads. Instead: first request acquires the lock and downloads; the other 19 await an `asyncio.Event` that fires when the download completes.
 
@@ -97,9 +97,9 @@ This prevents: 20 participants requesting the same slide → 20 parallel GDrive 
 1. Try HEAD first (cheap, ~0 bytes)
 2. If HEAD returns useful headers → use them as fingerprint
 3. If HEAD returns 405 or empty headers → fall back to GET, but only for the first probe to establish a baseline fingerprint, then use HEAD for subsequent checks (Content-Length alone may change)
-4. If HEAD consistently fails → fall back to GET every poll tick (worst case: ~20 full downloads in 60s for one slide — acceptable as a rare edge case)
+4. If HEAD consistently fails → fall back to GET every quiz tick (worst case: ~20 full downloads in 60s for one slide — acceptable as a rare edge case)
 
-**Duplicate invalidation handling**: if `slide_invalidated` arrives while already in `polling_drive` for the same slug, ignore it (the poll is already running). If it arrives in `downloading` state, ignore it (will re-check after download completes).
+**Duplicate invalidation handling**: if `slide_invalidated` arrives while already in `polling_drive` for the same slug, ignore it (the quiz is already running). If it arrives in `downloading` state, ignore it (will re-check after download completes).
 
 When BE receives `slide_invalidated`:
 1. If already `polling_drive` or `downloading` for this slug → ignore
@@ -138,7 +138,7 @@ All sent as `{"type": "slide_log", "slug": "...", "event": "...", "detail": "...
 | `download_failed` | download error | `HTTP 403: Forbidden` |
 | `invalidated` | daemon reports change | — |
 | `poll_started` | fingerprint polling begins | `fingerprint=hdr:etag\|...\|1234` |
-| `poll_check` | each HEAD poll tick | `attempt=3 fingerprint=hdr:...` |
+| `poll_check` | each HEAD quiz tick | `attempt=3 fingerprint=hdr:...` |
 | `poll_fingerprint_changed` | new fingerprint detected | `old=hdr:... new=hdr:...` |
 | `poll_timeout` | 60s elapsed, no change | `attempts=20` |
 

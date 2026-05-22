@@ -1,0 +1,81 @@
+@startuml
+title Quiz
+hide footbox
+autonumber
+
+skinparam BackgroundColor transparent
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+skinparam MaxMessageSize 110
+skinparam WrapWidth 220
+skinparam RoundCorner 8
+
+actor "Host browser\nstatic/host.js" as Host
+actor "Participant browser" as Participant
+participant "Daemon quiz queue router\n/api/{session}/host/quiz-*" as QuizQueueAPI
+collections "Quiz pending queue" as QuizPending
+participant "Daemon main loop\nquiz_queue.history" as Loop
+participant "Claude API" as Claude
+participant "Daemon quiz router\n/api/.../quiz" as QuizAPI
+participant "Railway HTTP proxy" as RailwayHTTP
+participant "Railway session WS" as RailwayWS
+
+group AI quiz generation
+Host -> QuizQueueAPI: POST /quiz-request {minutes|topic}
+QuizQueueAPI -> QuizPending: put(quiz_request)
+QuizQueueAPI -> RailwayWS: broadcast quiz_status=requested
+
+Loop -> QuizPending: pop quiz_request
+Loop -> Loop: load summary points / notes / quiz history
+Loop -> Claude: generate_quiz(...) or refine_quiz(...)
+Claude --> Loop: quiz JSON
+Loop -> RailwayWS: broadcast quiz_preview
+Loop -> RailwayWS: broadcast quiz_status=done
+
+opt Host regenerates one field
+  Host -> QuizQueueAPI: POST /quiz-refine {target}
+  QuizQueueAPI -> QuizPending: put(quiz_refine)
+  QuizQueueAPI -> RailwayWS: broadcast quiz_status=generating
+  Loop -> QuizPending: pop quiz_refine
+  Loop -> Claude: refine current preview
+  Claude --> Loop: updated quiz JSON
+  Loop -> RailwayWS: broadcast updated quiz_preview
+  Loop -> RailwayWS: broadcast quiz_status=done
+end
+end
+
+group Draft -> open -> vote -> reveal
+Host -> QuizAPI: POST /host/quiz
+QuizAPI -> QuizAPI: create draft quiz\nset current_activity="quiz"
+QuizAPI -> Host: notify_host quiz_ai_generated
+
+Host -> QuizAPI: POST /host/quiz/open
+QuizAPI -> RailwayWS: broadcast quiz_opened
+QuizAPI -> Host: notify_host quiz_opened
+
+Participant -> RailwayHTTP: POST /api/participant/quiz/vote
+RailwayHTTP -> QuizAPI: proxy vote request
+QuizAPI -> QuizAPI: cast_vote once for this participant
+QuizAPI -> RailwayWS: write_back vote_update
+QuizAPI -> Host: notify_host vote_update
+
+opt Host starts a countdown
+  Host -> QuizAPI: POST /host/quiz/timer
+  QuizAPI -> RailwayWS: broadcast quiz_timer_started
+  QuizAPI -> Host: notify_host quiz_timer_started
+end
+
+Host -> QuizAPI: POST /host/quiz/close
+QuizAPI -> RailwayWS: broadcast quiz_closed with tallies
+QuizAPI -> Host: notify_host quiz_closed
+
+opt Host reveals correct answers after closing
+  Host -> QuizAPI: PUT /host/quiz/correct
+  QuizAPI -> QuizAPI: reveal correct_ids\naward scores
+  QuizAPI -> RailwayWS: broadcast quiz_correct_revealed
+  QuizAPI -> RailwayWS: broadcast scores_updated
+  QuizAPI -> Host: notify_host scores_updated
+end
+end
+@enduml

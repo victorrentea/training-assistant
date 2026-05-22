@@ -22,27 +22,27 @@ class QueuedQuestion(BaseModel):
     correct_indices: list[int]
 ```
 
-### Updated PollQueueStatus
+### Updated QuizQueueStatus
 
 ```python
-class PollQueueStatus(BaseModel):
+class QuizQueueStatus(BaseModel):
     pending: int
     items: list[QueuedQuestion]   # all queued questions, in order
     current: QueuedQuestion | None = None  # always items[0] if non-empty, kept for backward compat
 ```
 
-`items` and `current` are both populated on every `GET /api/{session_id}/host/poll` response. `current` equals `items[0]` (or `None`); kept because existing callers may read it.
+`items` and `current` are both populated on every `GET /api/{session_id}/host/quiz` response. `current` equals `items[0]` (or `None`); kept because existing callers may read it.
 
 ### New Endpoint
 
-`DELETE /api/{session_id}/host/poll/queue/{index}`
+`DELETE /api/{session_id}/host/quiz/queue/{index}`
 
 - Removes the question at position `index` (0-based) from the queue.
-- Broadcasts `PollQueueUpdatedMsg`.
+- Broadcasts `QuizQueueUpdatedMsg`.
 - Returns 204 No Content.
 - Returns 404 if index is out of range.
 
-### PollQueue Class Simplification
+### QuizQueue Class Simplification
 
 The internal `_index` advance pointer and `advance()` method are removed. The queue becomes a simple list. `current()` returns `self._questions[0]` (or `None`).
 
@@ -60,8 +60,8 @@ Remove: `advance()`, `skip()`, and `self._index` field.
 
 ### Removed Endpoints
 
-- `POST /api/{session_id}/host/poll/queue/submit` — deleted
-- `POST /api/{session_id}/host/poll/queue/skip` — deleted
+- `POST /api/{session_id}/host/quiz/queue/submit` — deleted
+- `POST /api/{session_id}/host/quiz/queue/skip` — deleted
 
 ---
 
@@ -104,8 +104,8 @@ The list is a `<ul id="queue-list">` with `overflow-y: auto` and `flex: 1` to fi
 
 When `selectedQueueIndex !== null`:
 
-1. Fires the poll as normal (using textarea content + hidden `correct_indices` from `selectedQueueItem`).
-2. Calls `DELETE /api/{session_id}/host/poll/queue/{selectedQueueIndex}`.
+1. Fires the quiz as normal (using textarea content + hidden `correct_indices` from `selectedQueueItem`).
+2. Calls `DELETE /api/{session_id}/host/quiz/queue/{selectedQueueIndex}`.
 3. Clears textarea, resets `selectedQueueIndex = null`, `selectedQueueItem = null`.
 4. Makes `#correct-count` editable again.
 
@@ -123,7 +123,7 @@ Replaces the currently loaded item — `selectedQueueIndex` and textarea update 
 
 ### List Rendering
 
-`renderPollQueuePanel(queue)` updated to:
+`renderQuizQueuePanel(queue)` updated to:
 - Render `queue.items` as `<li>` elements showing `item.question` (title only).
 - Attach click handlers per item.
 - Re-apply highlight to `selectedQueueIndex` if still valid after refresh.
@@ -134,7 +134,7 @@ Replaces the currently loaded item — `selectedQueueIndex` and textarea update 
 
 Correct answers (`correct_indices`) are **never displayed** in the UI. They are:
 - Stored in hidden JS state (`selectedQueueItem.correct_indices`) when a queue item is loaded.
-- Passed to the poll creation call invisibly.
+- Passed to the quiz creation call invisibly.
 - The `#correct-count` input shows only the *count* (readonly when a queue item is loaded).
 
 ---
@@ -143,11 +143,11 @@ Correct answers (`correct_indices`) are **never displayed** in the UI. They are:
 
 | File | Change |
 |---|---|
-| `daemon/quiz/queue.py` | Add `remove(index)` method |
-| `daemon/quiz/queue_router.py` | Add `DELETE /{index}`, remove `/submit` and `/skip` |
-| `daemon/poll/router.py` | Update `PollQueueStatus` and `HostPollStateResponse` |
+| `daemon/quiz_queue/queue.py` | Add `remove(index)` method |
+| `daemon/quiz_queue/router.py` | Add `DELETE /{index}`, remove `/submit` and `/skip` |
+| `daemon/quiz/router.py` | Update `QuizQueueStatus` and `HostQuizStateResponse` |
 | `static/host.html` | Remove Pop/Skip buttons, add Clear button, add `#queue-list` |
-| `static/host.js` | Update `renderPollQueuePanel`, click handlers, Send logic, Clear logic |
+| `static/host.js` | Update `renderQuizQueuePanel`, click handlers, Send logic, Clear logic |
 
 ---
 

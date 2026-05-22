@@ -49,7 +49,7 @@ class ParticipantPage:
         edit_input.press("Enter")
         expect(self._page.locator("#display-name .display-name-text")).to_have_text(name, timeout=3000)
 
-    # ── Poll ─────────────────────────────────────────────────────────────────
+    # ── Quiz ─────────────────────────────────────────────────────────────────
 
     def vote_for(self, option_text: str) -> None:
         self._page.locator(f".option-btn:has-text('{option_text}')").click()
@@ -65,7 +65,7 @@ class ParticipantPage:
             self._page.wait_for_timeout(300)  # wait for WS round-trip
 
     def get_percentages(self) -> list[int]:
-        """Return displayed percentage values for each poll option."""
+        """Return displayed percentage values for each quiz option."""
         return [
             int(el.inner_text().replace("%", "").strip())
             for el in self._page.locator(".pct").all()

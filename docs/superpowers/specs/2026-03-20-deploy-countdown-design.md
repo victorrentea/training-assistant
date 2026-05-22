@@ -14,7 +14,7 @@ Enhance `watch-deploy.sh` to show a live countdown timer via a macOS menu bar it
 
 ### Menu Bar Countdown (JXA)
 
-A `osascript -l JavaScript` process creates an `NSStatusItem` in the macOS menu bar. The bash script writes countdown text to `/tmp/deploy_status.txt`; the JXA process polls it every 0.5s and updates the menu bar item in-place. Zero animation, zero flash.
+A `osascript -l JavaScript` process creates an `NSStatusItem` in the macOS menu bar. The bash script writes countdown text to `/tmp/deploy_status.txt`; the JXA process quizzes it every 0.5s and updates the menu bar item in-place. Zero animation, zero flash.
 
 - **Idle state**: menu bar item hidden (or shows `🚀`)
 - **During deploy**: `🚀 ~32s` → `🚀 ~25s` → `🚀 ~5s` → `🚀 ...` → hidden
@@ -32,7 +32,7 @@ Current `version.js` format: `const VERSION = '<timestamp>';`
 
 The pre-commit hook stamps `version.js` with a timestamp. We can't easily map timestamp → commit SHA. Instead:
 
-**Approach**: When a merge to master is detected, record the new master HEAD SHA. Then poll the production `version.js` — when the version string changes to something DIFFERENT from what it was when we started waiting, AND we're still tracking that same `MERGE_SHA`, we accept it. If a NEW push arrives (master HEAD changes again while waiting), we:
+**Approach**: When a merge to master is detected, record the new master HEAD SHA. Then quiz the production `version.js` — when the version string changes to something DIFFERENT from what it was when we started waiting, AND we're still tracking that same `MERGE_SHA`, we accept it. If a NEW push arrives (master HEAD changes again while waiting), we:
 1. Reset `WAITING_SINCE` to now
 2. Update `MERGE_SHA` to the new HEAD
 3. Restart the countdown with fresh estimate
@@ -65,7 +65,7 @@ File: `deploy-status-bar.js` (in project root, committed to repo)
 ObjC.import('Cocoa');
 ObjC.import('Foundation');
 
-// Create status bar item, poll file, update title
+// Create status bar item, quiz file, update title
 // When file is empty or missing → hide item
 // When file has text → show item with that text
 ```

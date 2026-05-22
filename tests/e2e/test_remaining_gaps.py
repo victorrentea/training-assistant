@@ -1,7 +1,7 @@
 """
 E2E tests for remaining coverage gaps.
 
-Covers: multi-select poll (submit/scoring), poll timer, leaderboard show/hide,
+Covers: multi-select quiz (submit/scoring), quiz timer, leaderboard show/hide,
 conference mode identity, connection indicators, QR code, host panel elements,
 and additional edge cases.
 
@@ -23,20 +23,20 @@ from conftest import api, sapi, host_browser_ctx, pax_browser_ctx, host_url, pax
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=False)
-def clean_poll(server_url):
-    sapi(server_url, "put", "/poll/status", json={"open": False})
-    sapi(server_url, "delete", "/poll")
+def clean_quiz(server_url):
+    sapi(server_url, "put", "/quiz/status", json={"open": False})
+    sapi(server_url, "delete", "/quiz")
     yield
-    sapi(server_url, "put", "/poll/status", json={"open": False})
-    sapi(server_url, "delete", "/poll")
+    sapi(server_url, "put", "/quiz/status", json={"open": False})
+    sapi(server_url, "delete", "/quiz")
 
 
 # ---------------------------------------------------------------------------
-# Multi-Select Poll
+# Multi-Select Quiz
 # ---------------------------------------------------------------------------
 
-@pytest.mark.usefixtures("clean_poll", "clean_scores")
-class TestMultiSelectPoll:
+@pytest.mark.usefixtures("clean_quiz", "clean_scores")
+class TestMultiSelectQuiz:
 
     def test_multi_vote_submit_and_host_count(self, server_url, playwright):
         """Submit multi-vote by toggling options, verify host sees correct vote count."""
@@ -51,8 +51,8 @@ class TestMultiSelectPoll:
 
         try:
             p1.join("MultiVoter")
-            host._page.click("#tab-poll")
-            host.create_poll("Pick 2 correct", ["A", "B", "C", "D"], multi=True, correct_count=2)
+            host._page.click("#tab-quiz")
+            host.create_quiz("Pick 2 correct", ["A", "B", "C", "D"], multi=True, correct_count=2)
 
             expect(p1._page.locator(".option-btn")).to_have_count(4, timeout=5000)
 
@@ -60,7 +60,7 @@ class TestMultiSelectPoll:
             p1.multi_vote("A", "C")
             p1._page.wait_for_timeout(1000)
 
-            host.close_poll()
+            host.close_quiz()
             # Host should see 1 total vote
             expect(host._page.locator("text=1 total vote")).to_be_visible(timeout=5000)
         finally:
@@ -82,8 +82,8 @@ class TestMultiSelectPoll:
 
         try:
             p1.join("AllCorrect")
-            host._page.click("#tab-poll")
-            host.create_poll("Pick 2", ["Right1", "Right2", "Wrong1", "Wrong2"],
+            host._page.click("#tab-quiz")
+            host.create_quiz("Pick 2", ["Right1", "Right2", "Wrong1", "Wrong2"],
                              multi=True, correct_count=2)
 
             expect(p1._page.locator(".option-btn")).to_have_count(4, timeout=5000)
@@ -91,7 +91,7 @@ class TestMultiSelectPoll:
             p1.multi_vote("Right1", "Right2")
             p1._page.wait_for_timeout(500)
 
-            host.close_poll()
+            host.close_quiz()
             host.mark_correct("Right1")
             host.mark_correct("Right2")
 
@@ -118,8 +118,8 @@ class TestMultiSelectPoll:
 
         try:
             p1.join("PartialVoter")
-            host._page.click("#tab-poll")
-            host.create_poll("Pick 2", ["Right1", "Right2", "Wrong1", "Wrong2"],
+            host._page.click("#tab-quiz")
+            host.create_quiz("Pick 2", ["Right1", "Right2", "Wrong1", "Wrong2"],
                              multi=True, correct_count=2)
 
             expect(p1._page.locator(".option-btn")).to_have_count(4, timeout=5000)
@@ -127,7 +127,7 @@ class TestMultiSelectPoll:
             p1.multi_vote("Right1", "Wrong1")
             p1._page.wait_for_timeout(500)
 
-            host.close_poll()
+            host.close_quiz()
             host.mark_correct("Right1")
             host.mark_correct("Right2")
 
@@ -154,8 +154,8 @@ class TestMultiSelectPoll:
 
         try:
             p1.join("AllWrong")
-            host._page.click("#tab-poll")
-            host.create_poll("Pick 2", ["Right1", "Right2", "Wrong1", "Wrong2"],
+            host._page.click("#tab-quiz")
+            host.create_quiz("Pick 2", ["Right1", "Right2", "Wrong1", "Wrong2"],
                              multi=True, correct_count=2)
 
             expect(p1._page.locator(".option-btn")).to_have_count(4, timeout=5000)
@@ -163,7 +163,7 @@ class TestMultiSelectPoll:
             p1.multi_vote("Wrong1", "Wrong2")
             p1._page.wait_for_timeout(500)
 
-            host.close_poll()
+            host.close_quiz()
             host.mark_correct("Right1")
             host.mark_correct("Right2")
 
@@ -178,20 +178,20 @@ class TestMultiSelectPoll:
 
 
 # ---------------------------------------------------------------------------
-# Poll Timer
+# Quiz Timer
 # ---------------------------------------------------------------------------
 
-@pytest.mark.usefixtures("clean_poll")
-class TestPollTimer:
+@pytest.mark.usefixtures("clean_quiz")
+class TestQuizTimer:
 
     def test_timer_countdown_visible(self, server_url, host: HostPage, pax: ParticipantPage):
         """Start a timer, participant sees countdown element."""
         pax.join("TimerTest")
-        host._page.click("#tab-poll")
-        host.create_poll("Timer Q?", ["A", "B"])
+        host._page.click("#tab-quiz")
+        host.create_quiz("Timer Q?", ["A", "B"])
 
         # Start a 10-second timer via API
-        resp = sapi(server_url, "post", "/poll/timer", json={"seconds": 10})
+        resp = sapi(server_url, "post", "/quiz/timer", json={"seconds": 10})
         assert resp.status_code == 200
 
         # Participant should see the countdown element with timer text
@@ -207,23 +207,23 @@ class TestPollTimer:
         assert "s" in text, f"Timer should show seconds, got: {text}"
 
     def test_timer_cleared_on_close(self, server_url, host: HostPage, pax: ParticipantPage):
-        """Timer disappears when poll voting is closed."""
+        """Timer disappears when quiz voting is closed."""
         pax.join("TimerClose")
-        host._page.click("#tab-poll")
-        host.create_poll("Timer close?", ["Yes", "No"])
+        host._page.click("#tab-quiz")
+        host.create_quiz("Timer close?", ["Yes", "No"])
         expect(host._page.locator("text=Close voting")).to_be_visible(timeout=5000)
 
-        sapi(server_url, "post", "/poll/timer", json={"seconds": 30})
+        sapi(server_url, "post", "/quiz/timer", json={"seconds": 30})
         pax._page.wait_for_function(
             "() => document.getElementById('pax-countdown')?.textContent?.includes('s')",
             timeout=5000
         )
 
         # Close voting via API (more reliable than clicking UI)
-        sapi(server_url, "put", "/poll/status", json={"open": False})
+        sapi(server_url, "put", "/quiz/status", json={"open": False})
         pax._page.wait_for_timeout(2000)
 
-        # After closing, the poll re-renders without active timer
+        # After closing, the quiz re-renders without active timer
         # Timer element may still exist but should be empty
         has_timer_text = pax._page.evaluate("""() => {
             const el = document.getElementById('pax-countdown');
@@ -521,8 +521,8 @@ class TestAdditionalEdgeCases:
 
         try:
             p1.join("CapTest")
-            host._page.click("#tab-poll")
-            host.create_poll("Pick 2", ["A", "B", "C", "D"], multi=True, correct_count=2)
+            host._page.click("#tab-quiz")
+            host.create_quiz("Pick 2", ["A", "B", "C", "D"], multi=True, correct_count=2)
 
             expect(p1._page.locator(".option-btn")).to_have_count(4, timeout=5000)
 
@@ -541,8 +541,8 @@ class TestAdditionalEdgeCases:
             }""")
             assert selected <= 2, f"Should not have more than 2 selected, got {selected}"
         finally:
-            sapi(server_url, "put", "/poll/status", json={"open": False})
-            sapi(server_url, "delete", "/poll")
+            sapi(server_url, "put", "/quiz/status", json={"open": False})
+            sapi(server_url, "delete", "/quiz")
             for ctx in (ctx_host, ctx1):
                 ctx.close()
             for b in (b_host, b1):
@@ -550,7 +550,7 @@ class TestAdditionalEdgeCases:
 
     @pytest.mark.usefixtures("clean_qa", "clean_scores")
     def test_no_js_errors_during_full_session_lifecycle(self, server_url, playwright):
-        """Full session lifecycle (join, Q&A, word cloud, poll, leaderboard) with no JS errors."""
+        """Full session lifecycle (join, Q&A, word cloud, quiz, leaderboard) with no JS errors."""
         b_host, ctx_host = host_browser_ctx(server_url, playwright)
         b1, ctx1 = pax_browser_ctx(server_url, playwright)
 
@@ -578,11 +578,11 @@ class TestAdditionalEdgeCases:
             p1.submit_word("lifecycle")
             p1_page.wait_for_timeout(500)
 
-            # Poll
-            host._page.click("#tab-poll")
-            host.create_poll("Lifecycle?", ["A", "B"])
+            # Quiz
+            host._page.click("#tab-quiz")
+            host.create_quiz("Lifecycle?", ["A", "B"])
             p1.vote_for("A")
-            host.close_poll()
+            host.close_quiz()
             host.mark_correct("A")
             expect(p1_page.locator(".result-icon", has_text="✅")).to_be_visible(timeout=5000)
 
@@ -592,8 +592,8 @@ class TestAdditionalEdgeCases:
 
             assert js_errors == [], f"JS errors during full lifecycle: {js_errors}"
         finally:
-            sapi(server_url, "put", "/poll/status", json={"open": False})
-            sapi(server_url, "delete", "/poll")
+            sapi(server_url, "put", "/quiz/status", json={"open": False})
+            sapi(server_url, "delete", "/quiz")
             sapi(server_url, "post", "/wordcloud/clear")
             for ctx in (ctx_host, ctx1):
                 ctx.close()

@@ -65,15 +65,15 @@ ws_messages_total = Counter(
     ["type"],
 )
 
-# Poll voting
-poll_votes_total = Counter(
-    "poll_votes_total",
+# Quiz voting
+quiz_votes_total = Counter(
+    "quiz_votes_total",
     "Total votes cast",
 )
 
-poll_vote_duration_seconds = Histogram(
-    "poll_vote_duration_seconds",
-    "Time from poll open to participant vote",
+quiz_vote_duration_seconds = Histogram(
+    "quiz_vote_duration_seconds",
+    "Time from quiz open to participant vote",
     buckets=[1, 2, 5, 10, 15, 30, 60, 120, 300],
 )
 
@@ -145,7 +145,7 @@ def test_metrics_endpoint_returns_prometheus_format():
     assert "http_request" in body
     # Custom metrics should be present
     assert "ws_connections_active" in body
-    assert "poll_votes_total" in body
+    assert "quiz_votes_total" in body
     assert "qa_questions_total" in body
 ```
 
@@ -176,7 +176,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from auth import require_host_auth
 from state import state
-from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview, summary, debate
+from routers import ws, quiz, scores, quiz, pages, wordcloud, activity, qa, codereview, summary, debate
 ```
 
 And after `app = FastAPI(...)`:
@@ -249,16 +249,16 @@ def test_ws_connection_increments_gauge():
 
 
 def test_vote_increments_counter():
-    """Voting should increment poll_votes_total."""
+    """Voting should increment quiz_votes_total."""
     client = TestClient(app)
-    before = _get_metric_value("poll_votes_total", {}) or 0
+    before = _get_metric_value("quiz_votes_total", {}) or 0
 
-    # Create and open a poll via host API
-    client.post("/api/poll", json={
+    # Create and open a quiz via host API
+    client.post("/api/quiz", json={
         "question": "Metrics test?",
         "options": [{"id": "a", "text": "Yes"}, {"id": "b", "text": "No"}],
     }, headers=_HOST_AUTH_HEADERS)
-    client.post("/api/poll/status", json={"active": True}, headers=_HOST_AUTH_HEADERS)
+    client.post("/api/quiz/status", json={"active": True}, headers=_HOST_AUTH_HEADERS)
 
     with client.websocket_connect("/ws/test-metrics-voter") as ws:
         ws.send_text(json.dumps({"type": "set_name", "name": "Voter"}))
@@ -273,15 +273,15 @@ def test_vote_increments_counter():
             if msg.get("type") == "vote_update":
                 break
 
-    after = _get_metric_value("poll_votes_total", {})
+    after = _get_metric_value("quiz_votes_total", {})
     assert after is not None
     assert after > before
 
     # Cleanup
-    state.poll = None
-    state.poll_active = False
-    state.poll_opened_at = None
-    state.poll_correct_ids = None
+    state.quiz = None
+    state.quiz_active = False
+    state.quiz_opened_at = None
+    state.quiz_correct_ids = None
     state.votes.clear()
     state.vote_times.clear()
 
@@ -314,8 +314,8 @@ At the top of `routers/ws.py`, add import:
 from metrics import (
     ws_connections_active,
     ws_messages_total,
-    poll_votes_total,
-    poll_vote_duration_seconds,
+    quiz_votes_total,
+    quiz_vote_duration_seconds,
     qa_questions_total,
     qa_upvotes_total,
 )
@@ -343,19 +343,19 @@ from metrics import (
 **In the `vote` handler** (after `state.vote_times[pid] = datetime.now(timezone.utc)`, line 133), add:
 
 ```python
-                        poll_votes_total.inc()
-                        if state.poll_opened_at:
-                            duration = (datetime.now(timezone.utc) - state.poll_opened_at).total_seconds()
-                            poll_vote_duration_seconds.observe(duration)
+                        quiz_votes_total.inc()
+                        if state.quiz_opened_at:
+                            duration = (datetime.now(timezone.utc) - state.quiz_opened_at).total_seconds()
+                            quiz_vote_duration_seconds.observe(duration)
 ```
 
 **In the `multi_vote` handler** (after `state.vote_times[pid] = datetime.now(timezone.utc)`, line 156), add:
 
 ```python
-                        poll_votes_total.inc()
-                        if state.poll_opened_at:
-                            duration = (datetime.now(timezone.utc) - state.poll_opened_at).total_seconds()
-                            poll_vote_duration_seconds.observe(duration)
+                        quiz_votes_total.inc()
+                        if state.quiz_opened_at:
+                            duration = (datetime.now(timezone.utc) - state.quiz_opened_at).total_seconds()
+                            quiz_vote_duration_seconds.observe(duration)
 ```
 
 **In the `qa_submit` handler** (after `state.scores[pid] = ...`, line 183), add:
@@ -537,7 +537,7 @@ Create `monitoring/grafana/provisioning/dashboards/workshop.json` with a Grafana
    - Query: `sum(ws_connections_active)`
    - Also: `ws_connections_active` by role (timeseries)
 3. **Votes per Minute** — timeseries panel
-   - Query: `rate(poll_votes_total[1m]) * 60`
+   - Query: `rate(quiz_votes_total[1m]) * 60`
 4. **Error Rate** — timeseries panel
    - Query: `sum(rate(http_requests_total{status=~"4..|5.."}[1m]))`
 5. **Q&A Activity** — stat panels
@@ -545,7 +545,7 @@ Create `monitoring/grafana/provisioning/dashboards/workshop.json` with a Grafana
 6. **WebSocket Messages by Type** — timeseries panel
    - Query: `rate(ws_messages_total[1m])` grouped by `type`
 7. **Vote Duration Distribution** — heatmap or histogram panel
-   - Query: `rate(poll_vote_duration_seconds_bucket[5m])`
+   - Query: `rate(quiz_vote_duration_seconds_bucket[5m])`
 
 The dashboard JSON should use Grafana's standard export format. Title: "Workshop Live Metrics". Auto-refresh: 5s.
 

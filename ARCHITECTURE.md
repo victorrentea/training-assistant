@@ -18,7 +18,7 @@ For product goals, workflow rules, and operational conventions, see [CLAUDE.md](
 - [Sequence Diagrams](#sequence-diagrams)
   - [Session Lifecycle and Recovery](#session-lifecycle-and-recovery)
   - [Participant Join and Geolocation](#participant-join-and-geolocation)
-  - [Poll and Quiz](#poll-and-quiz)
+  - [Quiz](#quiz)
   - [Q&A and Word Cloud](#qa-and-word-cloud)
   - [Code Review and Debate](#code-review-and-debate)
   - [Slides Cache and Follow Trainer](#slides-cache-and-follow-trainer)
@@ -33,7 +33,7 @@ For product goals, workflow rules, and operational conventions, see [CLAUDE.md](
 - Participant traffic is served from Railway. The participant journey is `landing.html` -> `/{session_id}` -> session-scoped REST and WebSocket calls.
 - The host control plane is daemon-first. `python3 -m daemon` starts a local host panel at `http://127.0.0.1:1234/host`, serves the same static host assets there, mounts most live feature routers locally, and proxies the rest to Railway.
 - Railway is now a thin session-aware bridge: page serving, session validation, browser WebSockets, daemon WebSocket, slide cache/downloads, temporary file uploads, and daemon-driven static sync.
-- Most live workshop behavior lives in the daemon: session lifecycle, participant and host snapshots, poll/word cloud/Q&A/code review/debate state, quiz generation, slide orchestration, upload handoff, and local persistence.
+- Most live workshop behavior lives in the daemon: session lifecycle, participant and host snapshots, quiz/word cloud/Q&A/code review/debate state, quiz generation, slide orchestration, upload handoff, and local persistence.
 - There is no standalone database in the current runtime. Railway keeps in-memory state plus temp files; the daemon persists session files on disk.
 - Summary publication is currently file-driven, with `ai-summary.md` as the primary current path while legacy/fallback summary content can still exist in the session folder. Claude is currently used for quiz generation/refinement and debate cleanup.
 
@@ -208,9 +208,9 @@ ContainerDb_Ext(local_rag, "Local ChromaDB store", "~/.workshop-rag/chroma")
 Container_Boundary(daemon_pkg, "Training Daemon") {
     Component(main, "daemon/__main__.py", "Orchestrator", "Starts lock/heartbeat, local host server, daemon WS client, slides runner, addons bridge, and the 1-second main loop.")
     Component(host_server, "daemon/host_server.py", "Embedded host FastAPI", "Serves `/host`, mounts local feature routers, and proxies remaining HTTP/WS traffic to Railway.")
-    Component(feature_routes, "participant|poll|wordcloud|qa|codereview|debate|activity|misc|slides|session|leaderboard routers", "Local application API", "Authoritative feature mutations for host actions and participant REST commands.")
+    Component(feature_routes, "participant|quiz|wordcloud|qa|codereview|debate|activity|misc|slides|session|leaderboard routers", "Local application API", "Authoritative feature mutations for host actions and participant REST commands.")
     Component(host_state, "daemon/host_state_router.py", "Host snapshot builder", "Builds the full host `state` payload from local state singletons and session files.")
-    Component(state_singletons, "*state.py modules", "Runtime state", "participant_state, poll_state, qa_state, wordcloud_state, codereview_state, debate_state, misc_state, leaderboard_state, session stack.")
+    Component(state_singletons, "*state.py modules", "Runtime state", "participant_state, quiz_state, qa_state, wordcloud_state, codereview_state, debate_state, misc_state, leaderboard_state, session stack.")
     Component(railway_bridge, "daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py", "Railway bridge", "Persistent `/ws/daemon` client, write-back event transport, typed broadcasts/send_to_host, static sync triggers.")
     Component(session_state, "daemon/session_state.py", "Disk persistence", "Persists `global-state.json`, `session-state.json`, session metadata, key points, slide manifests, and uploads.")
     Component(quiz, "daemon/quiz/* + daemon/llm/adapter.py + daemon/rag/*", "Quiz pipeline", "Generates/refines quiz suggestions from notes, key points, transcripts, and local materials.")
@@ -264,7 +264,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 - [`daemon/host_server.py`](daemon/host_server.py) is the actual host control plane. It mounts local feature routers first and only then falls back to a reverse proxy for remaining `/api/*` and `/ws/*` paths.
 - Local feature routers are the authoritative live application surface:
   - participant identity and personalised snapshots from [`daemon/participant/router.py`](daemon/participant/router.py)
-  - poll state from [`daemon/poll/router.py`](daemon/poll/router.py) and [`daemon/poll/state.py`](daemon/poll/state.py)
+  - quiz state from [`daemon/quiz/router.py`](daemon/quiz/router.py) and [`daemon/quiz/state.py`](daemon/quiz/state.py)
   - word cloud, Q&A, code review, debate, activity switching, misc, leaderboard, slides, and session lifecycle from the matching `daemon/*/router.py` and `daemon/*/state.py` modules
 - The host page loads its full snapshot from [`daemon/host_state_router.py`](daemon/host_state_router.py), which aggregates local state plus file-backed notes, key points, slide logs, and session metadata.
 - Participant REST traffic forwarded by Railway lands on the same daemon routers. The daemon's write-back middleware stores semantic events in `X-Write-Back-Events`, and [`daemon/proxy_handler.py`](daemon/proxy_handler.py) converts those into daemon-WS `broadcast` or `send_to_host` messages so Railway can fan out updates.
@@ -307,7 +307,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 | Railway runtime bridge state | [`railway/shared/state.py`](railway/shared/state.py) | In memory inside the Railway process | Tracks connected participants/host/daemon, session id/name, slide cache status, temp uploads, and a few mirrored UI fields. Lost on Railway restart. |
 | Railway temp files | Railway | `.server-data/uploads`, `/tmp/slides-cache` | Temporary participant uploads and cached Google Drive PDFs. |
 | Startup-generated static metadata | Railway and local daemon host server | `static/version.js`, `static/deploy-info.json` | Stamped at startup; `version.js` is excluded from static sync. |
-| Daemon live feature state | `daemon/*/state.py` modules | In memory inside the daemon process | `participant_state`, `poll_state`, `wordcloud_state`, `qa_state`, `codereview_state`, `debate_state`, `misc_state`, `leaderboard_state`, and session stack helpers. |
+| Daemon live feature state | `daemon/*/state.py` modules | In memory inside the daemon process | `participant_state`, `quiz_state`, `wordcloud_state`, `qa_state`, `codereview_state`, `debate_state`, `misc_state`, `leaderboard_state`, and session stack helpers. |
 | Daemon persisted session state | [`daemon/session_state.py`](daemon/session_state.py) | Session folders under `SESSIONS_FOLDER` | `global-state.json`, `session-state.json`, session metadata, uploads, key points, slide manifests. |
 | Transcript inputs | Host filesystem | Normalized `YYYY-MM-DD transcription.txt` files under `TRANSCRIPTION_FOLDER` | Current consumers read normalized files only; raw transcript normalization is not implemented in this repo anymore. |
 | Summary inputs | Host filesystem | `ai-summary.md` in the session folder | Summary publication reads `ai-summary.md`. |
@@ -371,13 +371,13 @@ Current code path / behavior family: [`static/participant.js`](static/participan
 
 ![participant join and geolocation](docs/sequences/manual/svg/02-participant-join-and-geolocation.svg)
 
-### Poll and Quiz
+### Quiz
 
-This diagram covers Claude-backed quiz draft generation plus the live poll lifecycle from host draft/open through participant votes, close, and score reveal.
+This diagram covers Claude-backed quiz draft generation plus the live quiz lifecycle from host draft/open through participant votes, close, and score reveal.
 
-Current code path / behavior family: [`daemon/quiz/router.py`](daemon/quiz/router.py), [`daemon/quiz/generator.py`](daemon/quiz/generator.py), [`daemon/quiz/history.py`](daemon/quiz/history.py), [`daemon/poll/router.py`](daemon/poll/router.py), [`daemon/poll/state.py`](daemon/poll/state.py)
+Current code path / behavior family: [`daemon/quiz_queue/router.py`](daemon/quiz_queue/router.py), [`daemon/quiz_queue/generator.py`](daemon/quiz_queue/generator.py), [`daemon/quiz_queue/history.py`](daemon/quiz_queue/history.py), [`daemon/quiz/router.py`](daemon/quiz/router.py), [`daemon/quiz/state.py`](daemon/quiz/state.py)
 
-![poll and quiz](docs/sequences/manual/svg/03-poll-and-quiz.svg)
+![quiz](docs/sequences/manual/svg/03-quiz.svg)
 
 ### Q&A and Word Cloud
 

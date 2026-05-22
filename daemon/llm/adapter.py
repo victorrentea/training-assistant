@@ -96,7 +96,7 @@ def _stub_create_message(
     ).lower()
     system_lower = (system or "").lower()
 
-    if "quiz" in system_lower or "poll" in system_lower or "question" in user_text:
+    if "quiz" in system_lower or "question" in user_text:
         # Canned quiz response (must match _validate_quiz expectations)
         quiz_json = _json.dumps({
             "question": "Which design pattern decouples an abstraction from its implementation?",

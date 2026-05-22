@@ -21,15 +21,15 @@ log_level?: string
 session_id?: string  # 6-char alphanumeric join code
 saved_at?: string  # ISO timestamp of last snapshot write
 mode?: string  # workshop | talk
-current_activity?: string  # none | poll | wordcloud | qa | codereview | debate
+current_activity?: string  # none | quiz | wordcloud | qa | codereview | debate
 participants?: dict[str, PersistedParticipant{
   name?:string
   avatar?:string
   score?:int | number
   location?:string
 }]  # participant_uuid → identity/score
-poll?: PersistedPollState{
-  definition?:dict[str, any]  # Poll question and options as shown to participants
+quiz?: PersistedQuizState{
+  definition?:dict[str, any]  # Quiz question and options as shown to participants
   active?:bool
   correct_indices?:list[int]  # Option indices marked as correct answers
   opened_at?:string

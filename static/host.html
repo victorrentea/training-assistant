@@ -31,7 +31,7 @@
 <div class="host-top-bar">
   <div class="tab-bar">
     <button class="tab-btn" id="tab-slides" onclick="switchTab('none')"><span class="tab-icon">👨🏻‍🏫</span>Slides</button>
-    <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')"><span class="tab-icon">📊</span>Poll</button>
+    <button class="tab-btn active" id="tab-quiz" onclick="switchTab('quiz')"><span class="tab-icon">📊</span>Quiz</button>
     <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')"><span class="tab-icon">☁</span>Words</button>
     <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')"><span class="tab-icon">❓</span>Q&A</button>
     <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')"><span class="tab-icon">🕵️</span>Code</button>
@@ -88,17 +88,17 @@
   <div class="host-col host-col-left">
     <div class="left-tabs-wrapper">
 
-    <!-- Poll tab content -->
-    <div id="tab-content-poll" class="tab-content">
+    <!-- Quiz tab content -->
+    <div id="tab-content-quiz" class="tab-content">
       <!-- Backstage manual entry -->
       <div style="margin-top:.75rem; flex-shrink:0;">
         <div class="composer-wrap">
           <span class="composer-tag" aria-hidden="true">Backstage</span>
           <div class="composer-links">
-            <a href="#" onclick="event.preventDefault(); testOnePoll();">one</a>
+            <a href="#" onclick="event.preventDefault(); testOneQuiz();">one</a>
             <a href="#" onclick="event.preventDefault(); pushDummyQueue();">queue</a>
           </div>
-          <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
+          <div id="quiz-input" class="quiz-composer" contenteditable="true" spellcheck="false"
                data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
         </div>
         <div class="btn-row" style="align-items:center; margin-top:.25rem;">
@@ -232,13 +232,13 @@
       </div>
       <div id="qr-code" class="qr-code" title="Click to brighten"></div>
     </div>
-    <!-- Poll results panel -->
-    <div id="center-poll" class="center-panel" style="display:none;">
-      <div id="poll-results-section" style="flex-shrink:0;">
+    <!-- Quiz results panel -->
+    <div id="center-quiz" class="center-panel" style="display:none;">
+      <div id="quiz-results-section" style="flex-shrink:0;">
         <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.9rem;">
-          <span id="poll-pills"></span>
+          <span id="quiz-pills"></span>
         </div>
-        <div id="poll-display"></div>
+        <div id="quiz-display"></div>
       </div>
     </div>
     <!-- Word cloud panel -->

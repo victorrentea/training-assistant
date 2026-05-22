@@ -44,8 +44,8 @@ def _feature_from_tag_and_path(tag: str, path: str) -> str:
 
 # Keep this small and focused on operationally important behavior.
 _DOC_NOTES: dict[tuple[str, str], list[str]] = {
-    ("POST", "/api/participant/poll/vote"): [
-        "Votes are mutable while the poll is open: re-submitting overwrites the prior selection and updates voted_at.",
+    ("POST", "/api/participant/quiz/vote"): [
+        "Votes are mutable while the quiz is open: re-submitting overwrites the prior selection and updates voted_at.",
     ],
     ("GET", "/api/participant/state"): [
         "Returns participant-personalized full state snapshot.",

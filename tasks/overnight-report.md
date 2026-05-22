@@ -17,7 +17,7 @@
 | Backend healthy | Infra | Pass |
 | Daemon connected | Infra | Pass |
 | Session start + join | Session | Pass |
-| Full poll lifecycle | Poll | Pass |
+| Full quiz lifecycle | Quiz | Pass |
 | Slide view (cache miss) | Slides | Pass |
 | Slide view (cache hit) | Slides | Pass |
 | Follow Me basic | Slides | Pass |
@@ -32,16 +32,16 @@
 | Word cloud submission | Wordcloud | Pass |
 | PPTX change detection | Integration | Pass |
 | IntelliJ tracking | Integration | Pass |
-| Correct answer scoring | Poll | Pass |
+| Correct answer scoring | Quiz | Pass |
 | Paste text to host | Participant | Pass |
 | Late joiner sees Q&A | Q&A | Pass |
 | Self-upvote disabled | Q&A | Pass |
 | Quiz generation | Integration | Skip (#98) |
 | Conference mode | Mode | Skip (WIP) |
-| Zero votes 0% | Poll | Skip (WIP) |
+| Zero votes 0% | Quiz | Skip (WIP) |
 | Code review lines | CodeReview | Skip (WIP) |
 | Wordcloud close | Wordcloud | Skip (WIP) |
-| Multi-select cap | Poll | Skip (WIP) |
+| Multi-select cap | Quiz | Skip (WIP) |
 | Participant count | UI | Skip (WIP) |
 
 ### Parallelization

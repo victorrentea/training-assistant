@@ -22,7 +22,7 @@ channels:
       message:
         oneOf:
           - $ref: '#/components/messages/decks_updated'
-          - $ref: '#/components/messages/poll_queue_updated'
+          - $ref: '#/components/messages/quiz_queue_updated'
           - $ref: '#/components/messages/vote_update'
           - $ref: '#/components/messages/wordcloud_updated'
           - $ref: '#/components/messages/qa_updated'
@@ -58,22 +58,22 @@ components:
               $ref: '#/components/schemas/Deck'
             default: {}
 
-    # ── Poll ─────────────────────────────────────────────────────────────────
+    # ── Quiz ─────────────────────────────────────────────────────────────────
 
-    poll_queue_updated:
-      summary: Poll queue changed — host should GET /poll/queue to refresh
-      x-feature: poll
+    quiz_queue_updated:
+      summary: Quiz queue changed — host should GET /quiz/queue to refresh
+      x-feature: quiz
       payload:
         type: object
         required: [type]
         properties:
           type:
             type: string
-            enum: [poll_queue_updated]
+            enum: [quiz_queue_updated]
 
     vote_update:
-      summary: Real-time vote tally while poll is open
-      x-feature: poll
+      summary: Real-time vote tally while quiz is open
+      x-feature: quiz
       x-doc-notes:
         - Host-only event; participants do not receive live vote tallies.
         - Only total voted count is sent to avoid influencing participants.

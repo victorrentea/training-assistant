@@ -3,9 +3,9 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def reset_poll_state():
-    """Reset the global poll_state singleton before each test to prevent cross-test contamination."""
-    from daemon.poll.state import poll_state
-    poll_state.clear()
+def reset_quiz_state():
+    """Reset the global quiz_state singleton before each test to prevent cross-test contamination."""
+    from daemon.quiz.state import quiz_state
+    quiz_state.clear()
     yield
-    poll_state.clear()
+    quiz_state.clear()

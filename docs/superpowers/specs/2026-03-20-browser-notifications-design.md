@@ -24,13 +24,13 @@ A notification fires **only when `document.hidden === true`** (tab is background
 
 | Event | Title | Body |
 |---|---|---|
-| Poll opens (voting becomes active) | 🗳️ New poll! | The poll question text |
+| Quiz opens (voting becomes active) | 🗳️ New quiz! | The quiz question text |
 | Q&A activity opens | ❓ Q&A is open | "Tap to ask or upvote questions" |
 | Word cloud activity opens | ☁️ Word cloud is open | "Tap to share your thoughts" |
 
 Notifications are **not** fired for:
 - Individual Q&A questions submitted by participants
-- Poll closing / results
+- Quiz closing / results
 - Score updates
 
 ---
@@ -63,7 +63,7 @@ Add the button inside the `.status-bar` `.status-right` span, initially hidden:
 ### New variables (`participant.js`)
 
 ```js
-let _prevPollActive = false;
+let _prevQuizActive = false;
 let _prevActivity = null;
 let _stateInitialised = false;   // suppresses false-positive on first state message
 let _notifBtnBound = false;      // prevents re-binding on reconnect
@@ -126,13 +126,13 @@ The first `state` message after connecting initialises the tracking variables wi
 ```js
 if (!_stateInitialised) {
   // Seed tracking state from current server state — no notification
-  _prevPollActive = msg.poll_active;
+  _prevQuizActive = msg.quiz_active;
   _prevActivity = msg.current_activity;
   _stateInitialised = true;
 } else {
   // Detect transitions
-  if (!_prevPollActive && msg.poll_active && msg.poll) {
-    notifyIfHidden('🗳️ New poll!', msg.poll.question);
+  if (!_prevQuizActive && msg.quiz_active && msg.quiz) {
+    notifyIfHidden('🗳️ New quiz!', msg.quiz.question);
   }
   if (_prevActivity !== 'qa' && msg.current_activity === 'qa') {
     notifyIfHidden('❓ Q&A is open', 'Tap to ask or upvote questions');
@@ -140,7 +140,7 @@ if (!_stateInitialised) {
   if (_prevActivity !== 'wordcloud' && msg.current_activity === 'wordcloud') {
     notifyIfHidden('☁️ Word cloud is open', 'Tap to share your thoughts');
   }
-  _prevPollActive = msg.poll_active;
+  _prevQuizActive = msg.quiz_active;
   _prevActivity = msg.current_activity;
 }
 ```

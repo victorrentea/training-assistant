@@ -100,19 +100,19 @@ function formatElapsed(deployDate, now) {
   return 'from ' + _window.APP_VERSION;
 }
 
-// --- from host.js: poll history logic ---
-function recordPollInHistory_logic(history, poll, correctIds) {
-  // Extracted pure logic from recordPollInHistory (no localStorage dependency)
-  if (!poll) return history;
+// --- from host.js: quiz history logic ---
+function recordQuizInHistory_logic(history, quiz, correctIds) {
+  // Extracted pure logic from recordQuizInHistory (no localStorage dependency)
+  if (!quiz) return history;
   const entry = {
-    question: poll.question,
-    options: poll.options.map(o => ({
+    question: quiz.question,
+    options: quiz.options.map(o => ({
       text: o.text,
       correct: correctIds.has(o.id),
     })),
-    multi: !!poll.multi,
+    multi: !!quiz.multi,
   };
-  const idx = history.findIndex(e => e.question === poll.question);
+  const idx = history.findIndex(e => e.question === quiz.question);
   const result = [...history];
   if (idx >= 0) result[idx] = entry; else result.push(entry);
   return result;
@@ -242,10 +242,10 @@ assertEq('23 hours ago', formatElapsed(base, new Date(base.getTime() + 23 * 3600
 assertEq('24+ hours shows version', formatElapsed(base, new Date(base.getTime() + 25 * 3600000)), 'from 2026-03-20 23:00');
 assertEq('future date clamps to 0s', formatElapsed(base, new Date(base.getTime() - 5000)), '0s ago');
 
-// ── recordPollInHistory (pure logic) ─────────────────────────────────
-suite('recordPollInHistory() logic');
+// ── recordQuizInHistory (pure logic) ─────────────────────────────────
+suite('recordQuizInHistory() logic');
 
-const samplePoll = {
+const sampleQuiz = {
   question: 'What is 2+2?',
   options: [
     { id: 'a', text: 'Three' },
@@ -255,7 +255,7 @@ const samplePoll = {
   multi: false,
 };
 
-const h1 = recordPollInHistory_logic([], samplePoll, new Set(['b']));
+const h1 = recordQuizInHistory_logic([], sampleQuiz, new Set(['b']));
 assertEq('adds first entry', h1.length, 1);
 assertEq('records question', h1[0].question, 'What is 2+2?');
 assertEq('marks correct option', h1[0].options[1].correct, true);
@@ -263,18 +263,18 @@ assertEq('marks incorrect option', h1[0].options[0].correct, false);
 assertEq('records multi flag', h1[0].multi, false);
 
 // Duplicate question updates in-place
-const h2 = recordPollInHistory_logic(h1, samplePoll, new Set(['a']));
+const h2 = recordQuizInHistory_logic(h1, sampleQuiz, new Set(['a']));
 assertEq('deduplicates by question', h2.length, 1);
 assertEq('updates correct option', h2[0].options[0].correct, true);
 assertEq('clears old correct', h2[0].options[1].correct, false);
 
-// null poll returns unchanged history
-const h3 = recordPollInHistory_logic([{ question: 'x' }], null, new Set());
-assertEq('null poll returns unchanged', h3.length, 1);
+// null quiz returns unchanged history
+const h3 = recordQuizInHistory_logic([{ question: 'x' }], null, new Set());
+assertEq('null quiz returns unchanged', h3.length, 1);
 
-// Multi-select poll
-const multiPoll = { ...samplePoll, multi: true };
-const h4 = recordPollInHistory_logic([], multiPoll, new Set(['a', 'c']));
+// Multi-select quiz
+const multiQuiz = { ...sampleQuiz, multi: true };
+const h4 = recordQuizInHistory_logic([], multiQuiz, new Set(['a', 'c']));
 assertEq('multi-select marks two correct', h4[0].options.filter(o => o.correct).length, 2);
 assertEq('multi flag is true', h4[0].multi, true);
 

@@ -58,7 +58,7 @@ def test_feedback_route_uses_active_session_name():
         ):
             resp = client.post(
                 "/api/participant/misc/feedback",
-                json={"text": "Need bigger poll buttons."},
+                json={"text": "Need bigger quiz buttons."},
                 headers={"X-Participant-ID": "p2"},
             )
     assert resp.status_code == 204

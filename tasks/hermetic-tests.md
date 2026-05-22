@@ -3,7 +3,7 @@
 ## Completed
 
 - [x] **Session start + join**: Host starts session, participant joins, host sees participant
-- [x] **Poll lifecycle**: Host creates poll → 2 participants vote → host sees count → close → percentages correct
+- [x] **Quiz lifecycle**: Host creates quiz → 2 participants vote → host sees count → close → percentages correct
 - [x] **Slide view (cache miss)**: Participant clicks topic → backend fetches from mock Drive → PDF served
 - [x] **Slide view (cache hit)**: Second participant views same topic → served from cache, 0 extra Drive calls
 - [x] **Follow Me basic**: Stub PPT set to "Clean Code" slide 3 → daemon sends slides_current → participant clicks Follow → correct topic selected
@@ -82,17 +82,17 @@
 
 ## From Existing E2E Suite (to migrate)
 
-### Poll (advanced)
-- [ ] **Zero votes → 0%**: Close poll with no votes → all options show 0%
+### Quiz (advanced)
+- [ ] **Zero votes → 0%**: Close quiz with no votes → all options show 0%
 - [ ] **Correct answer feedback**: Mark correct → participant sees green/red feedback
 - [ ] **Correct count hint**: Multi-select shows "select N" hint
 - [ ] **Multi-select cap enforced**: Can't select more than correct_count options
 - [ ] **Multi-vote submit + host count**: Multi-select voting and host count update
 - [ ] **Multi-select scoring (all correct)**: Full score when all correct
 - [ ] **Multi-select scoring (partial wrong)**: Zero score on partial-wrong
-- [ ] **Timer countdown visible**: Poll timer appears and counts down
-- [ ] **Timer cleared on close**: Timer disappears when poll closes
-- [ ] **Poll download text**: Download captures two polls with correct answers
+- [ ] **Timer countdown visible**: Quiz timer appears and counts down
+- [ ] **Timer cleared on close**: Timer disappears when quiz closes
+- [ ] **Quiz download text**: Download captures two quizzes with correct answers
 
 ### Q&A
 - [ ] **Question submission**: Participant submits question → host sees it
@@ -133,7 +133,7 @@
 - [ ] **Host tab survives reload**: Active tab persists after host page reload
 - [ ] **Version tag elapsed time**: Version tag shows deploy age and updates
 - [ ] **Notification button states**: Hidden on load, hidden after fresh join, visible for returning participant
-- [ ] **No spurious notification on mid-poll join**: Regression test
+- [ ] **No spurious notification on mid-quiz join**: Regression test
 - [ ] **QR code rendered**: QR code visible on host panel
 - [ ] **Participant link displayed**: Session link shown on host panel
 - [ ] **Unavailable slide styling**: Unavailable slides crossed out and disabled

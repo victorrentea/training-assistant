@@ -29,10 +29,10 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
             trainingDaemon = container "Training Daemon" "Local source of truth for host control, live state, persistence, and AI-assisted jobs." "Python 3.12 CLI + embedded FastAPI" {
                 orchestrator = component "Orchestrator" "Starts OTel tracing, the lock/heartbeat, host server, daemon WS client, addons bridge, slide runner, transcript probes, and the 1-second main loop." "daemon/__main__.py"
                 hostServer = component "Embedded host server" "Serves /host on localhost:1234, mounts local feature routers, holds the host-browser WS, and reverse-proxies remaining HTTP/WS traffic to Railway." "daemon/host_server.py + daemon/host_proxy.py + daemon/host_ws.py"
-                participantApis = component "Participant APIs" "Authoritative participant REST handlers for identity, polls, Q&A, debate, code review, misc actions, slides, emoji, and word cloud." "daemon/participant/router.py + daemon/poll/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py"
-                hostApis = component "Host APIs" "Local host-side routers for session lifecycle, activity switching, leaderboard, host state snapshot, poll queue, and per-feature host actions." "daemon/session/router.py + daemon/activity/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/quiz/queue_router.py + daemon/{poll,qa,debate,codereview,wordcloud,misc}/router.py (host sub-routers)"
-                runtimeState = component "Runtime state modules" "In-memory feature state for participants, polls, Q&A, debate, code review, misc data, leaderboard, scores, session stack, and word cloud." "daemon/*/state.py + daemon/scores.py + daemon/session/state.py"
-                pollQueue = component "Poll queue" "In-memory queue of pre-submitted poll questions for one-at-a-time firing by the host." "daemon/quiz/queue.py + daemon/quiz/queue_router.py"
+                participantApis = component "Participant APIs" "Authoritative participant REST handlers for identity, quizzes, Q&A, debate, code review, misc actions, slides, emoji, and word cloud." "daemon/participant/router.py + daemon/quiz/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py"
+                hostApis = component "Host APIs" "Local host-side routers for session lifecycle, activity switching, leaderboard, host state snapshot, quiz queue, and per-feature host actions." "daemon/session/router.py + daemon/activity/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/quiz_queue/router.py + daemon/{quiz,qa,debate,codereview,wordcloud,misc}/router.py (host sub-routers)"
+                runtimeState = component "Runtime state modules" "In-memory feature state for participants, quizzes, Q&A, debate, code review, misc data, leaderboard, scores, session stack, and word cloud." "daemon/*/state.py + daemon/scores.py + daemon/session/state.py"
+                quizQueue = component "Quiz queue" "In-memory queue of pre-submitted quiz questions for one-at-a-time firing by the host." "daemon/quiz_queue/queue.py + daemon/quiz_queue/router.py"
                 railwayBridge = component "Railway bridge" "Persistent /ws/daemon client, proxy response handling, typed broadcasts/notify_host, upload handoff, and static sync trigger." "daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py + daemon/ws_messages.py"
                 sessionPersistence = component "Session persistence" "Persists global-state.json, session-state.json, session metadata, key points, and slide manifests." "daemon/session_state.py + daemon/persisted_models.py"
                 debateCleanup = component "Debate AI cleanup" "Claude-backed argument dedupe, cleanup, and new-suggestion generation." "daemon/debate/ai_cleanup.py + daemon/llm/adapter.py"
@@ -107,7 +107,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
 
         hostServer -> participantApis "Mounts"
         hostServer -> hostApis "Mounts"
-        hostServer -> pollQueue "Mounts host poll-queue routes"
+        hostServer -> quizQueue "Mounts host quiz-queue routes"
         hostServer -> railwayBackend "Proxies unmatched HTTP and WebSocket traffic to"
 
         participantApis -> runtimeState "Mutates"
@@ -121,7 +121,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         hostApis -> slidesPipeline "Triggers"
         hostApis -> debateCleanup "Triggers"
         hostApis -> summaryHelpers "Reads ai-summary.md state through"
-        hostApis -> pollQueue "Manages queued poll questions through"
+        hostApis -> quizQueue "Manages queued quiz questions through"
 
         runtimeState -> sessionPersistence "Is snapshotted by"
 
@@ -205,7 +205,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         }
 
         component trainingDaemon "C3DaemonOnly" "Only the internal daemon subsystems, without Railway or external systems." {
-            include orchestrator hostServer participantApis hostApis runtimeState pollQueue railwayBridge sessionPersistence debateCleanup codereviewSmartPaste summaryHelpers slidesPipeline addonsBridge transcriptIngest ragIndexer emailNotify daemonTelemetry lockHeartbeat
+            include orchestrator hostServer participantApis hostApis runtimeState quizQueue railwayBridge sessionPersistence debateCleanup codereviewSmartPaste summaryHelpers slidesPipeline addonsBridge transcriptIngest ragIndexer emailNotify daemonTelemetry lockHeartbeat
             autoLayout lr
         }
 
@@ -219,8 +219,8 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
             autoLayout lr
         }
 
-        component trainingDaemon "C3DaemonSummaryAndPolls" "Daemon slice for file-driven summary helpers and the host poll queue." {
-            include hostApis summaryHelpers pollQueue railwayBridge sessionPersistence hostFiles
+        component trainingDaemon "C3DaemonSummaryAndQuiz" "Daemon slice for file-driven summary helpers and the host quiz queue." {
+            include hostApis summaryHelpers quizQueue railwayBridge sessionPersistence hostFiles
             autoLayout lr
         }
 

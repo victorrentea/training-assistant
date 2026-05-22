@@ -1,6 +1,6 @@
 # Workshop Live Interaction Tool
 
-Real-time live poll tool for webinars/workshops.
+Real-time live quiz tool for webinars/workshops.
 Built with **Python FastAPI + WebSockets** — no frontend build step required.
 
 ## API Reference Workflow
@@ -109,11 +109,11 @@ Your app is now live at:
 ## Usage flow
 
 1. Open `/host` in your browser before the session starts
-2. Create a poll (question + options)
+2. Create a quiz (question + options)
 3. Click **Open voting** when you're ready
 4. Participants vote at `/` — results update live for everyone
 5. Click **Close voting** to freeze results
-6. Click **Remove poll** to clear and prepare the next one
+6. Click **Remove quiz** to clear and prepare the next one
 
 ---
 

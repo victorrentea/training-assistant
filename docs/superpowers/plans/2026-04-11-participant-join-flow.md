@@ -71,7 +71,7 @@ This is the core task. The landing page becomes a multi-screen flow with these s
 6. **Screen: name-entry** — Session code (read-only) + name input + "Random name" button
 7. **Screen: entering** — Brief "Joining..." while registering
 
-The host flow is handled transparently: `pollLocalDaemon()` detects `localhost:1234`, fetches session_id from daemon, sets the query param, and the normal flow handles the rest.
+The host flow is handled transparently: `quizLocalDaemon()` detects `localhost:1234`, fetches session_id from daemon, sets the query param, and the normal flow handles the rest.
 
 - [ ] **Step 1: Write the complete landing.html**
 
@@ -81,11 +81,11 @@ Key behaviors to implement per diagram:
 - On page load, call `GET /api/is-active-session`
 - 3-way response: request failed → "Host not connected"; `{active:false}` → "No session started"; `{active:true}` → continue
 - **Participant retry:** 5 attempts with backoff delays [1s, 2s, 3s, 5s, 5s], then stop
-- **Host retry:** poll every 3s indefinitely (detected via `pollLocalDaemon` trying `localhost:1234`)
+- **Host retry:** quiz every 3s indefinitely (detected via `quizLocalDaemon` trying `localhost:1234`)
 - Both error screens show a "Retrying in Xs..." countdown
 
 **ON_HOST_MACHINE (before code entry):**
-- `pollLocalDaemon()` polls `GET localhost:1234/api/session/active` every 1s
+- `quizLocalDaemon()` quizzes `GET localhost:1234/api/session/active` every 1s
 - On success: set `?session_id={id}` in URL and proceed (existing behavior, just adapted to query param)
 
 **Case A — no session_id query param:**
@@ -626,8 +626,8 @@ Key behaviors to implement per diagram:
       }
     }
 
-    // ── Host machine detection: poll local daemon ──
-    function pollLocalDaemon() {
+    // ── Host machine detection: quiz local daemon ──
+    function quizLocalDaemon() {
       function tryFetch() {
         fetch('http://localhost:1234/api/session/active', { signal: AbortSignal.timeout(800) })
           .then(r => r.ok ? r.json() : null)
@@ -654,7 +654,7 @@ Key behaviors to implement per diagram:
       if (!SESSION_CODE_RE.test(sessionId)) sessionId = null;
 
       // Start host machine detection in background
-      pollLocalDaemon();
+      quizLocalDaemon();
 
       // Step 1: Check if any session is active
       const active = await runActiveSessionCheck();

@@ -1021,7 +1021,7 @@ python3 -m uvicorn main:app --reload --port 8000
 1. Open host panel (`http://localhost:8000/host`), switch to conference mode
 2. Open 5+ participant tabs (`http://localhost:8000/`)
 3. Verify each participant gets a character name (visible in server logs or WS messages)
-4. Do a poll or word cloud activity so participants earn points
+4. Do a quiz or word cloud activity so participants earn points
 5. Click Leaderboard button on host — verify:
    - Dramatic overlay with sequential reveal (5th → 1st)
    - Each entry shows letter avatar, name (universe), score

@@ -34,10 +34,10 @@ class PersistedParticipant(PersistedModel):
     location: str | None = None
 
 
-class PersistedPollState(PersistedModel):
-    """Poll snapshot persisted in session state."""
+class PersistedQuizState(PersistedModel):
+    """Quiz snapshot persisted in session state."""
 
-    definition: dict[str, Any] | None = Field(default=None, description="Poll question and options as shown to participants")
+    definition: dict[str, Any] | None = Field(default=None, description="Quiz question and options as shown to participants")
     active: bool | None = None
     correct_indices: list[int] = Field(default_factory=list, description="Option indices marked as correct answers")
     opened_at: str | None = None
@@ -101,7 +101,7 @@ class PersistedSessionState(PersistedModel):
     session_id: str | None = Field(default=None, description="6-char alphanumeric join code")
     saved_at: str | None = Field(default=None, description="ISO timestamp of last snapshot write")
     mode: str | None = Field(default=None, description="workshop | talk")
-    current_activity: str | None = Field(default=None, description="none | poll | wordcloud | qa | codereview | debate")
+    current_activity: str | None = Field(default=None, description="none | quiz | wordcloud | qa | codereview | debate")
 
     participants: dict[str, PersistedParticipant] = Field(default_factory=dict, description="participant_uuid → identity/score")
     # Legacy split maps: accepted on read, omitted on write.
@@ -111,8 +111,16 @@ class PersistedSessionState(PersistedModel):
     scores: dict[str, int | float] = Field(default_factory=dict, exclude=True)
     locations: dict[str, str] = Field(default_factory=dict, exclude=True)
 
-    poll: PersistedPollState | None = None
-    # Legacy flat poll fields: accepted on read, omitted on write.
+    quiz: PersistedQuizState | None = None
+    # Legacy flat quiz fields: accepted on read, omitted on write.
+    quiz_active: bool | None = Field(default=None, exclude=True)
+    quiz_correct_indices: list[int] = Field(default_factory=list, exclude=True)
+    quiz_opened_at: str | None = Field(default=None, exclude=True)
+    quiz_timer_seconds: int | None = Field(default=None, exclude=True)
+    quiz_timer_started_at: str | None = Field(default=None, exclude=True)
+    # Legacy "poll_*" fields preserved for reading state.json files written before
+    # the Poll→Quiz rename. Accepted on read, omitted on write; the validator below
+    # promotes them into the modern keys.
     poll_active: bool | None = Field(default=None, exclude=True)
     poll_correct_indices: list[int] = Field(default_factory=list, exclude=True)
     poll_opened_at: str | None = Field(default=None, exclude=True)
@@ -169,6 +177,10 @@ class PersistedSessionState(PersistedModel):
         data.pop("summary_points", None)
         data.pop("leaderboard_active", None)
 
+        # Legacy current_activity migration: "poll" → "quiz".
+        if data.get("current_activity") == "poll":
+            data["current_activity"] = "quiz"
+
         participants_raw = data.get("participants")
         participants: dict[str, dict[str, Any]] = {}
         if isinstance(participants_raw, dict):
@@ -214,13 +226,19 @@ class PersistedSessionState(PersistedModel):
             participants[pid] = row
 
         data["participants"] = participants
-        poll_raw = data.get("poll")
-        poll: dict[str, Any] = {}
-        if isinstance(poll_raw, PersistedPollState):
-            poll = poll_raw.model_dump(mode="json", exclude_unset=True)
-        elif isinstance(poll_raw, dict):
-            poll = dict(poll_raw)
-            poll_keys = {
+
+        # ── Quiz (renamed from Poll) ──
+        # Read modern "quiz" key first; fall back to legacy "poll" key. Flat
+        # quiz_* fields take precedence; legacy flat poll_* fields fill any gaps.
+        quiz_raw = data.get("quiz")
+        if quiz_raw is None:
+            quiz_raw = data.get("poll")
+        quiz: dict[str, Any] = {}
+        if isinstance(quiz_raw, PersistedQuizState):
+            quiz = quiz_raw.model_dump(mode="json", exclude_unset=True)
+        elif isinstance(quiz_raw, dict):
+            quiz = dict(quiz_raw)
+            quiz_keys = {
                 "definition",
                 "active",
                 "correct_indices",
@@ -229,9 +247,15 @@ class PersistedSessionState(PersistedModel):
                 "end_timer_started_at",
                 "votes",
             }
-            if not any(key in poll for key in poll_keys):
-                poll = {"definition": dict(poll_raw)}
-        legacy_poll_keys = (
+            if not any(key in quiz for key in quiz_keys):
+                quiz = {"definition": dict(quiz_raw)}
+        legacy_quiz_keys = (
+            "quiz",
+            "quiz_active",
+            "quiz_correct_indices",
+            "quiz_opened_at",
+            "quiz_timer_seconds",
+            "quiz_timer_started_at",
             "poll",
             "poll_active",
             "poll_correct_indices",
@@ -240,22 +264,38 @@ class PersistedSessionState(PersistedModel):
             "poll_timer_started_at",
             "votes",
         )
+        # Modern flat quiz_* fields (highest priority).
+        if "quiz_active" in data:
+            quiz.setdefault("active", data["quiz_active"])
+        if "quiz_correct_indices" in data:
+            legacy_correct_indices = data["quiz_correct_indices"]
+            data["quiz_correct_indices"] = [] if legacy_correct_indices is None else legacy_correct_indices
+            quiz.setdefault("correct_indices", data["quiz_correct_indices"])
+        if "quiz_opened_at" in data:
+            quiz.setdefault("opened_at", data["quiz_opened_at"])
+        if "quiz_timer_seconds" in data:
+            quiz.setdefault("end_timer_seconds", data["quiz_timer_seconds"])
+        if "quiz_timer_started_at" in data:
+            quiz.setdefault("end_timer_started_at", data["quiz_timer_started_at"])
+        # Legacy flat poll_* fields — fill in if not already set above.
         if "poll_active" in data:
-            poll.setdefault("active", data["poll_active"])
+            quiz.setdefault("active", data["poll_active"])
         if "poll_correct_indices" in data:
             legacy_correct_indices = data["poll_correct_indices"]
             data["poll_correct_indices"] = [] if legacy_correct_indices is None else legacy_correct_indices
-            poll.setdefault("correct_indices", data["poll_correct_indices"])
+            quiz.setdefault("correct_indices", data["poll_correct_indices"])
         if "poll_opened_at" in data:
-            poll.setdefault("opened_at", data["poll_opened_at"])
+            quiz.setdefault("opened_at", data["poll_opened_at"])
         if "poll_timer_seconds" in data:
-            poll.setdefault("end_timer_seconds", data["poll_timer_seconds"])
+            quiz.setdefault("end_timer_seconds", data["poll_timer_seconds"])
         if "poll_timer_started_at" in data:
-            poll.setdefault("end_timer_started_at", data["poll_timer_started_at"])
+            quiz.setdefault("end_timer_started_at", data["poll_timer_started_at"])
         if "votes" in data:
-            poll.setdefault("votes", data["votes"])
-        if any(key in data for key in legacy_poll_keys):
-            data["poll"] = poll
+            quiz.setdefault("votes", data["votes"])
+        if any(key in data for key in legacy_quiz_keys):
+            data["quiz"] = quiz
+            # Drop legacy top-level "poll" so the new model only sees "quiz".
+            data.pop("poll", None)
 
         wordcloud_raw = data.get("wordcloud")
         wordcloud: dict[str, Any] = {}

@@ -267,17 +267,17 @@ async def get_session_snapshot(credentials: HTTPBasicCredentials = Depends(verif
             "universe": state.participant_universes.get(uuid, ""),
         }
 
-    poll_data = None
-    if state.poll:
-        poll_data = {
-            **state.poll,
-            "active": state.poll_active,
+    quiz_data = None
+    if state.quiz:
+        quiz_data = {
+            **state.quiz,
+            "active": state.quiz_active,
             "votes": state.votes,
             "vote_times": {uuid: t.isoformat() for uuid, t in state.vote_times.items()},
-            "correct_ids": state.poll_correct_ids or [],
-            "opened_at": state.poll_opened_at.isoformat() if state.poll_opened_at else None,
-            "timer_seconds": state.poll_timer_seconds,
-            "timer_started_at": state.poll_timer_started_at.isoformat() if state.poll_timer_started_at else None,
+            "correct_ids": state.quiz_correct_ids or [],
+            "opened_at": state.quiz_opened_at.isoformat() if state.quiz_opened_at else None,
+            "timer_seconds": state.quiz_timer_seconds,
+            "timer_started_at": state.quiz_timer_started_at.isoformat() if state.quiz_timer_started_at else None,
         }
 
     qa_questions = []
@@ -313,7 +313,7 @@ async def get_session_snapshot(credentials: HTTPBasicCredentials = Depends(verif
         "mode": state.mode,
         "participants": participants,
         "activity": state.current_activity.value if state.current_activity else "none",
-        "poll": poll_data,
+        "quiz": quiz_data,
         "qa": {"questions": qa_questions},
         "wordcloud": {
             "topic": state.wordcloud_topic,
@@ -369,7 +369,7 @@ def test_session_sync_restores_participants_and_scores(client, auth_headers):
                 "uuid-restored": {"name": "Bob", "score": 250, "base_score": 200, "location": "Cluj", "avatar": "", "universe": ""}
             },
             "activity": "none",
-            "poll": None,
+            "quiz": None,
             "qa": {"questions": []},
             "wordcloud": {"topic": "", "words": {}},
             "debate": {"statement": None, "phase": None, "sides": {}, "arguments": [], "champions": {}, "auto_assigned": [], "first_side": None, "round_index": None, "round_timer_seconds": None, "round_timer_started_at": None},
@@ -455,18 +455,18 @@ def _restore_state_from_snapshot(snap: dict):
             state.current_activity = ActivityType(snap["activity"])
         except ValueError:
             pass
-    # Poll
-    if snap.get("poll"):
-        p = snap["poll"]
+    # Quiz
+    if snap.get("quiz"):
+        p = snap["quiz"]
         exclude = {"active", "votes", "vote_times", "correct_ids", "opened_at", "timer_seconds", "timer_started_at"}
-        state.poll = {k: v for k, v in p.items() if k not in exclude}
-        state.poll_active = p.get("active", False)
+        state.quiz = {k: v for k, v in p.items() if k not in exclude}
+        state.quiz_active = p.get("active", False)
         state.votes = p.get("votes") or {}
         state.vote_times = {uuid: datetime.fromisoformat(t) for uuid, t in (p.get("vote_times") or {}).items()}
-        state.poll_correct_ids = p.get("correct_ids")
-        state.poll_opened_at = datetime.fromisoformat(p["opened_at"]) if p.get("opened_at") else None
-        state.poll_timer_seconds = p.get("timer_seconds")
-        state.poll_timer_started_at = datetime.fromisoformat(p["timer_started_at"]) if p.get("timer_started_at") else None
+        state.quiz_correct_ids = p.get("correct_ids")
+        state.quiz_opened_at = datetime.fromisoformat(p["opened_at"]) if p.get("opened_at") else None
+        state.quiz_timer_seconds = p.get("timer_seconds")
+        state.quiz_timer_started_at = datetime.fromisoformat(p["timer_started_at"]) if p.get("timer_started_at") else None
     # QA
     qa = snap.get("qa") or {}
     state.qa_questions.clear()
@@ -1484,7 +1484,7 @@ After all tasks complete, run a full integration check:
 - [ ] Verify FRAGILE state shown when no session exists (daemon not connected)
 - [ ] Start daemon: `python3 training_daemon.py`
 - [ ] Verify session auto-opens if today's folder exists
-- [ ] Vote in a poll, give a participant 100 points
+- [ ] Vote in a quiz, give a participant 100 points
 - [ ] Restart server: kill uvicorn, start again
 - [ ] Verify participant scores are restored after daemon reconnects (~5s)
 - [ ] Click START TALK: verify participant tabs show "Session paused" overlay

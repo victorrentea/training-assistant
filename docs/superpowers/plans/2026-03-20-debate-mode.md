@@ -42,7 +42,7 @@ In `state.py`, add after line 12:
 ```python
 class ActivityType(str, Enum):
     NONE = "none"
-    POLL = "poll"
+    QUIZ = "quiz"
     WORDCLOUD = "wordcloud"
     QA = "qa"
     DEBATE = "debate"
@@ -262,7 +262,7 @@ Return JSON (no markdown fences):
 
 In `main.py`, add to imports (line 13):
 ```python
-from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, summary, debate
+from routers import ws, quiz, scores, quiz, pages, wordcloud, activity, qa, summary, debate
 ```
 
 After line 27, add:
@@ -536,7 +536,7 @@ In `switchTab()` (line 890), add debate tab handling. Replace the entire functio
 
 ```javascript
   async function switchTab(tab) {
-    ['poll', 'wordcloud', 'qa', 'debate'].forEach(t => {
+    ['quiz', 'wordcloud', 'qa', 'debate'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('active', tab === t);
       document.getElementById('tab-content-' + t).style.display = tab === t ? '' : 'none';
     });
@@ -554,7 +554,7 @@ Replace the entire function (line 906):
 
 ```javascript
   function updateCenterPanel(currentActivity) {
-    ['qr', 'poll', 'wordcloud', 'qa', 'debate'].forEach(id => {
+    ['qr', 'quiz', 'wordcloud', 'qa', 'debate'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {
         el.style.display = currentActivity === 'none' ? '' : 'none';
@@ -563,7 +563,7 @@ Replace the entire function (line 906):
       }
     });
     if (currentActivity && currentActivity !== 'none') {
-      ['poll', 'wordcloud', 'qa', 'debate'].forEach(t => {
+      ['quiz', 'wordcloud', 'qa', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? '' : 'none';
       });
@@ -1030,7 +1030,7 @@ In `routers/activity.py`, line 12, update the comment:
 
 ```python
 class ActivitySwitch(BaseModel):
-    activity: str  # "poll" | "wordcloud" | "qa" | "debate" | "none"
+    activity: str  # "quiz" | "wordcloud" | "qa" | "debate" | "none"
 ```
 
 This is just a comment update — the enum validation already handles the new value since we added `DEBATE = "debate"` to `ActivityType`.

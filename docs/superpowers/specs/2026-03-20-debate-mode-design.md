@@ -6,7 +6,7 @@ A new activity type (`ActivityType.DEBATE`) that splits participants into two ca
 
 **Goal:** Force participants to articulate trade-off arguments — powerful for architectural discussions in workshops.
 
-**Activity integration:** Launching a debate sets `current_activity = ActivityType.DEBATE` and clears any previous debate state. Only one activity can be active at a time — launching a debate while a poll/Q&A/wordcloud is active replaces it (same pattern as existing activities). Launching a new debate replaces any existing debate.
+**Activity integration:** Launching a debate sets `current_activity = ActivityType.DEBATE` and clears any previous debate state. Only one activity can be active at a time — launching a debate while a quiz/Q&A/wordcloud is active replaces it (same pattern as existing activities). Launching a new debate replaces any existing debate.
 
 ---
 

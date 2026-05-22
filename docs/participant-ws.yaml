@@ -23,11 +23,11 @@ channels:
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/active_participants_count_updated'
           - $ref: '#/components/messages/slides_history_updated'
-          - $ref: '#/components/messages/poll_opened'
-          - $ref: '#/components/messages/poll_ended'
-          - $ref: '#/components/messages/poll_correct_revealed'
-          - $ref: '#/components/messages/poll_cleared'
-          - $ref: '#/components/messages/poll_end_countdown_started'
+          - $ref: '#/components/messages/quiz_opened'
+          - $ref: '#/components/messages/quiz_ended'
+          - $ref: '#/components/messages/quiz_correct_revealed'
+          - $ref: '#/components/messages/quiz_cleared'
+          - $ref: '#/components/messages/quiz_end_countdown_started'
           - $ref: '#/components/messages/scores_updated'
           - $ref: '#/components/messages/wordcloud_updated'
           - $ref: '#/components/messages/qa_updated'
@@ -94,7 +94,7 @@ components:
             enum: [activity_updated]
           current_activity:
             type: string
-            enum: [none, poll, wordcloud, qa, codereview, debate]
+            enum: [none, quiz, wordcloud, qa, codereview, debate]
 
     # ── Identity ──────────────────────────────────────────────────────────────
 
@@ -126,73 +126,73 @@ components:
           count:
             type: integer
 
-    # ── Poll ─────────────────────────────────────────────────────────────────
+    # ── Quiz ─────────────────────────────────────────────────────────────────
 
-    poll_opened:
-      summary: Poll opened for voting
-      x-feature: poll
+    quiz_opened:
+      summary: Quiz opened for voting
+      x-feature: quiz
       x-doc-notes:
-        - Participants can vote only while poll is open.
+        - Participants can vote only while quiz is open.
       payload:
         type: object
-        required: [type, poll]
+        required: [type, quiz]
         properties:
           type:
             type: string
-            enum: [poll_opened]
-          poll:
-            $ref: '#/components/schemas/Poll'
+            enum: [quiz_opened]
+          quiz:
+            $ref: '#/components/schemas/Quiz'
 
-    poll_ended:
+    quiz_ended:
       summary: Voting closed by host
-      x-feature: poll
+      x-feature: quiz
       payload:
         type: object
         required: [type]
         properties:
           type:
             type: string
-            enum: [poll_ended]
+            enum: [quiz_ended]
 
-    poll_correct_revealed:
+    quiz_correct_revealed:
       summary: Host revealed correct answers
       x-doc-notes:
         - Participants use correct_indices (0-based) to highlight correct options in the UI.
-      x-feature: poll
+      x-feature: quiz
       payload:
         type: object
         required: [type, correct_indices]
         properties:
           type:
             type: string
-            enum: [poll_correct_revealed]
+            enum: [quiz_correct_revealed]
           correct_indices:
             type: array
             items:
               type: integer
             description: 0-based indices of correct options
 
-    poll_cleared:
-      summary: Poll removed by host
-      x-feature: poll
+    quiz_cleared:
+      summary: Quiz removed by host
+      x-feature: quiz
       payload:
         type: object
         required: [type]
         properties:
           type:
             type: string
-            enum: [poll_cleared]
+            enum: [quiz_cleared]
 
-    poll_end_countdown_started:
-      summary: Host started a countdown timer for the poll
-      x-feature: poll
+    quiz_end_countdown_started:
+      summary: Host started a countdown timer for the quiz
+      x-feature: quiz
       payload:
         type: object
         required: [type, seconds, started_at]
         properties:
           type:
             type: string
-            enum: [poll_end_countdown_started]
+            enum: [quiz_end_countdown_started]
           seconds:
             type: integer
           started_at:
@@ -511,7 +511,7 @@ components:
           type: string
           nullable: true
 
-    Poll:
+    Quiz:
       type: object
       required: [id, question, options, multi]
       properties:
@@ -523,7 +523,7 @@ components:
           type: array
           items:
             type: string
-          description: Poll options as plain text strings
+          description: Quiz options as plain text strings
         multi:
           type: boolean
 

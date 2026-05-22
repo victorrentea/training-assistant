@@ -442,7 +442,7 @@ Add at the top of the `while True:` loop (before the `_get_json` call), after th
 
 Add `last_detected_date: Optional[date] = None` as a local variable before `while True:` (import `date` is already imported via `find_session_folder`; `replace` is already imported from `dataclasses`).
 
-Also update the `POST /api/quiz-status` call in `quiz_core.post_status` — wait, per the spec the daemon should include `session_folder`/`session_notes` in the **daemon's** status poll call, not every `post_status`. Looking at the spec again: the fields go on `POST /api/quiz-status`. The daemon calls this via `post_status()` in `quiz_core.py`. But the spec says to extend the daemon status payload — the cleanest place is to have the daemon call `POST /api/quiz-status` with these fields.
+Also update the `POST /api/quiz-status` call in `quiz_core.post_status` — wait, per the spec the daemon should include `session_folder`/`session_notes` in the **daemon's** status quiz call, not every `post_status`. Looking at the spec again: the fields go on `POST /api/quiz-status`. The daemon calls this via `post_status()` in `quiz_core.py`. But the spec says to extend the daemon status payload — the cleanest place is to have the daemon call `POST /api/quiz-status` with these fields.
 
 Per spec section 3: fields included in `POST /api/quiz-status` payload. The daemon needs to pass them. The `post_status()` helper in `quiz_core.py` must accept and forward them.
 

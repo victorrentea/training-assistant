@@ -61,7 +61,7 @@ def _open_browser_trio(p, session_id):
     host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
     host_page = host_ctx.new_page()
     host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-    expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+    expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
     host = HostPage(host_page)
 
     pax_ctx = browser.new_context()
@@ -118,7 +118,7 @@ def test_qr_fullscreen_on_click():
         host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS})
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # Check QR icon exists and is visible
         qr_icon = host_page.locator("#top-qr-icon")

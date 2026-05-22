@@ -56,19 +56,19 @@ def test_load_session_state_returns_empty_when_invalid_json():
         assert _load_session_state(folder) == {}
 
 
-def test_load_session_state_normalizes_null_poll_correct_indices():
+def test_load_session_state_normalizes_null_quiz_correct_indices():
     with tempfile.TemporaryDirectory() as d:
         folder = Path(d)
         (folder / "session-state.json").write_text(
             json.dumps({
                 "mode": "workshop",
-                "poll_correct_indices": None,
+                "quiz_correct_indices": None,
             }),
             encoding="utf-8",
         )
         from daemon.session_state import load_session_state as _load_session_state
         loaded = _load_session_state(folder)
-        assert loaded["poll"]["correct_indices"] == []
+        assert loaded["quiz"]["correct_indices"] == []
 
 
 def test_load_session_state_normalizes_legacy_flat_activity_fields():

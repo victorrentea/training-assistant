@@ -1,7 +1,7 @@
 # Load Test Design — Task 115
 
 **Date:** 2026-03-20
-**Goal:** Verify the Workshop Interact server can handle 30–300 concurrent participants — connect simultaneously, receive a live poll, vote randomly, accumulate scores.
+**Goal:** Verify the Workshop Interact server can handle 30–300 concurrent participants — connect simultaneously, receive a live quiz, vote randomly, accumulate scores.
 
 ---
 
@@ -27,8 +27,8 @@ No new dependencies (`websockets>=12.0` already in `pyproject.toml`).
 
 1. `websockets.connect(ws_url/ws/{name})` — real TCP WebSocket
 2. Receive initial `state` message → increment shared counter; if counter == N, set `all_connected_event`
-3. `await poll_ready_event` (set by main after host opens the poll)
-4. Drain WebSocket messages until `poll_active == True` in a state broadcast
+3. `await quiz_ready_event` (set by main after host opens the quiz)
+4. Drain WebSocket messages until `quiz_active == True` in a state broadcast
 5. Pick a random option; send `{"type": "vote", "option_id": "..."}`
 6. Receive `vote_update` confirmation → signal voted
 7. Drain messages until `scores` broadcast includes own name → store score
@@ -41,11 +41,11 @@ No new dependencies (`websockets>=12.0` already in `pyproject.toml`).
 ```
 launch N asyncio tasks
 await all_connected_event          # 15s timeout
-host POST /api/poll                # create poll
-host POST /api/poll/status open    # open voting → set poll_ready_event
+host POST /api/quiz                # create quiz
+host POST /api/quiz/status open    # open voting → set quiz_ready_event
 await all_voted_event              # 30s timeout
-host POST /api/poll/status close   # close voting
-host POST /api/poll/correct        # mark first option correct
+host POST /api/quiz/status close   # close voting
+host POST /api/quiz/correct        # mark first option correct
 await all_scored_event             # 15s timeout
 run assertions
 print leaderboard

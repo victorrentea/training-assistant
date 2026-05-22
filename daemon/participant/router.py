@@ -177,7 +177,7 @@ class QAQuestionRaw(BaseModel):
     timestamp: float
 
 
-class PollData(BaseModel):
+class QuizData(BaseModel):
     id: str
     question: str
     options: list[str]
@@ -239,10 +239,10 @@ class ParticipantStateResponse(BaseModel):
     session_name: str | None = None
     wordcloud: WordcloudData
     qa_questions: list[QAQuestionRaw]
-    poll: PollData | None = None
-    poll_active: bool
+    quiz: QuizData | None = None
+    quiz_active: bool
     my_voted_indices: list[int] | None = None
-    poll_correct_indices: list[int] | None = None
+    quiz_correct_indices: list[int] | None = None
     codereview: CodeReviewParticipantState
     debate: DebateData
     slides_current: CurrentSlide | None = None
@@ -324,29 +324,29 @@ def _get_score(pid: str) -> int:
     return scores.scores.get(pid, 0)
 
 
-def _build_poll_for_participant(pid: str) -> dict:
-    """Build poll state personalised for participant pid."""
-    from daemon.poll.state import poll_state
+def _build_quiz_for_participant(pid: str) -> dict:
+    """Build quiz state personalised for participant pid."""
+    from daemon.quiz.state import quiz_state
 
-    ps = poll_state
-    poll = dict(ps.poll) if ps.poll else None
-    if poll is not None:
-        poll["end_timer_seconds"] = ps.poll_timer_seconds
-        poll["end_timer_started_at"] = (
-            ps.poll_timer_started_at.isoformat() if ps.poll_timer_started_at else None
+    ps = quiz_state
+    quiz = dict(ps.quiz) if ps.quiz else None
+    if quiz is not None:
+        quiz["end_timer_seconds"] = ps.quiz_timer_seconds
+        quiz["end_timer_started_at"] = (
+            ps.quiz_timer_started_at.isoformat() if ps.quiz_timer_started_at else None
         )
-        poll["correct_indices"] = ps.poll_correct_indices
+        quiz["correct_indices"] = ps.quiz_correct_indices
 
     result: dict = {
-        "poll": poll,
-        "poll_active": ps.poll_active,
+        "quiz": quiz,
+        "quiz_active": ps.quiz_active,
     }
     my_vote_entry = ps.votes.get(pid)
     if my_vote_entry is not None:
         result["my_voted_indices"] = my_vote_entry["option_indices"]
     else:
         result["my_voted_indices"] = None
-    result["poll_correct_indices"] = ps.poll_correct_indices
+    result["quiz_correct_indices"] = ps.quiz_correct_indices
     return result
 
 
@@ -601,7 +601,7 @@ async def get_participant_state(request: Request):
     pid = request.headers.get("x-participant-id", "")
     ps = participant_state
 
-    poll_data = _build_poll_for_participant(pid)
+    quiz_data = _build_quiz_for_participant(pid)
     wc = wordcloud_state
     cr = _build_codereview_for_participant(pid)
     debate = _build_debate_for_participant(pid)
@@ -626,8 +626,8 @@ async def get_participant_state(request: Request):
         },
         # QA (personalised)
         "qa_questions": _build_qa_for_participant(pid),
-        # Poll (personalised)
-        **poll_data,
+        # Quiz (personalised)
+        **quiz_data,
         # Codereview (personalised)
         "codereview": cr,
         # Debate (personalised, grouped)

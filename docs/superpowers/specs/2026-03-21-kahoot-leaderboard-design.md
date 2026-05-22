@@ -51,7 +51,7 @@ Add a Kahoot-style dramatic leaderboard reveal, triggered on demand by the host.
 ## 2. Leaderboard Trigger and Server Logic
 
 ### Host Button
-- "Leaderboard" button with trophy icon placed in the **tab bar** alongside Poll, Words, Q&A, Code, Debate.
+- "Leaderboard" button with trophy icon placed in the **tab bar** alongside Quiz, Words, Q&A, Code, Debate.
 - Styled as a **button, not a tab** — clicking does not switch tab content.
 - Toggles leaderboard on/off.
 - **Disabled** when fewer than 5 participants have `score > 0`.
@@ -94,7 +94,7 @@ Add a Kahoot-style dramatic leaderboard reveal, triggered on demand by the host.
 - (Simplified from vote_times since those can be lost on reconnect.)
 
 ### Interaction with Activities
-- Leaderboard can be shown while a poll/activity is active. The overlay sits on top.
+- Leaderboard can be shown while a quiz/activity is active. The overlay sits on top.
 - Voting and interaction continue to work underneath — the leaderboard is purely visual.
 
 ---

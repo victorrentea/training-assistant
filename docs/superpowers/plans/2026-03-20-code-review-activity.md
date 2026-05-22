@@ -43,7 +43,7 @@ In `state.py`, add `CODEREVIEW = "codereview"` after the `QA = "qa"` line:
 ```python
 class ActivityType(str, Enum):
     NONE = "none"
-    POLL = "poll"
+    QUIZ = "quiz"
     WORDCLOUD = "wordcloud"
     QA = "qa"
     CODEREVIEW = "codereview"
@@ -181,7 +181,7 @@ async def clear_codereview():
 
 Add to imports (line 6):
 ```python
-from routers import ws, poll, scores, quiz, pages, wordcloud, activity, qa, codereview
+from routers import ws, quiz, scores, quiz, pages, wordcloud, activity, qa, codereview
 ```
 
 Add after the last `include_router` call (line 26):
@@ -1161,7 +1161,7 @@ Read `adoc/c4_c3_components.puml` to understand the current component structure.
 
 - [ ] **Step 2: Add codereview router component**
 
-Add a new component for the codereview router, following the pattern of existing activity routers (poll, wordcloud, qa).
+Add a new component for the codereview router, following the pattern of existing activity routers (quiz, wordcloud, qa).
 
 - [ ] **Step 3: Commit**
 

@@ -137,8 +137,8 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
             elif msg_type == "vote":
                 option_id = data.get("option_id")
-                valid_ids = [o["id"] for o in state.poll["options"]] if state.poll else []
-                if state.poll_active and state.poll and not state.poll.get("multi") and option_id in valid_ids:
+                valid_ids = [o["id"] for o in state.quiz["options"]] if state.quiz else []
+                if state.quiz_active and state.quiz and not state.quiz.get("multi") and option_id in valid_ids:
                     state.votes[pid] = option_id
                     if pid not in state.vote_times:
                         state.vote_times[pid] = datetime.now(timezone.utc)
@@ -150,13 +150,13 @@ async def websocket_endpoint(websocket: WebSocket, participant_id: str):
 
             elif msg_type == "multi_vote":
                 option_ids = data.get("option_ids", [])
-                valid_ids = [o["id"] for o in state.poll["options"]] if state.poll else []
-                correct_count = state.poll.get("correct_count") if state.poll else None
+                valid_ids = [o["id"] for o in state.quiz["options"]] if state.quiz else []
+                correct_count = state.quiz.get("correct_count") if state.quiz else None
                 max_allowed = correct_count if correct_count else len(valid_ids)
                 if (
-                    state.poll_active
-                    and state.poll
-                    and state.poll.get("multi")
+                    state.quiz_active
+                    and state.quiz
+                    and state.quiz.get("multi")
                     and isinstance(option_ids, list)
                     and len(option_ids) <= max_allowed
                     and len(set(option_ids)) == len(option_ids)
@@ -247,8 +247,8 @@ def _base_state() -> dict:
     return {
         "type": "state",
         "backend_version": get_backend_version(),
-        "poll": state.poll,
-        "poll_active": state.poll_active,
+        "quiz": state.quiz,
+        "quiz_active": state.quiz_active,
         "vote_counts": state.vote_counts(),
         "participant_count": len(participant_ids()),
         "current_activity": state.current_activity,
@@ -474,12 +474,12 @@ git commit -m "feat: migrate Q&A submit/upvote from REST to WebSocket, remove ol
 
 ---
 
-### Task 4: Update poll.py scoring to use UUID keys
+### Task 4: Update quiz.py scoring to use UUID keys
 
 **Files:**
-- Modify: `routers/poll.py:88-166`
+- Modify: `routers/quiz.py:88-166`
 
-- [ ] **Step 1: Update score broadcasting in poll.py**
+- [ ] **Step 1: Update score broadcasting in quiz.py**
 
 In `set_correct_options()`:
 - The scoring loop already iterates `state.votes.items()` which are now UUID-keyed — this just works.
@@ -508,19 +508,19 @@ for pid, ws in list(state.participants.items()):
     }))
 ```
 
-- [ ] **Step 2: Update other poll.py endpoints that broadcast**
+- [ ] **Step 2: Update other quiz.py endpoints that broadcast**
 
-`create_poll()`, `set_poll_status()`, `clear_poll()` all call `broadcast(build_state_message())`. Change to `broadcast_state()`.
+`create_quiz()`, `set_quiz_status()`, `clear_quiz()` all call `broadcast(build_state_message())`. Change to `broadcast_state()`.
 
 - [ ] **Step 3: Update suggest_name endpoint**
 
-The `suggest_name()` in state.py was already updated in Task 1 to not use `suggested_names`. No changes needed in poll.py.
+The `suggest_name()` in state.py was already updated in Task 1 to not use `suggested_names`. No changes needed in quiz.py.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add routers/poll.py
-git commit -m "feat: update poll scoring to work with UUID-keyed state"
+git add routers/quiz.py
+git commit -m "feat: update quiz scoring to work with UUID-keyed state"
 ```
 
 ---
@@ -858,7 +858,7 @@ async def reset_scores():
 
 - [ ] **Step 3: Fix /api/status participant count — filter unnamed UUIDs**
 
-In `poll.py`, update the `/api/status` endpoint to only count named participants:
+In `quiz.py`, update the `/api/status` endpoint to only count named participants:
 
 ```python
 from messaging import participant_ids
@@ -868,8 +868,8 @@ async def status():
     return {
         "backend_version": get_backend_version(),
         "participants": len(participant_ids()),
-        "poll": state.poll,
-        "poll_active": state.poll_active,
+        "quiz": state.quiz,
+        "quiz_active": state.quiz_active,
         "vote_counts": state.vote_counts(),
         "total_votes": len(state.votes),
     }
@@ -878,7 +878,7 @@ async def status():
 - [ ] **Step 4: Commit**
 
 ```bash
-git add routers/wordcloud.py routers/activity.py routers/scores.py routers/poll.py
+git add routers/wordcloud.py routers/activity.py routers/scores.py routers/quiz.py
 git commit -m "refactor: all routers use broadcast_state() for personalized messaging"
 ```
 

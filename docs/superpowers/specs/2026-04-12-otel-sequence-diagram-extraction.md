@@ -157,7 +157,7 @@ Configured via `OTEL_TRACES_FILE` env var. When not set, no file export (product
 
 **Rule 3 — Participant names from `service.name`:** No mapping dict. `OTEL_SERVICE_NAME` values (`Participant`, `Host`, `Railway`, `Daemon`, `Addons`) become PlantUML participant names directly.
 
-**Rule 4 — Arrow labels from span names:** Span name (e.g., `POST /api/participant/poll/vote`, `broadcast:poll_opened`, `ws:slide`) becomes the arrow label. No renaming.
+**Rule 4 — Arrow labels from span names:** Span name (e.g., `POST /api/participant/quiz/vote`, `broadcast:quiz_opened`, `ws:slide`) becomes the arrow label. No renaming.
 
 **Rule 5 — Skip internal spans:** When parent and child span share the same `service.name`, omit from the diagram. Only cross-service arrows shown.
 
@@ -216,17 +216,17 @@ Specific hermetic tests exercise canonical flows and generate diagrams after ass
 ```python
 from scripts.traces_to_puml import generate_puml
 
-def test_poll_flow_generates_sequence(trace_session):
-    # ... exercise full poll lifecycle ...
-    generate_puml(trace_session, family="03-poll-and-quiz",
-                  output="docs/sequences/generated/03-poll-and-quiz.puml")
+def test_quiz_flow_generates_sequence(trace_session):
+    # ... exercise full quiz lifecycle ...
+    generate_puml(trace_session, family="03-quiz",
+                  output="docs/sequences/generated/03-quiz.puml")
 ```
 
 ### Initial coverage (2-3 families)
 
 | Family | Existing test | `.puml` file |
 |--------|--------------|--------------|
-| Poll and quiz | `test_poll_flow.py` | `03-poll-and-quiz.puml` |
+| Quiz and quiz | `test_quiz_flow.py` | `03-quiz.puml` |
 | Participant join | `test_participant_join_flow.py` | `02-participant-join.puml` |
 | Slides follow-me | `test_follow_me.py` | `06-slides.puml` |
 

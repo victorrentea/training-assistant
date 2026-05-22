@@ -1,5 +1,5 @@
 """
-Load test: N participants connect simultaneously, host fires a poll,
+Load test: N participants connect simultaneously, host fires a quiz,
 all vote randomly, scores are verified correct, leaderboard is printed.
 
 Local:  pytest test_load.py -v -s
@@ -112,14 +112,14 @@ async def _recv_until(ws, predicate, timeout=20.0):
             return msg
 
 
-async def participant_task(ws_base, name, idx, counter, n, connected_event, poll_ready_event, results, ssl_ctx=None):
+async def participant_task(ws_base, name, idx, counter, n, connected_event, quiz_ready_event, results, ssl_ctx=None):
     """
     Lifecycle for one load-test participant:
     1. Stagger connect (idx * 50ms) to avoid broadcast storm on simultaneous connections
     2. Connect via real WebSocket
     3. Receive initial state (fail fast on name_taken)
-    4. Wait for poll_ready_event
-    5. Drain until poll_active == True
+    4. Wait for quiz_ready_event
+    5. Drain until quiz_active == True
     6. Vote randomly
     7. Drain until vote_update (confirmation)
     8. Drain until scores broadcast
@@ -148,18 +148,18 @@ async def participant_task(ws_base, name, idx, counter, n, connected_event, poll
             if counter["count"] == n:
                 connected_event.set()
 
-            # Wait for host to open the poll
-            await poll_ready_event.wait()
+            # Wait for host to open the quiz
+            await quiz_ready_event.wait()
 
-            # Drain until poll is active
+            # Drain until quiz is active
             msg = await _recv_until(
                 ws,
-                lambda m: m.get("type") == "state" and m.get("poll_active") and m.get("poll"),
+                lambda m: m.get("type") == "state" and m.get("quiz_active") and m.get("quiz"),
                 timeout=20.0,
             )
 
             # Vote for a random option
-            options = msg["poll"]["options"]
+            options = msg["quiz"]["options"]
             chosen = random.choice(options)
             voted_id = chosen["id"]
             await ws.send(json.dumps({"type": "vote", "option_id": voted_id}))
@@ -188,10 +188,10 @@ def test_load(server_url):
     ws_base = server_url.replace("http://", "ws://").replace("https://", "wss://")
     ssl_ctx = ssl.create_default_context(cafile=certifi.where()) if ws_base.startswith("wss://") else None
 
-    # Pre-condition: no active poll (avoids disrupting a live session on prod)
+    # Pre-condition: no active quiz (avoids disrupting a live session on prod)
     status = requests.get(f"{server_url}/api/status").json()
-    if status.get("poll") is not None:
-        pytest.skip("Server already has an active poll — skipping load test")
+    if status.get("quiz") is not None:
+        pytest.skip("Server already has an active quiz — skipping load test")
 
     results = {
         f"LBT{i:03d}": {"voted": False, "voted_id": None, "score": None, "done": False, "error": None}
@@ -200,12 +200,12 @@ def test_load(server_url):
 
     async def _run():
         connected_event = asyncio.Event()
-        poll_ready_event = asyncio.Event()
+        quiz_ready_event = asyncio.Event()
         counter = {"count": 0}
 
         tasks = [
             asyncio.create_task(
-                participant_task(ws_base, f"LBT{i:03d}", i, counter, n, connected_event, poll_ready_event, results, ssl_ctx)
+                participant_task(ws_base, f"LBT{i:03d}", i, counter, n, connected_event, quiz_ready_event, results, ssl_ctx)
             )
             for i in range(n)
         ]
@@ -214,20 +214,20 @@ def test_load(server_url):
         await asyncio.wait_for(connected_event.wait(), timeout=max(30.0, n * 0.1 + 20.0))
         print(f"\n✓ All {n} participants connected")
 
-        # Phase 2: host creates and opens poll
+        # Phase 2: host creates and opens quiz
         # Use asyncio.to_thread so requests don't block the event loop (participant ping/pong)
-        poll_resp = await asyncio.to_thread(
-            lambda: _shost(server_url, "post", "/poll", json={
-                "question": "Load test poll — pick any option",
+        quiz_resp = await asyncio.to_thread(
+            lambda: _shost(server_url, "post", "/quiz", json={
+                "question": "Load test quiz — pick any option",
                 "options": ["Option A", "Option B", "Option C", "Option D"],
             })
         )
-        assert poll_resp.status_code == 200, f"create_poll failed: {poll_resp.text}"
-        correct_id = poll_resp.json()["poll"]["options"][0]["id"]  # opt0 is the "correct" answer
+        assert quiz_resp.status_code == 200, f"create_quiz failed: {quiz_resp.text}"
+        correct_id = quiz_resp.json()["quiz"]["options"][0]["id"]  # opt0 is the "correct" answer
 
-        await asyncio.to_thread(lambda: _shost(server_url, "put", "/poll/status", json={"open": True}))
-        poll_ready_event.set()
-        print(f"✓ Poll opened — {n} participants voting...")
+        await asyncio.to_thread(lambda: _shost(server_url, "put", "/quiz/status", json={"open": True}))
+        quiz_ready_event.set()
+        print(f"✓ Quiz opened — {n} participants voting...")
 
         loop = asyncio.get_running_loop()
 
@@ -242,10 +242,10 @@ def test_load(server_url):
             await asyncio.sleep(0.1)
         print(f"✓ All {n} votes cast")
 
-        # Phase 4: close poll and post correct answer → triggers scores broadcast
-        await asyncio.to_thread(lambda: _shost(server_url, "put", "/poll/status", json={"open": False}))
-        await asyncio.to_thread(lambda: _shost(server_url, "put", "/poll/correct", json={"correct_ids": [correct_id]}))
-        print("✓ Poll closed, correct answer posted")
+        # Phase 4: close quiz and post correct answer → triggers scores broadcast
+        await asyncio.to_thread(lambda: _shost(server_url, "put", "/quiz/status", json={"open": False}))
+        await asyncio.to_thread(lambda: _shost(server_url, "put", "/quiz/correct", json={"correct_ids": [correct_id]}))
+        print("✓ Quiz closed, correct answer posted")
 
         # Phase 5: wait for all scores received
         deadline = loop.time() + 30.0
@@ -265,9 +265,9 @@ def test_load(server_url):
     finally:
         # Teardown: always clean up server state (essential for prod)
         try:
-            _shost(server_url, "delete", "/poll")
+            _shost(server_url, "delete", "/quiz")
         except Exception as exc:
-            print(f"  [warn] DELETE /api/poll failed during teardown: {exc}")
+            print(f"  [warn] DELETE /api/quiz failed during teardown: {exc}")
         try:
             _shost(server_url, "delete", "/scores")
         except Exception as exc:

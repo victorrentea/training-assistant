@@ -16,15 +16,15 @@ ws_messages_total = Counter(
     ["type"],
 )
 
-# Poll voting
-poll_votes_total = Counter(
-    "poll_votes_total",
+# Quiz voting
+quiz_votes_total = Counter(
+    "quiz_votes_total",
     "Total votes cast",
 )
 
-poll_vote_duration_seconds = Histogram(
-    "poll_vote_duration_seconds",
-    "Time from poll open to participant vote",
+quiz_vote_duration_seconds = Histogram(
+    "quiz_vote_duration_seconds",
+    "Time from quiz open to participant vote",
     buckets=[1, 2, 5, 10, 15, 30, 60, 120, 300],
 )
 

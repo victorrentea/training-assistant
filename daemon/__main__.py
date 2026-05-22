@@ -137,8 +137,8 @@ def _build_runtime_session_snapshot(
     from daemon.debate.state import debate_state
     from daemon.misc.state import misc_state
     from daemon.participant.state import participant_state
-    from daemon.poll.state import poll_state
     from daemon.qa.state import qa_state
+    from daemon.quiz.state import quiz_state
     from daemon.wordcloud.state import wordcloud_state
 
     qa_payload: dict[str, dict] = {}
@@ -153,14 +153,14 @@ def _build_runtime_session_snapshot(
         }
 
     debate_snapshot = debate_state.snapshot()
-    poll_timer_started_at = (
-        poll_state.poll_timer_started_at.isoformat()
-        if poll_state.poll_timer_started_at
+    quiz_timer_started_at = (
+        quiz_state.quiz_timer_started_at.isoformat()
+        if quiz_state.quiz_timer_started_at
         else None
     )
-    poll_opened_at = (
-        poll_state.poll_opened_at.isoformat()
-        if poll_state.poll_opened_at
+    quiz_opened_at = (
+        quiz_state.quiz_opened_at.isoformat()
+        if quiz_state.quiz_opened_at
         else None
     )
     participants_payload: dict[str, dict[str, object]] = {}
@@ -192,15 +192,15 @@ def _build_runtime_session_snapshot(
         "mode": participant_state.mode,
         "current_activity": participant_state.current_activity,
         "participants": participants_payload,
-        "poll": {
-            "definition": poll_state.poll,
-            "active": poll_state.poll_active,
-            "correct_indices": poll_state.poll_correct_indices or [],
-            "opened_at": poll_opened_at,
-            "timer_seconds": poll_state.poll_timer_seconds,
-            "timer_started_at": poll_timer_started_at,
-            "votes": dict(poll_state.votes),
-            "awarded_points": dict(poll_state.awarded_points),
+        "quiz": {
+            "definition": quiz_state.quiz,
+            "active": quiz_state.quiz_active,
+            "correct_indices": quiz_state.quiz_correct_indices or [],
+            "opened_at": quiz_opened_at,
+            "timer_seconds": quiz_state.quiz_timer_seconds,
+            "timer_started_at": quiz_timer_started_at,
+            "votes": dict(quiz_state.votes),
+            "awarded_points": dict(quiz_state.awarded_points),
         },
         "qa_questions": qa_payload,
         "wordcloud": {
@@ -657,7 +657,7 @@ def run() -> None:
             _pending_requests[msg_type] = data
         return handler
 
-    # poll_request and poll_refine are now served via daemon REST endpoints (daemon/quiz/router.py)
+    # quiz_request and quiz_refine are now served via daemon REST endpoints (daemon/quiz/router.py)
     # and stored in daemon.quiz.pending — no longer via WS push from Railway
     # debate_ai_request handled directly by debate router (no longer via WS polling)
     ws_client.register_handler("summary_force", _ws_handler("summary_force"))
@@ -1107,8 +1107,8 @@ def run() -> None:
                             from daemon.participant.state import (
                                 participant_state as _participant_state,
                             )
-                            from daemon.poll.state import poll_state as _poll_state
                             from daemon.qa.state import qa_state as _qa_state
+                            from daemon.quiz.state import quiz_state as _quiz_state
                             from daemon.scores import scores as _scores_state
                             from daemon.wordcloud.state import wordcloud_state as _wordcloud_state
 
@@ -1116,7 +1116,7 @@ def run() -> None:
                             _wordcloud_state.clear()
                             _qa_state.clear()
                             _misc_state.reset_for_new_session()
-                            _poll_state.clear()
+                            _quiz_state.clear()
                             _codereview_state.clear()
                             _debate_state.reset()
                             _leaderboard_state.reset()

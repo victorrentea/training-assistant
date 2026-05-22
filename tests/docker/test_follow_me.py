@@ -87,7 +87,7 @@ def test_follow_me_basic():
         )
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # Participant joins
         pax_ctx = browser.new_context()

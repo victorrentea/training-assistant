@@ -58,7 +58,7 @@ This file mirrors the full serializable AppState. It is the authoritative restor
     }
   },
   "activity": "qa",
-  "poll": {
+  "quiz": {
     "id": "...", "question": "...", "options": [...], "multi": false,
     "active": false, "votes": {"<uuid>": "<option_id>"},
     "correct_ids": [], "opened_at": null,
@@ -238,7 +238,7 @@ SESSIONS
 2. Reads `daemon_state.json` → determines active session(s) per precedence rules
 3. Reads `session_state.json` from active session folder
 4. Posts restored state to `/api/session/sync` with full payload (see updated contract below)
-5. AppState is populated: mode, participants, scores, activity, poll, qa, wordcloud, debate, codereview, leaderboard, token_usage
+5. AppState is populated: mode, participants, scores, activity, quiz, qa, wordcloud, debate, codereview, leaderboard, token_usage
 6. Participants reconnecting with known UUIDs get their scores back
 
 ### Updated `/api/session/sync` contract

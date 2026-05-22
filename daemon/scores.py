@@ -13,7 +13,7 @@ class Scores:
             self.scores[pid] = self.scores.get(pid, 0) + points
 
     def snapshot_base(self):
-        """Capture current scores as base (called when poll opens)."""
+        """Capture current scores as base (called when quiz opens)."""
         with self._lock:
             self.base_scores = dict(self.scores)
 

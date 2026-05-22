@@ -492,7 +492,7 @@ git push origin master
 
 - [ ] **Step 3: Wait for Railway deployment**
 
-Railway auto-deploys on push; ~40-50 s. Use the `wait-for-deploy` skill or poll the deploy-info endpoint.
+Railway auto-deploys on push; ~40-50 s. Use the `wait-for-deploy` skill or quiz the deploy-info endpoint.
 
 - [ ] **Step 4: Verify on production**
 

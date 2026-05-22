@@ -4,7 +4,7 @@
 
 **Goal:** Add a live word cloud activity where participants submit words that form an animated D3-cloud word cloud on all screens, with the host controlling open/close and the host UI redesigned into a 3-column layout.
 
-**Architecture:** New `ActivityType` enum + `current_activity` / `wordcloud_words` fields on `AppState`; new `routers/wordcloud.py` HTTP router; `wordcloud_word` WS message handled in `routers/ws.py`; `messaging.py` includes the new fields in every state broadcast. Host UI is redesigned into a 3-column layout (controls | activity | participants); participant UI adds a word cloud screen beside the existing poll/idle screens.
+**Architecture:** New `ActivityType` enum + `current_activity` / `wordcloud_words` fields on `AppState`; new `routers/wordcloud.py` HTTP router; `wordcloud_word` WS message handled in `routers/ws.py`; `messaging.py` includes the new fields in every state broadcast. Host UI is redesigned into a 3-column layout (controls | activity | participants); participant UI adds a word cloud screen beside the existing quiz/idle screens.
 
 **Tech Stack:** Python/FastAPI (backend), Vanilla JS/HTML/CSS (frontend), D3 v7 + d3-cloud v1 (word cloud rendering via CDN), pytest + FastAPI TestClient (unit tests), Playwright (E2E tests).
 
@@ -17,7 +17,7 @@
 | `state.py` | Modify | Add `ActivityType` enum, `current_activity`, `wordcloud_words` fields |
 | `messaging.py` | Modify | Include `current_activity` + `wordcloud_words` in `build_state_message()` |
 | `routers/wordcloud.py` | **Create** | `POST /api/wordcloud/status` — open/close word cloud activity |
-| `routers/poll.py` | Modify | Return 409 when creating poll if `current_activity != NONE`; set/clear `current_activity` on create/delete |
+| `routers/quiz.py` | Modify | Return 409 when creating quiz if `current_activity != NONE`; set/clear `current_activity` on create/delete |
 | `routers/ws.py` | Modify | Handle `wordcloud_word` message type |
 | `main.py` | Modify | Register `wordcloud` router |
 | `static/host.html` | Modify | 3-column layout; add Word Cloud tab, center activity panel, move participants to right column |
@@ -45,11 +45,11 @@ from enum import Enum
 
 class ActivityType(str, Enum):
     NONE = "none"
-    POLL = "poll"
+    QUIZ = "quiz"
     WORDCLOUD = "wordcloud"
 ```
 
-In `AppState.reset()`, add these two lines alongside the existing `self.poll`, `self.scores`, etc.:
+In `AppState.reset()`, add these two lines alongside the existing `self.quiz`, `self.scores`, etc.:
 ```python
 self.current_activity: ActivityType = ActivityType.NONE
 self.wordcloud_words: dict[str, int] = {}
@@ -110,7 +110,7 @@ git commit -m "feat: include current_activity and wordcloud_words in state broad
 
 - [ ] **Step 1: Write the failing tests first**
 
-In `test_main.py`, add these tests after the existing poll tests. First add DSL helpers to `WorkshopSession`:
+In `test_main.py`, add these tests after the existing quiz tests. First add DSL helpers to `WorkshopSession`:
 
 ```python
 def open_wordcloud(self):
@@ -151,18 +151,18 @@ def test_open_wordcloud_clears_previous_words():
     session.open_wordcloud()
     assert state.wordcloud_words == {}
 
-def test_open_wordcloud_blocked_when_poll_active():
+def test_open_wordcloud_blocked_when_quiz_active():
     state.reset()
     session = WorkshopSession()
-    session.create_poll("Q?", ["A", "B"])
+    session.create_quiz("Q?", ["A", "B"])
     resp = session._client.post("/api/wordcloud/status", json={"active": True})
     assert resp.status_code == 409
 
-def test_create_poll_blocked_when_wordcloud_active():
+def test_create_quiz_blocked_when_wordcloud_active():
     state.reset()
     session = WorkshopSession()
     session.open_wordcloud()
-    resp = session._client.post("/api/poll", json={"question": "Q?", "options": ["A", "B"]})
+    resp = session._client.post("/api/quiz", json={"question": "Q?", "options": ["A", "B"]})
     assert resp.status_code == 409
 ```
 
@@ -172,8 +172,8 @@ def test_create_poll_blocked_when_wordcloud_active():
 pytest test_main.py::test_open_wordcloud_sets_activity \
        test_main.py::test_close_wordcloud_sets_activity_none \
        test_main.py::test_open_wordcloud_clears_previous_words \
-       test_main.py::test_open_wordcloud_blocked_when_poll_active \
-       test_main.py::test_create_poll_blocked_when_wordcloud_active -v
+       test_main.py::test_open_wordcloud_blocked_when_quiz_active \
+       test_main.py::test_create_quiz_blocked_when_wordcloud_active -v
 ```
 Expected: all FAIL (404/ImportError — router not registered yet).
 
@@ -210,30 +210,30 @@ async def set_wordcloud_status(body: WordCloudStatus):
 
 In `main.py`, add:
 ```python
-from routers import ws, poll, scores, quiz, pages, wordcloud
+from routers import ws, quiz, scores, quiz, pages, wordcloud
 # ...
 app.include_router(wordcloud.router)
 ```
 
-- [ ] **Step 5: Add mutual exclusivity to `routers/poll.py`**
+- [ ] **Step 5: Add mutual exclusivity to `routers/quiz.py`**
 
-In `create_poll()`, before setting `state.poll`, add:
+In `create_quiz()`, before setting `state.quiz`, add:
 ```python
 if state.current_activity != ActivityType.NONE:
     raise HTTPException(409, "Another activity is already active")
 ```
 
-On `create_poll` success, add:
+On `create_quiz` success, add:
 ```python
-state.current_activity = ActivityType.POLL
+state.current_activity = ActivityType.QUIZ
 ```
 
-In `clear_poll()`, add:
+In `clear_quiz()`, add:
 ```python
 state.current_activity = ActivityType.NONE
 ```
 
-Add the import at the top of `poll.py`:
+Add the import at the top of `quiz.py`:
 ```python
 from state import state, ActivityType
 ```
@@ -245,8 +245,8 @@ from state import state, ActivityType
 pytest test_main.py::test_open_wordcloud_sets_activity \
        test_main.py::test_close_wordcloud_sets_activity_none \
        test_main.py::test_open_wordcloud_clears_previous_words \
-       test_main.py::test_open_wordcloud_blocked_when_poll_active \
-       test_main.py::test_create_poll_blocked_when_wordcloud_active -v
+       test_main.py::test_open_wordcloud_blocked_when_quiz_active \
+       test_main.py::test_create_quiz_blocked_when_wordcloud_active -v
 ```
 Expected: all PASS.
 
@@ -260,8 +260,8 @@ Expected: all pass.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add routers/wordcloud.py routers/poll.py main.py test_main.py
-git commit -m "feat: add wordcloud open/close endpoint + mutual exclusivity with polls"
+git add routers/wordcloud.py routers/quiz.py main.py test_main.py
+git commit -m "feat: add wordcloud open/close endpoint + mutual exclusivity with quizzes"
 ```
 
 ---
@@ -409,7 +409,7 @@ The participant already has a `#content` div that is replaced with different scr
 
 - [ ] **Step 1: Add `renderWordCloudScreen()` to `participant.js`**
 
-Find the section in `participant.js` that handles the `state` message and renders different screens (idle / poll). After the existing screen logic, add handling for `current_activity === "wordcloud"`.
+Find the section in `participant.js` that handles the `state` message and renders different screens (idle / quiz). After the existing screen logic, add handling for `current_activity === "wordcloud"`.
 
 Add this function (place near other `render*` functions):
 
@@ -529,13 +529,13 @@ function _drawCloud(canvas, wordsMap) {
 
 - [ ] **Step 3: Hook `renderWordCloudScreen` into the state message handler**
 
-In `participant.js`, find where `msg.type === 'state'` is handled and where different screens are shown. Currently it calls something like `renderIdle()` or `renderPoll()`. Add:
+In `participant.js`, find where `msg.type === 'state'` is handled and where different screens are shown. Currently it calls something like `renderIdle()` or `renderQuiz()`. Add:
 
 ```javascript
 if (msg.current_activity === 'wordcloud') {
   renderWordCloudScreen(msg.wordcloud_words || {});
-} else if (msg.poll) {
-  renderPoll(msg);  // existing
+} else if (msg.quiz) {
+  renderQuiz(msg);  // existing
 } else {
   renderIdle();     // existing
 }
@@ -660,8 +660,8 @@ git commit -m "feat: participant word cloud screen with D3-cloud rendering"
 This is the largest frontend task. The current card-stack layout becomes a fixed 3-column layout.
 
 **3-column structure:**
-- Left (~25%): tab switcher + poll composer OR word cloud controls + status badges
-- Center (~50%): state-driven activity panel (QR / poll results / word cloud)
+- Left (~25%): tab switcher + quiz composer OR word cloud controls + status badges
+- Center (~50%): state-driven activity panel (QR / quiz results / word cloud)
 - Right (~25%): participant list + join link + reset scores
 
 - [ ] **Step 1: Rewrite `host.html` structure**
@@ -675,19 +675,19 @@ Replace the existing `<div class="grid">` content with the 3-column structure:
   <div class="host-col host-col-left">
     <!-- Tab switcher -->
     <div class="tab-bar">
-      <button class="tab-btn active" id="tab-poll" onclick="switchTab('poll')">Poll</button>
+      <button class="tab-btn active" id="tab-quiz" onclick="switchTab('quiz')">Quiz</button>
       <button class="tab-btn" id="tab-wordcloud" onclick="switchTab('wordcloud')">☁ Word Cloud</button>
     </div>
 
-    <!-- Poll tab content -->
-    <div id="tab-content-poll" class="tab-content">
+    <!-- Quiz tab content -->
+    <div id="tab-content-quiz" class="tab-content">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.6rem; flex-wrap:wrap; gap:.4rem;">
         <div style="display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
           <span id="ws-badge" class="badge disconnected">● Server</span>
           <span id="daemon-badge" class="badge disconnected" title="">Agent</span>
         </div>
       </div>
-      <div id="poll-input" class="poll-composer" contenteditable="true" spellcheck="false"
+      <div id="quiz-input" class="quiz-composer" contenteditable="true" spellcheck="false"
            data-placeholder="Question title&#10;&#10;Option A&#10;Option B&#10;Option C"></div>
       <div class="btn-row" style="align-items:center;">
         <button class="btn btn-primary" id="create-btn">🚀 Launch</button>
@@ -732,7 +732,7 @@ Replace the existing `<div class="grid">` content with the 3-column structure:
     <div id="tab-content-wordcloud" class="tab-content" style="display:none;">
       <div id="wc-inactive">
         <button class="btn btn-primary wc-open-btn" id="wc-open-btn" onclick="openWordCloud()">☁ Open Word Cloud</button>
-        <p id="wc-blocked-msg" style="display:none; font-size:.85rem; color:var(--warn); margin-top:.5rem;">Remove the current poll first.</p>
+        <p id="wc-blocked-msg" style="display:none; font-size:.85rem; color:var(--warn); margin-top:.5rem;">Remove the current quiz first.</p>
       </div>
       <div id="wc-active" style="display:none;">
         <button class="btn btn-danger" onclick="closeWordCloud()">✕ Close Word Cloud</button>
@@ -753,9 +753,9 @@ Replace the existing `<div class="grid">` content with the 3-column structure:
     <div id="center-qr" class="center-panel">
       <div id="qr-code" class="qr-code" title="Click to enlarge"></div>
     </div>
-    <!-- Poll results panel -->
-    <div id="center-poll" class="center-panel" style="display:none;">
-      <div id="poll-display"></div>
+    <!-- Quiz results panel -->
+    <div id="center-quiz" class="center-panel" style="display:none;">
+      <div id="quiz-display"></div>
     </div>
     <!-- Word cloud panel -->
     <div id="center-wordcloud" class="center-panel" style="display:none;">
@@ -774,7 +774,7 @@ Replace the existing `<div class="grid">` content with the 3-column structure:
       <span>Join: <a id="participant-link" style="color:var(--accent); word-break:break-all; font-size:.8rem;" href="/" target="_blank"></a></span>
       <div style="display:flex; gap:.5rem; margin-top:.4rem; flex-wrap:wrap;">
         <button class="btn btn-danger" onclick="resetScores()" title="Reset all scores to zero">↺ Reset scores</button>
-        <button class="btn btn-primary" onclick="downloadPollHistory()" title="Download today's polls">⬇ Quiz Q&amp;A</button>
+        <button class="btn btn-primary" onclick="downloadQuizHistory()" title="Download today's quizzes">⬇ Quiz Q&amp;A</button>
       </div>
     </div>
   </div>
@@ -922,15 +922,15 @@ In `host.js`, add:
 let hostWords = [];
 
 function switchTab(tab) {
-  document.getElementById('tab-poll').classList.toggle('active', tab === 'poll');
+  document.getElementById('tab-quiz').classList.toggle('active', tab === 'quiz');
   document.getElementById('tab-wordcloud').classList.toggle('active', tab === 'wordcloud');
-  document.getElementById('tab-content-poll').style.display = tab === 'poll' ? '' : 'none';
+  document.getElementById('tab-content-quiz').style.display = tab === 'quiz' ? '' : 'none';
   document.getElementById('tab-content-wordcloud').style.display = tab === 'wordcloud' ? '' : 'none';
 }
 
 function updateCenterPanel(currentActivity) {
   document.getElementById('center-qr').style.display = currentActivity === 'none' ? '' : 'none';
-  document.getElementById('center-poll').style.display = currentActivity === 'poll' ? '' : 'none';
+  document.getElementById('center-quiz').style.display = currentActivity === 'quiz' ? '' : 'none';
   document.getElementById('center-wordcloud').style.display = currentActivity === 'wordcloud' ? '' : 'none';
 }
 
@@ -940,7 +940,7 @@ async function openWordCloud() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ active: true }),
   });
-  if (!resp.ok) toast('Cannot open: remove current poll first');
+  if (!resp.ok) toast('Cannot open: remove current quiz first');
 }
 
 async function closeWordCloud() {
@@ -987,18 +987,18 @@ function updateWordCloudTab(currentActivity) {
   if (!inactive || !active) return;
 
   const isWordCloudActive = currentActivity === 'wordcloud';
-  const isPollActive = currentActivity === 'poll';
+  const isQuizActive = currentActivity === 'quiz';
 
   inactive.style.display = isWordCloudActive ? 'none' : '';
   active.style.display = isWordCloudActive ? '' : 'none';
 
   if (openBtn) {
-    openBtn.disabled = isPollActive;
-    openBtn.style.opacity = isPollActive ? '.4' : '';
-    openBtn.style.cursor = isPollActive ? 'not-allowed' : '';
+    openBtn.disabled = isQuizActive;
+    openBtn.style.opacity = isQuizActive ? '.4' : '';
+    openBtn.style.cursor = isQuizActive ? 'not-allowed' : '';
   }
   if (blockedMsg) {
-    blockedMsg.style.display = isPollActive ? '' : 'none';
+    blockedMsg.style.display = isQuizActive ? '' : 'none';
   }
 }
 ```
@@ -1016,8 +1016,8 @@ if (currentActivity === 'wordcloud') {
   renderHostWordCloud(msg.wordcloud_words || {});
 }
 
-// Move poll display rendering to center-poll div instead of the old full-width card
-// renderPollDisplay() already writes to #poll-display — no change needed
+// Move quiz display rendering to center-quiz div instead of the old full-width card
+// renderQuizDisplay() already writes to #quiz-display — no change needed
 ```
 
 - [ ] **Step 5: Add host word cloud render function**
@@ -1095,9 +1095,9 @@ python3 -m uvicorn main:app --reload --port 8000
 Open http://localhost:8000/host — verify:
 - 3-column layout appears
 - QR code shows in center when idle
-- Poll tab and Word Cloud tab switch correctly
-- Create a poll — center shows poll results, Word Cloud tab button is disabled
-- Delete poll — center returns to QR
+- Quiz tab and Word Cloud tab switch correctly
+- Create a quiz — center shows quiz results, Word Cloud tab button is disabled
+- Delete quiz — center returns to QR
 - Open word cloud — center shows canvas, Word Cloud tab shows Close button
 - Submit words from host and from participant — cloud renders
 - Close word cloud — PNG download triggers, center returns to QR
@@ -1227,7 +1227,7 @@ Change to:
 
 - [ ] **Step 2: Update C4 C3 diagram if wordcloud router is relevant**
 
-Open `adoc/c4_c3_components.puml`. If poll router is listed as a component, add wordcloud router similarly. Keep it minimal — just one line.
+Open `adoc/c4_c3_components.puml`. If quiz router is listed as a component, add wordcloud router similarly. Keep it minimal — just one line.
 
 - [ ] **Step 3: Commit**
 

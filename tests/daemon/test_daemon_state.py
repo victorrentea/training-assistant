@@ -516,12 +516,12 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     from daemon.codereview.state import codereview_state
     from daemon.debate.state import debate_state
     from daemon.participant.state import participant_state
-    from daemon.poll.state import poll_state
+    from daemon.quiz.state import quiz_state
     from daemon.scores import scores as daemon_scores
     from daemon.wordcloud.state import wordcloud_state
     participant_state.reset()
     daemon_scores.reset()
-    poll_state.clear()
+    quiz_state.clear()
     wordcloud_state.clear()
     codereview_state.clear()
     debate_state.reset()
@@ -532,10 +532,10 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     daemon_scores.scores["u1"] = 0
     participant_state.locations["u1"] = "🕐 America/Mexico_City"
     participant_state.participant_universes["u1"] = "Star Wars"
-    poll_state.poll = {"id": "p1", "question": "Q", "options": [], "multi": False}
-    poll_state.poll_active = True
-    poll_state.poll_correct_indices = [0]
-    poll_state.votes = {"u1": {"option_ids": ["a1"], "voted_at": "2026-04-09T00:00:00+00:00"}}
+    quiz_state.quiz = {"id": "p1", "question": "Q", "options": [], "multi": False}
+    quiz_state.quiz_active = True
+    quiz_state.quiz_correct_indices = [0]
+    quiz_state.votes = {"u1": {"option_ids": ["a1"], "voted_at": "2026-04-09T00:00:00+00:00"}}
     wordcloud_state.words = {"python": 2}
     wordcloud_state.word_order = ["python"]
     wordcloud_state.topic = "Language"
@@ -578,12 +578,12 @@ def test_runtime_session_snapshot_excludes_participant_universes():
             "location": "🕐 America/Mexico_City",
         }
     }
-    assert "poll_active" not in snapshot
+    assert "quiz_active" not in snapshot
     assert "wordcloud_words" not in snapshot
     assert "codereview_snippet" not in snapshot
     assert "debate_statement" not in snapshot
-    assert snapshot["poll"]["active"] is True
-    assert snapshot["poll"]["correct_indices"] == [0]
+    assert snapshot["quiz"]["active"] is True
+    assert snapshot["quiz"]["correct_indices"] == [0]
     assert snapshot["wordcloud"]["words"] == {"python": 2}
     assert snapshot["codereview"]["snippet"] == "print('x')"
     assert snapshot["debate"]["statement"] == "Tabs vs spaces"
@@ -688,18 +688,18 @@ def test_apply_snapshot_restore_accepts_nested_activity_state():
 
 
 def test_runtime_snapshot_includes_awarded_points():
-    """The snapshot writer must surface poll_state.awarded_points so it round-trips to disk."""
+    """The snapshot writer must surface quiz_state.awarded_points so it round-trips to disk."""
     from daemon.__main__ import _build_runtime_session_snapshot
-    from daemon.poll.state import poll_state
+    from daemon.quiz.state import quiz_state
 
-    poll_state.clear()
-    poll_state.create_poll("Q?", ["A", "B"])
-    poll_state.open_poll(lambda: None)
-    poll_state.awarded_points = {"alice": 750, "bob": 200}
+    quiz_state.clear()
+    quiz_state.create_quiz("Q?", ["A", "B"])
+    quiz_state.open_quiz(lambda: None)
+    quiz_state.awarded_points = {"alice": 750, "bob": 200}
 
     snap = _build_runtime_session_snapshot(session_name="Test Session")
 
-    assert "poll" in snap
-    assert snap["poll"].get("awarded_points") == {"alice": 750, "bob": 200}
+    assert "quiz" in snap
+    assert snap["quiz"].get("awarded_points") == {"alice": 750, "bob": 200}
 
-    poll_state.clear()
+    quiz_state.clear()

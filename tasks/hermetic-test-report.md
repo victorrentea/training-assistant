@@ -2,7 +2,7 @@
 
 ## Context
 
-After migrating poll/leaderboard/scores from Railway to daemon (commits 3f09aab7–bf4f0530),
+After migrating quiz/leaderboard/scores from Railway to daemon (commits 3f09aab7–bf4f0530),
 25 hermetic Docker tests were failing. This report documents the root causes and fixes applied.
 
 ## Root Causes Found
@@ -19,8 +19,8 @@ After migrating poll/leaderboard/scores from Railway to daemon (commits 3f09aab7
 
 ### 3. Single-Select Vote Format Bug
 - **Problem**: `participant.js` sends `{option_id: "A"}` but daemon expects `{option_ids: ["A"]}`. Causes 409.
-- **Fix**: All tests that vote replaced `pax.vote_for()` with `pax._page.evaluate("() => participantApi('poll/vote', { option_ids: ['X'] })")`.
-- **Affected files**: `test_high_value.py`, `test_poll_flow.py`, `test_poll_advanced.py`, `step_defs/test_poll.py`, `test_ui_interactions.py`.
+- **Fix**: All tests that vote replaced `pax.vote_for()` with `pax._page.evaluate("() => participantApi('quiz/vote', { option_ids: ['X'] })")`.
+- **Affected files**: `test_high_value.py`, `test_quiz_flow.py`, `test_quiz_advanced.py`, `step_defs/test_quiz.py`, `test_ui_interactions.py`.
 
 ### 4. Multi-Select Vote Race Condition
 - **Problem**: `pax.multi_vote()` clicks sequentially; votes are final (rejected on 2nd click) → only first option voted.
@@ -30,7 +30,7 @@ After migrating poll/leaderboard/scores from Railway to daemon (commits 3f09aab7
 ### 5. Vote Progress Label Not Updated in Real-Time
 - **Problem**: Daemon doesn't broadcast `vote_update` events; host DOM `#vote-progress` never changes.
 - **Fix**: Replaced browser DOM check with daemon REST API polling (`GET /api/{session_id}/host/state`).
-- **File**: `test_poll_flow.py`
+- **File**: `test_quiz_flow.py`
 
 ### 6. Avatar Refresh WS Message Not Working
 - **Problem**: `sendWS('refresh_avatar', ...)` isn't handled by Railway; `participant_avatar_updated` write_back event not forwarded to participant browser.
@@ -56,9 +56,9 @@ After migrating poll/leaderboard/scores from Railway to daemon (commits 3f09aab7
 - **Fix**: Reload participant page after activity switch. Initial state fetch returns `current_activity='none'`.
 - **File**: `test_high_value.py::test_wordcloud_close_returns_to_idle`
 
-### 11. Host Close Poll Button Not Found (DOM Timing)
-- **Problem**: `host.close_poll()` waits for `button[onclick='setPollStatus(false)']` to be attached — but this button only renders when `pollActive && !activeTimer` in host.js. In headless mode, timing between JS evaluate API call and DOM render is unreliable.
-- **Fix**: Modified `close_poll()` in `host_page.py` to use `evaluate()` calling `fetch(API('/poll/close'))` directly (same pattern as `create_poll`). DOM check for `!#poll-display.voting-active` remains.
+### 11. Host Close Quiz Button Not Found (DOM Timing)
+- **Problem**: `host.close_quiz()` waits for `button[onclick='setQuizStatus(false)']` to be attached — but this button only renders when `quizActive && !activeTimer` in host.js. In headless mode, timing between JS evaluate API call and DOM render is unreliable.
+- **Fix**: Modified `close_quiz()` in `host_page.py` to use `evaluate()` calling `fetch(API('/quiz/close'))` directly (same pattern as `create_quiz`). DOM check for `!#quiz-display.voting-active` remains.
 - **File**: `tests/pages/host_page.py`
 
 ### 12. Q&A Answer Button `visibility:hidden` in Headless Mode
@@ -95,15 +95,15 @@ These tests may still be flaky due to environment-specific timing.
 |------|---------|
 | `tests/docker/session_utils.py` | Added score reset after session creation |
 | `tests/docker/test_high_value.py` | Fixed 5 tests, added `_clear_qa()` helper |
-| `tests/docker/test_poll_flow.py` | Fixed vote format, replaced DOM check with REST |
-| `tests/docker/test_poll_advanced.py` | Fixed multi-select vote format (2 tests) |
-| `tests/docker/step_defs/test_poll.py` | Fixed vote format in BDD step |
+| `tests/docker/test_quiz_flow.py` | Fixed vote format, replaced DOM check with REST |
+| `tests/docker/test_quiz_advanced.py` | Fixed multi-select vote format (2 tests) |
+| `tests/docker/step_defs/test_quiz.py` | Fixed vote format in BDD step |
 | `tests/docker/test_qa_wordcloud.py` | Added `_clear_qa()` calls, fixed leaderboard URL |
 | `tests/docker/test_regressions.py` | Added `_clear_qa()` helper and call; fixed answer button label check |
 | `tests/docker/test_ui_interactions.py` | Added `_clear_qa()` helper and calls (2 tests) |
 | `tests/docker/test_unique_avatars.py` | Fixed avatar refresh, fixed assertion |
 | `tests/docker/test_integrations.py` | Tagged git-activity + quiz tests as `@pytest.mark.nightly` |
-| `tests/pages/host_page.py` | Fixed `close_poll()` to use daemon REST instead of DOM button |
+| `tests/pages/host_page.py` | Fixed `close_quiz()` to use daemon REST instead of DOM button |
 
 ## Key Assumptions
 

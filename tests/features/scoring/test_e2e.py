@@ -83,10 +83,10 @@ class TestScoring:
             };
         }""")
 
-        host._page.click("#tab-poll")
-        host.create_poll("What is 1+1?", ["1", "2", "3"])
+        host._page.click("#tab-quiz")
+        host.create_quiz("What is 1+1?", ["1", "2", "3"])
         pax.vote_for("2")
-        host.close_poll()
+        host.close_quiz()
         host.mark_correct("2")
 
         # Wait for result message to arrive

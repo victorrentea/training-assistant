@@ -218,7 +218,7 @@ def api(server_url, method, path, **kwargs):
 def sapi(server_url, method, path, **kwargs):
     """Session-scoped host API call — routes to daemon with /host/ prefix.
 
-    All host feature endpoints (poll, qa, wordcloud, scores, activity, etc.)
+    All host feature endpoints (quiz, qa, wordcloud, scores, activity, etc.)
     live in daemon since the session management migration. The daemon listens on
     a free port started alongside Railway in the server_url fixture.
     """
@@ -290,7 +290,7 @@ def host_url():
 
 def host_browser_ctx(server_url, playwright):
     # Host panel is served by daemon; point browser context at daemon so JS
-    # API calls (API('/poll') etc.) resolve to daemon host routes directly.
+    # API calls (API('/quiz') etc.) resolve to daemon host routes directly.
     # Use DAEMON_HOST_PORT env var (process-global) to avoid cross-module
     # _daemon_url[] reference issues when tests/__init__.py causes pytest to
     # load conftest.py as two separate module instances (conftest vs tests.conftest).
@@ -354,13 +354,13 @@ pax3 = _make_pax_fixture()
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=False)
-def clean_poll(server_url):
-    """Clear poll state before and after each test that uses it."""
-    sapi(server_url, "put", "/poll/status", json={"open": False})
-    sapi(server_url, "delete", "/poll")
+def clean_quiz(server_url):
+    """Clear quiz state before and after each test that uses it."""
+    sapi(server_url, "put", "/quiz/status", json={"open": False})
+    sapi(server_url, "delete", "/quiz")
     yield
-    sapi(server_url, "put", "/poll/status", json={"open": False})
-    sapi(server_url, "delete", "/poll")
+    sapi(server_url, "put", "/quiz/status", json={"open": False})
+    sapi(server_url, "delete", "/quiz")
 
 
 @pytest.fixture(autouse=False)

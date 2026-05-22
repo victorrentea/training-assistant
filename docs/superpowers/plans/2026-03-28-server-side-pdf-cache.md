@@ -4,7 +4,7 @@
 
 **Goal:** Move PDF downloading/caching from daemon to FastAPI backend; daemon becomes a thin file watcher that sends catalog + invalidation events.
 
-**Architecture:** Backend downloads PDFs from Google Drive on demand, caches them in `/tmp/slides-cache/`, deduplicates concurrent requests with per-slug locks, and polls GDrive fingerprints on invalidation. Status is WS-pushed to host UI.
+**Architecture:** Backend downloads PDFs from Google Drive on demand, caches them in `/tmp/slides-cache/`, deduplicates concurrent requests with per-slug locks, and quizzes GDrive fingerprints on invalidation. Status is WS-pushed to host UI.
 
 **Tech Stack:** Python/FastAPI (asyncio), vanilla JS, WebSocket
 
@@ -126,7 +126,7 @@ from pathlib import Path
 #   Assert urllib.request.urlopen is called exactly once (not 5 times).
 #   Assert all 5 calls return the same path.
 
-# test_invalidation_triggers_poll_loop
+# test_invalidation_triggers_quiz_loop
 #   Pre-cache a PDF. Set a known fingerprint.
 #   Mock HEAD to return a DIFFERENT fingerprint on 3rd call.
 #   Call handle_slide_invalidated("slug").
@@ -381,11 +381,11 @@ async def handle_slide_invalidated(slug: str):
     await _push_log(slug, "invalidated")
 
     # Start poll loop as a background task
-    asyncio.create_task(_poll_fingerprint_loop(slug, url))
+    asyncio.create_task(_quiz_fingerprint_loop(slug, url))
 
 
-async def _poll_fingerprint_loop(slug: str, url: str):
-    """Poll GDrive fingerprint until it changes, then re-download."""
+async def _quiz_fingerprint_loop(slug: str, url: str):
+    """Quiz GDrive fingerprint until it changes, then re-download."""
     lock = _get_lock(slug)
     old_fp = state.slides_fingerprints.get(slug)
 
@@ -764,7 +764,7 @@ git commit -m "feat(daemon): send slides_catalog on connect, handle slide_log, r
 
 - [ ] **Step 1: Read `daemon/slides/loop.py`** and `daemon/slides/daemon.py` to understand the current PPTX change detection → conversion → upload flow.
 
-- [ ] **Step 2: Modify `SlidesPollingRunner`** to send `slide_invalidated` via daemon WS instead of triggering conversion/upload.
+- [ ] **Step 2: Modify `SlidesQuizingRunner`** to send `slide_invalidated` via daemon WS instead of triggering conversion/upload.
 
 The runner needs access to the daemon's WebSocket. Since `ws_runner.py`'s `SlidesOnDemandWsRunner` maintains the WS connection, the polling runner should send invalidation messages through it.
 

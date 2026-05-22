@@ -203,7 +203,7 @@ class TestNoRawWsSends:
         "proxy_handler.py",   # Railway proxy request handler
         "session_state.py",   # session sync (internal daemon↔Railway protocol)
         "__main__.py",        # orchestrator loop (infrastructure messages)
-        "poll_api.py",        # quiz→poll bridge (TODO: model edge cases)
+        "quiz_api.py",        # legacy bridge file (TODO: model edge cases)
     }
 
     # Patterns that indicate raw WS sends

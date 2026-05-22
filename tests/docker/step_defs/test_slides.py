@@ -171,7 +171,7 @@ def host_connected(browser, session_id):
     )
     page = ctx.new_page()
     page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-    expect(page.locator("#tab-poll")).to_be_visible(timeout=10000)
+    expect(page.locator("#tab-quiz")).to_be_visible(timeout=10000)
     return {"page": page, "session_id": session_id}
 
 

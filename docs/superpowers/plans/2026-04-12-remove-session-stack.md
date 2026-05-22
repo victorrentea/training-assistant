@@ -99,10 +99,10 @@ The DB.md generator already renders `description` from JSON schema as `# comment
 ```python
 # PersistedParticipant — all fields are self-evident, skip
 
-# PersistedPollState:
-class PersistedPollState(PersistedModel):
-    """Poll snapshot persisted in session state."""
-    definition: dict[str, Any] | None = Field(default=None, description="Poll question and options as shown to participants")
+# PersistedQuizState:
+class PersistedQuizState(PersistedModel):
+    """Quiz snapshot persisted in session state."""
+    definition: dict[str, Any] | None = Field(default=None, description="Quiz question and options as shown to participants")
     active: bool | None = None
     correct_ids: list[str] = Field(default_factory=list, description="Option IDs marked as correct answers")
     opened_at: str | None = None

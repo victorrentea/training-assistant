@@ -113,7 +113,7 @@ Mounted on the `session_participant` sub-app in `main.py` (no auth required), sa
 
 **Future expansion:** When migrating more features, widen the prefix:
 - Phase 3: `/api/participant/{path:path}`
-- Later: `/api/poll/{path:path}`, `/api/qa/{path:path}`, etc.
+- Later: `/api/quiz/{path:path}`, `/api/qa/{path:path}`, etc.
 - Final: `/api/{path:path}` (everything proxied, old routers removed)
 
 ## WS Message Types

@@ -354,13 +354,13 @@ paths:
         '204':
           description: Successful Response
       x-feature: qa
-  /api/participant/poll/vote:
+  /api/participant/quiz/vote:
     post:
       tags:
-      - poll
+      - quiz
       summary: Cast Vote
       description: Participant casts a vote.
-      operationId: cast_vote_api_participant_poll_vote_post
+      operationId: cast_vote_api_participant_quiz_vote_post
       requestBody:
         content:
           application/json:
@@ -370,45 +370,45 @@ paths:
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
+      x-feature: quiz
       x-doc-notes:
-      - 'Votes are mutable while the poll is open: re-submitting overwrites the prior
+      - 'Votes are mutable while the quiz is open: re-submitting overwrites the prior
         selection and updates voted_at.'
-  /api/{session_id}/host/poll/manual/submit:
+  /api/{session_id}/host/quiz/manual/submit:
     post:
       tags:
-      - poll
-      summary: Create Poll
-      description: Host manually creates and immediately opens a new poll.
-      operationId: create_poll_api__session_id__host_poll_manual_submit_post
+      - quiz
+      summary: Create Quiz
+      description: Host manually creates and immediately opens a new quiz.
+      operationId: create_quiz_api__session_id__host_quiz_manual_submit_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreatePollRequest'
+              $ref: '#/components/schemas/CreateQuizRequest'
         required: true
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll/end:
+      x-feature: quiz
+  /api/{session_id}/host/quiz/end:
     post:
       tags:
-      - poll
-      summary: End Poll
-      description: Host ends the poll.
-      operationId: end_poll_api__session_id__host_poll_end_post
+      - quiz
+      summary: End Quiz
+      description: Host ends the quiz.
+      operationId: end_quiz_api__session_id__host_quiz_end_post
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll/correct:
+      x-feature: quiz
+  /api/{session_id}/host/quiz/correct:
     put:
       tags:
-      - poll
+      - quiz
       summary: Reveal Correct
       description: Host reveals correct answers and awards scores.
-      operationId: reveal_correct_api__session_id__host_poll_correct_put
+      operationId: reveal_correct_api__session_id__host_quiz_correct_put
       requestBody:
         content:
           application/json:
@@ -418,14 +418,14 @@ paths:
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll/end/timer:
+      x-feature: quiz
+  /api/{session_id}/host/quiz/end/timer:
     post:
       tags:
-      - poll
+      - quiz
       summary: Start Timer
-      description: Host starts a countdown timer to end the poll.
-      operationId: start_timer_api__session_id__host_poll_end_timer_post
+      description: Host starts a countdown timer to end the quiz.
+      operationId: start_timer_api__session_id__host_quiz_end_timer_post
       requestBody:
         content:
           application/json:
@@ -435,32 +435,32 @@ paths:
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll:
+      x-feature: quiz
+  /api/{session_id}/host/quiz:
     get:
       tags:
-      - poll
-      summary: Get Poll State
-      description: Return full poll state for host poll tab.
-      operationId: get_poll_state_api__session_id__host_poll_get
+      - quiz
+      summary: Get Quiz State
+      description: Return full quiz state for host quiz tab.
+      operationId: get_quiz_state_api__session_id__host_quiz_get
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HostPollStateResponse'
-      x-feature: poll
+                $ref: '#/components/schemas/HostQuizStateResponse'
+      x-feature: quiz
     delete:
       tags:
-      - poll
-      summary: Delete Poll
-      description: Host deletes the current poll.
-      operationId: delete_poll_api__session_id__host_poll_delete
+      - quiz
+      summary: Delete Quiz
+      description: Host deletes the current quiz.
+      operationId: delete_quiz_api__session_id__host_quiz_delete
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
+      x-feature: quiz
   /api/{session_id}/host/leaderboard/show:
     post:
       tags:
@@ -687,13 +687,13 @@ paths:
             application/json:
               schema: {}
       x-feature: slides
-  /api/{session_id}/host/poll/queue:
+  /api/{session_id}/host/quiz/queue:
     post:
       tags:
-      - poll
+      - quiz
       summary: Submit Questions
-      description: Replace the entire poll queue with the submitted questions.
-      operationId: submit_questions_api__session_id__host_poll_queue_post
+      description: Replace the entire quiz queue with the submitted questions.
+      operationId: submit_questions_api__session_id__host_quiz_queue_post
       requestBody:
         content:
           application/json:
@@ -703,24 +703,24 @@ paths:
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
+      x-feature: quiz
     delete:
       tags:
-      - poll
+      - quiz
       summary: Clear Queue
       description: Clear the entire quiz queue.
-      operationId: clear_queue_api__session_id__host_poll_queue_delete
+      operationId: clear_queue_api__session_id__host_quiz_queue_delete
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
-  /api/{session_id}/host/poll/queue/{index}:
+      x-feature: quiz
+  /api/{session_id}/host/quiz/queue/{index}:
     delete:
       tags:
-      - poll
+      - quiz
       summary: Remove From Queue
       description: Remove the question at the given 0-based index from the queue.
-      operationId: remove_from_queue_api__session_id__host_poll_queue__index__delete
+      operationId: remove_from_queue_api__session_id__host_quiz_queue__index__delete
       parameters:
       - name: index
         in: path
@@ -731,7 +731,7 @@ paths:
       responses:
         '204':
           description: Successful Response
-      x-feature: poll
+      x-feature: quiz
   /api/participant/codereview/selection:
     put:
       tags:
@@ -1388,7 +1388,7 @@ components:
       required:
       - snippet
       title: CreateCodeReviewRequest
-    CreatePollRequest:
+    CreateQuizRequest:
       properties:
         question:
           type: string
@@ -1411,7 +1411,7 @@ components:
       - question
       - options
       - multi
-      title: CreatePollRequest
+      title: CreateQuizRequest
     CurrentSlide:
       properties:
         slug:
@@ -1854,7 +1854,7 @@ components:
       - location
       - avatar
       title: HostParticipant
-    HostPollStateResponse:
+    HostQuizStateResponse:
       properties:
         id:
           anyOf:
@@ -1900,23 +1900,23 @@ components:
             type: array
           - type: 'null'
           title: Correct Indices
-        poll_running:
+        quiz_running:
           type: boolean
-          title: Poll Running
+          title: Quiz Running
         votes:
           additionalProperties:
-            $ref: '#/components/schemas/HostPollVote'
+            $ref: '#/components/schemas/HostQuizVote'
           type: object
           title: Votes
         queue:
-          $ref: '#/components/schemas/PollQueueStatus'
+          $ref: '#/components/schemas/QuizQueueStatus'
       type: object
       required:
-      - poll_running
+      - quiz_running
       - votes
       - queue
-      title: HostPollStateResponse
-    HostPollVote:
+      title: HostQuizStateResponse
+    HostQuizVote:
       properties:
         option_indices:
           items:
@@ -1930,7 +1930,7 @@ components:
       required:
       - option_indices
       - voted_at
-      title: HostPollVote
+      title: HostQuizVote
     HostQAQuestion:
       properties:
         id:
@@ -2309,13 +2309,13 @@ components:
             $ref: '#/components/schemas/QAQuestionRaw'
           type: array
           title: Qa Questions
-        poll:
+        quiz:
           anyOf:
-          - $ref: '#/components/schemas/PollData'
+          - $ref: '#/components/schemas/QuizData'
           - type: 'null'
-        poll_active:
+        quiz_active:
           type: boolean
-          title: Poll Active
+          title: Quiz Active
         my_voted_indices:
           anyOf:
           - items:
@@ -2323,13 +2323,13 @@ components:
             type: array
           - type: 'null'
           title: My Voted Indices
-        poll_correct_indices:
+        quiz_correct_indices:
           anyOf:
           - items:
               type: integer
             type: array
           - type: 'null'
-          title: Poll Correct Indices
+          title: Quiz Correct Indices
         codereview:
           $ref: '#/components/schemas/CodeReviewParticipantState'
         debate:
@@ -2377,7 +2377,7 @@ components:
       - current_activity
       - wordcloud
       - qa_questions
-      - poll_active
+      - quiz_active
       - codereview
       - debate
       - slides_history_count
@@ -2426,7 +2426,7 @@ components:
       required:
       - side
       title: PickSideRequest
-    PollData:
+    QuizData:
       properties:
         id:
           type: string
@@ -2470,8 +2470,8 @@ components:
       - question
       - options
       - multi
-      title: PollData
-    PollQueueQuestion:
+      title: QuizData
+    QuizQueueQuestion:
       properties:
         question:
           type: string
@@ -2491,8 +2491,8 @@ components:
       - question
       - options
       - correct_indices
-      title: PollQueueQuestion
-    PollQueueStatus:
+      title: QuizQueueQuestion
+    QuizQueueStatus:
       properties:
         pending:
           type: integer
@@ -2510,7 +2510,7 @@ components:
       required:
       - pending
       - items
-      title: PollQueueStatus
+      title: QuizQueueStatus
     PptxUpdateDetectedRequest:
       properties:
         slug:
@@ -2844,7 +2844,7 @@ components:
       properties:
         questions:
           items:
-            $ref: '#/components/schemas/PollQueueQuestion'
+            $ref: '#/components/schemas/QuizQueueQuestion'
           type: array
           title: Questions
       type: object

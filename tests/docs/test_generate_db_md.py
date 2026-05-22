@@ -51,7 +51,7 @@ def test_generator_renders_list_and_dict_shapes():
     body = session_block.group("body")
     assert "participants?: dict[str, PersistedParticipant{" in body
     assert "  name?:string" in body
-    assert "poll?: PersistedPollState{" in body
+    assert "quiz?: PersistedQuizState{" in body
     assert "  correct_indices?:list[int]" in body
     assert "wordcloud?: PersistedWordCloudState{" in body
     assert "codereview?: PersistedCodeReviewState{" in body

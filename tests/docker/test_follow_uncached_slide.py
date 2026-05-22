@@ -168,7 +168,7 @@ def test_follow_opens_uncached_slide():
             )
             host_page = host_ctx.new_page()
             host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-            expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10_000)
+            expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10_000)
 
             # Fresh context → empty localStorage → follow mode defaults to ON.
             pax_ctx = browser.new_context()
@@ -237,7 +237,7 @@ def test_follow_retries_after_cache_status_event():
             )
             host_page = host_ctx.new_page()
             host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-            expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10_000)
+            expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10_000)
 
             pax_ctx = browser.new_context()
             pax_page = pax_ctx.new_page()

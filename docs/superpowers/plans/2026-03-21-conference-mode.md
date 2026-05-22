@@ -291,18 +291,18 @@ git commit -m "feat: host conference mode layout with toggle badge"
 
 In `static/host.html`, change the tab-bar button order from:
 ```
-Poll, Words, Q&A, Debate, Code
+Quiz, Words, Q&A, Debate, Code
 ```
 to:
 ```
-Poll, Words, Q&A, Code, Debate
+Quiz, Words, Q&A, Code, Debate
 ```
 
 Move the `#tab-debate` button HTML after `#tab-codereview`. Also reorder the corresponding `#tab-content-debate` div after `#tab-content-codereview`.
 
 - [ ] **Step 2: Update switchTab tab list in host.js**
 
-In `static/host.js`, find `switchTab` function — update the array from `['poll', 'wordcloud', 'qa', 'debate', 'codereview']` to `['poll', 'wordcloud', 'qa', 'codereview', 'debate']`.
+In `static/host.js`, find `switchTab` function — update the array from `['quiz', 'wordcloud', 'qa', 'debate', 'codereview']` to `['quiz', 'wordcloud', 'qa', 'codereview', 'debate']`.
 
 - [ ] **Step 3: Compact badge text in JS rendering functions**
 
@@ -326,7 +326,7 @@ Change the initial badge innerHTML in `.left-status-bar`:
 
 Open host panel, verify:
 - Badges show icons only (🟢, 🤖, 📝, 🧠, 💬, ❤️, $0.00, 👥, 🎓)
-- Tab order: Poll, Words, Q&A, Code, Debate
+- Tab order: Quiz, Words, Q&A, Code, Debate
 
 - [ ] **Step 6: Commit**
 
@@ -485,8 +485,8 @@ Wrap the existing onboarding block in the `else`.
 3. Verify: no name bar, no score, no location prompt, no notification prompt
 4. Verify: 3x3 emoji grid shown as main content
 5. Tap emojis — verify they send to overlay
-6. Start a poll from host → emoji grid hides, poll shows
-7. Close poll → emoji grid returns
+6. Start a quiz from host → emoji grid hides, quiz shows
+7. Close quiz → emoji grid returns
 
 - [ ] **Step 7: Commit**
 
@@ -529,9 +529,9 @@ git commit -m "docs: add /api/mode to host auth scope"
 5. Open participant in new tab at http://localhost:8000/
 6. Verify participant: no name prompt, emoji grid shown, no onboarding
 7. Send emoji reactions — verify they arrive at overlay
-8. Start poll from host → participant sees poll, emoji grid hides
-9. Vote → poll works normally
-10. Close poll → emoji grid returns
+8. Start quiz from host → participant sees quiz, emoji grid hides
+9. Vote → quiz works normally
+10. Close quiz → emoji grid returns
 11. Test word cloud similarly
 12. Test Q&A — verify questions appear without author name
 13. Test code review — verify line selections work
@@ -543,7 +543,7 @@ Address visual glitches, missing state, or broken flows.
 
 - [ ] **Step 3: Take screenshots for proof**
 
-Capture: host in conference mode, participant emoji grid, participant during poll.
+Capture: host in conference mode, participant emoji grid, participant during quiz.
 
 - [ ] **Step 4: Final commit if needed**
 

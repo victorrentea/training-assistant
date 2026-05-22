@@ -106,7 +106,7 @@ def test_pptx_change_triggers_slide_invalidation():
         )
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
         # Wait for daemon to detect PPTX change and send slide_invalidated
         # The host page's WS state includes slides_updated updates
@@ -187,7 +187,7 @@ def test_git_file_opened_tracked_by_daemon():
             )
             host_page = host_ctx.new_page()
             host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-            expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+            expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
 
             _await_condition(
                 lambda: host_page.evaluate("""() => {
@@ -225,11 +225,11 @@ def test_quiz_generation_with_stub_llm():
         )
         host_page = host_ctx.new_page()
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-        expect(host_page.locator("#tab-poll")).to_be_visible(timeout=10000)
+        expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
 
-        # Click Poll tab to see quiz controls
-        host_page.click("#tab-poll")
+        # Click Quiz tab to see quiz controls
+        host_page.click("#tab-quiz")
 
         # Set a topic and request quiz generation
         topic_input = host_page.locator("#quiz-topic")
