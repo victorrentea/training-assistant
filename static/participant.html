@@ -2002,7 +2002,12 @@ function showView(name) {
       }
     }
   }
-  if (name === 'activity') initActivityView();
+  if (name === 'activity') {
+    initActivityView();
+    _showNameNudge();
+  } else {
+    _hideNameNudge();
+  }
 }
 var _activityLocationSent = false;
 function initActivityView() {
@@ -2198,6 +2203,35 @@ function _completeOnboarding() {
     tooltip2.classList.remove('visible');
     setTimeout(function () { tooltip2.classList.add('hidden'); }, 300);
   }
+}
+
+function _hasCustomName() {
+  return localStorage.getItem(LS_CUSTOM_NAME_KEY) === '1';
+}
+
+var _nameNudgeVisible = false;
+function _showNameNudge() {
+  if (_isHostTab) return;
+  if (_onboardingStep !== 0) return;
+  if (_hasCustomName()) return;
+  var tooltip2 = document.getElementById('onboarding-tooltip-2');
+  if (!tooltip2) return;
+  _nameNudgeVisible = true;
+  _positionTooltipNearProfileCard();
+  tooltip2.classList.remove('hidden');
+  requestAnimationFrame(function () { tooltip2.classList.add('visible'); });
+}
+
+function _hideNameNudge() {
+  if (!_nameNudgeVisible) return;
+  if (_onboardingStep !== 0) return;
+  _nameNudgeVisible = false;
+  var tooltip2 = document.getElementById('onboarding-tooltip-2');
+  if (!tooltip2) return;
+  tooltip2.classList.remove('visible');
+  setTimeout(function () {
+    if (!_nameNudgeVisible) tooltip2.classList.add('hidden');
+  }, 300);
 }
 
 function _showAccessToast() {
@@ -2441,6 +2475,7 @@ function _confirmNameEdit() {
       headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
       body: JSON.stringify({ name: _myName })
     });
+    _hideNameNudge();
   }
   document.getElementById('display-name').style.display = '';
   document.getElementById('name-edit-wrap').style.display = 'none';
@@ -3367,7 +3402,7 @@ function downloadSummaryPdf() {
 </div>
 <div id="onboarding-tooltip-2" class="hidden">
   <div class="onboarding-bubble">
-    Click here to change your name (optional)
+    Tell me your name to score points on the leaderboard 🏆
   </div>
   <div class="onboarding-arrow-left"></div>
 </div>
