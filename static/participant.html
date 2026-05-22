@@ -395,7 +395,7 @@ body{visibility:hidden}
 <span id="activity-score-badge" class="badge-new" style="display:none"></span>
 </a>
 <a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
-<span class="material-symbols-outlined">event_note</span>
+<span class="material-symbols-outlined">check_box</span>
 <span class="text-base">Agenda</span>
 <span id="agenda-progress-badge" class="badge-new ml-auto" style="display:none"></span>
 </a>
@@ -406,7 +406,7 @@ body{visibility:hidden}
 </a>
 <a data-nav="summary" onclick="showView('summary')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">psychology</span>
-<span class="text-base">AI Summary</span>
+<span class="text-base">Summary</span>
 <span id="summary-badge" class="badge-new" style="display:none"></span>
 </a>
 <a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
@@ -3386,7 +3386,7 @@ function downloadSummaryPdf() {
   var content = document.getElementById('summary-content');
   if (!content || !_summaryRawMarkdown) return;
   var w = window.open('', '_blank');
-  w.document.write('<!DOCTYPE html><html><head><title>AI Summary</title><style>body{font-family:system-ui,sans-serif;padding:1rem 2rem;max-width:800px;margin:0 auto;font-size:0.55rem;line-height:1.6}h1,h2,h3,h4{margin-top:1.5em;line-height:1.3}li{margin:.3em 0}code{background:#f0f0f0;padding:.1em .3em;border-radius:3px}pre{background:#f0f0f0;padding:1em;border-radius:6px;overflow-x:auto}.material-symbols-outlined{display:none}</style></head><body>' + content.innerHTML + '</body></html>');
+  w.document.write('<!DOCTYPE html><html><head><title>Summary</title><style>body{font-family:system-ui,sans-serif;padding:1rem 2rem;max-width:800px;margin:0 auto;font-size:0.55rem;line-height:1.6}h1,h2,h3,h4{margin-top:1.5em;line-height:1.3}li{margin:.3em 0}code{background:#f0f0f0;padding:.1em .3em;border-radius:3px}pre{background:#f0f0f0;padding:1em;border-radius:6px;overflow-x:auto}.material-symbols-outlined{display:none}</style></head><body>' + content.innerHTML + '</body></html>');
   w.document.close();
   w.focus();
   setTimeout(function() { w.print(); }, 400);
