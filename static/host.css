@@ -1114,6 +1114,17 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   color: #f0a500;
   border-color: #f0a500;
   background: #f0a50022;
+  animation: mode-pill-multi-blink 2.2s ease-in-out infinite;
+}
+@keyframes mode-pill-multi-blink {
+  0%, 100% {
+    background: #f0a50022;
+    box-shadow: none;
+  }
+  50% {
+    background: #f0a50055;
+    box-shadow: 0 0 10px 1px #f0a50066;
+  }
 }
 
 .no-poll { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
