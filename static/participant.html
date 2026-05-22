@@ -975,21 +975,32 @@ function _applyContentZoom(z) {
   return z;
 }
 
-function _onContentZoomWheel(e) {
-  if (!e.ctrlKey) return;
+function _onContentZoomWheel(e, scroller) {
+  if (!e.ctrlKey && !e.metaKey) return;
   e.preventDefault();
   var current = parseFloat(
     getComputedStyle(document.documentElement).getPropertyValue('--participant-zoom')
   ) || 1.0;
   var delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
-  _applyContentZoom(current + delta);
+  var next = _applyContentZoom(current + delta);
+  if (scroller && next !== current && current > 0) {
+    scroller.scrollTop = scroller.scrollTop * (next / current);
+  }
 }
 
 function _installContentZoom() {
   _loadContentZoom();
-  ['notes-view', 'summary-view', 'agenda-view'].forEach(function (id) {
-    var el = document.getElementById(id);
-    if (el) el.addEventListener('wheel', _onContentZoomWheel, { passive: false });
+  var bindings = [
+    ['notes-view', 'notes-scroll'],
+    ['summary-view', 'summary-scroll'],
+    ['agenda-view', 'agenda-view'],
+  ];
+  bindings.forEach(function (pair) {
+    var view = document.getElementById(pair[0]);
+    var scroller = document.getElementById(pair[1]);
+    if (view) view.addEventListener('wheel', function (e) {
+      _onContentZoomWheel(e, scroller);
+    }, { passive: false });
   });
 }
 
