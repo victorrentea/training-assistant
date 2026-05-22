@@ -982,11 +982,16 @@ function _onContentZoomWheel(e, scroller) {
   var current = parseFloat(
     getComputedStyle(document.documentElement).getPropertyValue('--participant-zoom')
   ) || 1.0;
-  var oldScrollTop = scroller ? scroller.scrollTop : 0;
+  var fraction = null;
+  if (scroller) {
+    var oldMax = scroller.scrollHeight - scroller.clientHeight;
+    if (oldMax > 0) fraction = scroller.scrollTop / oldMax;
+  }
   var delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
   var next = _applyContentZoom(current + delta);
-  if (scroller && next !== current && current > 0) {
-    scroller.scrollTop = oldScrollTop * (next / current);
+  if (scroller && next !== current && fraction !== null) {
+    var newMax = scroller.scrollHeight - scroller.clientHeight;
+    if (newMax > 0) scroller.scrollTop = fraction * newMax;
   }
 }
 
