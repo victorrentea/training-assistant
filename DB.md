@@ -64,6 +64,7 @@ debate?: PersistedDebateState{
   round_timer_seconds?:int
   round_timer_started_at?:string
 }
+gdrive_url?: string  # Google Drive web URL for the session folder (resolved at session create time)
 talk_presentation_name?: string  # Display name of the last PPTX dropped in talk mode (stem, no extension)
 talk_presentation_url?: string  # PDF export URL for talk PPTX (docs.google.com/presentation/d/.../export/pdf)
 talk_presentation_slug?: string  # Railway slug under which the talk PPTX PDF is cached
