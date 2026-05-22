@@ -2738,15 +2738,6 @@ function _applyPollState(msg) {
     };
   }
 
-  // Auto-switch to activity tab when poll arrives (if not on a specific view already)
-  if (_currentPoll && document.getElementById('activity-view').style.display === 'none') {
-    var currentView = document.querySelector('[data-nav].nav-active');
-    var currentViewName = currentView ? currentView.getAttribute('data-nav') : null;
-    if (!currentViewName || currentViewName === 'slides') {
-      showView('activity');
-    }
-  }
-
   _renderActivityPoll();
 }
 
@@ -2822,7 +2813,7 @@ function _renderActivityPoll() {
   } else if (hasVoted) {
     footer = '<div class="vote-msg">&#x2705; Vote registered! Click another option to change it.</div>';
   } else {
-    footer = '<div class="vote-msg">Choose an option to vote.</div>';
+    footer = '<div class="vote-msg">Choose one option to vote.</div>';
   }
 
   section.innerHTML =
@@ -3036,6 +3027,7 @@ function _handleWsMessage(msg) {
       _pollActive = true;
       _applyPollState(msg);
       _renderActivityPoll();
+      if (_currentPoll) showView('activity');
       break;
     case 'poll_end_countdown_started':
       _activeTimer = { seconds: msg.seconds, startedAt: new Date(msg.started_at).getTime() };
