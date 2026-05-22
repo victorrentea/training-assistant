@@ -299,6 +299,41 @@ def load_session_state(session_folder: Path) -> dict:
         return {}
 
 
+def _describe_changed_value(old_v, new_v) -> str:
+    """Return a parenthesised sub-field hint for a changed value, or '' if no detail to add.
+
+    For dict[str, dict] values (e.g. participants, qa_questions) this reports added/removed
+    entry counts and the union of changed inner field names — so a save log like
+    'participants(score)' tells us a score changed, not just that the collection moved.
+    """
+    if not (isinstance(old_v, dict) and isinstance(new_v, dict)):
+        return ""
+    # Only drill in if entries look like nested dicts (e.g. participants[uuid] -> {name, score, ...}).
+    has_dict_entries = any(isinstance(v, dict) for v in old_v.values()) or any(
+        isinstance(v, dict) for v in new_v.values()
+    )
+    if not has_dict_entries:
+        return ""
+    added = set(new_v.keys()) - set(old_v.keys())
+    removed = set(old_v.keys()) - set(new_v.keys())
+    subfields: set[str] = set()
+    for k in set(old_v.keys()) & set(new_v.keys()):
+        ov, nv = old_v.get(k), new_v.get(k)
+        if isinstance(ov, dict) and isinstance(nv, dict):
+            for fk in set(ov.keys()) | set(nv.keys()):
+                if ov.get(fk) != nv.get(fk):
+                    subfields.add(fk)
+        elif ov != nv:
+            subfields.add("<value>")
+    parts: list[str] = []
+    if added:
+        parts.append(f"+{len(added)}")
+    if removed:
+        parts.append(f"-{len(removed)}")
+    parts.extend(sorted(subfields))
+    return f"({', '.join(parts)})" if parts else ""
+
+
 def save_session_state(session_folder: Path, snapshot: dict) -> None:
     """Atomically writes session-state.json to the session folder."""
     session_folder.mkdir(parents=True, exist_ok=True)
@@ -314,21 +349,21 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
             if key in existing and key not in payload:
                 payload[key] = existing[key]
     payload = PersistedSessionState.model_validate(payload).model_dump(mode="json", exclude_unset=True)
-    # Detect changed top-level keys for logging
-    changed_keys: list[str] = []
+    # Detect changed top-level keys for logging, with sub-field hints for dict-of-dict values.
+    changed_descriptors: list[str] = []
     all_keys = set(existing.keys()) | set(payload.keys()) if isinstance(existing, dict) else set(payload.keys())
     for k in sorted(all_keys):
         old_v = existing.get(k) if isinstance(existing, dict) else None
         new_v = payload.get(k)
         if old_v != new_v:
-            changed_keys.append(k)
-    if not changed_keys:
+            changed_descriptors.append(f"{k}{_describe_changed_value(old_v, new_v)}")
+    if not changed_descriptors:
         return
     path = session_state_path(session_folder)
     tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
     tmp.write_text(json.dumps(payload, default=str, indent=2), encoding="utf-8")
     tmp.replace(path)
-    log.info("session", f"💾 {SESSION_STATE_FILENAME} in {session_folder.name}: {', '.join(changed_keys)}")
+    log.info("session", f"💾 {SESSION_STATE_FILENAME} in {session_folder.name}: {', '.join(changed_descriptors)}")
 
 
 # ── Notes file helper ──────────────────────────────────────────────────────────

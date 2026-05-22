@@ -1,5 +1,7 @@
-import json, tempfile
+import json
+import tempfile
 from pathlib import Path
+
 
 def test_save_session_state_writes_json():
     """_save_session_state writes session-state.json to the session folder."""
@@ -163,3 +165,39 @@ def test_save_session_state_logs_compact_write_line(capsys):
         _save_session_state(folder, {"mode": "new"})
         out = capsys.readouterr().out
         assert "💾 session-state.json in 2026-04-07..09 AI@Globex" in out
+
+
+def test_save_session_state_logs_participant_subfield_change(capsys):
+    """When only a participant sub-field (e.g. score) changes, the log must name that sub-field."""
+    with tempfile.TemporaryDirectory() as d:
+        from daemon.session_state import save_session_state as _save_session_state
+
+        folder = Path(d) / "session"
+        folder.mkdir(parents=True, exist_ok=True)
+        _save_session_state(folder, {"participants": {"u1": {"name": "Alice", "score": 0}}})
+        capsys.readouterr()  # discard initial-write line
+        _save_session_state(folder, {"participants": {"u1": {"name": "Alice", "score": 5}}})
+        out = capsys.readouterr().out
+        assert "participants(score)" in out
+
+
+def test_save_session_state_logs_participant_added_and_field(capsys):
+    """Adding a participant and changing a field on another reports both signals."""
+    with tempfile.TemporaryDirectory() as d:
+        from daemon.session_state import save_session_state as _save_session_state
+
+        folder = Path(d) / "session"
+        folder.mkdir(parents=True, exist_ok=True)
+        _save_session_state(folder, {"participants": {"u1": {"name": "Alice", "location": "Bucharest"}}})
+        capsys.readouterr()
+        _save_session_state(
+            folder,
+            {
+                "participants": {
+                    "u1": {"name": "Alice", "location": "Cluj"},
+                    "u2": {"name": "Bob"},
+                }
+            },
+        )
+        out = capsys.readouterr().out
+        assert "participants(+1, location)" in out
