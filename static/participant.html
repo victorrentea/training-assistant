@@ -965,6 +965,7 @@ var LS = {
   NOTES_UNREAD: 'new:notes_unread',
   SUMMARY_UNREAD: 'new:summary_unread',
   ACTIVITY_SEEN: 'new:activity_seen',
+  ACCESS_TOAST_DISMISSED: 'new:access_toast_dismissed_date',
   SESSION_ID: 'new:session_id',
   scrollKey: function(view) { return 'new:scroll_' + view; },
   getSessionId: function() { return localStorage.getItem(LS.SESSION_ID); },
@@ -993,6 +994,18 @@ var LS = {
   setSummaryUnread: function(v){ localStorage.setItem(LS.SUMMARY_UNREAD, v ? 'true' : 'false'); },
   isActivitySeen:  function()  { return !!localStorage.getItem(LS.ACTIVITY_SEEN); },
   setActivitySeen: function()  { localStorage.setItem(LS.ACTIVITY_SEEN, '1'); },
+  _todayLocalDate: function() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + dd;
+  },
+  isAccessToastDismissedToday: function() {
+    return localStorage.getItem(LS.ACCESS_TOAST_DISMISSED) === LS._todayLocalDate();
+  },
+  markAccessToastDismissedToday: function() {
+    localStorage.setItem(LS.ACCESS_TOAST_DISMISSED, LS._todayLocalDate());
+  },
   clear:     function()     {
     localStorage.removeItem(LS.EMOJI_PROMOTED);
     localStorage.removeItem(LS.VIEW);
@@ -1000,6 +1013,7 @@ var LS = {
     localStorage.removeItem(LS.NOTES_UNREAD);
     localStorage.removeItem(LS.SUMMARY_UNREAD);
     localStorage.removeItem(LS.ACTIVITY_SEEN);
+    localStorage.removeItem(LS.ACCESS_TOAST_DISMISSED);
     localStorage.removeItem('workshop_onboarding_seen');
     LS._scrollViews().forEach(function(k) { localStorage.removeItem(k); });
   },
@@ -2121,6 +2135,7 @@ function _completeOnboarding() {
 function _showAccessToast() {
   var toast = document.getElementById('access-duration-toast');
   if (!toast) return;
+  if (LS.isAccessToastDismissedToday()) return;
   toast.classList.add('show');
 }
 
@@ -2128,6 +2143,7 @@ function _hideAccessToast() {
   var toast = document.getElementById('access-duration-toast');
   if (!toast) return;
   toast.classList.remove('show');
+  LS.markAccessToastDismissedToday();
 }
 
 function _applyGdriveToast(url) {
