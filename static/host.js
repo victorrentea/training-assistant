@@ -3425,26 +3425,28 @@ function renderSessionPanel() {
   }
 }
 
-function startTalk() {
-  fetch('/api/session/start_talk', {method: 'POST'})
-    .catch(e => console.error('startTalk failed:', e));
-}
 
-function endTalk() {
-  fetch('/api/session/end_talk', {method: 'POST'})
-    .catch(e => console.error('endTalk failed:', e));
-}
-
-function createSession() {
+async function createSession() {
   const prefix = (document.getElementById('session-date-prefix')?.textContent || '');
   const suffix = document.getElementById('session-create-input').value.trim();
   if (!suffix) return;
   const name = prefix + suffix;
-  fetch('/api/session/create', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name, type: 'workshop'})
-  }).catch(e => console.error('createSession failed:', e));
+  try {
+    const resp = await fetch('/api/session/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, type: 'workshop'})
+    });
+    if (resp.status === 503) {
+      const data = await resp.json().catch(() => ({}));
+      if (data.error === 'gdrive_unavailable') {
+        toast('Please start Google Drive');
+        return;
+      }
+    }
+  } catch (e) {
+    console.error('createSession failed:', e);
+  }
 }
 
 function updateCreateBtn() {

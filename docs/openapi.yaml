@@ -1110,6 +1110,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SessionStartResponse'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GDriveUnavailableResponse'
       x-feature: session_management
   /api/session/end:
     post:
@@ -1707,6 +1713,19 @@ components:
       required:
       - name
       title: FolderInfo
+    GDriveUnavailableResponse:
+      properties:
+        error:
+          type: string
+          title: Error
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - error
+      - message
+      title: GDriveUnavailableResponse
     GitActivityResponse:
       properties:
         git_repos:

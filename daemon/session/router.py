@@ -142,10 +142,38 @@ class TalkPresentationPathRequest(BaseModel):
     path: str
 
 
-@global_router.post("/create", response_model=SessionStartResponse)
+class GDriveUnavailableResponse(BaseModel):
+    error: str
+    message: str
+
+
+@global_router.post("/create", response_model=SessionStartResponse, responses={503: {"model": GDriveUnavailableResponse}})
 async def start_session(body: StartSessionRequest):
     """Host starts a new session (creates folder, assigns session_id, clean slate)."""
+    from fastapi.responses import JSONResponse
+    from scripts.resolve_gdrive_link import resolve_gdrive_url as _resolve_fn
+
     name = normalize_session_name(body.name)
+    root = _get_sessions_root()
+    folder = root / name if root else None
+
+    gdrive_url: str | None = None
+    if folder is not None:
+        try:
+            gdrive_url = _resolve_fn(str(folder))
+        except Exception as e:
+            daemon_log.error("session", f"GDrive URL resolve error: {e}")
+            gdrive_url = None
+
+    if gdrive_url is None:
+        return JSONResponse(
+            status_code=503,
+            content=GDriveUnavailableResponse(
+                error="gdrive_unavailable",
+                message="Please start Google Drive",
+            ).model_dump(),
+        )
+
     session_id = _generate_session_id()
 
     session_pending.put("session_request", {
@@ -153,6 +181,7 @@ async def start_session(body: StartSessionRequest):
         "name": name,
         "type": body.type,
         "session_id": session_id,
+        "gdrive_url": gdrive_url,
     })
     # Pre-register session_id with Railway immediately so host WS validates on first connect
     # (avoids race condition where host navigates before session_pending queue is processed)

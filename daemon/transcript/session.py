@@ -1,6 +1,6 @@
 """Transcript time-range computation for session-aware startup logging.
 
-Computes the active time windows for a session (excluding nested-session holes
+Computes the active time windows for a session (excluding paused intervals
 and day-end pauses), counts transcript lines within those windows, and formats
 a human-readable summary for the daemon startup log.
 """
@@ -64,7 +64,7 @@ def compute_active_windows(
 ) -> list[tuple[datetime, datetime]]:
     """Return the list of (start, end) active time windows for a session.
 
-    Paused intervals (nested sessions, day-end, explicit) are excluded.
+    Paused intervals (day-end, explicit, etc.) are excluded.
     An open (un-closed) pause means the session is currently paused — the
     window that started before the pause is still emitted, but nothing after.
     """

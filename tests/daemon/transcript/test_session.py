@@ -26,7 +26,7 @@ def mk_session(started: datetime, ended: datetime | None = None, paused=None) ->
     return s
 
 
-def mk_pause(from_dt: datetime, to_dt: datetime | None = None, reason: str = "nested") -> dict:
+def mk_pause(from_dt: datetime, to_dt: datetime | None = None, reason: str = "pause") -> dict:
     p = {"from": from_dt.isoformat(), "reason": reason}
     if to_dt is not None:
         p["to"] = to_dt.isoformat()
@@ -51,8 +51,8 @@ class TestComputeActiveWindows:
         windows = compute_active_windows(s, NOW)
         assert windows == [(dt(9), NOW)]
 
-    def test_scenario_b_nested_talk_ended(self):
-        """Workshop with completed nested talk — two windows, hole in the middle."""
+    def test_scenario_b_pause_and_resume(self):
+        """Workshop paused and resumed — two windows, hole in the middle."""
         s = mk_session(dt(9), dt(17), paused=[mk_pause(dt(12), dt(13, 30))])
         windows = compute_active_windows(s, NOW)
         assert windows == [
@@ -60,8 +60,8 @@ class TestComputeActiveWindows:
             (dt(13, 30), dt(17)),
         ]
 
-    def test_scenario_c_currently_inside_nested_talk(self):
-        """Currently inside a nested talk (open pause) — only pre-pause window."""
+    def test_scenario_c_currently_paused(self):
+        """Currently paused (open pause) — only pre-pause window."""
         s = mk_session(dt(9), paused=[mk_pause(dt(12))])  # open pause, no to
         windows = compute_active_windows(s, NOW)
         assert windows == [(dt(9), dt(12))]
@@ -79,13 +79,13 @@ class TestComputeActiveWindows:
             (dt(9, 30, day=25), dt(17, day=25)),
         ]
 
-    def test_scenario_e_two_day_with_nested_talk_on_day2(self):
-        """Two-day workshop with a nested talk on Day 2."""
+    def test_scenario_e_two_day_with_midday_pause_on_day2(self):
+        """Two-day workshop with a midday pause on Day 2."""
         s = mk_session(
             dt(9, 30, day=24),
             paused=[
                 mk_pause(dt(20, day=24), dt(9, 30, day=25), reason="day_end"),
-                mk_pause(dt(12, day=25), dt(13, day=25), reason="nested"),
+                mk_pause(dt(12, day=25), dt(13, day=25), reason="pause"),
             ],
         )
         now_day2 = dt(17, day=25)
@@ -176,7 +176,7 @@ class TestFormatTimeRanges:
         ]
         assert format_time_ranges(windows, 520) == "Day 1 09:30–20:00, Day 2 09:30–17:00 · 520 lines"
 
-    def test_scenario_e_two_day_with_nested_talk_on_day2(self):
+    def test_scenario_e_two_day_with_midday_pause_on_day2(self):
         windows = [
             (dt(9, 30, day=24), dt(20, day=24)),
             (dt(9, 30, day=25), dt(12, day=25)),

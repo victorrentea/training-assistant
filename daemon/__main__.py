@@ -250,6 +250,7 @@ def _build_runtime_session_snapshot(
             "round_timer_seconds": debate_snapshot.get("round_timer_seconds"),
             "round_timer_started_at": debate_snapshot.get("round_timer_started_at"),
         },
+        "gdrive_url": misc_state.gdrive_url,
         "current_slide": misc_state.current_slide,
         "slides_viewed": [dict(sv) for sv in misc_state.slides_viewed],
         "git_repos": [r.model_dump() for r in participant_state.git_repos],
@@ -868,12 +869,6 @@ def run() -> None:
         # Auto-start from today's detected session folder
         session_name = config.session_folder.name
         _do_save_daemon_state()
-    # Resolve Google Drive folder URL for the active session folder
-    if config.session_folder:
-        _gdrive_url = _resolve_gdrive_url(config.session_folder)
-        if _gdrive_url:
-            misc_state.gdrive_url = _gdrive_url
-            log.info("session", f"Google Drive: {_gdrive_url}")
     # Detect agenda .docx in session folder
     _agenda_path = _find_agenda_docx(config.session_folder)
     if _agenda_path:
@@ -930,6 +925,30 @@ def run() -> None:
             announce_session_id(_active_session_id)
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
+
+    # Boot-time GDrive URL auto-resolve:
+    # - If session already has a persisted gdrive_url (from _apply_runtime_snapshot_restore), keep it.
+    # - If not, attempt one resolution; on success persist into session state file and log INFO.
+    # - On failure, log WARN and leave None — next "Start Session" will be blocked until GDrive is up.
+    if session_name and config.session_folder:
+        if misc_state.gdrive_url:
+            log.info("session", f"Google Drive: {misc_state.gdrive_url}")
+        else:
+            _boot_gdrive_url = _resolve_gdrive_url(config.session_folder)
+            if _boot_gdrive_url:
+                misc_state.gdrive_url = _boot_gdrive_url
+                _boot_folder = config.session_folder
+                try:
+                    _boot_state_raw = load_session_state(_boot_folder)
+                    _boot_state_raw["gdrive_url"] = _boot_gdrive_url
+                    save_session_state(_boot_folder, _boot_state_raw)
+                    if startup_session_state:
+                        startup_session_state["gdrive_url"] = _boot_gdrive_url
+                    log.info("session", f"Google Drive resolved at boot: {_boot_gdrive_url}")
+                except Exception as e:
+                    log.error("session", f"Failed to persist gdrive_url at boot: {e}")
+            else:
+                log.error("session", "Google Drive not available at boot — start GDrive to enable the folder link")
 
     _prev_slides_history_count = len(misc_state.slides_viewed)
 
@@ -1138,6 +1157,16 @@ def run() -> None:
                             _leaderboard_state.reset()
                             _scores_state.reset()
                             restore_snapshot = _without_session_id(load_session_state(folder))
+                            # Persist gdrive_url from the create request into session state file
+                            _new_gdrive_url = session_req.get("gdrive_url")
+                            if _new_gdrive_url:
+                                _misc_state.gdrive_url = _new_gdrive_url
+                                if isinstance(restore_snapshot, dict):
+                                    restore_snapshot["gdrive_url"] = _new_gdrive_url
+                                else:
+                                    restore_snapshot = {"gdrive_url": _new_gdrive_url}
+                                save_session_state(folder, restore_snapshot)
+                                log.info("session", f"Google Drive: {_new_gdrive_url}")
                             runtime_session_snapshot = restore_snapshot
                             _apply_runtime_snapshot_restore(restore_snapshot)
                             last_session_state_hash = _state_hash(runtime_session_snapshot)
