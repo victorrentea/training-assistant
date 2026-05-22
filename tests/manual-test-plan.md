@@ -131,7 +131,7 @@
 ### 4.2 Open voting
 - [H] Click the open/start voting button.
 - [V] Participant sees poll question with clickable option cards.
-- [V] "Choose one option to vote." hint is visible.
+- [V] "Choose one option" hint is visible.
 
 ### 4.3 Cast a vote
 - [P] Click one option.
