@@ -955,6 +955,44 @@ var PdfCache = (function() {
   };
 </script>
 <script>
+var ZOOM_KEY = 'participant:contentZoom';
+var ZOOM_MIN = 0.5;
+var ZOOM_MAX = 3.0;
+var ZOOM_STEP = 0.1;
+
+function _loadContentZoom() {
+  var raw = localStorage.getItem(ZOOM_KEY);
+  var z = parseFloat(raw);
+  if (!isFinite(z) || z < ZOOM_MIN || z > ZOOM_MAX) z = 1.0;
+  document.documentElement.style.setProperty('--participant-zoom', String(z));
+  return z;
+}
+
+function _applyContentZoom(z) {
+  z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(z * 10) / 10));
+  document.documentElement.style.setProperty('--participant-zoom', String(z));
+  localStorage.setItem(ZOOM_KEY, String(z));
+  return z;
+}
+
+function _onContentZoomWheel(e) {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  var current = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--participant-zoom')
+  ) || 1.0;
+  var delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+  _applyContentZoom(current + delta);
+}
+
+function _installContentZoom() {
+  _loadContentZoom();
+  ['notes-view', 'summary-view', 'agenda-view'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('wheel', _onContentZoomWheel, { passive: false });
+  });
+}
+
 var _notesDirty = true;
 var _summaryDirty = true;
 var _notesRawText = '';
