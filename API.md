@@ -165,12 +165,23 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 
 ## Feature: Poll
 
+### Participant WS
+| Message | Payload |
+| --- | --- |
+| Poll started by host — participant should reset per-session vote tracking<br>Bare signal; WS ordering guarantees poll_updated arrives immediately after.<br>Participant should clear any previously stored vote selection on receiving this.<br>`poll_opened` | - |
+| Poll snapshot — fires on start, host edits, and votes when public=true<br>`counts` is present only when `poll.public` is true; absent → hide per-option bars.<br>`counts[i]` is the number of votes for `poll.options[i]`.<br>`poll_updated` | `poll: Poll{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`public:bool  # When true, counts are broadcast to participants`<br>`}`<br>`counts?: list[int]  # Per-option vote counts; present only when poll.public is true` |
+
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Start Poll, host opens the current draft as a live poll.<br>`POST /api/{session_id}/host/poll/start` | - | - |
 | Stop Poll, host clears the poll draft and stops any running poll.<br>`POST /api/{session_id}/host/poll/stop` | - | - |
 | Update Poll, host pushes the latest draft of the poll composer.<br>`PUT /api/{session_id}/host/poll/update` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`public: bool` | - |
+
+### Host WS
+| Message | Payload |
+| --- | --- |
+| Host-only poll snapshot — always carries full counts regardless of public flag<br>Sent exclusively to the host channel (notify_host). Participants never receive this.<br>`counts[i]` is the number of votes for `poll.options[i]`.<br>`poll_host_update` | `poll: Poll{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`question:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`options:list[string]`<br>&nbsp;&nbsp;&nbsp;&nbsp;`multi:bool`<br>&nbsp;&nbsp;&nbsp;&nbsp;`public:bool  # When true, counts are broadcast to participants`<br>`}`<br>`counts: list[int]  # Per-option vote counts (always present for host)`<br>`voted_count: int  # Total number of distinct participants who have voted` |
 
 ## Feature: Word Cloud
 

@@ -24,6 +24,7 @@ channels:
           - $ref: '#/components/messages/decks_updated'
           - $ref: '#/components/messages/quiz_queue_updated'
           - $ref: '#/components/messages/vote_update'
+          - $ref: '#/components/messages/poll_host_update'
           - $ref: '#/components/messages/wordcloud_updated'
           - $ref: '#/components/messages/qa_updated'
           - $ref: '#/components/messages/codereview_selections_updated'
@@ -87,6 +88,32 @@ components:
           voted_count:
             type: integer
             description: total number of participants who have voted so far
+
+    # ── Poll ─────────────────────────────────────────────────────────────────
+
+    poll_host_update:
+      summary: Host-only poll snapshot — always carries full counts regardless of public flag
+      x-feature: poll
+      x-doc-notes:
+        - Sent exclusively to the host channel (notify_host). Participants never receive this.
+        - "`counts[i]` is the number of votes for `poll.options[i]`."
+      payload:
+        type: object
+        required: [type, poll, counts, voted_count]
+        properties:
+          type:
+            type: string
+            enum: [poll_host_update]
+          poll:
+            $ref: '#/components/schemas/Poll'
+          counts:
+            type: array
+            items:
+              type: integer
+            description: Per-option vote counts (always present for host)
+          voted_count:
+            type: integer
+            description: Total number of distinct participants who have voted
 
     # ── Word Cloud ────────────────────────────────────────────────────────────
 
@@ -303,6 +330,22 @@ components:
             enum: [reload]
 
   schemas:
+
+    Poll:
+      type: object
+      required: [question, options, multi, public]
+      properties:
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        multi:
+          type: boolean
+        public:
+          type: boolean
+          description: When true, counts are broadcast to participants
 
     Deck:
       type: object

@@ -38,6 +38,12 @@ quiz?: PersistedQuizState{
   votes?:dict[str, any]  # participant_uuid → chosen option ID(s)
   awarded_points?:dict[str, int]  # participant_uuid → points awarded by most recent reveal_correct
 }
+poll?: PersistedPollState{
+  data?:dict[str, any]
+  started?:bool
+  opened_at?:string
+  votes?:dict[str, any]
+}
 qa?: dict[str, any]
 qa_questions?: dict[str, dict[str, any]]  # question_id → {text, author, upvoters, answered}
 wordcloud?: PersistedWordCloudState{

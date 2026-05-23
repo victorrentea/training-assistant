@@ -78,6 +78,33 @@ class QuizClearedMsg(BaseModel):
     type: Literal["quiz_cleared"] = "quiz_cleared"
 
 
+# ── Poll ──────────────────────────────────────────────────────────────────────
+
+class PollOpenedMsg(BaseModel):
+    """Bare signal — fires once on Start. Participant resets per-session
+    vote tracking. WS order guarantees PollUpdatedMsg arrives next with
+    the actual snapshot."""
+    type: Literal["poll_opened"] = "poll_opened"
+
+
+class PollUpdatedMsg(BaseModel):
+    """Participant-facing snapshot. Fires on Start, host edits, and
+    participant votes when public=true. `counts` present iff poll is
+    public; absent → participant hides per-option bars."""
+    type: Literal["poll_updated"] = "poll_updated"
+    poll: dict[str, Any]              # {question, options, multi, public}
+    counts: list[int] | None = None
+
+
+class PollHostUpdateMsg(BaseModel):
+    """Host-only snapshot (sent via notify_host). Always carries full
+    counts regardless of public flag."""
+    type: Literal["poll_host_update"] = "poll_host_update"
+    poll: dict[str, Any]
+    counts: list[int]
+    voted_count: int
+
+
 class QuizEndCountdownStartedMsg(BaseModel):
     type: Literal["quiz_end_countdown_started"] = "quiz_end_countdown_started"
     seconds: int
@@ -274,6 +301,9 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "quiz_correct_revealed": QuizCorrectRevealedMsg,
     "quiz_cleared": QuizClearedMsg,
     "quiz_end_countdown_started": QuizEndCountdownStartedMsg,
+    # Poll
+    "poll_opened": PollOpenedMsg,
+    "poll_updated": PollUpdatedMsg,
     # Scores
     "scores_updated": ScoresUpdatedMsg,
     # Word Cloud
@@ -306,6 +336,8 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Quiz
     "quiz_queue_updated": QuizQueueUpdatedMsg,
     "vote_update": VoteUpdateMsg,
+    # Poll
+    "poll_host_update": PollHostUpdateMsg,
     # Word Cloud
     "wordcloud_updated": WordcloudUpdatedMsg,
     # Q&A
@@ -346,6 +378,9 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "quiz_correct_revealed": "quiz",
     "quiz_cleared": "quiz",
     "quiz_end_countdown_started": "quiz",
+    # Poll
+    "poll_opened": "poll",
+    "poll_updated": "poll",
     # Scores & Leaderboard
     "scores_updated": "scores_leaderboard",
     "leaderboard_revealed": "scores_leaderboard",
@@ -377,6 +412,8 @@ HOST_MESSAGE_FEATURES: dict[str, str] = {
     # Quiz
     "quiz_queue_updated": "quiz",
     "vote_update": "quiz",
+    # Poll
+    "poll_host_update": "poll",
     # Word Cloud
     "wordcloud_updated": "wordcloud",
     # Q&A

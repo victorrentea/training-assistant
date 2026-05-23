@@ -28,6 +28,8 @@ channels:
           - $ref: '#/components/messages/quiz_correct_revealed'
           - $ref: '#/components/messages/quiz_cleared'
           - $ref: '#/components/messages/quiz_end_countdown_started'
+          - $ref: '#/components/messages/poll_opened'
+          - $ref: '#/components/messages/poll_updated'
           - $ref: '#/components/messages/scores_updated'
           - $ref: '#/components/messages/wordcloud_updated'
           - $ref: '#/components/messages/qa_updated'
@@ -198,6 +200,44 @@ components:
           started_at:
             type: string
             format: date-time
+
+    # ── Poll ──────────────────────────────────────────────────────────────────
+
+    poll_opened:
+      summary: Poll started by host — participant should reset per-session vote tracking
+      x-feature: poll
+      x-doc-notes:
+        - Bare signal; WS ordering guarantees poll_updated arrives immediately after.
+        - Participant should clear any previously stored vote selection on receiving this.
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [poll_opened]
+
+    poll_updated:
+      summary: Poll snapshot — fires on start, host edits, and votes when public=true
+      x-feature: poll
+      x-doc-notes:
+        - "`counts` is present only when `poll.public` is true; absent → hide per-option bars."
+        - "`counts[i]` is the number of votes for `poll.options[i]`."
+      payload:
+        type: object
+        required: [type, poll]
+        properties:
+          type:
+            type: string
+            enum: [poll_updated]
+          poll:
+            $ref: '#/components/schemas/Poll'
+          counts:
+            type: array
+            items:
+              type: integer
+            nullable: true
+            description: Per-option vote counts; present only when poll.public is true
 
     # ── Scores ────────────────────────────────────────────────────────────────
 
@@ -510,6 +550,22 @@ components:
         error:
           type: string
           nullable: true
+
+    Poll:
+      type: object
+      required: [question, options, multi, public]
+      properties:
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        multi:
+          type: boolean
+        public:
+          type: boolean
+          description: When true, counts are broadcast to participants
 
     Quiz:
       type: object

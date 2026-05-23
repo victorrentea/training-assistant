@@ -2488,7 +2488,7 @@ components:
       - multi
       - public
       title: PollData
-      description: Latest draft pushed by the host composer.
+      description: Host-composed poll draft, also the live poll while running.
     PptxUpdateDetectedRequest:
       properties:
         slug:
