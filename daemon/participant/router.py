@@ -10,6 +10,7 @@ import ssl
 import urllib.parse
 import urllib.request
 from types import SimpleNamespace
+from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import certifi
@@ -243,6 +244,10 @@ class ParticipantStateResponse(BaseModel):
     quiz_active: bool
     my_voted_indices: list[int] | None = None
     quiz_correct_indices: list[int] | None = None
+    poll: dict[str, Any] | None = None
+    poll_active: bool = False
+    my_poll_voted_indices: list[int] | None = None
+    poll_vote_counts: list[int] | None = None
     codereview: CodeReviewParticipantState
     debate: DebateData
     slides_current: CurrentSlide | None = None
@@ -348,6 +353,38 @@ def _build_quiz_for_participant(pid: str) -> dict:
         result["my_voted_indices"] = None
     result["quiz_correct_indices"] = ps.quiz_correct_indices
     return result
+
+
+def _build_poll_for_participant(pid: str) -> dict:
+    """Build poll state personalised for participant pid.
+
+    Returns the public snapshot, this participant's own vote (never others'),
+    and the aggregate counts (only when poll.public is True).
+    """
+    from daemon.poll.state import poll_state
+
+    if poll_state.data is None:
+        return {
+            "poll": None,
+            "poll_active": False,
+            "my_poll_voted_indices": None,
+            "poll_vote_counts": None,
+        }
+
+    snapshot = {
+        "question": poll_state.data.question,
+        "options": list(poll_state.data.options),
+        "multi": poll_state.data.multi,
+        "public": poll_state.data.public,
+    }
+    my_entry = poll_state.votes.get(pid)
+    counts = poll_state.vote_counts() if poll_state.data.public else None
+    return {
+        "poll": snapshot,
+        "poll_active": poll_state.started,
+        "my_poll_voted_indices": my_entry["option_indices"] if my_entry else None,
+        "poll_vote_counts": counts,
+    }
 
 
 async def _notify_host_participant_list():
@@ -602,6 +639,7 @@ async def get_participant_state(request: Request):
     ps = participant_state
 
     quiz_data = _build_quiz_for_participant(pid)
+    poll_fields = _build_poll_for_participant(pid)
     wc = wordcloud_state
     cr = _build_codereview_for_participant(pid)
     debate = _build_debate_for_participant(pid)
@@ -628,6 +666,8 @@ async def get_participant_state(request: Request):
         "qa_questions": _build_qa_for_participant(pid),
         # Quiz (personalised)
         **quiz_data,
+        # Poll (personalised)
+        **poll_fields,
         # Codereview (personalised)
         "codereview": cr,
         # Debate (personalised, grouped)

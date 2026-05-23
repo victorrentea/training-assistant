@@ -466,7 +466,9 @@ paths:
       tags:
       - poll
       summary: Update Poll
-      description: Host pushes the latest draft of the poll composer.
+      description: 'Host pushes latest draft. Validates option deletion + multi flip
+
+        while running, wipes votes on multi flip, broadcasts updates.'
       operationId: update_poll_api__session_id__host_poll_update_put
       requestBody:
         content:
@@ -483,7 +485,7 @@ paths:
       tags:
       - poll
       summary: Start Poll
-      description: Host opens the current draft as a live poll.
+      description: Validate the draft, set started, broadcast open signals.
       operationId: start_poll_api__session_id__host_poll_start_post
       responses:
         '204':
@@ -494,7 +496,7 @@ paths:
       tags:
       - poll
       summary: Stop Poll
-      description: Host clears the poll draft and stops any running poll.
+      description: Clear poll draft and votes; broadcast activity transition to none.
       operationId: stop_poll_api__session_id__host_poll_stop_post
       responses:
         '204':
@@ -2369,6 +2371,30 @@ components:
             type: array
           - type: 'null'
           title: Quiz Correct Indices
+        poll:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Poll
+        poll_active:
+          type: boolean
+          title: Poll Active
+          default: false
+        my_poll_voted_indices:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: My Poll Voted Indices
+        poll_vote_counts:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Poll Vote Counts
         codereview:
           $ref: '#/components/schemas/CodeReviewParticipantState'
         debate:
