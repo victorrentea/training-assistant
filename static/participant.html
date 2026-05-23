@@ -439,6 +439,15 @@ body{visibility:hidden}
   font-size: 0.9rem;
   text-align: center;
 }
+/* When the label text flips (single ↔ multi) we briefly highlight the
+   bar with the primary color, then ease it back to its resting state
+   over ~2.5s so participants notice the change. */
+@keyframes poll-status-bar-flash {
+  0%   { background: rgba(69, 85, 186, 0.7); color: #fff; font-weight: 700; }
+  10%  { background: rgba(69, 85, 186, 0.7); color: #fff; font-weight: 700; }
+  100% { background: rgba(127, 127, 127, 0.08); color: var(--color-on-surface-variant, #566166); font-weight: 400; }
+}
+.poll-status-bar.flash { animation: poll-status-bar-flash 2.5s ease-out; }
 </style>
 <link rel="stylesheet" href="/static/participant-theme.css"/>
 </head>
@@ -3157,8 +3166,18 @@ function _renderActivityPoll() {
   // Always show the status bar so the layout stays stable when the host
   // flips multi on/off — only the text changes.
   var statusBar = document.getElementById('poll-status-bar');
-  statusBar.textContent = multi ? 'Pick as many as you want' : 'Pick one';
+  var newStatus = multi ? 'Pick as many as you want' : 'Pick one';
+  var prevStatus = statusBar.textContent;
+  statusBar.textContent = newStatus;
   statusBar.style.display = '';
+  // On a real text flip, blink the bar then ease it back to its resting
+  // colors — drawing the eye to the changed rule. Skip on first paint
+  // (when prevStatus is empty) so the bar doesn't flash on poll open.
+  if (prevStatus && prevStatus !== newStatus) {
+    statusBar.classList.remove('flash');
+    void statusBar.offsetWidth;   // restart the CSS animation
+    statusBar.classList.add('flash');
+  }
 }
 
 async function castPollVote(idx) {
