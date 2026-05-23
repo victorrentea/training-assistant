@@ -1822,7 +1822,7 @@
     const counts = _hostPollCountsState;
     if (!_hostPollStarted) {
       pollOptionsEl.querySelectorAll('.poll-option-card').forEach(c => {
-        c.classList.remove('started', 'leading');
+        c.classList.remove('started');
         c.querySelector('.poll-option-card-count').textContent = '';
         c.querySelector('.poll-option-card-fill').style.width = '0%';
       });
@@ -1839,7 +1839,6 @@
       card.querySelector('.poll-option-card-count').textContent = isTrailingDraft ? '' : String(c);
       const pct = (!isTrailingDraft && maxCount > 0) ? (c / maxCount) * 100 : 0;
       card.querySelector('.poll-option-card-fill').style.width = pct + '%';
-      card.classList.toggle('leading', !isTrailingDraft && c === maxCount && maxCount > 0);
     });
     reorderPollCards();
   }

@@ -2194,9 +2194,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   pointer-events: none;
   z-index: 0;
 }
-.poll-option-card.leading .poll-option-card-fill {
-  background: rgba(72, 207, 173, 0.36);
-}
 .poll-option-row {
   width: 100%;
   min-height: 2.4rem;
@@ -2215,14 +2212,11 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   position: relative;
   z-index: 1;
 }
-/* Started state: keep the exact input look-and-feel from pre-start.
-   Fill bar is hidden (would conflict with the opaque input); count
-   on the right + leading green border are the popularity signals. */
-.poll-option-card.leading .poll-option-row {
-  border-color: var(--accent2);
-}
-.poll-option-card.started .poll-option-card-fill {
-  display: none;
+/* Started state: make the row transparent so the fill bar behind shows
+   through as a left-to-right progress indicator of vote share. Border
+   and count stay neutral — the fill itself is the popularity signal. */
+.poll-option-card.started .poll-option-row {
+  background: transparent;
 }
 .poll-option-row.filled { border-color: var(--success); }
 .poll-option-row:focus { outline: none; border-color: var(--accent); }
@@ -2237,4 +2231,3 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   z-index: 1;
 }
 .poll-option-card.started .poll-option-card-count { display: flex; }
-.poll-option-card.leading .poll-option-card-count { color: var(--accent2); }
