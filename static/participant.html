@@ -2165,6 +2165,7 @@ function resetOnboardingForTest() {
 <script>renderDeployAge('version-tag-new', {disableBranchTooltip: true});</script>
 <script>
 let _sessionId = null;
+var _firstConnect = true;
 var _isHostTab = document.cookie.indexOf('is_host=1') >= 0;
 var _myScore = 0;
 function _updateScoreBadge(score, earned) {
@@ -3391,6 +3392,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 var _ws = null;
+async function _refetchInitialState() {
+  if (!_sessionId || !_myUUID) return;
+  try {
+    var r = await fetch('/' + _sessionId + '/api/participant/state', {
+      headers: { 'X-Participant-ID': _myUUID }
+    });
+    if (!r.ok) return;
+    var state = await r.json();
+    _applyState(state);
+  } catch (e) { /* silent — next push will reconcile */ }
+}
+
 function _connectWS() {
   if (!_sessionId) return;
   var proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -3399,6 +3412,10 @@ function _connectWS() {
   if (tz) url += '?tz=' + encodeURIComponent(tz);
   _ws = new WebSocket(url);
   _ws.onopen = function() {
+    if (!_firstConnect) {
+      _refetchInitialState();
+    }
+    _firstConnect = false;
     // Show access duration toast after 10 seconds if not in onboarding
     setTimeout(function() {
       if (_onboardingStep === 0) {
