@@ -47,13 +47,18 @@ async def _push_poll_state() -> None:
     if poll_state.data is None:
         return
     counts = poll_state.vote_counts()
+    pcounts = poll_state.participant_vote_counts()
+    extras = list(poll_state.host_extras)
     voted = poll_state.distinct_voter_count()
     counts_for_pax = counts if poll_state.data.public else None
     snapshot = _pax_snapshot()
 
     broadcast(PollUpdatedMsg(poll=snapshot, counts=counts_for_pax))
     await notify_host(
-        PollHostUpdateMsg(poll=snapshot, counts=counts, voted_count=voted)
+        PollHostUpdateMsg(
+            poll=snapshot, counts=counts, voted_count=voted,
+            participant_counts=pcounts, host_extras=extras,
+        )
     )
 
 
@@ -76,10 +81,10 @@ async def update_poll(body: PollData):
     while running, wipes votes on multi flip, broadcasts updates."""
     prev = poll_state.data
     if poll_state.started and prev is not None:
-        # Forbid option removal while running
-        prev_nonempty = [o for o in prev.options if o.strip()]
-        new_nonempty = [o for o in body.options if o.strip()]
-        if len(new_nonempty) < len(prev_nonempty):
+        # Forbid shrinking the option list while running. Clearing an option's
+        # text (keeping the slot) is allowed — empty options remain voteable
+        # and are shown to participants as empty buttons.
+        if len(body.options) < len(prev.options):
             return JSONResponse(
                 {"error": "Cannot remove options while poll is running"},
                 status_code=409,

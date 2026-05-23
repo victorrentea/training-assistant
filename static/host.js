@@ -1791,31 +1791,28 @@
     pollPublicEl.checked = pollState.public;
 
     const desired = pollState.options.length;
-    const existing = pollOptionsEl.children.length;
 
-    if (existing !== desired) {
-      // Structural change — rebuild. (Reorder is correct here: the DOM
-      // doesn't yet exist in any sorted form.)
-      pollOptionsEl.innerHTML = '';
-      pollState.options.forEach((val, i) => pollOptionsEl.appendChild(_createPollCard(val, i)));
-    } else {
-      // In-place update so reorderPollCards' FIRST positions reflect the
-      // actual current sorted DOM, not a fresh natural-order rebuild —
-      // otherwise FLIP misses transitions where the new sort happens to
-      // equal natural order (Beta→Alpha-style swaps).
-      pollState.options.forEach((val, i) => {
-        const card = pollOptionsEl.querySelector(`[data-opt-idx="${i}"]`);
-        if (!card) return;
-        const row = card.querySelector('.poll-option-row');
-        if (row && row.value !== val && document.activeElement !== row) {
-          row.value = val;
-          autoGrow(row);
-          row.classList.toggle('filled', val.trim() !== '');
-        }
-        if (row) row.placeholder = i === desired - 1 ? 'Add option…' : '';
-        card.classList.toggle('started', _hostPollStarted);
-      });
+    // Surgically add/remove trailing cards so existing cards (and any focused
+    // textarea inside them) survive the render. Then in-place update values.
+    while (pollOptionsEl.children.length > desired) {
+      pollOptionsEl.removeChild(pollOptionsEl.lastChild);
     }
+    while (pollOptionsEl.children.length < desired) {
+      const idx = pollOptionsEl.children.length;
+      pollOptionsEl.appendChild(_createPollCard(pollState.options[idx], idx));
+    }
+    pollState.options.forEach((val, i) => {
+      const card = pollOptionsEl.querySelector(`[data-opt-idx="${i}"]`);
+      if (!card) return;
+      const row = card.querySelector('.poll-option-row');
+      if (row && row.value !== val && document.activeElement !== row) {
+        row.value = val;
+        autoGrow(row);
+        row.classList.toggle('filled', val.trim() !== '');
+      }
+      if (row) row.placeholder = i === desired - 1 ? 'Add option…' : '';
+      card.classList.toggle('started', _hostPollStarted);
+    });
 
     pollStartBtn.tabIndex = 2 + desired;
     updatePollStartEnabled();
@@ -1921,9 +1918,16 @@
   let _pollUpdateTimer = null;
 
   function pollPayload() {
+    // Strip ONLY the trailing draft row (last entry if empty). Middle empties
+    // are intentional — preserved both before-start (server stores them) and
+    // after-start (sent to participants as empty voteable buttons).
+    let opts = pollState.options.map(s => s.trim());
+    if (opts.length > 0 && opts[opts.length - 1] === '') {
+      opts = opts.slice(0, -1);
+    }
     return {
       question: pollState.question,
-      options: pollState.options.map(s => s.trim()).filter(s => s !== ''),
+      options: opts,
       multi: pollState.multi,
       public: pollState.public,
     };
@@ -1960,18 +1964,31 @@
     if (isLast && row.value !== '') {
       pollState.options.push('');
       renderPoll();
-      // After re-render, focus the row the user was typing in (still index i)
-      const rows = pollOptionsEl.querySelectorAll('.poll-option-row');
-      if (rows[i]) {
-        rows[i].focus();
-        const len = rows[i].value.length;
-        rows[i].setSelectionRange(len, len);
+      // After re-render, focus the row the user was typing in (data-opt-idx=i)
+      const focusRow = pollOptionsEl.querySelector(`[data-opt-idx="${i}"] .poll-option-row`);
+      if (focusRow) {
+        focusRow.focus();
+        const len = focusRow.value.length;
+        focusRow.setSelectionRange(len, len);
       }
       flushPollUpdate();   // structural change → immediate
-    } else {
-      updatePollStartEnabled();
-      schedulePollUpdate(); // text-only change → debounced
+      return;
     }
+    // Pre-start only: collapse trailing empties when the user clears the last
+    // filled option. e.g. [F1, F2, F3, '' (draft)] → clear F3 → [F1, F2, '']
+    // where the cleared row becomes the new draft.
+    if (!_hostPollStarted && row.value === '' && i < pollState.options.length - 1) {
+      const allTailEmpty = pollState.options.slice(i + 1).every(s => s.trim() === '');
+      if (allTailEmpty) {
+        pollState.options = pollState.options.slice(0, i + 1);
+        while (pollOptionsEl.children.length > pollState.options.length) {
+          pollOptionsEl.removeChild(pollOptionsEl.lastChild);
+        }
+        row.placeholder = 'Add option…';
+      }
+    }
+    updatePollStartEnabled();
+    schedulePollUpdate(); // text-only change → debounced
   }
 
   pollQuestionEl.addEventListener('input', () => {
