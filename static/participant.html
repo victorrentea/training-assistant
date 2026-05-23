@@ -2134,21 +2134,25 @@ function showView(name) {
   }
 }
 var _activityLocationSent = false;
-function initActivityView() {
+function _hasAnyActivity() {
+  return !!((_currentPoll && _pollActive) || _currentQuiz);
+}
+function _updateActivityIdleSections() {
   var welcome = document.getElementById('activity-welcome-section');
   var waiting = document.getElementById('activity-waiting-section');
-  if (_currentQuiz) {
-    welcome.style.display = 'none';
-    waiting.style.display = 'none';
+  if (_hasAnyActivity()) {
+    if (welcome) welcome.style.display = 'none';
+    if (waiting) waiting.style.display = 'none';
   } else if (LS.isActivitySeen()) {
-    welcome.style.display = 'none';
-    waiting.style.display = '';
+    if (welcome) welcome.style.display = 'none';
+    if (waiting) waiting.style.display = '';
   } else {
-    welcome.style.display = '';
-    waiting.style.display = 'none';
+    if (welcome) welcome.style.display = '';
+    if (waiting) waiting.style.display = 'none';
     LS.setActivitySeen();
   }
 }
+function initActivityView() { _updateActivityIdleSections(); }
 function initLocationMenuEntry() {
   if (_activityLocationSent) return;
   if (!navigator.geolocation) return;
@@ -2995,22 +2999,14 @@ function _renderActivityQuiz() {
   var section = document.getElementById('activity-quiz-section');
   if (!section) return;
 
-  var welcome = document.getElementById('activity-welcome-section');
-  var waiting = document.getElementById('activity-waiting-section');
-
   if (!_currentQuiz) {
     section.style.display = 'none';
-    // Restore welcome/waiting sections (same logic as initActivityView)
-    if (welcome) welcome.style.display = LS.isActivitySeen() ? 'none' : '';
-    if (waiting) waiting.style.display = LS.isActivitySeen() ? '' : 'none';
+    _updateActivityIdleSections();
     return;
   }
 
   section.style.display = '';
-
-  // Hide welcome/waiting sections when quiz is active
-  if (welcome) welcome.style.display = 'none';
-  if (waiting) waiting.style.display = 'none';
+  _updateActivityIdleSections();
 
   var multi = !!_currentQuiz.multi;
   var hasVoted = multi ? (_myVote instanceof Set && _myVote.size > 0) : _myVote !== null;
@@ -3118,17 +3114,13 @@ function _renderActivityPoll() {
   _updateActivityNavLabel();
   var section = document.getElementById('activity-poll-section');
   if (!section) return;
-  var welcome = document.getElementById('activity-welcome-section');
-  var waiting = document.getElementById('activity-waiting-section');
   if (!_currentPoll || !_pollActive) {
     section.style.display = 'none';
-    if (welcome) welcome.style.display = LS.isActivitySeen() ? 'none' : '';
-    if (waiting) waiting.style.display = LS.isActivitySeen() ? '' : 'none';
+    _updateActivityIdleSections();
     return;
   }
   section.style.display = '';
-  if (welcome) welcome.style.display = 'none';
-  if (waiting) waiting.style.display = 'none';
+  _updateActivityIdleSections();
 
   document.getElementById('poll-question-text').textContent = _currentPoll.question || '';
 
