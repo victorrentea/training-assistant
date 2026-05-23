@@ -9,6 +9,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Host State](#feature-host-state)
 - [Slides](#feature-slides)
 - [Activity](#feature-activity)
+- [Poll](#feature-poll)
 - [Word Cloud](#feature-word-cloud)
 - [Q&A](#feature-qa)
 - [Code Review](#feature-code-review)
@@ -161,6 +162,15 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- | --- |
 | Host sets the current activity.<br>`POST /api/{session_id}/host/activity` | `activity: string` | `ok?: bool`<br>`current_activity: string` |
 | Host sets the current activity.<br>`PUT /api/{session_id}/host/activity` | `activity: string` | `ok?: bool`<br>`current_activity: string` |
+
+## Feature: Poll
+
+### Host REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Start Poll, host opens the current draft as a live poll.<br>`POST /api/{session_id}/host/poll/start` | - | - |
+| Stop Poll, host clears the poll draft and stops any running poll.<br>`POST /api/{session_id}/host/poll/stop` | - | - |
+| Update Poll, host pushes the latest draft of the poll composer.<br>`PUT /api/{session_id}/host/poll/update` | `question: string`<br>`options: list[string]`<br>`multi: bool` | - |
 
 ## Feature: Word Cloud
 

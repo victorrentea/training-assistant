@@ -461,6 +461,45 @@ paths:
         '204':
           description: Successful Response
       x-feature: quiz
+  /api/{session_id}/host/poll/update:
+    put:
+      tags:
+      - poll
+      summary: Update Poll
+      description: Host pushes the latest draft of the poll composer.
+      operationId: update_poll_api__session_id__host_poll_update_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollData'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: poll
+  /api/{session_id}/host/poll/start:
+    post:
+      tags:
+      - poll
+      summary: Start Poll
+      description: Host opens the current draft as a live poll.
+      operationId: start_poll_api__session_id__host_poll_start_post
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: poll
+  /api/{session_id}/host/poll/stop:
+    post:
+      tags:
+      - poll
+      summary: Stop Poll
+      description: Host clears the poll draft and stops any running poll.
+      operationId: stop_poll_api__session_id__host_poll_stop_post
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: poll
   /api/{session_id}/host/leaderboard/show:
     post:
       tags:
@@ -1854,6 +1893,49 @@ components:
       - location
       - avatar
       title: HostParticipant
+    HostQAQuestion:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+        author:
+          type: string
+          title: Author
+        author_uuid:
+          type: string
+          title: Author Uuid
+        author_avatar:
+          type: string
+          title: Author Avatar
+        upvote_count:
+          type: integer
+          title: Upvote Count
+        upvoters:
+          items:
+            type: string
+          type: array
+          title: Upvoters
+        answered:
+          type: boolean
+          title: Answered
+        timestamp:
+          type: number
+          title: Timestamp
+      type: object
+      required:
+      - id
+      - text
+      - author
+      - author_uuid
+      - author_avatar
+      - upvote_count
+      - upvoters
+      - answered
+      - timestamp
+      title: HostQAQuestion
     HostQuizStateResponse:
       properties:
         id:
@@ -1931,49 +2013,6 @@ components:
       - option_indices
       - voted_at
       title: HostQuizVote
-    HostQAQuestion:
-      properties:
-        id:
-          type: string
-          title: Id
-        text:
-          type: string
-          title: Text
-        author:
-          type: string
-          title: Author
-        author_uuid:
-          type: string
-          title: Author Uuid
-        author_avatar:
-          type: string
-          title: Author Avatar
-        upvote_count:
-          type: integer
-          title: Upvote Count
-        upvoters:
-          items:
-            type: string
-          type: array
-          title: Upvoters
-        answered:
-          type: boolean
-          title: Answered
-        timestamp:
-          type: number
-          title: Timestamp
-      type: object
-      required:
-      - id
-      - text
-      - author
-      - author_uuid
-      - author_avatar
-      - upvote_count
-      - upvoters
-      - answered
-      - timestamp
-      title: HostQAQuestion
     HostStateResponse:
       properties:
         type:
@@ -2426,6 +2465,87 @@ components:
       required:
       - side
       title: PickSideRequest
+    PollData:
+      properties:
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            type: string
+          type: array
+          title: Options
+        multi:
+          type: boolean
+          title: Multi
+      type: object
+      required:
+      - question
+      - options
+      - multi
+      title: PollData
+      description: Latest draft pushed by the host composer.
+    PptxUpdateDetectedRequest:
+      properties:
+        slug:
+          type: string
+          title: Slug
+      type: object
+      required:
+      - slug
+      title: PptxUpdateDetectedRequest
+    QAQuestionRaw:
+      properties:
+        id:
+          type: string
+          title: Id
+        text:
+          type: string
+          title: Text
+        author_uuid:
+          type: string
+          title: Author Uuid
+        upvoter_uuids:
+          items:
+            type: string
+          type: array
+          title: Upvoter Uuids
+        answered:
+          type: boolean
+          title: Answered
+        timestamp:
+          type: number
+          title: Timestamp
+      type: object
+      required:
+      - id
+      - text
+      - author_uuid
+      - upvoter_uuids
+      - answered
+      - timestamp
+      title: QAQuestionRaw
+    QueuedQuestion:
+      properties:
+        question:
+          type: string
+          title: Question
+        options:
+          items:
+            type: string
+          type: array
+          title: Options
+        correct_indices:
+          items:
+            type: integer
+          type: array
+          title: Correct Indices
+      type: object
+      required:
+      - question
+      - options
+      - correct_indices
+      title: QueuedQuestion
     QuizData:
       properties:
         id:
@@ -2511,67 +2631,6 @@ components:
       - pending
       - items
       title: QuizQueueStatus
-    PptxUpdateDetectedRequest:
-      properties:
-        slug:
-          type: string
-          title: Slug
-      type: object
-      required:
-      - slug
-      title: PptxUpdateDetectedRequest
-    QAQuestionRaw:
-      properties:
-        id:
-          type: string
-          title: Id
-        text:
-          type: string
-          title: Text
-        author_uuid:
-          type: string
-          title: Author Uuid
-        upvoter_uuids:
-          items:
-            type: string
-          type: array
-          title: Upvoter Uuids
-        answered:
-          type: boolean
-          title: Answered
-        timestamp:
-          type: number
-          title: Timestamp
-      type: object
-      required:
-      - id
-      - text
-      - author_uuid
-      - upvoter_uuids
-      - answered
-      - timestamp
-      title: QAQuestionRaw
-    QueuedQuestion:
-      properties:
-        question:
-          type: string
-          title: Question
-        options:
-          items:
-            type: string
-          type: array
-          title: Options
-        correct_indices:
-          items:
-            type: integer
-          type: array
-          title: Correct Indices
-      type: object
-      required:
-      - question
-      - options
-      - correct_indices
-      title: QueuedQuestion
     RegisterRequest:
       properties:
         name:
