@@ -53,6 +53,7 @@ COPY tests/docker/test_pptx_update_auto_refresh.py .
 COPY tests/docker/test_follow_uncached_slide.py .
 COPY tests/docker/test_session_state_participant_name_restore.py .
 COPY tests/docker/test_participant_name_host.py .
+COPY tests/docker/test_poll_live.py .
 COPY tests/docker/features/ ./features/
 COPY tests/docker/step_defs/ ./step_defs/
 COPY tests/docker/generate_fixture_pdfs.py .
