@@ -10,9 +10,6 @@
   let quizActive = false;
   let voteCounts = [];
   let totalVotes = 0;
-  let _hostPoll = null;          // {question, options, multi, public}
-  let _hostPollCounts = null;    // list[int]
-  let _hostPollVoted = 0;
   let totalParticipants = 0;
   let activeParticipants = 0;
   let participantDataById = {};     // uuid -> participant payload
@@ -474,13 +471,20 @@
         totalVotes = msg.voted_count || 0;
         renderBars();
       } else if (msg.type === 'poll_host_update') {
-        _hostPoll = msg.poll;
-        _hostPollCounts = msg.counts || [];
-        _hostPollVoted = msg.voted_count || 0;
-        renderPollResults();
+        // Server is the authority for started + counts; mirror into composer state.
+        if (msg.poll) {
+          pollState.question = msg.poll.question;
+          pollState.options = [...msg.poll.options, ''];   // trailing empty draft
+          pollState.multi = msg.poll.multi;
+          pollState.public = msg.poll.public;
+        }
+        _hostPollCountsState = msg.counts || [];
+        // poll_host_update only fires while a poll exists on the server (started true on
+        // any push from _push_poll_state). Treat its arrival as "started".
+        _hostPollStarted = true;
+        renderPoll();
       } else if (msg.type === 'poll_opened') {
-        // Trigger initial fetch — snapshot follows immediately via poll_host_update,
-        // but this also handles the case where we missed the open and connect mid-flight.
+        // Bare signal — snapshot follows via poll_host_update.
         fetchPollState();
       } else if (msg.type === 'participant_list_updated') {
         ingestParticipants(msg.participants || []);
@@ -1732,6 +1736,10 @@
     public: false,
   };
 
+  // Live state — set by /api/{sid}/host/poll fetch + poll_host_update WS pushes.
+  let _hostPollStarted = false;
+  let _hostPollCountsState = [];   // per-option vote counts; aligned to pollState.options
+
   const pollQuestionEl  = document.getElementById('poll-question');
   const pollMultiEl     = document.getElementById('poll-multi');
   const pollPublicEl    = document.getElementById('poll-public');
@@ -1752,6 +1760,13 @@
     pollPublicEl.checked = pollState.public;
     pollOptionsEl.innerHTML = '';
     pollState.options.forEach((val, i) => {
+      const card = document.createElement('div');
+      card.className = 'poll-option-card' + (_hostPollStarted ? ' started' : '');
+      card.dataset.optIdx = String(i);
+
+      const fill = document.createElement('div');
+      fill.className = 'poll-option-card-fill';
+
       const row = document.createElement('textarea');
       row.className = 'poll-option-row' + (val.trim() ? ' filled' : '');
       row.rows = 1;
@@ -1759,14 +1774,93 @@
       row.tabIndex = 2 + i;
       row.placeholder = i === pollState.options.length - 1 ? 'Add option…' : '';
       row.addEventListener('input', () => onPollOptionInput(i, row));
-      pollOptionsEl.appendChild(row);
+
+      const count = document.createElement('span');
+      count.className = 'poll-option-card-count';
+      count.textContent = '';
+
+      card.appendChild(fill);
+      card.appendChild(row);
+      card.appendChild(count);
+      pollOptionsEl.appendChild(card);
       autoGrow(row);
     });
     pollStartBtn.tabIndex = 2 + pollState.options.length;
     updatePollStartEnabled();
+    applyPollLiveResults();
+  }
+
+  function applyPollLiveResults() {
+    const counts = _hostPollCountsState;
+    if (!_hostPollStarted) {
+      pollOptionsEl.querySelectorAll('.poll-option-card').forEach(c => {
+        c.classList.remove('started', 'leading');
+        c.querySelector('.poll-option-card-count').textContent = '';
+        c.querySelector('.poll-option-card-fill').style.width = '0%';
+      });
+      return;
+    }
+    const maxCount = counts.length ? Math.max(...counts, 0) : 0;
+    pollState.options.forEach((_val, i) => {
+      const card = pollOptionsEl.querySelector(`[data-opt-idx="${i}"]`);
+      if (!card) return;
+      card.classList.add('started');
+      const c = counts[i] ?? 0;
+      card.querySelector('.poll-option-card-count').textContent = String(c);
+      const pct = maxCount > 0 ? (c / maxCount) * 100 : 0;
+      card.querySelector('.poll-option-card-fill').style.width = pct + '%';
+      card.classList.toggle('leading', c === maxCount && maxCount > 0);
+    });
+    reorderPollCards();
+  }
+
+  function reorderPollCards() {
+    // Don't reorder while host is editing — would jump the cursor.
+    if (pollOptionsEl.contains(document.activeElement)) return;
+    const draftIdx = pollState.options.length - 1;
+    const realIdxs = [];
+    for (let i = 0; i < pollState.options.length; i++) {
+      if (i === draftIdx && pollState.options[i] === '') continue;
+      realIdxs.push(i);
+    }
+    realIdxs.sort((a, b) => ((_hostPollCountsState[b] ?? 0) - (_hostPollCountsState[a] ?? 0)) || (a - b));
+
+    const cards = Array.from(pollOptionsEl.children);
+    const first = new Map();
+    cards.forEach(c => first.set(c, c.getBoundingClientRect()));
+
+    // Re-append in sorted order; trailing empty draft (if any) goes last.
+    realIdxs.forEach(idx => {
+      const card = pollOptionsEl.querySelector(`[data-opt-idx="${idx}"]`);
+      if (card) pollOptionsEl.appendChild(card);
+    });
+    if (pollState.options[draftIdx] === '') {
+      const draft = pollOptionsEl.querySelector(`[data-opt-idx="${draftIdx}"]`);
+      if (draft) pollOptionsEl.appendChild(draft);
+    }
+
+    // FLIP
+    cards.forEach(c => {
+      const last = c.getBoundingClientRect();
+      const f = first.get(c);
+      const dy = f.top - last.top;
+      if (dy !== 0) {
+        c.style.transition = 'none';
+        c.style.transform = `translateY(${dy}px)`;
+      }
+    });
+    requestAnimationFrame(() => {
+      cards.forEach(c => { c.style.transition = ''; c.style.transform = ''; });
+    });
   }
 
   function updatePollStartEnabled() {
+    if (_hostPollStarted) {
+      pollStartBtn.textContent = 'Started';
+      pollStartBtn.disabled = true;
+      return;
+    }
+    pollStartBtn.textContent = 'Start';
     const validQ = pollState.question.trim() !== '';
     const nonEmpty = pollState.options.filter(s => s.trim() !== '').length;
     pollStartBtn.disabled = !(validQ && nonEmpty >= 2);
@@ -1815,9 +1909,9 @@
     }
   }
 
-  function flushPollUpdate() {
+  async function flushPollUpdate() {
     if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
-    sendPollUpdate();
+    await sendPollUpdate();
   }
 
   function schedulePollUpdate() {
@@ -1867,7 +1961,7 @@
 
   pollStartBtn.addEventListener('click', async () => {
     if (pollStartBtn.disabled) return;
-    flushPollUpdate();  // make sure backend has the latest before /start
+    await flushPollUpdate();   // await so daemon has the latest draft before /start
     let res;
     try {
       res = await fetch(API('/poll/start'), { method: 'POST' });
@@ -1876,6 +1970,10 @@
       return;
     }
     if (res.ok) {
+      _hostPollStarted = true;
+      _hostPollCountsState = pollState.options.map(() => 0);
+      applyPollLiveResults();
+      updatePollStartEnabled();
       toast('Poll started ✓');
     } else {
       const data = await res.json().catch(() => ({}));
@@ -1886,6 +1984,8 @@
   pollClearBtn.addEventListener('click', async () => {
     // Cancel any pending debounced update — we're about to stop.
     if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
+    _hostPollStarted = false;
+    _hostPollCountsState = [];
     resetPollLocal();
     pollQuestionEl.focus();
     pollQuestionEl.select();
@@ -1967,10 +2067,18 @@
       const resp = await fetch(API('/poll'));
       if (!resp.ok) return;
       const data = await resp.json();
-      _hostPoll = data.poll;
-      _hostPollCounts = data.counts || [];
-      _hostPollVoted = data.voted_count || 0;
-      renderPollResults();
+      if (!data.poll) {
+        _hostPollStarted = false;
+        _hostPollCountsState = [];
+        return;
+      }
+      pollState.question = data.poll.question;
+      pollState.options = [...data.poll.options, ''];
+      pollState.multi = data.poll.multi;
+      pollState.public = data.poll.public;
+      _hostPollStarted = !!data.started;
+      _hostPollCountsState = data.counts || [];
+      renderPoll();
     } catch (e) { /* silent */ }
   }
 
@@ -1999,91 +2107,6 @@
     totalVotes = allVotes.length;
     renderQuizDisplay();
     renderQuizQueuePanel(data.queue);
-  }
-
-  // ── Poll render helpers ──
-  function sortIndices(counts) {
-    const idxs = counts.map((_, i) => i);
-    idxs.sort((a, b) => (counts[b] - counts[a]) || (a - b));
-    return idxs;
-  }
-
-  function reorderBars(container, sortedIndices) {
-    const rows = Array.from(container.children);
-    const first = new Map();
-    rows.forEach(row => first.set(row, row.getBoundingClientRect()));
-
-    // Reorder DOM
-    sortedIndices.forEach(idx => {
-      const row = container.querySelector(`[data-opt-idx="${idx}"]`);
-      if (row) container.appendChild(row);
-    });
-
-    // Invert
-    rows.forEach(row => {
-      const last = row.getBoundingClientRect();
-      const firstRect = first.get(row);
-      const dy = firstRect.top - last.top;
-      if (dy !== 0) {
-        row.style.transition = 'none';
-        row.style.transform = `translateY(${dy}px)`;
-      }
-    });
-
-    // Play
-    requestAnimationFrame(() => {
-      rows.forEach(row => {
-        row.style.transition = '';
-        row.style.transform = '';
-      });
-    });
-  }
-
-  function renderPollResults() {
-    const container = document.getElementById('poll-results-bars');
-    if (!container || !_hostPoll) return;
-
-    // Header text
-    document.getElementById('poll-results-question').textContent = _hostPoll.question || '—';
-    document.getElementById('poll-results-voted').textContent = `${_hostPollVoted} voted`;
-    document.getElementById('poll-results-mode').textContent = _hostPoll.multi ? 'multi-select' : 'single-select';
-    document.getElementById('poll-results-visibility').textContent = _hostPoll.public ? 'public' : 'private';
-
-    const counts = _hostPollCounts.length === _hostPoll.options.length
-      ? _hostPollCounts
-      : _hostPoll.options.map(() => 0);
-    const maxCount = Math.max.apply(null, counts.concat([0]));
-
-    // Rebuild bars from scratch if option count changed
-    if (container.children.length !== _hostPoll.options.length) {
-      container.innerHTML = '';
-      _hostPoll.options.forEach((text, idx) => {
-        const row = document.createElement('div');
-        row.className = 'poll-bar-row';
-        row.dataset.optIdx = idx;
-        row.innerHTML = `
-          <div class="fill"></div>
-          <div class="row">
-            <span class="label"></span>
-            <span class="count"></span>
-          </div>`;
-        container.appendChild(row);
-      });
-    }
-
-    // Update each row's text + fill + leading class
-    _hostPoll.options.forEach((text, idx) => {
-      const row = container.querySelector(`[data-opt-idx="${idx}"]`);
-      if (!row) return;
-      row.querySelector('.label').textContent = text;
-      row.querySelector('.count').textContent = counts[idx];
-      const pct = maxCount > 0 ? (counts[idx] / maxCount) * 100 : 0;
-      row.querySelector('.fill').style.width = pct + '%';
-      row.classList.toggle('leading', counts[idx] === maxCount && maxCount > 0);
-    });
-
-    // FLIP reorder
-    reorderBars(container, sortIndices(counts));
   }
 
   // ── Render ──
