@@ -3330,13 +3330,12 @@ function _handleWsMessage(msg) {
       showView('activity');
       break;
     case 'poll_updated':
+      var _prevMulti = _currentPoll ? _currentPoll.multi : null;
       _currentPoll = msg.poll;
       _pollVoteCounts = (msg.counts !== undefined && msg.counts !== null) ? msg.counts : null;
-      // Reconcile vote-shape if multi flipped
-      if (_currentPoll && _currentPoll.multi && !(_myPollVote instanceof Set)) {
-        _myPollVote = (_myPollVote !== null) ? new Set([_myPollVote]) : new Set();
-      } else if (_currentPoll && !_currentPoll.multi && _myPollVote instanceof Set) {
-        _myPollVote = null;
+      // Multi flip wipes server-side votes — mirror locally so UI matches.
+      if (_currentPoll && _prevMulti !== null && _prevMulti !== _currentPoll.multi) {
+        _myPollVote = _currentPoll.multi ? new Set() : null;
       }
       _renderActivityPoll();
       break;
