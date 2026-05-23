@@ -1768,9 +1768,72 @@
     renderPoll();
   }
 
-  // Stubs filled in by Task 12:
-  function flushPollUpdate() { /* implemented in Task 12 */ }
-  function onPollOptionInput(i, row) { /* implemented in Task 12 */ }
+  let _pollUpdateTimer = null;
+
+  function pollPayload() {
+    return {
+      question: pollState.question,
+      options: pollState.options.map(s => s.trim()).filter(s => s !== ''),
+      multi: pollState.multi,
+    };
+  }
+
+  async function sendPollUpdate() {
+    try {
+      await fetch(API('/host/poll/update'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pollPayload()),
+      });
+    } catch (e) {
+      // Daemon may be momentarily unreachable; the next edit will retry.
+    }
+  }
+
+  function flushPollUpdate() {
+    if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
+    sendPollUpdate();
+  }
+
+  function schedulePollUpdate() {
+    if (_pollUpdateTimer) clearTimeout(_pollUpdateTimer);
+    _pollUpdateTimer = setTimeout(() => { _pollUpdateTimer = null; sendPollUpdate(); }, 300);
+  }
+
+  function onPollOptionInput(i, row) {
+    pollState.options[i] = row.value;
+    row.classList.toggle('filled', row.value.trim() !== '');
+    autoGrow(row);
+    // Auto-spawn trailing draft row when the user types into the last (previously empty) row.
+    const isLast = i === pollState.options.length - 1;
+    if (isLast && row.value !== '') {
+      pollState.options.push('');
+      renderPoll();
+      // After re-render, focus the row the user was typing in (still index i)
+      const rows = pollOptionsEl.querySelectorAll('.poll-option-row');
+      if (rows[i]) {
+        rows[i].focus();
+        const len = rows[i].value.length;
+        rows[i].setSelectionRange(len, len);
+      }
+      flushPollUpdate();   // structural change → immediate
+    } else {
+      updatePollStartEnabled();
+      schedulePollUpdate(); // text-only change → debounced
+    }
+  }
+
+  pollQuestionEl.addEventListener('input', () => {
+    pollState.question = pollQuestionEl.value;
+    autoGrow(pollQuestionEl);
+    updatePollStartEnabled();
+    schedulePollUpdate();
+  });
+
+  pollMultiEl.addEventListener('change', () => {
+    pollState.multi = pollMultiEl.checked;
+    flushPollUpdate();   // toggle is structural → immediate
+  });
 
   // Initial render
   renderPoll();
