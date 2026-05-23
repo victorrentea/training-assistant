@@ -46,10 +46,8 @@
   // ── Quiz history (persisted in localStorage, keyed by today's date) ──
   const TODAY_KEY = `host_quizzes_${new Date().toISOString().slice(0, 10)}`;
   const _FOOTER_BADGE_TOOLTIP_DEFAULTS = {
-    'ws-badge': 'Server connection status',
-    'overlay-badge': 'Desktop Overlay app',
+    'ws-badge': 'Railway',
     'gdrive-badge': 'Google Drive status',
-    'notes-badge': 'Session notes',
     'summary-badge': 'Key points summary',
     'log-level-badge': 'Daemon log level (click to toggle)',
     'git-repos-badge': 'Git repos activity',
@@ -417,12 +415,10 @@
           _railwayConnected = msg.railway_connected;
           setBadge(true);
         }
-        renderOverlayStatus(msg.overlay_connected);
         renderGdriveStatus(msg.gdrive_running);
         renderPendingDeploy(msg.pending_deploy);
         daemonSessionFolder = msg.daemon_session_folder || null;
         if (msg.session_type !== undefined) daemonSessionType = msg.session_type || 'workshop';
-        renderNotesStatus(msg.daemon_session_folder, msg.daemon_session_notes);
         const currentActivity = msg.current_activity || 'none';
         updateCenterPanel(currentActivity);
         renderDebateHost(msg);
@@ -452,11 +448,6 @@
         }
         if (msg.summary_updated_at) summaryUpdatedAt = msg.summary_updated_at;
         if (msg.summary_count) updateSummaryLineCount(msg.summary_count);
-        if (msg.notes_count) updateNotesLineCount(msg.notes_count);
-      } else if (msg.type === 'notes') {
-        updateHostNotes(msg.notes_content);
-      } else if (msg.type === 'notes_updated') {
-        updateNotesLineCount(msg.count);
       } else if (msg.type === 'summary_updated') {
         updateSummaryLineCount(msg.count);
       } else if (msg.type === 'summary') {
@@ -526,8 +517,6 @@
           _lastDebateMsg.debate_round_timer_seconds = null;
           renderDebateHost(_lastDebateMsg);
         }
-      } else if (msg.type === 'overlay_connected') {
-        renderOverlayStatus(msg.overlay_connected);
       } else if (msg.type === 'emoji_reaction') {
         showHostEmoji(msg.emoji);
       } else if (msg.type === 'paste_received') {
@@ -591,7 +580,6 @@
   }
 
   function showHostEmoji(emoji) {
-    if (emoji === '❤️' && _suppressHeartEcho) return;
     const el = document.createElement('div');
     const isScreen = emoji === '🖥️';
     el.className = 'host-emoji-float' + (isScreen ? ' host-emoji-float-screen' : '');
@@ -771,13 +759,13 @@
     let cls, tip;
     if (!wsOk) {
       cls = 'disconnected';
-      tip = 'Daemon unreachable — reconnecting';
+      tip = 'Daemon unreachable';
     } else if (_railwayConnected === false) {
       cls = 'warning';
       tip = 'Railway offline';
     } else {
       cls = 'connected';
-      tip = 'Railway connected';
+      tip = 'Railway';
     }
     b.textContent = '🟢';
     b.className = `badge ${cls}`;
@@ -1069,7 +1057,6 @@
     const grid = document.querySelector('.host-columns');
     const confQR = document.getElementById('conference-qr');
     const debateTab = document.getElementById('tab-debate');
-    const notesBadge = document.getElementById('notes-badge');
     const centerQR = document.getElementById('center-qr');
     const slidesLeftQR = document.getElementById('slides-left-qr');
     const leftTabsWrapper = document.querySelector('.left-tabs-wrapper');
@@ -1088,7 +1075,6 @@
       if (pptxDrop) pptxDrop.style.display = 'inline-flex';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
-      if (notesBadge) notesBadge.style.display = 'none';
       // Make center QR bright for conference
       if (centerQR) centerQR.classList.add('conference-center-qr');
       // Regenerate all QR codes with session-scoped join URL
@@ -1102,7 +1088,6 @@
       if (pptxDrop) pptxDrop.style.display = 'none';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
-      if (notesBadge) notesBadge.style.display = '';
       // Restore muted center QR
       if (centerQR) centerQR.classList.remove('conference-center-qr');
       _regenerateAllQRCodes();
@@ -1118,16 +1103,6 @@
   }
 
 
-  function renderOverlayStatus(connected) {
-    const el = document.getElementById('overlay-badge');
-    if (!el) return;
-    el.className = `badge ${connected ? 'connected' : 'disconnected'}`;
-    _setFooterBadgeTooltip(
-      el,
-      connected ? 'Desktop Overlay connected — click to fire a heart' : 'Desktop Overlay not connected — click to fire a heart',
-    );
-  }
-
   function renderGdriveStatus(running) {
     const el = document.getElementById('gdrive-badge');
     if (!el) return;
@@ -1136,30 +1111,6 @@
       el,
       running ? 'Google Drive is running' : 'Google Drive is NOT running',
     );
-  }
-
-  let _suppressHeartEcho = false;
-  function triggerHostHeart() {
-    _suppressHeartEcho = true;
-    setTimeout(() => { _suppressHeartEcho = false; }, 500);
-    fetch(`/api/participant/emoji/reaction`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Participant-ID': '__host__',
-      },
-      body: JSON.stringify({ emoji: '❤️' }),
-    })
-      .then((resp) => {
-        if (!resp.ok) {
-          // Keep old WS path as best-effort fallback.
-          sendWS('emoji_reaction', { emoji: '❤️' });
-        }
-      })
-      .catch(() => {
-        // Keep old WS path as best-effort fallback.
-        sendWS('emoji_reaction', { emoji: '❤️' });
-    });
   }
 
   function renderPendingDeploy(pendingDeploy) {
@@ -1179,77 +1130,11 @@
     _prevPaxCount = count;
   }
 
-  let hostNotesContent = '';
-  let _notesLineCount = 0;
   let _summaryLineCount = 0;
-  let _notesSessionFolder = null;
-  let _notesSessionNotes = null;
-
-  function renderNotesStatus(sessionFolder, sessionNotes) {
-    _notesSessionFolder = sessionFolder;
-    _notesSessionNotes = sessionNotes;
-    _renderNotesBadge();
-  }
-
-  function updateNotesLineCount(count) {
-    _notesLineCount = count || 0;
-    _renderNotesBadge();
-  }
 
   function updateSummaryLineCount(count) {
     _summaryLineCount = count || 0;
     renderSummaryBadge();
-  }
-
-  function _renderNotesBadge() {
-    const el = document.getElementById('notes-badge');
-    if (!el) return;
-    const nonEmptyLines = hostNotesContent
-      ? hostNotesContent.split('\n').filter(l => l.trim()).length
-      : _notesLineCount;
-    el.style.cssText = 'cursor:pointer;';
-    if (nonEmptyLines > 0) {
-      el.textContent = `📝 ${nonEmptyLines}`;
-      el.className = 'badge connected';
-      const folderTip = (_notesSessionFolder && _notesSessionNotes)
-        ? `${_notesSessionFolder}/${_notesSessionNotes}\n` : '';
-      _setFooterBadgeTooltip(el, `${folderTip}${nonEmptyLines} non-empty lines\nClick to view`);
-    } else if (_notesSessionFolder && !_notesSessionNotes) {
-      el.textContent = '📝';
-      el.className = 'badge';
-      el.style.cssText = 'cursor:pointer; color:var(--warn); border:1px solid var(--warn); --badge-fill:#ffd16644;';
-      _setFooterBadgeTooltip(el, 'Session folder found but no notes file inside');
-    } else {
-      el.textContent = '📝';
-      el.className = 'badge empty';
-      _setFooterBadgeTooltip(el, 'No notes yet');
-    }
-  }
-
-  function _linkifyText(text) {
-    const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
-    return escHtml(text).replace(urlRegex, url =>
-      `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
-    );
-  }
-
-  function updateHostNotes(content) {
-    hostNotesContent = content || '';
-    const el = document.getElementById('host-notes-content');
-    if (el) {
-      if (hostNotesContent) {
-        el.innerHTML = _linkifyText(hostNotesContent);
-        el.style.cssText = '';
-        const dlBtn = document.getElementById('host-notes-download');
-        if (dlBtn) dlBtn.style.display = '';
-      } else {
-        el.textContent = 'No notes available yet.';
-        el.style.cssText = 'color:var(--text-muted);';
-        const dlBtn = document.getElementById('host-notes-download');
-        if (dlBtn) dlBtn.style.display = 'none';
-      }
-    }
-    _renderNotesBadge();
   }
 
   function downloadKeyPoints() {
@@ -1265,34 +1150,6 @@
     a.download = `key-points-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(a.href);
-  }
-
-  function downloadHostNotes() {
-    if (!hostNotesContent) return;
-    const blob = new Blob([hostNotesContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'session-notes.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function toggleHostNotesModal() {
-    const overlay = document.getElementById('host-notes-overlay');
-    if (!overlay) return;
-    const opening = !overlay.classList.contains('open');
-    toggleModal('host-notes-overlay');
-    if (opening) {
-      fetch(API('/notes'))
-        .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data) updateHostNotes(data.notes_content); })
-        .catch(() => {});
-    }
-  }
-
-  function closeHostNotesModal() {
-    closeModal('host-notes-overlay');
   }
 
   function renderParticipantList(participantIds, flashPids) {
@@ -1434,7 +1291,6 @@
       closeMap();
       closeQR();
       closeSummaryModal();
-      closeHostNotesModal();
     }
   });
 

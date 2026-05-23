@@ -289,8 +289,6 @@ class TestHostSessionCode:
                 const ids = [
                     'ws-badge',
                     'daemon-badge',
-                    'overlay-badge',
-                    'notes-badge',
                     'summary-badge',
                     'token-cost',
                     'git-repos-badge',
