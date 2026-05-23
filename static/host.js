@@ -1,5 +1,8 @@
   const SESSION_ID = location.pathname.split('/')[2];
-  const API = (path) => `/api/${SESSION_ID}/host${path}`;
+  // Use absolute URL with location.origin so fetch() doesn't inherit
+  // basic-auth credentials from the page URL (Chrome refuses to fetch
+  // a URL with embedded credentials).
+  const API = (path) => `${location.origin}/api/${SESSION_ID}/host${path}`;
 
   const UPLOAD_CLEANUP_MINUTES = 5; // hide download icon + delete file after this many minutes
   let ws = null;
