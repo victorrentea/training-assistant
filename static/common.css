@@ -1,6 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  color-scheme: dark;
   --bg:        #0f1117;
   --surface:   #1c1f2e;
   --surface2:  #252840;
@@ -17,6 +18,7 @@
 
 @media (prefers-color-scheme: light) {
   :root {
+    color-scheme: light;
     --bg:        #f4f5f9;
     --surface:   #ffffff;
     --surface2:  #e8eaf0;
@@ -30,6 +32,42 @@
     --warn:      #c89400;
     --radius:    12px;
   }
+}
+
+/* ── Scrollbars (dark mode default) ── */
+* {
+  scrollbar-color: #3a3f5c #14161f;
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: #14161f;
+}
+::-webkit-scrollbar-thumb {
+  background: #3a3f5c;
+  border-radius: 8px;
+  border: 2px solid #14161f;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4d5478;
+}
+::-webkit-scrollbar-corner {
+  background: #14161f;
+}
+@media (prefers-color-scheme: light) {
+  * {
+    scrollbar-color: #b4b8c8 transparent;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: #b4b8c8;
+    border-color: transparent;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #8c92a8; }
+  ::-webkit-scrollbar-corner { background: transparent; }
 }
 
 /* ── Speech bubble tooltips ── */
