@@ -55,3 +55,55 @@ class TestPollUpdate:
         assert resp.status_code == 204
         assert fresh_poll_state.data.question == ""
         assert fresh_poll_state.data.options == ["Only one"]
+
+
+class TestPollStart:
+    def test_start_with_valid_draft_returns_204(self, host_client, fresh_poll_state):
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        resp = host_client.post("/api/test-session/host/poll/start")
+        assert resp.status_code == 204
+        assert fresh_poll_state.started is True
+
+    def test_start_with_no_draft_returns_409(self, host_client, fresh_poll_state):
+        resp = host_client.post("/api/test-session/host/poll/start")
+        assert resp.status_code == 409
+        assert fresh_poll_state.started is False
+
+    def test_start_with_empty_question_returns_409(self, host_client, fresh_poll_state):
+        host_client.put("/api/test-session/host/poll/update", json={
+            "question": "   ",
+            "options": ["A", "B"],
+            "multi": False,
+        })
+        resp = host_client.post("/api/test-session/host/poll/start")
+        assert resp.status_code == 409
+        assert fresh_poll_state.started is False
+
+    def test_start_with_fewer_than_two_options_returns_409(self, host_client, fresh_poll_state):
+        host_client.put("/api/test-session/host/poll/update", json={
+            "question": "Q?",
+            "options": ["only"],
+            "multi": False,
+        })
+        resp = host_client.post("/api/test-session/host/poll/start")
+        assert resp.status_code == 409
+        assert fresh_poll_state.started is False
+
+    def test_start_ignores_empty_options_when_counting(self, host_client, fresh_poll_state):
+        host_client.put("/api/test-session/host/poll/update", json={
+            "question": "Q?",
+            "options": ["A", "", "B"],
+            "multi": False,
+        })
+        resp = host_client.post("/api/test-session/host/poll/start")
+        # Client should never send empty options, but if a draft slipped through with one,
+        # the trimmed count must still be >= 2. Here A and B both pass, so accept.
+        assert resp.status_code == 204
+        assert fresh_poll_state.started is True
+
+    def test_start_is_idempotent(self, host_client, fresh_poll_state):
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        host_client.post("/api/test-session/host/poll/start")
+        resp = host_client.post("/api/test-session/host/poll/start")
+        assert resp.status_code == 204
+        assert fresh_poll_state.started is True
