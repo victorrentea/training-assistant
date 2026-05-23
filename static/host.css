@@ -2217,11 +2217,17 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .poll-option-card.started .poll-option-row {
   background: transparent;
-  border-color: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px 0 0 8px;
+  padding-right: 1rem;
 }
 .poll-option-card.started .poll-option-row:focus {
-  border-color: var(--accent);
+  border-color: transparent;
+}
+/* When any descendant is focused, draw the indicator on the whole card so
+   the highlight spans across the count badge too. */
+.poll-option-card.started:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 .poll-option-row.filled { border-color: var(--success); }
 .poll-option-row:focus { outline: none; border-color: var(--accent); }

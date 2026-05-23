@@ -217,9 +217,10 @@ class TestUpdateWhileRunning:
         assert resp.status_code == 204
         assert fresh_poll_state.data.options == ["Great", "Meh", "Bad"]
 
-    def test_wipes_votes_on_multi_flip(
+    def test_single_to_multi_preserves_votes(
         self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
     ):
+        # _SAMPLE_BODY is single-select. Cast a vote, flip to multi — vote survives.
         host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
         host_client.post("/api/test-session/host/poll/start")
         fresh_poll_state.cast_vote("p1", [0])
@@ -230,7 +231,31 @@ class TestUpdateWhileRunning:
             "options": ["Great", "Meh"],
             "multi": True, "public": False,
         })
-        assert fresh_poll_state.votes == {}
+        assert fresh_poll_state.votes["p1"]["option_indices"] == [0]
+
+    def test_multi_to_single_keeps_single_option_votes_drops_multi(
+        self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
+    ):
+        # Start in multi mode, two voters: alice picks 1 option, bob picks 2.
+        host_client.put("/api/test-session/host/poll/update", json={
+            "question": "How was lunch?",
+            "options": ["Great", "Meh"],
+            "multi": True, "public": False,
+        })
+        host_client.post("/api/test-session/host/poll/start")
+        fresh_poll_state.cast_vote("alice", [0])
+        fresh_poll_state.cast_vote("bob", [0, 1])
+        assert len(fresh_poll_state.votes) == 2
+
+        # Flip to single: alice's [0] kept, bob's [0,1] dropped.
+        host_client.put("/api/test-session/host/poll/update", json={
+            "question": "How was lunch?",
+            "options": ["Great", "Meh"],
+            "multi": False, "public": False,
+        })
+        assert "alice" in fresh_poll_state.votes
+        assert "bob" not in fresh_poll_state.votes
+        assert fresh_poll_state.votes["alice"]["option_indices"] == [0]
 
 
 class TestStopBroadcast:

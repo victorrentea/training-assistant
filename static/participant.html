@@ -331,6 +331,7 @@ body{visibility:hidden}
   border-radius: 8px; text-align: center; font-size: .85rem; color: #ff6b6b;
 }
 /* ── Poll card styles ── */
+#activity-poll-section { width: 100%; max-width: 41.6rem; }
 .poll-card {
   background: var(--color-surface-container-low, #f0f4f7);
   border: 1px solid var(--color-outline-variant, #a9b4b9);
@@ -369,6 +370,9 @@ body{visibility:hidden}
   cursor: pointer;
   overflow: hidden;
   transition: border-color 0.2s, transform 0.1s;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 @media (prefers-color-scheme: dark) {
   .poll-option-btn { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); }
@@ -384,12 +388,26 @@ body{visibility:hidden}
 .poll-option-btn.selected .fill { background: rgba(69, 85, 186, 0.18); }
 .poll-option-btn .row {
   position: relative;
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; align-items: center;
   gap: 0.5rem;
 }
 .poll-option-btn .count {
-  font-weight: 700; min-width: 2rem; text-align: right;
-  color: var(--color-primary, #4555ba);
+  position: absolute;
+  top: 0.35rem; right: 0.45rem;
+  font-size: 0.7rem; font-weight: 700;
+  line-height: 1.2;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.55rem;
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--color-on-surface, #2a3439);
+  pointer-events: none;
+  z-index: 2;
+}
+@media (prefers-color-scheme: dark) {
+  .poll-option-btn .count {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--color-on-surface, #dce4e9);
+  }
 }
 /* Selection marker — always present, fills only when selected. Works for
    both single-select (radio look) and multi-select (square look via
@@ -481,7 +499,7 @@ body{visibility:hidden}
 </div>
 <a data-nav="activity" onclick="showView('activity')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
-<span class="text-base">Activity</span>
+<span class="text-base" id="activity-nav-label">Activity</span>
 <span id="activity-score-badge" class="badge-new" style="display:none"></span>
 </a>
 <a data-nav="agenda" onclick="showView('agenda')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
@@ -2855,6 +2873,11 @@ function _applyState(msg) {
   if (msg.poll !== undefined || msg.poll_active !== undefined) {
     _applyPollState(msg);
   }
+  // Track current activity + reflect it in the sidebar nav label.
+  if (msg.current_activity !== undefined) {
+    _currentActivity = msg.current_activity || 'none';
+    _updateActivityNavLabel();
+  }
 }
 
 // ── Quiz helpers ──
@@ -2916,6 +2939,20 @@ function _resetActivityState(activity) {
     _pollVoteCounts = null;
   }
   // Safe no-op on unknown activity names.
+}
+
+function _updateActivityNavLabel() {
+  var el = document.getElementById('activity-nav-label');
+  if (!el) return;
+  var labels = {
+    poll: 'Activity: Poll',
+    quiz: 'Activity: Quiz',
+    wordcloud: 'Activity: Words',
+    qa: 'Activity: Q&A',
+    codereview: 'Activity: Code',
+    debate: 'Activity: Debate',
+  };
+  el.textContent = labels[_currentActivity] || 'Activity';
 }
 
 function _applyPollState(msg) {
@@ -3097,25 +3134,24 @@ function _renderActivityPoll() {
                '</span>';
     return '<button class="poll-option-btn ' + selClass + '" onclick="castPollVote(' + idx + ')">' +
              '<div class="fill" style="width:' + fillWidth + '%"></div>' +
+             countHtml +
              '<div class="row">' +
                '<span>' + mark + _escHtmlWithCode(text) + '</span>' +
-               countHtml +
              '</div>' +
            '</button>';
   }).join('');
 
   document.getElementById('poll-options').innerHTML = optsHtml;
 
-  var statusText;
+  var statusBar = document.getElementById('poll-status-bar');
   if (multi) {
     var n = (_myPollVote instanceof Set) ? _myPollVote.size : 0;
-    statusText = (n === 0)
-      ? 'Select as many as you want'
-      : 'Select as many as you want · ' + n + ' selected';
+    statusBar.textContent = (n === 0)
+      ? 'Pick as many as you want'
+      : 'Pick as many as you want · ' + n + ' selected';
+    statusBar.style.display = '';
   } else {
-    statusText = (_myPollVote === null)
-      ? 'Single option'
-      : 'Single option · tap another to change';
+    statusBar.style.display = 'none';
   }
   document.getElementById('poll-status-bar').textContent = statusText;
 }
@@ -3354,9 +3390,19 @@ function _handleWsMessage(msg) {
       var _prevMulti = _currentPoll ? _currentPoll.multi : null;
       _currentPoll = msg.poll;
       _pollVoteCounts = (msg.counts !== undefined && msg.counts !== null) ? msg.counts : null;
-      // Multi flip wipes server-side votes — mirror locally so UI matches.
+      // Multi flip: mirror server-side vote-preservation rule.
+      // - single → multi: keep the single vote, wrap in a Set
+      // - multi → single: keep iff exactly 1 option was selected; else clear
       if (_currentPoll && _prevMulti !== null && _prevMulti !== _currentPoll.multi) {
-        _myPollVote = _currentPoll.multi ? new Set() : null;
+        if (!_prevMulti && _currentPoll.multi) {
+          _myPollVote = (_myPollVote !== null) ? new Set([_myPollVote]) : new Set();
+        } else if (_prevMulti && !_currentPoll.multi) {
+          if (_myPollVote instanceof Set && _myPollVote.size === 1) {
+            _myPollVote = Array.from(_myPollVote)[0];
+          } else {
+            _myPollVote = null;
+          }
+        }
       }
       _renderActivityPoll();
       break;
@@ -3366,6 +3412,7 @@ function _handleWsMessage(msg) {
         _resetActivityState(_currentActivity);
       }
       _currentActivity = newAct;
+      _updateActivityNavLabel();
       _renderActivityPoll();
       break;
     }

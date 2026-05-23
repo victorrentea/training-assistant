@@ -1827,16 +1827,18 @@
       });
       return;
     }
+    const draftIdx = pollState.options.length - 1;
     const maxCount = counts.length ? Math.max(...counts, 0) : 0;
-    pollState.options.forEach((_val, i) => {
+    pollState.options.forEach((val, i) => {
       const card = pollOptionsEl.querySelector(`[data-opt-idx="${i}"]`);
       if (!card) return;
       card.classList.add('started');
+      const isTrailingDraft = (i === draftIdx && val.trim() === '');
       const c = counts[i] ?? 0;
-      card.querySelector('.poll-option-card-count').textContent = String(c);
-      const pct = maxCount > 0 ? (c / maxCount) * 100 : 0;
+      card.querySelector('.poll-option-card-count').textContent = isTrailingDraft ? '' : String(c);
+      const pct = (!isTrailingDraft && maxCount > 0) ? (c / maxCount) * 100 : 0;
       card.querySelector('.poll-option-card-fill').style.width = pct + '%';
-      card.classList.toggle('leading', c === maxCount && maxCount > 0);
+      card.classList.toggle('leading', !isTrailingDraft && c === maxCount && maxCount > 0);
     });
     reorderPollCards();
   }
@@ -1882,12 +1884,11 @@
   }
 
   function updatePollStartEnabled() {
+    pollStartBtn.textContent = 'Start';
     if (_hostPollStarted) {
-      pollStartBtn.textContent = 'Started';
       pollStartBtn.disabled = true;
       return;
     }
-    pollStartBtn.textContent = 'Start';
     const validQ = pollState.question.trim() !== '';
     const nonEmpty = pollState.options.filter(s => s.trim() !== '').length;
     pollStartBtn.disabled = !(validQ && nonEmpty >= 2);

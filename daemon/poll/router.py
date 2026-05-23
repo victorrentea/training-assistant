@@ -84,9 +84,15 @@ async def update_poll(body: PollData):
                 {"error": "Cannot remove options while poll is running"},
                 status_code=409,
             )
-        # Multi flip wipes votes (per spec edge case)
-        if prev.multi != body.multi:
-            poll_state.votes.clear()
+        # Multi flip: single→multi keeps everyone (single votes are still valid
+        # in multi mode); multi→single keeps only voters with exactly one
+        # option selected, drops voters with multiple selections.
+        if prev.multi and not body.multi:
+            poll_state.votes = {
+                pid: v for pid, v in poll_state.votes.items()
+                if len(v.get("option_indices", [])) == 1
+            }
+        # (single → multi: no change to votes)
 
     poll_state.data = body
     poll_state.invalidate_counts()
