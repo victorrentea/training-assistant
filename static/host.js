@@ -1780,7 +1780,7 @@
 
   async function sendPollUpdate() {
     try {
-      await fetch(API('/host/poll/update'), {
+      await fetch(API('/poll/update'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pollPayload()),
@@ -1840,7 +1840,7 @@
     flushPollUpdate();  // make sure backend has the latest before /start
     let res;
     try {
-      res = await fetch(API('/host/poll/start'), { method: 'POST' });
+      res = await fetch(API('/poll/start'), { method: 'POST' });
     } catch (e) {
       toast('Network error — daemon unreachable');
       return;
@@ -1858,7 +1858,7 @@
     if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
     resetPollLocal();
     try {
-      await fetch(API('/host/poll/stop'), { method: 'POST' });
+      await fetch(API('/poll/stop'), { method: 'POST' });
     } catch (e) {
       toast('Network error — daemon unreachable');
     }
