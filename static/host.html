@@ -303,8 +303,8 @@
       </div>
     </div>
     <div id="leaderboard-overlay" class="leaderboard-overlay" style="display:none;" onclick="toggleLeaderboard()">
-      <div class="leaderboard-content">
-        <button class="leaderboard-close" onclick="toggleLeaderboard()">&times;</button>
+      <div class="leaderboard-content" onclick="event.stopPropagation()">
+        <button class="leaderboard-close" onclick="hideLeaderboard()">&times;</button>
         <h1 class="leaderboard-title">LEADERBOARD</h1>
         <div id="leaderboard-entries" class="leaderboard-entries"></div>
       </div>
