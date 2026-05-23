@@ -47,6 +47,19 @@ class PersistedQuizState(PersistedModel):
     awarded_points: dict[str, int] = Field(default_factory=dict, description="participant_uuid → points awarded by most recent reveal_correct")
 
 
+class PersistedPollState(PersistedModel):
+    """Poll snapshot persisted in session-state.json.
+
+    `data` is the full poll definition (question, options, multi, public).
+    `votes` is the uuid → {option_indices, voted_at} map mirroring quiz.
+    All fields are optional/defaulted so legacy session files load cleanly.
+    """
+    data: dict[str, Any] | None = None
+    started: bool = False
+    opened_at: str | None = None
+    votes: dict[str, Any] = Field(default_factory=dict)
+
+
 class PersistedWordCloudState(PersistedModel):
     """Word cloud snapshot persisted in session state."""
 
@@ -112,6 +125,7 @@ class PersistedSessionState(PersistedModel):
     locations: dict[str, str] = Field(default_factory=dict, exclude=True)
 
     quiz: PersistedQuizState | None = None
+    poll: PersistedPollState | None = None
     # Legacy flat quiz fields: accepted on read, omitted on write.
     quiz_active: bool | None = Field(default=None, exclude=True)
     quiz_correct_indices: list[int] = Field(default_factory=list, exclude=True)
