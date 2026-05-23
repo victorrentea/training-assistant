@@ -2135,6 +2135,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  margin: 0;
   color: var(--text);
   font-size: 0.9rem;
   cursor: pointer;
