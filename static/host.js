@@ -1835,6 +1835,24 @@
     flushPollUpdate();   // toggle is structural → immediate
   });
 
+  pollStartBtn.addEventListener('click', async () => {
+    if (pollStartBtn.disabled) return;
+    flushPollUpdate();  // make sure backend has the latest before /start
+    let res;
+    try {
+      res = await fetch(API('/host/poll/start'), { method: 'POST' });
+    } catch (e) {
+      toast('Network error — daemon unreachable');
+      return;
+    }
+    if (res.ok) {
+      toast('Poll started ✓');
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast(data.error || 'Poll start failed');
+    }
+  });
+
   // Initial render
   renderPoll();
 
