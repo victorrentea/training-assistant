@@ -1701,6 +1701,85 @@
     if (list) list.querySelectorAll('li').forEach(li => { li.classList.remove('selected'); });
   };
 
+  // ── Poll composer ──
+  const POLL_PRESETS = {
+    yesno:      { question: '', options: ['Yes', 'No'], multi: false },
+    truefalse:  { question: '', options: ['True', 'False'], multi: false },
+    rating15:   { question: '', options: ['1', '2', '3', '4', '5'], multi: false },
+    energy:     { question: '', options: ['🔥 On fire', '😄 Energized', '😐 OK', '😴 Sleepy', '💀 Need coffee'], multi: false },
+  };
+
+  const pollState = {
+    question: '',
+    options: [''],
+    multi: false,
+  };
+
+  const pollQuestionEl  = document.getElementById('poll-question');
+  const pollMultiEl     = document.getElementById('poll-multi');
+  const pollStartBtn    = document.getElementById('poll-start-btn');
+  const pollClearBtn    = document.getElementById('poll-clear-btn');
+  const pollOptionsEl   = document.getElementById('poll-options-container');
+  const pollQuickBtns   = document.querySelectorAll('.poll-quick-btn');
+
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
+  function renderPoll() {
+    pollQuestionEl.value = pollState.question;
+    autoGrow(pollQuestionEl);
+    pollMultiEl.checked = pollState.multi;
+    pollOptionsEl.innerHTML = '';
+    pollState.options.forEach((val, i) => {
+      const row = document.createElement('textarea');
+      row.className = 'poll-option-row' + (val.trim() ? ' filled' : '');
+      row.rows = 1;
+      row.value = val;
+      row.placeholder = i === pollState.options.length - 1 ? 'Add option…' : '';
+      row.addEventListener('input', () => onPollOptionInput(i, row));
+      pollOptionsEl.appendChild(row);
+      autoGrow(row);
+    });
+    updatePollStartEnabled();
+  }
+
+  function updatePollStartEnabled() {
+    const validQ = pollState.question.trim() !== '';
+    const nonEmpty = pollState.options.filter(s => s.trim() !== '').length;
+    pollStartBtn.disabled = !(validQ && nonEmpty >= 2);
+  }
+
+  function applyPollPreset(name) {
+    const preset = POLL_PRESETS[name];
+    if (!preset) return;
+    pollState.question = preset.question;
+    pollState.options = [...preset.options, ''];   // trailing empty draft row
+    pollState.multi = preset.multi;
+    renderPoll();
+    flushPollUpdate();  // immediate, no debounce
+  }
+
+  function resetPollLocal() {
+    pollState.question = '';
+    pollState.options = [''];
+    pollState.multi = false;
+    renderPoll();
+  }
+
+  // Stubs filled in by Task 12:
+  function flushPollUpdate() { /* implemented in Task 12 */ }
+  function onPollOptionInput(i, row) { /* implemented in Task 12 */ }
+
+  // Initial render
+  renderPoll();
+
+  // Wire Quick Question buttons
+  pollQuickBtns.forEach(btn => {
+    btn.addEventListener('click', () => applyPollPreset(btn.dataset.preset));
+  });
+
   // ── Timer ──
   let activeTimer = null;   // {seconds, started_at (ms)} or null
   let _timerInterval = null;
