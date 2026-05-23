@@ -170,7 +170,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- | --- |
 | Start Poll, host opens the current draft as a live poll.<br>`POST /api/{session_id}/host/poll/start` | - | - |
 | Stop Poll, host clears the poll draft and stops any running poll.<br>`POST /api/{session_id}/host/poll/stop` | - | - |
-| Update Poll, host pushes the latest draft of the poll composer.<br>`PUT /api/{session_id}/host/poll/update` | `question: string`<br>`options: list[string]`<br>`multi: bool` | - |
+| Update Poll, host pushes the latest draft of the poll composer.<br>`PUT /api/{session_id}/host/poll/update` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`public: bool` | - |
 
 ## Feature: Word Cloud
 

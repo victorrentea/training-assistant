@@ -2478,11 +2478,15 @@ components:
         multi:
           type: boolean
           title: Multi
+        public:
+          type: boolean
+          title: Public
       type: object
       required:
       - question
       - options
       - multi
+      - public
       title: PollData
       description: Latest draft pushed by the host composer.
     PptxUpdateDetectedRequest:

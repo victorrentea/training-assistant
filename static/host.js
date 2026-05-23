@@ -1713,10 +1713,12 @@
     question: '',
     options: [''],
     multi: false,
+    public: false,
   };
 
   const pollQuestionEl  = document.getElementById('poll-question');
   const pollMultiEl     = document.getElementById('poll-multi');
+  const pollPublicEl    = document.getElementById('poll-public');
   const pollStartBtn    = document.getElementById('poll-start-btn');
   const pollClearBtn    = document.getElementById('poll-clear-btn');
   const pollOptionsEl   = document.getElementById('poll-options-container');
@@ -1731,6 +1733,7 @@
     pollQuestionEl.value = pollState.question;
     autoGrow(pollQuestionEl);
     pollMultiEl.checked = pollState.multi;
+    pollPublicEl.checked = pollState.public;
     pollOptionsEl.innerHTML = '';
     pollState.options.forEach((val, i) => {
       const row = document.createElement('textarea');
@@ -1765,6 +1768,7 @@
     pollState.question = '';
     pollState.options = [''];
     pollState.multi = false;
+    pollState.public = false;
     renderPoll();
   }
 
@@ -1775,6 +1779,7 @@
       question: pollState.question,
       options: pollState.options.map(s => s.trim()).filter(s => s !== ''),
       multi: pollState.multi,
+      public: pollState.public,
     };
   }
 
@@ -1832,6 +1837,11 @@
 
   pollMultiEl.addEventListener('change', () => {
     pollState.multi = pollMultiEl.checked;
+    flushPollUpdate();   // toggle is structural → immediate
+  });
+
+  pollPublicEl.addEventListener('change', () => {
+    pollState.public = pollPublicEl.checked;
     flushPollUpdate();   // toggle is structural → immediate
   });
 

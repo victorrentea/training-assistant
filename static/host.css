@@ -2139,7 +2139,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   font-size: 0.9rem;
   cursor: pointer;
 }
-#poll-start-btn { margin-left: auto; }
+#poll-clear-btn { margin-left: auto; }
 
 .poll-quick-section {
   display: flex;
@@ -2154,7 +2154,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .poll-quick-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 0.4rem;
 }
 .poll-quick-btn {
@@ -2164,13 +2165,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 
 /* ── Poll tab — center pane ───────────────────────────────────────── */
 #center-poll { display: none; flex-direction: column; min-height: 0; }
-.poll-center-title {
-  margin: 0 0 0.9rem;
-  font-size: 0.95rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
 .poll-options-container {
   display: flex;
   flex-direction: column;
@@ -2197,8 +2191,3 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 .poll-option-row.filled { border-color: var(--success); }
 .poll-option-row:focus { outline: none; border-color: var(--accent); }
-
-.poll-clear-btn {
-  align-self: flex-start;
-  margin-top: 0.75rem;
-}

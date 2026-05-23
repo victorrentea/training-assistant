@@ -16,6 +16,7 @@ class PollData(BaseModel):
     question: str
     options: list[str]
     multi: bool
+    public: bool
 
 
 @dataclass

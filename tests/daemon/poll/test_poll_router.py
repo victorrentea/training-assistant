@@ -26,6 +26,7 @@ _SAMPLE_BODY = {
     "question": "How was lunch?",
     "options": ["Great", "Meh"],
     "multi": False,
+    "public": False,
 }
 
 
@@ -51,6 +52,7 @@ class TestPollUpdate:
             "question": "",
             "options": ["Only one"],
             "multi": False,
+            "public": False,
         })
         assert resp.status_code == 204
         assert fresh_poll_state.data.question == ""
@@ -74,6 +76,7 @@ class TestPollStart:
             "question": "   ",
             "options": ["A", "B"],
             "multi": False,
+            "public": False,
         })
         resp = host_client.post("/api/test-session/host/poll/start")
         assert resp.status_code == 409
@@ -84,6 +87,7 @@ class TestPollStart:
             "question": "Q?",
             "options": ["only"],
             "multi": False,
+            "public": False,
         })
         resp = host_client.post("/api/test-session/host/poll/start")
         assert resp.status_code == 409
@@ -94,6 +98,7 @@ class TestPollStart:
             "question": "Q?",
             "options": ["A", "", "B"],
             "multi": False,
+            "public": False,
         })
         resp = host_client.post("/api/test-session/host/poll/start")
         # Client should never send empty options, but if a draft slipped through with one,
