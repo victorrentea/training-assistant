@@ -115,8 +115,28 @@
       <ol id="queue-list" style="margin:.5rem 0 0 0; padding:.25rem 0 0 1.5rem;"></ol>
     </div>
 
-    <!-- Poll tab content (placeholder) -->
-    <div id="tab-content-poll" class="tab-content" style="display:none;"></div>
+    <!-- Poll tab content -->
+    <div id="tab-content-poll" class="tab-content" style="display:none;">
+      <div class="poll-left">
+        <textarea id="poll-question" class="poll-question" rows="2" placeholder="Question…"></textarea>
+        <div class="poll-controls-row">
+          <label class="poll-multi-label">
+            <input type="checkbox" id="poll-multi" />
+            Multi
+          </label>
+          <button class="btn btn-success" id="poll-start-btn" disabled>Start</button>
+        </div>
+        <div class="poll-quick-section">
+          <div class="poll-quick-label">Quick Questions</div>
+          <div class="poll-quick-row">
+            <button class="btn btn-secondary poll-quick-btn" data-preset="yesno">Yes / No</button>
+            <button class="btn btn-secondary poll-quick-btn" data-preset="truefalse">True / False</button>
+            <button class="btn btn-secondary poll-quick-btn" data-preset="rating15">1–5 rating</button>
+            <button class="btn btn-secondary poll-quick-btn" data-preset="energy">Energy Level</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Word Cloud tab content -->
     <div id="tab-content-wordcloud" class="tab-content" style="display:none;">
