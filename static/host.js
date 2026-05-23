@@ -1740,11 +1740,13 @@
       row.className = 'poll-option-row' + (val.trim() ? ' filled' : '');
       row.rows = 1;
       row.value = val;
+      row.tabIndex = 2 + i;
       row.placeholder = i === pollState.options.length - 1 ? 'Add option…' : '';
       row.addEventListener('input', () => onPollOptionInput(i, row));
       pollOptionsEl.appendChild(row);
       autoGrow(row);
     });
+    pollStartBtn.tabIndex = 2 + pollState.options.length;
     updatePollStartEnabled();
   }
 
@@ -1880,6 +1882,13 @@
 
   // Initial render
   renderPoll();
+
+  // Tab order: Question → option rows → Start. Everything else stays mouse-only.
+  pollQuestionEl.tabIndex = 1;
+  pollMultiEl.tabIndex   = -1;
+  pollPublicEl.tabIndex  = -1;
+  pollClearBtn.tabIndex  = -1;
+  pollQuickBtns.forEach(b => b.tabIndex = -1);
 
   // Wire Quick Question buttons (prepend "*" to ones that overwrite the question)
   pollQuickBtns.forEach(btn => {
