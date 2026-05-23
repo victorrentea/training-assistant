@@ -1757,7 +1757,7 @@
   function applyPollPreset(name) {
     const preset = POLL_PRESETS[name];
     if (!preset) return;
-    pollState.question = preset.question;
+    if (preset.question) pollState.question = preset.question;   // empty question → preserve existing
     pollState.options = [...preset.options, ''];   // trailing empty draft row
     pollState.multi = preset.multi;
     renderPoll();
@@ -1867,6 +1867,8 @@
     // Cancel any pending debounced update — we're about to stop.
     if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
     resetPollLocal();
+    pollQuestionEl.focus();
+    pollQuestionEl.select();
     try {
       await fetch(API('/poll/stop'), { method: 'POST' });
     } catch (e) {
@@ -1877,8 +1879,10 @@
   // Initial render
   renderPoll();
 
-  // Wire Quick Question buttons
+  // Wire Quick Question buttons (prepend "*" to ones that overwrite the question)
   pollQuickBtns.forEach(btn => {
+    const preset = POLL_PRESETS[btn.dataset.preset];
+    if (preset && preset.question) btn.textContent = '* ' + btn.textContent;
     btn.addEventListener('click', () => applyPollPreset(btn.dataset.preset));
   });
 
