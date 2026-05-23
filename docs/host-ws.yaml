@@ -96,24 +96,40 @@ components:
       x-feature: poll
       x-doc-notes:
         - Sent exclusively to the host channel (notify_host). Participants never receive this.
-        - "`counts[i]` is the number of votes for `poll.options[i]`."
+        - "`counts[i]` is the number of votes for `poll.options[i]` (participant_counts[i] + host_extras[i])."
+        - "`poll` is null when the host cleared the draft; `started` reflects whether a poll is currently live."
       payload:
         type: object
-        required: [type, poll, counts, voted_count]
+        required: [type]
         properties:
           type:
             type: string
             enum: [poll_host_update]
           poll:
-            $ref: '#/components/schemas/Poll'
+            oneOf:
+              - $ref: '#/components/schemas/Poll'
+              - type: 'null'
+          started:
+            type: boolean
+            description: True while a poll is live; false after Stop or Clear
           counts:
             type: array
             items:
               type: integer
-            description: Per-option vote counts (always present for host)
+            description: Per-option total vote counts (participant + host extras)
           voted_count:
             type: integer
             description: Total number of distinct participants who have voted
+          participant_counts:
+            type: array
+            items:
+              type: integer
+            description: Per-option vote counts from real participants only
+          host_extras:
+            type: array
+            items:
+              type: integer
+            description: Per-option host-added extras (e.g. for chat answers); total = participant + extras
 
     # ── Word Cloud ────────────────────────────────────────────────────────────
 

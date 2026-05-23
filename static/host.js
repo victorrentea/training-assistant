@@ -477,11 +477,15 @@
           pollState.options = [...msg.poll.options, ''];   // trailing empty draft
           pollState.multi = msg.poll.multi;
           pollState.public = msg.poll.public;
+        } else {
+          // Cleared on the server — reset this tab's composer too.
+          pollState.question = '';
+          pollState.options = [''];
+          pollState.multi = false;
+          pollState.public = true;
         }
         _hostPollCountsState = msg.counts || [];
-        // poll_host_update only fires while a poll exists on the server (started true on
-        // any push from _push_poll_state). Treat its arrival as "started".
-        _hostPollStarted = true;
+        _hostPollStarted = !!msg.started;
         renderPoll();
       } else if (msg.type === 'poll_opened') {
         // Bare signal — snapshot follows via poll_host_update.
@@ -1734,7 +1738,7 @@
     question: '',
     options: [''],
     multi: false,
-    public: false,
+    public: true,
   };
 
   // Live state — set by /api/{sid}/host/poll fetch + poll_host_update WS pushes.
@@ -1745,6 +1749,7 @@
   const pollMultiEl     = document.getElementById('poll-multi');
   const pollPublicEl    = document.getElementById('poll-public');
   const pollStartBtn    = document.getElementById('poll-start-btn');
+  const pollStopBtn     = document.getElementById('poll-stop-btn');
   const pollClearBtn    = document.getElementById('poll-clear-btn');
   const pollOptionsEl   = document.getElementById('poll-options-container');
   const pollQuickBtns   = document.querySelectorAll('.poll-quick-btn');
@@ -1759,12 +1764,6 @@
     card.className = 'poll-option-card' + (_hostPollStarted ? ' started' : '');
     card.dataset.optIdx = String(i);
 
-    const rowWrap = document.createElement('div');
-    rowWrap.className = 'poll-option-card-rowwrap';
-
-    const fill = document.createElement('div');
-    fill.className = 'poll-option-card-fill';
-
     const row = document.createElement('textarea');
     row.className = 'poll-option-row' + (val.trim() ? ' filled' : '');
     row.rows = 1;
@@ -1774,14 +1773,23 @@
     row.addEventListener('input', () => onPollOptionInput(i, row));
     row.addEventListener('keydown', _onPollKeyDown);
 
+    // Progress bar stacked below the textarea. The bar element is hidden via
+    // CSS unless the card has both .started and .has-votes; the count badge
+    // rides at the right edge of the colored fill.
+    const bar = document.createElement('div');
+    bar.className = 'poll-option-card-bar';
+
+    const fill = document.createElement('div');
+    fill.className = 'poll-option-card-fill';
+
     const count = document.createElement('span');
     count.className = 'poll-option-card-count';
     count.textContent = '';
 
-    rowWrap.appendChild(fill);
-    rowWrap.appendChild(row);
-    card.appendChild(rowWrap);
-    card.appendChild(count);
+    fill.appendChild(count);
+    bar.appendChild(fill);
+    card.appendChild(row);
+    card.appendChild(bar);
     return card;
   }
 
@@ -1828,7 +1836,7 @@
     const counts = _hostPollCountsState;
     if (!_hostPollStarted) {
       pollOptionsEl.querySelectorAll('.poll-option-card').forEach(c => {
-        c.classList.remove('started');
+        c.classList.remove('started', 'has-votes');
         c.querySelector('.poll-option-card-count').textContent = '';
         c.querySelector('.poll-option-card-fill').style.width = '0%';
       });
@@ -1842,8 +1850,10 @@
       card.classList.add('started');
       const isTrailingDraft = (i === draftIdx && val.trim() === '');
       const c = counts[i] ?? 0;
-      card.querySelector('.poll-option-card-count').textContent = isTrailingDraft ? '' : String(c);
-      const pct = (!isTrailingDraft && maxCount > 0) ? (c / maxCount) * 100 : 0;
+      const hasVotes = !isTrailingDraft && c > 0;
+      card.classList.toggle('has-votes', hasVotes);
+      card.querySelector('.poll-option-card-count').textContent = hasVotes ? String(c) : '';
+      const pct = (hasVotes && maxCount > 0) ? (c / maxCount) * 100 : 0;
       card.querySelector('.poll-option-card-fill').style.width = pct + '%';
     });
     reorderPollCards();
@@ -1916,6 +1926,7 @@
   function updatePollStartEnabled() {
     pollStartBtn.textContent = 'Start';
     pollQuickBtns.forEach(b => { b.disabled = _hostPollStarted; });
+    pollStopBtn.disabled = !_hostPollStarted;
     if (_hostPollStarted) {
       pollStartBtn.disabled = true;
       return;
@@ -2071,8 +2082,23 @@
     }
   });
 
+  pollStopBtn.addEventListener('click', async () => {
+    if (pollStopBtn.disabled) return;
+    // Cancel any pending debounced update — we're about to stop the live run.
+    if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
+    // Drop live state locally; question + options stay so the host can edit.
+    _hostPollStarted = false;
+    _hostPollCountsState = [];
+    renderPoll();
+    try {
+      await fetch(API('/poll/stop'), { method: 'POST' });
+    } catch (e) {
+      toast('Network error — daemon unreachable');
+    }
+  });
+
   pollClearBtn.addEventListener('click', async () => {
-    // Cancel any pending debounced update — we're about to stop.
+    // Cancel any pending debounced update — we're about to wipe.
     if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
     _hostPollStarted = false;
     _hostPollCountsState = [];
@@ -2080,7 +2106,7 @@
     pollQuestionEl.focus();
     pollQuestionEl.select();
     try {
-      await fetch(API('/poll/stop'), { method: 'POST' });
+      await fetch(API('/poll/clear'), { method: 'POST' });
     } catch (e) {
       toast('Network error — daemon unreachable');
     }
@@ -2094,6 +2120,7 @@
   pollMultiEl.tabIndex   = -1;
   pollPublicEl.tabIndex  = -1;
   pollClearBtn.tabIndex  = -1;
+  pollStopBtn.tabIndex   = -1;
   pollQuickBtns.forEach(b => b.tabIndex = -1);
 
   // Wire Quick Question buttons (prepend "*" to ones that overwrite the question)

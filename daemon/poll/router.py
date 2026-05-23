@@ -56,7 +56,8 @@ async def _push_poll_state() -> None:
     broadcast(PollUpdatedMsg(poll=snapshot, counts=counts_for_pax))
     await notify_host(
         PollHostUpdateMsg(
-            poll=snapshot, counts=counts, voted_count=voted,
+            poll=snapshot, started=poll_state.started,
+            counts=counts, voted_count=voted,
             participant_counts=pcounts, host_extras=extras,
         )
     )
@@ -141,13 +142,34 @@ async def start_poll():
 
 @host_router.post("/stop", status_code=204)
 async def stop_poll():
-    """Clear poll draft and votes; broadcast activity transition to none."""
+    """End the live poll but keep the draft so the host can edit and restart.
+
+    Clears votes and host extras; preserves question/options/multi/public.
+    Broadcasts activity transition to none and pushes the cleared host snapshot.
+    """
+    was_running = poll_state.started
+    poll_state.end_live()
+    if was_running and participant_state.current_activity == "poll":
+        participant_state.current_activity = "none"
+    broadcast(ActivityUpdatedMsg(current_activity="none"))
+    await notify_host(ActivityUpdatedMsg(current_activity="none"))
+    # Sync any other host tabs to "stopped but draft intact".
+    if poll_state.data is not None:
+        await _push_poll_state()
+    return Response(status_code=204)
+
+
+@host_router.post("/clear", status_code=204)
+async def clear_poll():
+    """Full reset: drop draft, votes, and host extras. Broadcasts activity off
+    and pushes an empty host snapshot so all host tabs sync."""
     was_running = poll_state.started
     poll_state.reset()
     if was_running and participant_state.current_activity == "poll":
         participant_state.current_activity = "none"
     broadcast(ActivityUpdatedMsg(current_activity="none"))
     await notify_host(ActivityUpdatedMsg(current_activity="none"))
+    await notify_host(PollHostUpdateMsg(poll=None, started=False))
     return Response(status_code=204)
 
 

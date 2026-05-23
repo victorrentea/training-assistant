@@ -350,3 +350,52 @@ class HostPage:
             expect(card).to_have_class(lambda c: "qa-answered" in c, timeout=4000)
         else:
             expect(card).not_to_have_class(lambda c: "qa-answered" in c, timeout=4000)
+
+    # ── Poll helpers ──
+
+    def open_poll_tab(self):
+        # Wait for host page JS to initialize (WS connected + state fetched)
+        # The #tab-quiz being visible indicates the host panel is fully ready
+        self._page.wait_for_selector("#tab-quiz", state="visible", timeout=15000)
+        self._page.click("#tab-poll")
+        # Wait for poll tab to become active
+        self._page.wait_for_function(
+            "() => document.getElementById('tab-poll') && document.getElementById('tab-poll').classList.contains('active')",
+            timeout=5000,
+        )
+        self._page.wait_for_timeout(200)
+
+    def fill_poll_question(self, text: str):
+        self._page.fill("#poll-question", text)
+
+    def add_poll_option(self, text: str):
+        """Fills the trailing empty draft row."""
+        rows = self._page.locator(".poll-option-row")
+        # The last row is always the empty draft
+        rows.last.fill(text)
+
+    def toggle_poll_multi(self):
+        self._page.click("#poll-multi")
+
+    def toggle_poll_public(self):
+        self._page.click("#poll-public")
+
+    def start_poll(self):
+        self._page.click("#poll-start-btn")
+
+    def stop_poll(self):
+        """End the live poll but keep the draft for editing."""
+        self._page.click("#poll-stop-btn")
+
+    def clear_poll(self):
+        self._page.click("#poll-clear-btn")
+
+    def poll_results_rows(self):
+        """Returns the host live-results rows in current DOM order."""
+        return self._page.locator(".poll-bar-row").all()
+
+    def poll_results_row_text(self, idx: int) -> str:
+        return self.poll_results_rows()[idx].locator(".label").inner_text()
+
+    def poll_results_row_count(self, idx: int) -> int:
+        return int(self.poll_results_rows()[idx].locator(".count").inner_text())

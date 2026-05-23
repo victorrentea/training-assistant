@@ -115,20 +115,61 @@ class TestPollStart:
 
 
 class TestPollStop:
-    def test_stop_clears_data_and_started(self, host_client, fresh_poll_state):
+    def test_stop_preserves_draft_clears_started_and_votes(self, host_client, fresh_poll_state):
         host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
         host_client.post("/api/test-session/host/poll/start")
+        fresh_poll_state.cast_vote("p1", [0])
         assert fresh_poll_state.data is not None
         assert fresh_poll_state.started is True
+        assert fresh_poll_state.votes
 
+        resp = host_client.post("/api/test-session/host/poll/stop")
+        assert resp.status_code == 204
+        # Draft preserved so host can edit and re-start without losing text.
+        assert fresh_poll_state.data is not None
+        assert fresh_poll_state.data.question == "How was lunch?"
+        assert fresh_poll_state.started is False
+        # Live state wiped (host_extras may be re-normalized to zeros by the
+        # post-stop snapshot push, so check the effective totals instead).
+        assert fresh_poll_state.votes == {}
+        assert all(x == 0 for x in fresh_poll_state.host_extras)
+        assert fresh_poll_state.vote_counts() == [0, 0]
+
+    def test_stop_is_idempotent(self, host_client, fresh_poll_state):
+        # No draft, no start — stop should still succeed.
         resp = host_client.post("/api/test-session/host/poll/stop")
         assert resp.status_code == 204
         assert fresh_poll_state.data is None
         assert fresh_poll_state.started is False
 
-    def test_stop_is_idempotent(self, host_client, fresh_poll_state):
-        # No draft, no start — stop should still succeed.
-        resp = host_client.post("/api/test-session/host/poll/stop")
+
+class TestPollClear:
+    def test_clear_wipes_data_and_started(self, host_client, fresh_poll_state):
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        host_client.post("/api/test-session/host/poll/start")
+        fresh_poll_state.cast_vote("p1", [0])
+        assert fresh_poll_state.data is not None
+        assert fresh_poll_state.started is True
+
+        resp = host_client.post("/api/test-session/host/poll/clear")
+        assert resp.status_code == 204
+        assert fresh_poll_state.data is None
+        assert fresh_poll_state.started is False
+        assert fresh_poll_state.votes == {}
+
+    def test_clear_after_stop_drops_draft(self, host_client, fresh_poll_state):
+        # Sequence: edit → start → stop (draft preserved) → clear (draft gone).
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        host_client.post("/api/test-session/host/poll/start")
+        host_client.post("/api/test-session/host/poll/stop")
+        assert fresh_poll_state.data is not None
+
+        resp = host_client.post("/api/test-session/host/poll/clear")
+        assert resp.status_code == 204
+        assert fresh_poll_state.data is None
+
+    def test_clear_is_idempotent(self, host_client, fresh_poll_state):
+        resp = host_client.post("/api/test-session/host/poll/clear")
         assert resp.status_code == 204
         assert fresh_poll_state.data is None
         assert fresh_poll_state.started is False

@@ -98,11 +98,15 @@ class PollUpdatedMsg(BaseModel):
 
 class PollHostUpdateMsg(BaseModel):
     """Host-only snapshot (sent via notify_host). Always carries full
-    counts regardless of public flag."""
+    counts regardless of public flag. `poll` is None when the draft was
+    cleared; `started` reflects whether the poll is currently live."""
     type: Literal["poll_host_update"] = "poll_host_update"
-    poll: dict[str, Any]
-    counts: list[int]
-    voted_count: int
+    poll: dict[str, Any] | None = None
+    started: bool = False
+    counts: list[int] = []
+    voted_count: int = 0
+    participant_counts: list[int] = []   # real-participant counts only (per option)
+    host_extras: list[int] = []          # host-added extras (per option); total = participant + extras
 
 
 class QuizEndCountdownStartedMsg(BaseModel):

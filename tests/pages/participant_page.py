@@ -259,3 +259,38 @@ class ParticipantPage:
         expect(
             self._page.locator(f'.qa-card-p[data-id="{question_id}"]')
         ).to_have_class(re.compile(r"qa-answered-p"), timeout=timeout)
+
+    # ── Poll helpers ──
+
+    def wait_for_poll(self, timeout: int = 5000):
+        self._page.wait_for_selector("#activity-poll-section", state="visible", timeout=timeout)
+
+    def cast_poll_vote(self, idx: int):
+        self._page.locator(".poll-option-btn").nth(idx).click()
+
+    def poll_question_text(self) -> str:
+        return self._page.inner_text("#poll-question-text")
+
+    def poll_status_text(self) -> str:
+        return self._page.inner_text("#poll-status-bar")
+
+    def poll_option_count(self, idx: int):
+        """Returns int when counts visible (public mode), None otherwise.
+
+        In public mode an option with zero votes renders no bar/badge by
+        design — detect public mode by checking whether any other option
+        has a count badge, and treat the missing badge as 0.
+        """
+        target = self._page.locator(".poll-option-btn").nth(idx).locator(".count")
+        if target.count() > 0:
+            return int(target.inner_text())
+        if self._page.locator(".poll-option-btn .count").count() > 0:
+            return 0
+        return None
+
+    def poll_option_is_selected(self, idx: int) -> bool:
+        cls = self._page.locator(".poll-option-btn").nth(idx).get_attribute("class") or ""
+        return "selected" in cls
+
+    def poll_options_count(self) -> int:
+        return self._page.locator(".poll-option-btn").count()

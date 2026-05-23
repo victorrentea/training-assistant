@@ -165,6 +165,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 
 ## Feature: Poll
 
+### Participant REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Cast Poll Vote, participant casts/changes their vote; empty list clears the vote.<br>`POST /api/participant/poll/vote` | `options: list[int]` | - |
+
 ### Participant WS
 | Message | Payload |
 | --- | --- |
@@ -174,8 +179,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
+| Get Poll, host snapshot fetch on tab activation; subsequent updates via WS.<br>`GET /api/{session_id}/host/poll` | - | `any` |
+| Clear Poll, full reset: drop draft, votes, and host extras; broadcasts activity off and pushes an empty host snapshot so all host tabs sync.<br>`POST /api/{session_id}/host/poll/clear` | - | - |
 | Start Poll, validate the draft, set started, broadcast open signals.<br>`POST /api/{session_id}/host/poll/start` | - | - |
-| Stop Poll, clear poll draft and votes; broadcast activity transition to none.<br>`POST /api/{session_id}/host/poll/stop` | - | - |
+| Stop Poll, end the live poll but keep the draft so the host can edit and restart; clears votes and host extras; preserves question/options/multi/public; broadcasts activity transition to none and pushes the cleared host snapshot.<br>`POST /api/{session_id}/host/poll/stop` | - | - |
 | Update Poll, host pushes latest draft; validates option deletion + multi flip while running, wipes votes on multi flip, broadcasts updates.<br>`PUT /api/{session_id}/host/poll/update` | `question: string`<br>`options: list[string]`<br>`multi: bool`<br>`public: bool` | - |
 
 ### Host WS

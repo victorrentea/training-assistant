@@ -357,7 +357,10 @@ body{visibility:hidden}
 .poll-options { display: flex; flex-direction: column; gap: 0.75rem; }
 .poll-option-btn {
   position: relative;
-  display: block; width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
   padding: 0.85rem 1.1rem;
   min-height: 48px;
   border-radius: 8px;
@@ -368,7 +371,6 @@ body{visibility:hidden}
   font-family: inherit;
   text-align: left;
   cursor: pointer;
-  overflow: hidden;
   transition: border-color 0.2s, transform 0.1s;
   white-space: normal;
   overflow-wrap: break-word;
@@ -379,35 +381,40 @@ body{visibility:hidden}
 }
 .poll-option-btn:hover:not(:disabled) { border-color: var(--color-primary, #4555ba); transform: translateX(3px); }
 .poll-option-btn:disabled { cursor: default; opacity: 0.7; }
-.poll-option-btn .fill {
-  position: absolute; top: 0; bottom: 0; left: 0;
-  background: rgba(69, 85, 186, 0.12);
-  transition: width 0.4s ease;
-}
 .poll-option-btn.selected { border-color: var(--color-primary, #4555ba); background: rgba(69, 85, 186, 0.09); }
-.poll-option-btn.selected .fill { background: rgba(69, 85, 186, 0.18); }
 .poll-option-btn .row {
-  position: relative;
   display: flex; align-items: center;
   gap: 0.5rem;
 }
-.poll-option-btn .count {
-  position: absolute;
-  top: 0.35rem; right: 0.45rem;
-  font-size: 0.7rem; font-weight: 700;
-  line-height: 1.2;
-  padding: 0.1rem 0.4rem;
-  border-radius: 0.55rem;
-  background: rgba(0, 0, 0, 0.12);
-  color: var(--color-on-surface, #2a3439);
-  pointer-events: none;
-  z-index: 2;
+/* Progress bar lives below the option text. Rendered only when the host
+   shares counts AND this option has at least one vote. */
+.poll-option-btn .bar {
+  height: 1.4rem;
+  border-radius: 5px;
+  overflow: visible;
 }
-@media (prefers-color-scheme: dark) {
-  .poll-option-btn .count {
-    background: rgba(255, 255, 255, 0.15);
-    color: var(--color-on-surface, #dce4e9);
-  }
+.poll-option-btn .fill {
+  position: relative;
+  height: 100%;
+  width: 0;
+  background: rgba(69, 85, 186, 0.55);
+  border-radius: 5px;
+  transition: width 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.poll-option-btn.selected .fill { background: rgba(69, 85, 186, 0.7); }
+.poll-option-btn .count {
+  background: #000;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  margin-right: 3px;
+  white-space: nowrap;
 }
 /* Selection marker — always present, fills only when selected. Works for
    both single-select (radio look) and multi-select (square look via
@@ -3133,19 +3140,22 @@ function _renderActivityPoll() {
       ? (_myPollVote instanceof Set && _myPollVote.has(idx))
       : (_myPollVote === idx);
     var selClass = isSel ? 'selected' : '';
-    var fillWidth = (counts && maxCount > 0) ? (counts[idx] / maxCount) * 100 : 0;
-    var countHtml = (counts !== null)
-      ? '<span class="count">' + counts[idx] + '</span>'
+    var c = counts ? (counts[idx] || 0) : 0;
+    var showBar = counts !== null && c > 0;
+    var fillWidth = (showBar && maxCount > 0) ? (c / maxCount) * 100 : 0;
+    var barHtml = showBar
+      ? '<div class="bar"><div class="fill" style="width:' + fillWidth + '%">' +
+          '<span class="count">' + c + '</span>' +
+        '</div></div>'
       : '';
     var mark = '<span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true">' +
                  (isSel ? '✓' : '') +
                '</span>';
     return '<button class="poll-option-btn ' + selClass + '" onclick="castPollVote(' + idx + ')">' +
-             '<div class="fill" style="width:' + fillWidth + '%"></div>' +
-             countHtml +
              '<div class="row">' +
                '<span>' + mark + _escHtmlWithCode(text) + '</span>' +
              '</div>' +
+             barHtml +
            '</button>';
   }).join('');
 

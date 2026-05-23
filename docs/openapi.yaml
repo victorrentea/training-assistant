@@ -461,6 +461,20 @@ paths:
         '204':
           description: Successful Response
       x-feature: quiz
+  /api/{session_id}/host/poll:
+    get:
+      tags:
+      - poll
+      summary: Get Poll
+      description: Host snapshot fetch on tab activation. Subsequent updates via WS.
+      operationId: get_poll_api__session_id__host_poll_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+      x-feature: poll
   /api/{session_id}/host/poll/update:
     put:
       tags:
@@ -496,8 +510,45 @@ paths:
       tags:
       - poll
       summary: Stop Poll
-      description: Clear poll draft and votes; broadcast activity transition to none.
+      description: 'End the live poll but keep the draft so the host can edit and
+        restart.
+
+
+        Clears votes and host extras; preserves question/options/multi/public.
+
+        Broadcasts activity transition to none and pushes the cleared host snapshot.'
       operationId: stop_poll_api__session_id__host_poll_stop_post
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: poll
+  /api/{session_id}/host/poll/clear:
+    post:
+      tags:
+      - poll
+      summary: Clear Poll
+      description: 'Full reset: drop draft, votes, and host extras. Broadcasts activity
+        off
+
+        and pushes an empty host snapshot so all host tabs sync.'
+      operationId: clear_poll_api__session_id__host_poll_clear_post
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: poll
+  /api/participant/poll/vote:
+    post:
+      tags:
+      - poll
+      summary: Cast Poll Vote
+      description: Participant casts/changes their vote. Empty list clears the vote.
+      operationId: cast_poll_vote_api_participant_poll_vote_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollVoteRequest'
+        required: true
       responses:
         '204':
           description: Successful Response
@@ -2515,6 +2566,17 @@ components:
       - public
       title: PollData
       description: Host-composed poll draft, also the live poll while running.
+    PollVoteRequest:
+      properties:
+        options:
+          items:
+            type: integer
+          type: array
+          title: Options
+      type: object
+      required:
+      - options
+      title: PollVoteRequest
     PptxUpdateDetectedRequest:
       properties:
         slug:
