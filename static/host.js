@@ -2268,7 +2268,7 @@
     _resetInactivityTimer();
     const centerQrPanel = document.getElementById('center-qr');
     if (centerQrPanel) centerQrPanel.classList.toggle('link-only', currentActivity === 'none');
-    ['qr', 'quiz', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
+    ['qr', 'quiz', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {
         el.style.display = currentActivity === 'none' ? 'flex' : 'none';
@@ -2283,7 +2283,8 @@
         const divider = el.querySelector('.or-divider span');
         if (divider) divider.textContent = currentActivity === 'quiz' ? 'generate next' : 'generate question';
       } else {
-        const showVal = id === 'codereview' ? 'flex' : '';
+        const flexPanels = new Set(['codereview', 'poll']);
+        const showVal = flexPanels.has(id) ? 'flex' : '';
         el.style.display = currentActivity === id ? showVal : 'none';
       }
     });
