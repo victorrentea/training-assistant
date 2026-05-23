@@ -1844,8 +1844,8 @@
   }
 
   function reorderPollCards() {
-    // Don't reorder while host is editing — would jump the cursor.
-    if (pollOptionsEl.contains(document.activeElement)) return;
+    // appendChild on a focused textarea moves the DOM node intact — cursor
+    // and selection are preserved across the move, so reorder is always safe.
     const draftIdx = pollState.options.length - 1;
     const realIdxs = [];
     for (let i = 0; i < pollState.options.length; i++) {
