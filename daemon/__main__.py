@@ -137,6 +137,7 @@ def _build_runtime_session_snapshot(
     from daemon.debate.state import debate_state
     from daemon.misc.state import misc_state
     from daemon.participant.state import participant_state
+    from daemon.poll.state import poll_state
     from daemon.qa.state import qa_state
     from daemon.quiz.state import quiz_state
     from daemon.wordcloud.state import wordcloud_state
@@ -202,6 +203,12 @@ def _build_runtime_session_snapshot(
             "votes": dict(quiz_state.votes),
             "awarded_points": dict(quiz_state.awarded_points),
         },
+        "poll": ({
+            "data": poll_state.data.model_dump() if poll_state.data else None,
+            "started": poll_state.started,
+            "opened_at": poll_state.opened_at,
+            "votes": dict(poll_state.votes),
+        } if poll_state.data is not None or poll_state.votes else None),
         "qa_questions": qa_payload,
         "wordcloud": {
             "words": dict(wordcloud_state.words),
@@ -270,6 +277,16 @@ def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
     debate_state.sync_from_restore(snapshot)
     if "gdrive_url" in snapshot:
         session_shared_state.set_gdrive_url(snapshot["gdrive_url"])
+
+    from daemon.poll.state import PollData, poll_state
+    poll_data = snapshot.get("poll")
+    if poll_data:
+        if poll_data.get("data"):
+            poll_state.data = PollData.model_validate(poll_data["data"])
+        poll_state.started = bool(poll_data.get("started", False))
+        poll_state.opened_at = poll_data.get("opened_at")
+        poll_state.votes = dict(poll_data.get("votes") or {})
+        poll_state.invalidate_counts()
 
 
 def _schedule_backfill_location_metadata() -> None:
