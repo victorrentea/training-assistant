@@ -40,6 +40,32 @@ from scripts.resolve_gdrive_link import (
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
+# How long to wait for DriveFS to sync a freshly-created session folder
+# back to Google Drive so we can resolve its URL. Module-level so tests can patch.
+_GDRIVE_WAIT_TIMEOUT_S = 15.0
+_GDRIVE_POLL_INTERVAL_S = 0.5
+
+
+async def _wait_for_gdrive_url(folder_path: str) -> str | None:
+    """Poll DriveFS for the gdrive URL of folder_path up to _GDRIVE_WAIT_TIMEOUT_S.
+
+    Runs the sqlite lookup in a thread so the event loop is not blocked.
+    Returns the URL as soon as it is available, or None on timeout.
+    """
+    loop = asyncio.get_event_loop()
+    deadline = loop.time() + _GDRIVE_WAIT_TIMEOUT_S
+    while True:
+        try:
+            url = await asyncio.to_thread(_resolve_gdrive_url_fn, folder_path)
+        except Exception as e:
+            daemon_log.error("session", f"GDrive URL resolve error: {e}")
+            url = None
+        if url:
+            return url
+        if loop.time() >= deadline:
+            return None
+        await asyncio.sleep(_GDRIVE_POLL_INTERVAL_S)
+
 
 def _slugify(value: str) -> str:
     return _SLUG_RE.sub("-", value.strip().lower()).strip("-") or "slide"
@@ -153,27 +179,44 @@ class GDriveUnavailableResponse(BaseModel):
 
 @global_router.post("/create", response_model=SessionStartResponse, responses={503: {"model": GDriveUnavailableResponse}})
 async def start_session(body: StartSessionRequest):
-    """Host starts a new session (creates folder, assigns session_id, clean slate)."""
+    """Host starts a new session (creates folder, assigns session_id, clean slate).
+
+    For fresh sessions the local folder is created immediately so DriveFS can
+    sync it up to Google Drive; we then poll DriveFS for the resulting URL up
+    to 15s before returning. The host UI only navigates into the session once
+    we respond, so this guarantees a usable gdrive_url is in place.
+    """
     name = normalize_session_name(body.name)
     root = _get_sessions_root()
     folder = root / name if root else None
 
     gdrive_url: str | None = None
-    if folder is not None:
+    existed = True  # default for stub_mode / no-folder paths
+    stub_mode = os.environ.get("DAEMON_ADAPTER") == "stub"
+    if folder is not None and not stub_mode:
+        existed = folder.exists()
         try:
-            gdrive_url = _resolve_gdrive_url_fn(str(folder))
+            folder.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            daemon_log.error("session", f"GDrive URL resolve error: {e}")
-            gdrive_url = None
+            daemon_log.error("session", f"Failed to create session folder {folder}: {e}")
+            return JSONResponse(
+                status_code=503,
+                content=GDriveUnavailableResponse(
+                    error="gdrive_unavailable",
+                    message="Please start Google Drive",
+                ).model_dump(),
+            )
 
-    if gdrive_url is None:
-        return JSONResponse(
-            status_code=503,
-            content=GDriveUnavailableResponse(
-                error="gdrive_unavailable",
-                message="Please start Google Drive",
-            ).model_dump(),
-        )
+        gdrive_url = await _wait_for_gdrive_url(str(folder))
+
+        if gdrive_url is None:
+            return JSONResponse(
+                status_code=503,
+                content=GDriveUnavailableResponse(
+                    error="gdrive_unavailable",
+                    message="Please start Google Drive",
+                ).model_dump(),
+            )
 
     session_id = _generate_session_id()
 
@@ -183,6 +226,7 @@ async def start_session(body: StartSessionRequest):
         "type": body.type,
         "session_id": session_id,
         "gdrive_url": gdrive_url,
+        "existed": existed,
     })
     # Pre-register session_id with Railway immediately so host WS validates on first connect
     # (avoids race condition where host navigates before session_pending queue is processed)
@@ -212,6 +256,7 @@ async def resume_session(body: ResumeSessionRequest):
         "name": folder_name,
         "type": session_type,
         "session_id": session_id,
+        "existed": True,
     })
     announce_session_id(session_id, session_type=session_type)
     return SessionStartResponse(session_name=folder_name, session_id=session_id)

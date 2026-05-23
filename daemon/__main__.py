@@ -1093,7 +1093,13 @@ def run() -> None:
                             set_current_session_id(sid)
                             _active_session_id = sid
                         folder = sessions_root / name
-                        existed = folder.exists()
+                        # Endpoint may have already pre-created the folder (so DriveFS
+                        # can sync it before returning). It tells us whether the folder
+                        # existed before that, so we can still distinguish fresh from resume.
+                        if "existed" in session_req:
+                            existed = bool(session_req["existed"])
+                        else:
+                            existed = folder.exists()
                         folder.mkdir(parents=True, exist_ok=True)
                         if sid:
                             save_session_meta(folder, {"session_id": sid, "session_type": session_type})
