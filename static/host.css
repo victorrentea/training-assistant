@@ -2117,7 +2117,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: 1.425rem;
   font-family: inherit;
   resize: none;
   overflow: hidden;
@@ -2205,7 +2205,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   border: 1px solid var(--border);
   background: var(--surface2);
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: 1.425rem;
   font-family: inherit;
   resize: none;
   overflow: hidden;
@@ -2215,19 +2215,14 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   position: relative;
   z-index: 1;
 }
-.poll-option-card.started .poll-option-row {
-  background: transparent;
-  border-color: transparent;
-  border-radius: 8px 0 0 8px;
-  padding-right: 1rem;
+/* Started state: keep the exact input look-and-feel from pre-start.
+   Fill bar is hidden (would conflict with the opaque input); count
+   on the right + leading green border are the popularity signals. */
+.poll-option-card.leading .poll-option-row {
+  border-color: var(--accent2);
 }
-.poll-option-card.started .poll-option-row:focus {
-  border-color: transparent;
-}
-/* When any descendant is focused, draw the indicator on the whole card so
-   the highlight spans across the count badge too. */
-.poll-option-card.started:focus-within {
-  box-shadow: inset 0 0 0 1.5px var(--accent);
+.poll-option-card.started .poll-option-card-fill {
+  display: none;
 }
 .poll-option-row.filled { border-color: var(--success); }
 .poll-option-row:focus { outline: none; border-color: var(--accent); }

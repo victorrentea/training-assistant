@@ -2316,13 +2316,15 @@ function _advanceOnboardingToStep2() {
     if (tooltip1) tooltip1.classList.add('hidden');
     document.body.classList.remove('onboarding-active');
     document.body.classList.add('onboarding-phase2');
+    // The "Remember to set a name" tooltip is only useful for activities
+    // where names matter (i.e. scored activities like quiz). Skip it for
+    // poll (anonymous) and any other non-quiz activity.
     var tooltip2 = document.getElementById('onboarding-tooltip-2');
-    if (tooltip2) {
+    if (tooltip2 && _currentActivity === 'quiz') {
       _positionTooltipNearProfileCard();
       tooltip2.classList.remove('hidden');
       requestAnimationFrame(function () { tooltip2.classList.add('visible'); });
     }
-    // Show access duration toast after unblocking
     _showAccessToast();
   }, 300);
 }
@@ -3145,10 +3147,7 @@ function _renderActivityPoll() {
 
   var statusBar = document.getElementById('poll-status-bar');
   if (multi) {
-    var n = (_myPollVote instanceof Set) ? _myPollVote.size : 0;
-    statusBar.textContent = (n === 0)
-      ? 'Pick as many as you want'
-      : 'Pick as many as you want · ' + n + ' selected';
+    statusBar.textContent = 'Pick as many as you want';
     statusBar.style.display = '';
   } else {
     statusBar.style.display = 'none';
