@@ -1845,8 +1845,6 @@
   }
 
   function reorderPollCards() {
-    // appendChild on a focused textarea moves the DOM node intact — cursor
-    // and selection are preserved across the move, so reorder is always safe.
     const draftIdx = pollState.options.length - 1;
     const realIdxs = [];
     for (let i = 0; i < pollState.options.length; i++) {
@@ -1854,23 +1852,39 @@
       realIdxs.push(i);
     }
     realIdxs.sort((a, b) => ((_hostPollCountsState[b] ?? 0) - (_hostPollCountsState[a] ?? 0)) || (a - b));
+    const desiredOrder = realIdxs.slice();
+    if (pollState.options[draftIdx] === '') desiredOrder.push(draftIdx);
 
-    const cards = Array.from(pollOptionsEl.children);
+    const current = Array.from(pollOptionsEl.children);
+    const currentOrder = current.map(c => Number(c.dataset.optIdx));
+    const sameOrder = currentOrder.length === desiredOrder.length &&
+      currentOrder.every((idx, i) => idx === desiredOrder[i]);
+    // Bail when nothing moved. appendChild on a card whose textarea is
+    // focused causes Chrome to drop focus (textarea is nested two levels
+    // deep), so we must avoid no-op moves.
+    if (sameOrder) return;
+
+    // Save focus + caret so we can restore after reorder.
+    const focusEl = document.activeElement;
+    const wasInRow = focusEl && focusEl.classList && focusEl.classList.contains('poll-option-row');
+    const savedSelStart = wasInRow ? focusEl.selectionStart : null;
+    const savedSelEnd = wasInRow ? focusEl.selectionEnd : null;
+
     const first = new Map();
-    cards.forEach(c => first.set(c, c.getBoundingClientRect()));
+    current.forEach(c => first.set(c, c.getBoundingClientRect()));
 
-    // Re-append in sorted order; trailing empty draft (if any) goes last.
-    realIdxs.forEach(idx => {
+    desiredOrder.forEach(idx => {
       const card = pollOptionsEl.querySelector(`[data-opt-idx="${idx}"]`);
       if (card) pollOptionsEl.appendChild(card);
     });
-    if (pollState.options[draftIdx] === '') {
-      const draft = pollOptionsEl.querySelector(`[data-opt-idx="${draftIdx}"]`);
-      if (draft) pollOptionsEl.appendChild(draft);
+
+    if (wasInRow && document.activeElement !== focusEl) {
+      focusEl.focus();
+      if (savedSelStart !== null) focusEl.setSelectionRange(savedSelStart, savedSelEnd);
     }
 
     // FLIP
-    cards.forEach(c => {
+    current.forEach(c => {
       const last = c.getBoundingClientRect();
       const f = first.get(c);
       const dy = f.top - last.top;
@@ -1880,7 +1894,7 @@
       }
     });
     requestAnimationFrame(() => {
-      cards.forEach(c => { c.style.transition = ''; c.style.transform = ''; });
+      current.forEach(c => { c.style.transition = ''; c.style.transform = ''; });
     });
   }
 
