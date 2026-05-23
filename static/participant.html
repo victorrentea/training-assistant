@@ -3154,13 +3154,11 @@ function _renderActivityPoll() {
 
   document.getElementById('poll-options').innerHTML = optsHtml;
 
+  // Always show the status bar so the layout stays stable when the host
+  // flips multi on/off — only the text changes.
   var statusBar = document.getElementById('poll-status-bar');
-  if (multi) {
-    statusBar.textContent = 'Pick as many as you want';
-    statusBar.style.display = '';
-  } else {
-    statusBar.style.display = 'none';
-  }
+  statusBar.textContent = multi ? 'Pick as many as you want' : 'Pick one';
+  statusBar.style.display = '';
 }
 
 async function castPollVote(idx) {
