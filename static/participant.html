@@ -332,70 +332,91 @@ body{visibility:hidden}
 }
 /* ── Poll card styles ── */
 .poll-card {
-  background: var(--surface2, #1a1d21);
-  border: 1px solid var(--border, #2a2d33);
-  border-radius: 12px;
-  padding: 1.25rem;
-  max-width: 560px;
+  background: var(--color-surface-container-low, #f0f4f7);
+  border: 1px solid var(--color-outline-variant, #a9b4b9);
+  border-radius: 1rem;
+  padding: 1.8rem;
+  max-width: 41.6rem;
   margin: 0 auto;
   width: 100%;
 }
-.poll-card h2 {
-  margin: 0 0 1rem;
-  font-size: 1.4rem;
-  line-height: 1.3;
-  color: var(--text, #e6e7ea);
+@media (prefers-color-scheme: dark) {
+  .poll-card { background: var(--color-surface-container-low, #16171e); }
 }
-.poll-options { display: flex; flex-direction: column; gap: 0.5rem; }
+.poll-card h2 {
+  margin: 0 0 1.5rem;
+  font-size: 1.15rem;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--color-on-surface, #2a3439);
+}
+@media (prefers-color-scheme: dark) {
+  .poll-card h2 { color: var(--color-on-surface, #dce4e9); }
+}
+.poll-options { display: flex; flex-direction: column; gap: 0.75rem; }
 .poll-option-btn {
   position: relative;
   display: block; width: 100%;
-  padding: 0.85rem 1rem;
+  padding: 0.85rem 1.1rem;
+  min-height: 48px;
   border-radius: 8px;
-  border: 1px solid var(--border, #2a2d33);
-  background: var(--surface3, #23262d);
-  color: var(--text, #e6e7ea);
-  font-size: 1.05rem;
+  border: 1.5px solid var(--color-outline-variant, #a9b4b9);
+  background: var(--color-surface, #f7f9fb);
+  color: var(--color-on-surface, #2a3439);
+  font-size: 0.95rem;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
   overflow: hidden;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.2s, transform 0.1s;
 }
-.poll-option-btn:hover { background: rgba(255,255,255,0.05); }
-.poll-option-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+@media (prefers-color-scheme: dark) {
+  .poll-option-btn { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); }
+}
+.poll-option-btn:hover:not(:disabled) { border-color: var(--color-primary, #4555ba); transform: translateX(3px); }
+.poll-option-btn:disabled { cursor: default; opacity: 0.7; }
 .poll-option-btn .fill {
   position: absolute; top: 0; bottom: 0; left: 0;
-  background: rgba(108, 99, 255, 0.22);
+  background: rgba(69, 85, 186, 0.12);
   transition: width 0.4s ease;
 }
-.poll-option-btn.selected { border-color: var(--accent, #6c63ff); background: rgba(108, 99, 255, 0.12); }
-.poll-option-btn.selected .fill { background: rgba(108, 99, 255, 0.35); }
+.poll-option-btn.selected { border-color: var(--color-primary, #4555ba); background: rgba(69, 85, 186, 0.09); }
+.poll-option-btn.selected .fill { background: rgba(69, 85, 186, 0.18); }
 .poll-option-btn .row {
   position: relative;
   display: flex; justify-content: space-between; align-items: center;
+  gap: 0.5rem;
 }
-.poll-option-btn .count { font-weight: 700; min-width: 2rem; text-align: right; }
-.poll-multi-check {
-  appearance: none;
-  width: 1.1rem; height: 1.1rem;
-  border: 2px solid var(--border, #2a2d33);
-  border-radius: 3px;
-  margin-right: 0.5rem;
+.poll-option-btn .count {
+  font-weight: 700; min-width: 2rem; text-align: right;
+  color: var(--color-primary, #4555ba);
+}
+/* Selection marker — always present, fills only when selected. Works for
+   both single-select (radio look) and multi-select (square look via
+   .multi modifier on the marker). */
+.poll-option-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.2rem; height: 1.2rem;
+  border: 2px solid var(--color-outline-variant, #a9b4b9);
+  border-radius: 50%;
+  margin-right: 0.65rem;
   vertical-align: middle;
-  display: inline-block;
   flex-shrink: 0;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s;
+  color: #fff; font-size: 0.85rem; line-height: 1; font-weight: 900;
 }
-.poll-option-btn.selected .poll-multi-check {
-  background: var(--accent, #6c63ff);
-  border-color: var(--accent, #6c63ff);
+.poll-option-mark.multi { border-radius: 3px; }
+.poll-option-btn.selected .poll-option-mark {
+  background: var(--color-primary, #4555ba);
+  border-color: var(--color-primary, #4555ba);
 }
 .poll-status-bar {
-  margin-top: 0.85rem;
+  margin-top: 1rem;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
-  background: rgba(255,255,255,0.04);
-  color: var(--muted, #8a8f99);
+  background: rgba(127, 127, 127, 0.08);
+  color: var(--color-on-surface-variant, #566166);
   font-size: 0.9rem;
   text-align: center;
 }
@@ -3071,13 +3092,13 @@ function _renderActivityPoll() {
     var countHtml = (counts !== null)
       ? '<span class="count">' + counts[idx] + '</span>'
       : '';
-    var checkbox = multi
-      ? '<input type="checkbox" class="poll-multi-check" ' + (isSel ? 'checked' : '') + ' tabindex="-1" aria-hidden="true">'
-      : '';
+    var mark = '<span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true">' +
+                 (isSel ? '✓' : '') +
+               '</span>';
     return '<button class="poll-option-btn ' + selClass + '" onclick="castPollVote(' + idx + ')">' +
              '<div class="fill" style="width:' + fillWidth + '%"></div>' +
              '<div class="row">' +
-               '<span>' + checkbox + _escHtmlWithCode(text) + '</span>' +
+               '<span>' + mark + _escHtmlWithCode(text) + '</span>' +
                countHtml +
              '</div>' +
            '</button>';
