@@ -2204,6 +2204,15 @@ var _activeTimer = null;   // {seconds, startedAt (ms)} or null
 var _timerInterval = null;
 var _quizWsSeq = 0;        // incremented on each WS quiz_opened/quiz_ended; used to detect race with initial state fetch
 
+// ── Poll state ──
+var _pollActive = false;
+var _currentPoll = null;          // {question, options, multi, public}
+var _myPollVote = null;           // single: int idx | null;  multi: Set<int>
+var _pollVoteCounts = null;       // list[int] when public, null otherwise
+
+// ── Activity tracking ──
+var _currentActivity = 'none';
+
 function _shouldShowOnboarding() {
   if (_isHostTab) return false;
   return !localStorage.getItem(LS_ONBOARDING_KEY);
@@ -2820,6 +2829,10 @@ function _applyState(msg) {
   if (msg.quiz !== undefined || msg.quiz_active !== undefined) {
     _applyQuizState(msg);
   }
+  // Sync poll state
+  if (msg.poll !== undefined || msg.poll_active !== undefined) {
+    _applyPollState(msg);
+  }
 }
 
 // ── Quiz helpers ──
@@ -2871,6 +2884,37 @@ function _applyQuizState(msg) {
   }
 
   _renderActivityQuiz();
+}
+
+function _resetActivityState(activity) {
+  if (activity === 'poll') {
+    _currentPoll = null;
+    _pollActive = false;
+    _myPollVote = null;
+    _pollVoteCounts = null;
+  }
+  // Safe no-op on unknown activity names.
+}
+
+function _applyPollState(msg) {
+  if (msg.poll !== undefined) _currentPoll = msg.poll;
+  if (msg.poll_active !== undefined) _pollActive = !!msg.poll_active;
+
+  if (msg.my_poll_voted_indices !== undefined) {
+    if (msg.my_poll_voted_indices === null) {
+      _myPollVote = (_currentPoll && _currentPoll.multi) ? new Set() : null;
+    } else if (_currentPoll && _currentPoll.multi) {
+      _myPollVote = new Set(msg.my_poll_voted_indices);
+    } else {
+      _myPollVote = msg.my_poll_voted_indices.length > 0
+        ? msg.my_poll_voted_indices[0]
+        : null;
+    }
+  }
+
+  if (msg.poll_vote_counts !== undefined) _pollVoteCounts = msg.poll_vote_counts;
+
+  _renderActivityPoll();
 }
 
 function _renderActivityQuiz() {
@@ -2994,6 +3038,85 @@ function _startParticipantCountdown() {
     }
     _renderCountdown(el, remaining, _activeTimer.seconds);
   }, 200);
+}
+
+function _renderActivityPoll() {
+  var section = document.getElementById('activity-poll-section');
+  if (!section) return;
+  if (!_currentPoll || !_pollActive) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+
+  document.getElementById('poll-question-text').textContent = _currentPoll.question || '';
+
+  var multi = !!_currentPoll.multi;
+  var counts = _pollVoteCounts;
+  var maxCount = counts ? Math.max.apply(null, counts.concat([0])) : 0;
+
+  var optsHtml = _currentPoll.options.map(function(text, idx) {
+    var isSel = multi
+      ? (_myPollVote instanceof Set && _myPollVote.has(idx))
+      : (_myPollVote === idx);
+    var selClass = isSel ? 'selected' : '';
+    var fillWidth = (counts && maxCount > 0) ? (counts[idx] / maxCount) * 100 : 0;
+    var countHtml = (counts !== null)
+      ? '<span class="count">' + counts[idx] + '</span>'
+      : '';
+    var checkbox = multi
+      ? '<input type="checkbox" class="poll-multi-check" ' + (isSel ? 'checked' : '') + ' tabindex="-1" aria-hidden="true">'
+      : '';
+    return '<button class="poll-option-btn ' + selClass + '" onclick="castPollVote(' + idx + ')">' +
+             '<div class="fill" style="width:' + fillWidth + '%"></div>' +
+             '<div class="row">' +
+               '<span>' + checkbox + _escHtmlWithCode(text) + '</span>' +
+               countHtml +
+             '</div>' +
+           '</button>';
+  }).join('');
+
+  document.getElementById('poll-options').innerHTML = optsHtml;
+
+  var statusText;
+  if (multi) {
+    var n = (_myPollVote instanceof Set) ? _myPollVote.size : 0;
+    statusText = (n === 0)
+      ? 'Select as many as you want'
+      : 'Select as many as you want · ' + n + ' selected';
+  } else {
+    statusText = (_myPollVote === null)
+      ? 'Single option'
+      : 'Single option · tap another to change';
+  }
+  document.getElementById('poll-status-bar').textContent = statusText;
+}
+
+async function castPollVote(idx) {
+  if (!_pollActive || !_currentPoll || !_sessionId) return;
+
+  if (_currentPoll.multi) {
+    if (!(_myPollVote instanceof Set)) _myPollVote = new Set();
+    if (_myPollVote.has(idx)) _myPollVote.delete(idx);
+    else _myPollVote.add(idx);
+  } else {
+    if (_myPollVote === idx) return;
+    _myPollVote = idx;
+  }
+
+  _renderActivityPoll();
+
+  var options = _currentPoll.multi
+    ? Array.from(_myPollVote)
+    : (_myPollVote !== null ? [_myPollVote] : []);
+
+  try {
+    await fetch('/' + _sessionId + '/api/participant/poll/vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+      body: JSON.stringify({ options: options }),
+    });
+  } catch (e) { /* silent — next WS push reconciles */ }
 }
 
 function castVote(optionIdx) {
@@ -3193,6 +3316,31 @@ function _handleWsMessage(msg) {
     case 'leaderboard_revealed':
       _showPaxLb(msg);
       break;
+    case 'poll_opened':
+      _pollActive = true;
+      _myPollVote = (_currentPoll && _currentPoll.multi) ? new Set() : null;
+      _renderActivityPoll();
+      break;
+    case 'poll_updated':
+      _currentPoll = msg.poll;
+      _pollVoteCounts = (msg.counts !== undefined && msg.counts !== null) ? msg.counts : null;
+      // Reconcile vote-shape if multi flipped
+      if (_currentPoll && _currentPoll.multi && !(_myPollVote instanceof Set)) {
+        _myPollVote = (_myPollVote !== null) ? new Set([_myPollVote]) : new Set();
+      } else if (_currentPoll && !_currentPoll.multi && _myPollVote instanceof Set) {
+        _myPollVote = null;
+      }
+      _renderActivityPoll();
+      break;
+    case 'activity_updated': {
+      var newAct = msg.current_activity;
+      if (_currentActivity !== newAct) {
+        _resetActivityState(_currentActivity);
+      }
+      _currentActivity = newAct;
+      _renderActivityPoll();
+      break;
+    }
   }
 }
 
