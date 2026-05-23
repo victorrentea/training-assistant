@@ -7,6 +7,9 @@
   let quizActive = false;
   let voteCounts = [];
   let totalVotes = 0;
+  let _hostPoll = null;          // {question, options, multi, public}
+  let _hostPollCounts = null;    // list[int]
+  let _hostPollVoted = 0;
   let totalParticipants = 0;
   let activeParticipants = 0;
   let participantDataById = {};     // uuid -> participant payload
@@ -386,6 +389,7 @@
         // Only refresh quiz state when the host is (or is being switched to)
         // the quiz tab — avoids two GET /quiz on every state snapshot.
         if (msg.current_activity === 'quiz') fetchQuizState();
+        if (msg.current_activity === 'poll') fetchPollState();
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
         ingestParticipants(msg.participants || []);
         totalParticipants = (msg.participants || []).length;
@@ -466,6 +470,15 @@
       } else if (msg.type === 'vote_update') {
         totalVotes = msg.voted_count || 0;
         renderBars();
+      } else if (msg.type === 'poll_host_update') {
+        _hostPoll = msg.poll;
+        _hostPollCounts = msg.counts || [];
+        _hostPollVoted = msg.voted_count || 0;
+        renderPollResults();
+      } else if (msg.type === 'poll_opened') {
+        // Trigger initial fetch — snapshot follows immediately via poll_host_update,
+        // but this also handles the case where we missed the open and connect mid-flight.
+        fetchPollState();
       } else if (msg.type === 'participant_list_updated') {
         ingestParticipants(msg.participants || []);
         totalParticipants = (msg.participants || []).length;
@@ -1946,6 +1959,18 @@
     await fetch(API('/quiz'), { method: 'DELETE' });
   }
 
+  async function fetchPollState() {
+    try {
+      const resp = await fetch(API('/poll'));
+      if (!resp.ok) return;
+      const data = await resp.json();
+      _hostPoll = data.poll;
+      _hostPollCounts = data.counts || [];
+      _hostPollVoted = data.voted_count || 0;
+      renderPollResults();
+    } catch (e) { /* silent */ }
+  }
+
   async function fetchQuizState() {
     const resp = await fetch(API('/quiz'));
     if (!resp.ok) return;
@@ -1971,6 +1996,91 @@
     totalVotes = allVotes.length;
     renderQuizDisplay();
     renderQuizQueuePanel(data.queue);
+  }
+
+  // ── Poll render helpers ──
+  function sortIndices(counts) {
+    const idxs = counts.map((_, i) => i);
+    idxs.sort((a, b) => (counts[b] - counts[a]) || (a - b));
+    return idxs;
+  }
+
+  function reorderBars(container, sortedIndices) {
+    const rows = Array.from(container.children);
+    const first = new Map();
+    rows.forEach(row => first.set(row, row.getBoundingClientRect()));
+
+    // Reorder DOM
+    sortedIndices.forEach(idx => {
+      const row = container.querySelector(`[data-opt-idx="${idx}"]`);
+      if (row) container.appendChild(row);
+    });
+
+    // Invert
+    rows.forEach(row => {
+      const last = row.getBoundingClientRect();
+      const firstRect = first.get(row);
+      const dy = firstRect.top - last.top;
+      if (dy !== 0) {
+        row.style.transition = 'none';
+        row.style.transform = `translateY(${dy}px)`;
+      }
+    });
+
+    // Play
+    requestAnimationFrame(() => {
+      rows.forEach(row => {
+        row.style.transition = '';
+        row.style.transform = '';
+      });
+    });
+  }
+
+  function renderPollResults() {
+    const container = document.getElementById('poll-results-bars');
+    if (!container || !_hostPoll) return;
+
+    // Header text
+    document.getElementById('poll-results-question').textContent = _hostPoll.question || '—';
+    document.getElementById('poll-results-voted').textContent = `${_hostPollVoted} voted`;
+    document.getElementById('poll-results-mode').textContent = _hostPoll.multi ? 'multi-select' : 'single-select';
+    document.getElementById('poll-results-visibility').textContent = _hostPoll.public ? 'public' : 'private';
+
+    const counts = _hostPollCounts.length === _hostPoll.options.length
+      ? _hostPollCounts
+      : _hostPoll.options.map(() => 0);
+    const maxCount = Math.max.apply(null, counts.concat([0]));
+
+    // Rebuild bars from scratch if option count changed
+    if (container.children.length !== _hostPoll.options.length) {
+      container.innerHTML = '';
+      _hostPoll.options.forEach((text, idx) => {
+        const row = document.createElement('div');
+        row.className = 'poll-bar-row';
+        row.dataset.optIdx = idx;
+        row.innerHTML = `
+          <div class="fill"></div>
+          <div class="row">
+            <span class="label"></span>
+            <span class="count"></span>
+          </div>`;
+        container.appendChild(row);
+      });
+    }
+
+    // Update each row's text + fill + leading class
+    _hostPoll.options.forEach((text, idx) => {
+      const row = container.querySelector(`[data-opt-idx="${idx}"]`);
+      if (!row) return;
+      row.querySelector('.label').textContent = text;
+      row.querySelector('.count').textContent = counts[idx];
+      const pct = maxCount > 0 ? (counts[idx] / maxCount) * 100 : 0;
+      row.querySelector('.fill').style.width = pct + '%';
+      row.classList.toggle('leading', counts[idx] === maxCount && maxCount > 0);
+    });
+
+    // FLIP reorder
+    reorderBars(container, sortIndices(counts));
   }
 
   // ── Render ──
