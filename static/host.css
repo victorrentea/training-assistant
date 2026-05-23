@@ -2100,3 +2100,105 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   color: var(--danger);
   background: rgba(255, 107, 107, 0.18);
 }
+
+/* ── Poll tab — left pane ─────────────────────────────────────────── */
+.poll-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.poll-question {
+  width: 100%;
+  min-height: calc(2.4rem * 2);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  line-height: 1.4;
+}
+.poll-question:focus { border-color: var(--accent); outline: none; }
+
+.poll-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.poll-multi-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+#poll-start-btn { margin-left: auto; }
+
+.poll-quick-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.poll-quick-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.poll-quick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.poll-quick-btn {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.7rem;
+}
+
+/* ── Poll tab — center pane ───────────────────────────────────────── */
+#center-poll { display: none; flex-direction: column; min-height: 0; }
+.poll-center-title {
+  margin: 0 0 0.9rem;
+  font-size: 0.95rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.poll-options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 0.25rem;
+}
+.poll-option-row {
+  width: 100%;
+  min-height: 2.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  line-height: 1.4;
+}
+.poll-option-row.filled { border-color: var(--success); }
+.poll-option-row:focus { outline: none; border-color: var(--accent); }
+
+.poll-clear-btn {
+  align-self: flex-start;
+  margin-top: 0.75rem;
+}
