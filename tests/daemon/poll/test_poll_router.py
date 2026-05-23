@@ -246,3 +246,114 @@ class TestStopBroadcast:
         assert "activity_updated" in broadcast_types
         activity_msgs = [m for ch, m in mock_broadcast if ch == "broadcast" and m["type"] == "activity_updated"]
         assert activity_msgs[-1]["current_activity"] == "none"
+
+
+@pytest.fixture
+def participant_client(fresh_poll_state):
+    from daemon.poll.router import participant_router
+    app = FastAPI()
+    app.include_router(participant_router)
+    return TestClient(app)
+
+
+class TestPollVote:
+    def test_vote_when_active_returns_204(
+        self, host_client, participant_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
+    ):
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        host_client.post("/api/test-session/host/poll/start")
+
+        resp = participant_client.post(
+            "/api/test-session/api/participant/poll/vote",
+            json={"options": [0]},
+            headers={"x-participant-id": "alice"},
+        )
+        assert resp.status_code == 204
+        assert fresh_poll_state.votes["alice"]["option_indices"] == [0]
+
+    def test_vote_missing_pid_returns_400(self, participant_client, fresh_poll_state):
+        resp = participant_client.post(
+            "/api/test-session/api/participant/poll/vote",
+            json={"options": [0]},
+        )
+        assert resp.status_code == 400
+
+    def test_vote_when_not_started_returns_409(self, participant_client, fresh_poll_state):
+        resp = participant_client.post(
+            "/api/test-session/api/participant/poll/vote",
+            json={"options": [0]},
+            headers={"x-participant-id": "alice"},
+        )
+        assert resp.status_code == 409
+
+    def test_vote_out_of_range_returns_409(
+        self, host_client, participant_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
+    ):
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        host_client.post("/api/test-session/host/poll/start")
+
+        resp = participant_client.post(
+            "/api/test-session/api/participant/poll/vote",
+            json={"options": [99]},
+            headers={"x-participant-id": "alice"},
+        )
+        assert resp.status_code == 409
+
+    def test_vote_broadcasts_when_public(
+        self, host_client, participant_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
+    ):
+        host_client.put("/api/test-session/host/poll/update", json={
+            "question": "Q?", "options": ["A", "B"], "multi": False, "public": True,
+        })
+        host_client.post("/api/test-session/host/poll/start")
+        mock_broadcast.clear()
+
+        participant_client.post(
+            "/api/test-session/api/participant/poll/vote",
+            json={"options": [1]},
+            headers={"x-participant-id": "alice"},
+        )
+
+        broadcast_updates = [m for ch, m in mock_broadcast if ch == "broadcast" and m["type"] == "poll_updated"]
+        assert len(broadcast_updates) == 1
+        assert broadcast_updates[0]["counts"] == [0, 1]
+
+    def test_vote_does_not_broadcast_counts_when_private(
+        self, host_client, participant_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
+    ):
+        host_client.put("/api/test-session/host/poll/update", json={
+            "question": "Q?", "options": ["A", "B"], "multi": False, "public": False,
+        })
+        host_client.post("/api/test-session/host/poll/start")
+        mock_broadcast.clear()
+
+        participant_client.post(
+            "/api/test-session/api/participant/poll/vote",
+            json={"options": [1]},
+            headers={"x-participant-id": "alice"},
+        )
+
+        broadcast_updates = [m for ch, m in mock_broadcast if ch == "broadcast" and m["type"] == "poll_updated"]
+        for u in broadcast_updates:
+            assert u["counts"] is None
+
+
+class TestHostGetPoll:
+    def test_returns_null_when_no_data(self, host_client, fresh_poll_state):
+        resp = host_client.get("/api/test-session/host/poll")
+        assert resp.status_code == 200
+        assert resp.json() == {"poll": None, "started": False, "counts": [], "voted_count": 0}
+
+    def test_returns_snapshot_when_running(
+        self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
+    ):
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        host_client.post("/api/test-session/host/poll/start")
+        fresh_poll_state.cast_vote("alice", [0])
+
+        resp = host_client.get("/api/test-session/host/poll")
+        data = resp.json()
+        assert data["started"] is True
+        assert data["counts"] == [1, 0]
+        assert data["voted_count"] == 1
+        assert data["poll"]["question"] == "How was lunch?"
