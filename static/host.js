@@ -1753,39 +1753,66 @@
     el.style.height = el.scrollHeight + 'px';
   }
 
+  function _createPollCard(val, i) {
+    const card = document.createElement('div');
+    card.className = 'poll-option-card' + (_hostPollStarted ? ' started' : '');
+    card.dataset.optIdx = String(i);
+
+    const fill = document.createElement('div');
+    fill.className = 'poll-option-card-fill';
+
+    const row = document.createElement('textarea');
+    row.className = 'poll-option-row' + (val.trim() ? ' filled' : '');
+    row.rows = 1;
+    row.value = val;
+    row.tabIndex = 2 + i;
+    row.placeholder = i === pollState.options.length - 1 ? 'Add option…' : '';
+    row.addEventListener('input', () => onPollOptionInput(i, row));
+
+    const count = document.createElement('span');
+    count.className = 'poll-option-card-count';
+    count.textContent = '';
+
+    card.appendChild(fill);
+    card.appendChild(row);
+    card.appendChild(count);
+    return card;
+  }
+
   function renderPoll() {
     pollQuestionEl.value = pollState.question;
     autoGrow(pollQuestionEl);
     pollMultiEl.checked = pollState.multi;
     pollPublicEl.checked = pollState.public;
-    pollOptionsEl.innerHTML = '';
-    pollState.options.forEach((val, i) => {
-      const card = document.createElement('div');
-      card.className = 'poll-option-card' + (_hostPollStarted ? ' started' : '');
-      card.dataset.optIdx = String(i);
 
-      const fill = document.createElement('div');
-      fill.className = 'poll-option-card-fill';
+    const desired = pollState.options.length;
+    const existing = pollOptionsEl.children.length;
 
-      const row = document.createElement('textarea');
-      row.className = 'poll-option-row' + (val.trim() ? ' filled' : '');
-      row.rows = 1;
-      row.value = val;
-      row.tabIndex = 2 + i;
-      row.placeholder = i === pollState.options.length - 1 ? 'Add option…' : '';
-      row.addEventListener('input', () => onPollOptionInput(i, row));
+    if (existing !== desired) {
+      // Structural change — rebuild. (Reorder is correct here: the DOM
+      // doesn't yet exist in any sorted form.)
+      pollOptionsEl.innerHTML = '';
+      pollState.options.forEach((val, i) => pollOptionsEl.appendChild(_createPollCard(val, i)));
+    } else {
+      // In-place update so reorderPollCards' FIRST positions reflect the
+      // actual current sorted DOM, not a fresh natural-order rebuild —
+      // otherwise FLIP misses transitions where the new sort happens to
+      // equal natural order (Beta→Alpha-style swaps).
+      pollState.options.forEach((val, i) => {
+        const card = pollOptionsEl.querySelector(`[data-opt-idx="${i}"]`);
+        if (!card) return;
+        const row = card.querySelector('.poll-option-row');
+        if (row && row.value !== val && document.activeElement !== row) {
+          row.value = val;
+          autoGrow(row);
+          row.classList.toggle('filled', val.trim() !== '');
+        }
+        if (row) row.placeholder = i === desired - 1 ? 'Add option…' : '';
+        card.classList.toggle('started', _hostPollStarted);
+      });
+    }
 
-      const count = document.createElement('span');
-      count.className = 'poll-option-card-count';
-      count.textContent = '';
-
-      card.appendChild(fill);
-      card.appendChild(row);
-      card.appendChild(count);
-      pollOptionsEl.appendChild(card);
-      autoGrow(row);
-    });
-    pollStartBtn.tabIndex = 2 + pollState.options.length;
+    pollStartBtn.tabIndex = 2 + desired;
     updatePollStartEnabled();
     applyPollLiveResults();
   }
