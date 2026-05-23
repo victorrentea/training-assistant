@@ -2124,7 +2124,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   box-sizing: border-box;
   line-height: 1.4;
 }
-.poll-question:focus { border-color: var(--accent); outline: none; }
+.poll-question.filled { border-color: var(--action); }
+.poll-question:focus { border-color: var(--text); outline: none; }
 
 .poll-controls-row {
   display: flex;
@@ -2227,8 +2228,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .poll-option-card.started .poll-option-row {
   background: transparent;
 }
-.poll-option-row.filled { border-color: var(--success); }
-.poll-option-row:focus { outline: none; border-color: var(--accent); }
+.poll-option-row.filled { border-color: var(--action); }
+.poll-option-row:focus { outline: none; border-color: var(--text); }
 .poll-option-card-count {
   display: none;
   align-items: center; justify-content: flex-end;

@@ -1772,6 +1772,7 @@
     row.tabIndex = 2 + i;
     row.placeholder = i === pollState.options.length - 1 ? 'Add option…' : '';
     row.addEventListener('input', () => onPollOptionInput(i, row));
+    row.addEventListener('keydown', _onPollKeyDown);
 
     const count = document.createElement('span');
     count.className = 'poll-option-card-count';
@@ -1787,19 +1788,23 @@
   function renderPoll() {
     pollQuestionEl.value = pollState.question;
     autoGrow(pollQuestionEl);
+    pollQuestionEl.classList.toggle('filled', pollState.question.trim() !== '');
     pollMultiEl.checked = pollState.multi;
     pollPublicEl.checked = pollState.public;
 
     const desired = pollState.options.length;
 
-    // Surgically add/remove trailing cards so existing cards (and any focused
-    // textarea inside them) survive the render. Then in-place update values.
-    while (pollOptionsEl.children.length > desired) {
-      pollOptionsEl.removeChild(pollOptionsEl.lastChild);
-    }
-    while (pollOptionsEl.children.length < desired) {
-      const idx = pollOptionsEl.children.length;
-      pollOptionsEl.appendChild(_createPollCard(pollState.options[idx], idx));
+    // Surgically add/remove cards by data-opt-idx — cards may have been
+    // reordered for vote-count sorting, so removing "lastChild" would drop
+    // the wrong card. Remove anything whose index is out of range, then
+    // add any missing index.
+    Array.from(pollOptionsEl.children).forEach(c => {
+      if (Number(c.dataset.optIdx) >= desired) pollOptionsEl.removeChild(c);
+    });
+    for (let idx = 0; idx < desired; idx++) {
+      if (!pollOptionsEl.querySelector(`[data-opt-idx="${idx}"]`)) {
+        pollOptionsEl.appendChild(_createPollCard(pollState.options[idx], idx));
+      }
     }
     pollState.options.forEach((val, i) => {
       const card = pollOptionsEl.querySelector(`[data-opt-idx="${i}"]`);
@@ -1846,12 +1851,14 @@
 
   function reorderPollCards() {
     const draftIdx = pollState.options.length - 1;
-    const realIdxs = [];
-    for (let i = 0; i < pollState.options.length; i++) {
-      if (i === draftIdx && pollState.options[i] === '') continue;
-      realIdxs.push(i);
-    }
-    realIdxs.sort((a, b) => ((_hostPollCountsState[b] ?? 0) - (_hostPollCountsState[a] ?? 0)) || (a - b));
+    // Build realIdxs from CURRENT DOM order, then sort by count desc with
+    // JS's stable sort. Ties preserve the existing position, so an option
+    // only moves when its count strictly exceeds (or falls below) a
+    // neighbor's — never on a tie.
+    const realIdxs = Array.from(pollOptionsEl.children)
+      .map(c => Number(c.dataset.optIdx))
+      .filter(i => !(i === draftIdx && pollState.options[i] === ''));
+    realIdxs.sort((a, b) => (_hostPollCountsState[b] ?? 0) - (_hostPollCountsState[a] ?? 0));
     const desiredOrder = realIdxs.slice();
     if (pollState.options[draftIdx] === '') desiredOrder.push(draftIdx);
 
@@ -1859,42 +1866,50 @@
     const currentOrder = current.map(c => Number(c.dataset.optIdx));
     const sameOrder = currentOrder.length === desiredOrder.length &&
       currentOrder.every((idx, i) => idx === desiredOrder[i]);
-    // Bail when nothing moved. appendChild on a card whose textarea is
-    // focused causes Chrome to drop focus (textarea is nested two levels
-    // deep), so we must avoid no-op moves.
-    if (sameOrder) return;
 
-    // Save focus + caret so we can restore after reorder.
-    const focusEl = document.activeElement;
-    const wasInRow = focusEl && focusEl.classList && focusEl.classList.contains('poll-option-row');
-    const savedSelStart = wasInRow ? focusEl.selectionStart : null;
-    const savedSelEnd = wasInRow ? focusEl.selectionEnd : null;
+    // appendChild on a card whose textarea is focused causes Chrome to
+    // drop focus (textarea is nested two levels deep), so we must avoid
+    // no-op moves. When a real reorder is needed, capture focus and
+    // restore after the appendChild loop.
+    if (!sameOrder) {
+      const focusEl = document.activeElement;
+      const wasInRow = focusEl && focusEl.classList && focusEl.classList.contains('poll-option-row');
+      const savedSelStart = wasInRow ? focusEl.selectionStart : null;
+      const savedSelEnd = wasInRow ? focusEl.selectionEnd : null;
 
-    const first = new Map();
-    current.forEach(c => first.set(c, c.getBoundingClientRect()));
+      const first = new Map();
+      current.forEach(c => first.set(c, c.getBoundingClientRect()));
 
-    desiredOrder.forEach(idx => {
-      const card = pollOptionsEl.querySelector(`[data-opt-idx="${idx}"]`);
-      if (card) pollOptionsEl.appendChild(card);
-    });
+      desiredOrder.forEach(idx => {
+        const card = pollOptionsEl.querySelector(`[data-opt-idx="${idx}"]`);
+        if (card) pollOptionsEl.appendChild(card);
+      });
 
-    if (wasInRow && document.activeElement !== focusEl) {
-      focusEl.focus();
-      if (savedSelStart !== null) focusEl.setSelectionRange(savedSelStart, savedSelEnd);
+      if (wasInRow && document.activeElement !== focusEl) {
+        focusEl.focus();
+        if (savedSelStart !== null) focusEl.setSelectionRange(savedSelStart, savedSelEnd);
+      }
+
+      // FLIP
+      current.forEach(c => {
+        const last = c.getBoundingClientRect();
+        const f = first.get(c);
+        const dy = f.top - last.top;
+        if (dy !== 0) {
+          c.style.transition = 'none';
+          c.style.transform = `translateY(${dy}px)`;
+        }
+      });
+      requestAnimationFrame(() => {
+        current.forEach(c => { c.style.transition = ''; c.style.transform = ''; });
+      });
     }
 
-    // FLIP
-    current.forEach(c => {
-      const last = c.getBoundingClientRect();
-      const f = first.get(c);
-      const dy = f.top - last.top;
-      if (dy !== 0) {
-        c.style.transition = 'none';
-        c.style.transform = `translateY(${dy}px)`;
-      }
-    });
-    requestAnimationFrame(() => {
-      current.forEach(c => { c.style.transition = ''; c.style.transform = ''; });
+    // Sync tab order to current DOM order so Tab follows the visible
+    // top-to-bottom layout — question → first visible option → ... → Start.
+    Array.from(pollOptionsEl.children).forEach((c, pos) => {
+      const row = c.querySelector('.poll-option-row');
+      if (row) row.tabIndex = 2 + pos;
     });
   }
 
@@ -2005,12 +2020,23 @@
     schedulePollUpdate(); // text-only change → debounced
   }
 
+  // Enter starts the poll (Shift+Enter is also blocked — no multi-line
+  // content in question or options).
+  function _onPollKeyDown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!pollStartBtn.disabled) pollStartBtn.click();
+    }
+  }
+
   pollQuestionEl.addEventListener('input', () => {
     pollState.question = pollQuestionEl.value;
     autoGrow(pollQuestionEl);
+    pollQuestionEl.classList.toggle('filled', pollQuestionEl.value.trim() !== '');
     updatePollStartEnabled();
     schedulePollUpdate();
   });
+  pollQuestionEl.addEventListener('keydown', _onPollKeyDown);
 
   pollMultiEl.addEventListener('change', () => {
     pollState.multi = pollMultiEl.checked;
