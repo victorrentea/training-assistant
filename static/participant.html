@@ -2946,6 +2946,18 @@ function _resetActivityState(activity) {
 function _updateActivityNavLabel() {
   var el = document.getElementById('activity-nav-label');
   if (!el) return;
+  // Only decorate the label when the activity is actually started AND has
+  // content to display. Just setting current_activity (e.g. host switched
+  // tabs but hasn't started the activity yet) is not enough.
+  var hasContent = false;
+  switch (_currentActivity) {
+    case 'poll': hasContent = !!(_pollActive && _currentPoll); break;
+    case 'quiz': hasContent = !!(_quizActive && _currentQuiz); break;
+    // Other activities (wordcloud / qa / codereview / debate): no
+    // per-activity 'active' flag in participant client yet, so leave them
+    // as plain 'Activity' until we wire similar checks. Avoids showing a
+    // misleading label.
+  }
   var labels = {
     poll: 'Activity: Poll',
     quiz: 'Activity: Quiz',
@@ -2954,7 +2966,7 @@ function _updateActivityNavLabel() {
     codereview: 'Activity: Code',
     debate: 'Activity: Debate',
   };
-  el.textContent = labels[_currentActivity] || 'Activity';
+  el.textContent = (hasContent && labels[_currentActivity]) || 'Activity';
 }
 
 function _applyPollState(msg) {
@@ -2979,6 +2991,7 @@ function _applyPollState(msg) {
 }
 
 function _renderActivityQuiz() {
+  _updateActivityNavLabel();
   var section = document.getElementById('activity-quiz-section');
   if (!section) return;
 
@@ -3102,6 +3115,7 @@ function _startParticipantCountdown() {
 }
 
 function _renderActivityPoll() {
+  _updateActivityNavLabel();
   var section = document.getElementById('activity-poll-section');
   if (!section) return;
   var welcome = document.getElementById('activity-welcome-section');
