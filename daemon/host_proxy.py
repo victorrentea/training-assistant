@@ -149,7 +149,7 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
     finally:
         if is_host:
             from daemon.ws_publish import clear_host_ws
-            clear_host_ws()
+            clear_host_ws(client_ws)
         try:
             await client_ws.close()
         except Exception:

@@ -15,7 +15,10 @@ from daemon import log
 
 # Set by __main__.py during daemon startup
 _ws_client = None
-_host_ws = None
+# Set of active host browser WS connections. Multiple host tabs may be open
+# at once (e.g. trainer's main session + a debug tab); notify_host broadcasts
+# to all of them so a new tab can't silence pushes to the original.
+_host_wss: set = set()
 
 
 def set_ws_client(client):
@@ -25,15 +28,16 @@ def set_ws_client(client):
 
 
 def set_host_ws(ws):
-    """Store the host browser's WS connection."""
-    global _host_ws
-    _host_ws = ws
+    """Register a host browser WS connection."""
+    _host_wss.add(ws)
 
 
-def clear_host_ws():
-    """Clear the host WS reference."""
-    global _host_ws
-    _host_ws = None
+def clear_host_ws(ws=None):
+    """Unregister a specific host WS, or all if ws=None."""
+    if ws is None:
+        _host_wss.clear()
+    else:
+        _host_wss.discard(ws)
 
 
 def send_to_railway(msg: dict) -> bool:
@@ -66,24 +70,30 @@ def broadcast(msg: BaseModel):
 
 
 async def notify_host(msg: BaseModel):
-    """Send typed message to host browser via direct WS."""
-    if _host_ws is None:
+    """Send typed message to every connected host browser WS."""
+    if not _host_wss:
         return
+    event = msg.model_dump()
+    msg_type = event.get("type", "unknown")
+    log.debug("host", f"← {msg_type}")
     try:
-        event = msg.model_dump()
-        msg_type = event.get("type", "unknown")
-        log.debug("host", f"← {msg_type}")
+        from opentelemetry import trace
+        tracer = trace.get_tracer("daemon.ws_publish")
+        with tracer.start_as_current_span(f"notify_host:{msg_type}"):
+            from daemon.telemetry.ws_propagation import inject_trace_context
+            inject_trace_context(event)
+            payload = json.dumps(event)
+    except ImportError:
+        payload = json.dumps(event)
+    # Iterate over a snapshot so concurrent clear_host_ws is safe.
+    dead = []
+    for ws in list(_host_wss):
         try:
-            from opentelemetry import trace
-            tracer = trace.get_tracer("daemon.ws_publish")
-            with tracer.start_as_current_span(f"notify_host:{msg_type}"):
-                from daemon.telemetry.ws_propagation import inject_trace_context
-                inject_trace_context(event)
-                await _host_ws.send_text(json.dumps(event))
-        except ImportError:
-            await _host_ws.send_text(json.dumps(event))
-    except Exception:
-        log.debug("host", "Failed to send WS message")
+            await ws.send_text(payload)
+        except Exception:
+            dead.append(ws)
+    for ws in dead:
+        _host_wss.discard(ws)
 
 
 def broadcast_event(msg: BaseModel) -> dict:

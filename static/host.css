@@ -2106,7 +2106,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-top: 0.75rem;
 }
 
 .poll-question {
