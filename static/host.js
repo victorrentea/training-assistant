@@ -1761,6 +1761,8 @@
     pollState.options = [...preset.options, ''];   // trailing empty draft row
     pollState.multi = preset.multi;
     renderPoll();
+    pollQuestionEl.focus();
+    pollQuestionEl.select();
     flushPollUpdate();  // immediate, no debounce
   }
 
