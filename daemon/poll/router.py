@@ -38,3 +38,13 @@ async def start_poll():
     poll_state.started = True
     logger.info("◆ poll started: %r (%d options, multi=%s)", data.question, len(nonempty), data.multi)
     return Response(status_code=204)
+
+
+@host_router.post("/stop", status_code=204)
+async def stop_poll():
+    """Host clears the poll draft and stops any running poll."""
+    had_data = poll_state.data is not None
+    poll_state.reset()
+    if had_data:
+        logger.info("◆ poll stopped")
+    return Response(status_code=204)

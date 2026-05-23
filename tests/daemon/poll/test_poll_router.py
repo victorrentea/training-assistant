@@ -107,3 +107,23 @@ class TestPollStart:
         resp = host_client.post("/api/test-session/host/poll/start")
         assert resp.status_code == 204
         assert fresh_poll_state.started is True
+
+
+class TestPollStop:
+    def test_stop_clears_data_and_started(self, host_client, fresh_poll_state):
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        host_client.post("/api/test-session/host/poll/start")
+        assert fresh_poll_state.data is not None
+        assert fresh_poll_state.started is True
+
+        resp = host_client.post("/api/test-session/host/poll/stop")
+        assert resp.status_code == 204
+        assert fresh_poll_state.data is None
+        assert fresh_poll_state.started is False
+
+    def test_stop_is_idempotent(self, host_client, fresh_poll_state):
+        # No draft, no start — stop should still succeed.
+        resp = host_client.post("/api/test-session/host/poll/stop")
+        assert resp.status_code == 204
+        assert fresh_poll_state.data is None
+        assert fresh_poll_state.started is False
