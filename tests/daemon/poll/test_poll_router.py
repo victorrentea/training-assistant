@@ -264,7 +264,7 @@ class TestPollVote:
         host_client.post("/api/test-session/host/poll/start")
 
         resp = participant_client.post(
-            "/api/test-session/api/participant/poll/vote",
+            "/api/participant/poll/vote",
             json={"options": [0]},
             headers={"x-participant-id": "alice"},
         )
@@ -273,14 +273,14 @@ class TestPollVote:
 
     def test_vote_missing_pid_returns_400(self, participant_client, fresh_poll_state):
         resp = participant_client.post(
-            "/api/test-session/api/participant/poll/vote",
+            "/api/participant/poll/vote",
             json={"options": [0]},
         )
         assert resp.status_code == 400
 
     def test_vote_when_not_started_returns_409(self, participant_client, fresh_poll_state):
         resp = participant_client.post(
-            "/api/test-session/api/participant/poll/vote",
+            "/api/participant/poll/vote",
             json={"options": [0]},
             headers={"x-participant-id": "alice"},
         )
@@ -293,7 +293,7 @@ class TestPollVote:
         host_client.post("/api/test-session/host/poll/start")
 
         resp = participant_client.post(
-            "/api/test-session/api/participant/poll/vote",
+            "/api/participant/poll/vote",
             json={"options": [99]},
             headers={"x-participant-id": "alice"},
         )
@@ -309,7 +309,7 @@ class TestPollVote:
         mock_broadcast.clear()
 
         participant_client.post(
-            "/api/test-session/api/participant/poll/vote",
+            "/api/participant/poll/vote",
             json={"options": [1]},
             headers={"x-participant-id": "alice"},
         )
@@ -328,7 +328,7 @@ class TestPollVote:
         mock_broadcast.clear()
 
         participant_client.post(
-            "/api/test-session/api/participant/poll/vote",
+            "/api/participant/poll/vote",
             json={"options": [1]},
             headers={"x-participant-id": "alice"},
         )

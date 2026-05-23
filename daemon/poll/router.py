@@ -144,9 +144,7 @@ class PollVoteRequest(_BaseModel):
     options: list[int]
 
 
-participant_router = APIRouter(
-    prefix="/api/{session_id}/api/participant/poll", tags=["poll"]
-)
+participant_router = APIRouter(prefix="/api/participant/poll", tags=["poll"])
 
 
 @participant_router.post("/vote", status_code=204)
