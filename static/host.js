@@ -1706,7 +1706,7 @@
     yesno:      { question: '', options: ['Yes', 'No'], multi: false },
     truefalse:  { question: '', options: ['True', 'False'], multi: false },
     rating15:   { question: '', options: ['1', '2', '3', '4', '5'], multi: false },
-    energy:     { question: '', options: ['🔥 On fire', '😄 Energized', '😐 OK', '😴 Sleepy', '💀 Need coffee'], multi: false },
+    energy:     { question: "How's the room feeling right now?", options: ['🔥 On fire', '😄 Energized', '😐 OK', '😴 Sleepy', '💀 Need coffee'], multi: false },
   };
 
   const pollState = {
