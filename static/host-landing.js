@@ -27,20 +27,17 @@ function renderPage(folders) {
 
   app.innerHTML = `
     <div class="landing-card">
-      <div class="new-session-label">START NEW SESSION</div>
+      <div class="new-session-label">START TALK</div>
       <div class="session-name-row">
         <input id="session-date-input" class="session-date-prefix" type="text"
                value="${new Date().toISOString().slice(0, 10)}"
                autocomplete="off" spellcheck="false" />
         <input id="session-name-input" class="session-name-input" type="text"
-               placeholder="session name"
+               placeholder="Talk name"
                autocomplete="off"
                oninput="onNameInput()"
-               onkeydown="if(event.key==='Enter' && !document.getElementById('create-btn').disabled) doCreate();" />
-      </div>
-      <div class="create-btns-row">
-        <button id="create-btn-workshop" class="create-btn" onclick="doCreate('workshop')" disabled>🎓 Start workshop</button>
-        <button id="create-btn-talk" class="create-btn create-btn-talk" onclick="doCreate('talk')" disabled>🎙️ Start talk</button>
+               onkeydown="if(event.key==='Enter' && !document.getElementById('create-btn-talk').disabled) doCreate('talk');" />
+        <button id="create-btn-talk" class="create-btn create-btn-talk" onclick="doCreate('talk')" disabled title="Start talk">▶</button>
       </div>
       <div id="create-error" class="error-msg" style="display:none;"></div>
     </div>
@@ -56,7 +53,7 @@ function buildFolderList(folders, today) {
   if (!folders || folders.length === 0) {
     return `
       <div class="folders-card">
-        <div class="folders-header">RESUME PREVIOUS SESSION</div>
+        <div class="folders-header">START WORKSHOP</div>
         <div class="folders-empty">No previous sessions found.</div>
       </div>`;
   }
@@ -79,7 +76,7 @@ function buildFolderList(folders, today) {
 
   return `
     <div class="folders-card">
-      <div class="folders-header">RESUME PREVIOUS SESSION</div>
+      <div class="folders-header">START WORKSHOP</div>
       <ul class="folder-list">${items}</ul>
     </div>`;
 }
@@ -114,7 +111,6 @@ function _esc(str) {
 function onNameInput() {
   const input = document.getElementById('session-name-input');
   const hasName = !!input.value.trim();
-  document.getElementById('create-btn-workshop').disabled = !hasName;
   document.getElementById('create-btn-talk').disabled = !hasName;
 }
 

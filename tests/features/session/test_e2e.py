@@ -58,8 +58,8 @@ class TestLandingPage:
         page = ctx.new_page()
         page.goto("/host")
         expect(page.locator(".landing-title")).to_have_count(0, timeout=5000)
-        expect(page.locator(".new-session-label")).to_have_text("START NEW SESSION", timeout=5000)
-        expect(page.locator(".folders-header")).to_have_text("RESUME PREVIOUS SESSION", timeout=5000)
+        expect(page.locator(".new-session-label")).to_have_text("START TALK", timeout=5000)
+        expect(page.locator(".folders-header")).to_have_text("START WORKSHOP", timeout=5000)
         expect(page.locator(".rejoin-card")).to_have_count(0, timeout=5000)
         no_vertical_scroll = page.evaluate(
             "() => document.documentElement.scrollHeight <= document.documentElement.clientHeight"
