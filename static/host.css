@@ -2181,9 +2181,18 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   position: relative;
   display: flex; align-items: stretch; gap: 0;
   border-radius: 8px;
-  overflow: hidden;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
+}
+/* Wraps the textarea + fill so the fill is bounded to the textarea
+   area (not extended behind the count on the right). */
+.poll-option-card-rowwrap {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  min-width: 0;
+  border-radius: 8px;
+  overflow: hidden;
 }
 .poll-option-card-fill {
   position: absolute;

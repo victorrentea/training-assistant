@@ -1759,6 +1759,9 @@
     card.className = 'poll-option-card' + (_hostPollStarted ? ' started' : '');
     card.dataset.optIdx = String(i);
 
+    const rowWrap = document.createElement('div');
+    rowWrap.className = 'poll-option-card-rowwrap';
+
     const fill = document.createElement('div');
     fill.className = 'poll-option-card-fill';
 
@@ -1774,8 +1777,9 @@
     count.className = 'poll-option-card-count';
     count.textContent = '';
 
-    card.appendChild(fill);
-    card.appendChild(row);
+    rowWrap.appendChild(fill);
+    rowWrap.appendChild(row);
+    card.appendChild(rowWrap);
     card.appendChild(count);
     return card;
   }
