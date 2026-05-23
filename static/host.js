@@ -1853,6 +1853,17 @@
     }
   });
 
+  pollClearBtn.addEventListener('click', async () => {
+    // Cancel any pending debounced update — we're about to stop.
+    if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
+    resetPollLocal();
+    try {
+      await fetch(API('/host/poll/stop'), { method: 'POST' });
+    } catch (e) {
+      toast('Network error — daemon unreachable');
+    }
+  });
+
   // Initial render
   renderPoll();
 
