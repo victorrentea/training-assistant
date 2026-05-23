@@ -1764,6 +1764,12 @@
     card.className = 'poll-option-card' + (_hostPollStarted ? ' started' : '');
     card.dataset.optIdx = String(i);
 
+    const rowWrap = document.createElement('div');
+    rowWrap.className = 'poll-option-card-rowwrap';
+
+    const fill = document.createElement('div');
+    fill.className = 'poll-option-card-fill';
+
     const row = document.createElement('textarea');
     row.className = 'poll-option-row' + (val.trim() ? ' filled' : '');
     row.rows = 1;
@@ -1773,23 +1779,16 @@
     row.addEventListener('input', () => onPollOptionInput(i, row));
     row.addEventListener('keydown', _onPollKeyDown);
 
-    // Progress bar stacked below the textarea. The bar element is hidden via
-    // CSS unless the card has both .started and .has-votes; the count badge
-    // rides at the right edge of the colored fill.
-    const bar = document.createElement('div');
-    bar.className = 'poll-option-card-bar';
-
-    const fill = document.createElement('div');
-    fill.className = 'poll-option-card-fill';
-
+    // Vote count overlay — vertically centered on the row, anchored to
+    // the right edge of the colored fill via the `--fill-pct` CSS var.
     const count = document.createElement('span');
     count.className = 'poll-option-card-count';
     count.textContent = '';
 
-    fill.appendChild(count);
-    bar.appendChild(fill);
-    card.appendChild(row);
-    card.appendChild(bar);
+    rowWrap.appendChild(fill);
+    rowWrap.appendChild(row);
+    rowWrap.appendChild(count);
+    card.appendChild(rowWrap);
     return card;
   }
 
@@ -1837,7 +1836,9 @@
     if (!_hostPollStarted) {
       pollOptionsEl.querySelectorAll('.poll-option-card').forEach(c => {
         c.classList.remove('started', 'has-votes');
-        c.querySelector('.poll-option-card-count').textContent = '';
+        const countEl = c.querySelector('.poll-option-card-count');
+        countEl.textContent = '';
+        countEl.style.removeProperty('--fill-pct');
         c.querySelector('.poll-option-card-fill').style.width = '0%';
       });
       return;
@@ -1852,9 +1853,11 @@
       const c = counts[i] ?? 0;
       const hasVotes = !isTrailingDraft && c > 0;
       card.classList.toggle('has-votes', hasVotes);
-      card.querySelector('.poll-option-card-count').textContent = hasVotes ? String(c) : '';
       const pct = (hasVotes && maxCount > 0) ? (c / maxCount) * 100 : 0;
       card.querySelector('.poll-option-card-fill').style.width = pct + '%';
+      const countEl = card.querySelector('.poll-option-card-count');
+      countEl.textContent = hasVotes ? String(c) : '';
+      countEl.style.setProperty('--fill-pct', pct + '%');
     });
     reorderPollCards();
   }

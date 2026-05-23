@@ -2177,17 +2177,32 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   min-height: 0;
   padding-right: 0.25rem;
 }
-/* Each option is a stacked card: the textarea on top, the progress bar
-   below. The bar is only rendered when this option has at least one vote.
+/* Each option is a card with a colored fill behind the textarea (the
+   progress bar) and the vote count overlaid at the fill's right edge.
    Cards reorder via FLIP transform (transition: transform). */
 .poll-option-card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  display: flex; align-items: stretch; gap: 0;
   border-radius: 8px;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
+}
+.poll-option-card-rowwrap {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  min-width: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.poll-option-card-fill {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 0;
+  background: rgba(108, 99, 255, 0.55);
+  transition: width 0.5s ease;
+  pointer-events: none;
+  z-index: 0;
 }
 .poll-option-row {
   width: 100%;
@@ -2203,37 +2218,32 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   overflow: hidden;
   box-sizing: border-box;
   line-height: 1.4;
+  flex: 1 1 auto;
+  position: relative;
+  z-index: 1;
 }
+.poll-option-card.started .poll-option-row { background: transparent; }
 .poll-option-row.filled { border-color: var(--action); }
 .poll-option-row:focus { outline: none; border-color: var(--text); }
-/* Progress bar lives below the textarea. Hidden when this option has no
-   votes (so empty options leave a clean, uncluttered row). */
-.poll-option-card-bar {
-  display: none;
-  height: 1.85rem;
-  border-radius: 6px;
-  overflow: visible;
-}
-.poll-option-card.started.has-votes .poll-option-card-bar { display: block; }
-.poll-option-card-fill {
-  position: relative;
-  width: 0;
-  height: 100%;
-  background: rgba(108, 99, 255, 0.55);
-  border-radius: 6px;
-  transition: width 0.5s ease;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
+/* Vote count overlay: vertically centered on the textarea row, with its
+   right edge anchored to the right edge of the colored fill. No
+   background — just bold, large digits. `--fill-pct` is set inline as
+   the fill's width percentage. */
 .poll-option-card-count {
-  background: #000;
-  color: #fff;
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: calc(100% - var(--fill-pct, 0%));
+  padding-right: 0.65rem;
   font-weight: 800;
-  font-size: 1.15rem;
+  font-size: 1.5rem;
   line-height: 1;
-  padding: 0.25rem 0.55rem;
-  border-radius: 5px;
-  margin-right: 4px;
-  white-space: nowrap;
+  color: #000;
+  pointer-events: none;
+  z-index: 2;
+}
+.poll-option-card.started.has-votes .poll-option-card-count { display: block; }
+@media (prefers-color-scheme: light) {
+  .poll-option-card-count { color: #fff; }
 }
