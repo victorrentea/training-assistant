@@ -3044,11 +3044,17 @@ function _startParticipantCountdown() {
 function _renderActivityPoll() {
   var section = document.getElementById('activity-poll-section');
   if (!section) return;
+  var welcome = document.getElementById('activity-welcome-section');
+  var waiting = document.getElementById('activity-waiting-section');
   if (!_currentPoll || !_pollActive) {
     section.style.display = 'none';
+    if (welcome) welcome.style.display = LS.isActivitySeen() ? 'none' : '';
+    if (waiting) waiting.style.display = LS.isActivitySeen() ? '' : 'none';
     return;
   }
   section.style.display = '';
+  if (welcome) welcome.style.display = 'none';
+  if (waiting) waiting.style.display = 'none';
 
   document.getElementById('poll-question-text').textContent = _currentPoll.question || '';
 
@@ -3321,6 +3327,7 @@ function _handleWsMessage(msg) {
       _pollActive = true;
       _myPollVote = (_currentPoll && _currentPoll.multi) ? new Set() : null;
       _renderActivityPoll();
+      showView('activity');
       break;
     case 'poll_updated':
       _currentPoll = msg.poll;
