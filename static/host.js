@@ -1915,6 +1915,7 @@
 
   function updatePollStartEnabled() {
     pollStartBtn.textContent = 'Start';
+    pollQuickBtns.forEach(b => { b.disabled = _hostPollStarted; });
     if (_hostPollStarted) {
       pollStartBtn.disabled = true;
       return;
