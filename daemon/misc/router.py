@@ -151,6 +151,8 @@ async def get_files_md():
     if folder is None:
         return FilesMdResponse(raw_markdown=_files_md.EMPTY_STATE, updated_at=None)
     _files_md.migrate_session_if_needed(folder)
+    # Trigger a load so any historical noise entries get pruned + auto-saved.
+    _files_md._load_doc(folder)
     target = folder / "files.md"
     if not target.exists():
         return FilesMdResponse(raw_markdown=_files_md.EMPTY_STATE, updated_at=None)
