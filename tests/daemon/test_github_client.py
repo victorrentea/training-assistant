@@ -1,0 +1,133 @@
+from unittest.mock import patch
+
+import pytest
+
+from daemon import github_client
+
+
+@pytest.fixture(autouse=True)
+def reset_cache():
+    github_client.reset_cache()
+    yield
+    github_client.reset_cache()
+
+
+def _fake_resp(status: int, body: bytes = b"{}", headers: dict | None = None):
+    class _Resp:
+        def __init__(self):
+            self.status = status
+            self._body = body
+            self.headers = headers or {}
+
+        def read(self):
+            return self._body
+
+        def getcode(self):
+            return self.status
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    return _Resp()
+
+
+def test_get_repo_info_public_returns_default_branch():
+    body = b'{"default_branch":"main"}'
+    with patch("urllib.request.urlopen", return_value=_fake_resp(200, body)):
+        info = github_client.get_repo_info("owner", "repo")
+    assert info is not None
+    assert info.default_branch == "main"
+
+
+def test_get_repo_info_404_returns_none():
+    import urllib.error
+    with patch(
+        "urllib.request.urlopen",
+        side_effect=urllib.error.HTTPError("u", 404, "Not Found", {}, None),
+    ):
+        info = github_client.get_repo_info("owner", "missing")
+    assert info is None
+
+
+def test_get_repo_info_403_returns_none():
+    import urllib.error
+    with patch(
+        "urllib.request.urlopen",
+        side_effect=urllib.error.HTTPError("u", 403, "Forbidden", {}, None),
+    ):
+        info = github_client.get_repo_info("owner", "private")
+    assert info is None
+
+
+def test_get_repo_info_is_cached_after_success():
+    body = b'{"default_branch":"main"}'
+    with patch("urllib.request.urlopen", return_value=_fake_resp(200, body)) as mock:
+        github_client.get_repo_info("owner", "repo")
+        github_client.get_repo_info("owner", "repo")
+        github_client.get_repo_info("owner", "repo")
+    assert mock.call_count == 1
+
+
+def test_get_repo_info_caches_negative_lookup():
+    import urllib.error
+    with patch(
+        "urllib.request.urlopen",
+        side_effect=urllib.error.HTTPError("u", 404, "x", {}, None),
+    ) as mock:
+        github_client.get_repo_info("owner", "missing")
+        github_client.get_repo_info("owner", "missing")
+    assert mock.call_count == 1
+
+
+def test_get_repo_info_returns_rate_limited_sentinel():
+    import urllib.error
+    with patch(
+        "urllib.request.urlopen",
+        side_effect=urllib.error.HTTPError(
+            "u", 403, "rate limited",
+            {"X-RateLimit-Remaining": "0"},
+            None,
+        ),
+    ):
+        info = github_client.get_repo_info("owner", "repo")
+    assert info is github_client.RATE_LIMITED
+
+
+def test_get_repo_info_does_not_cache_rate_limited():
+    import urllib.error
+    err = urllib.error.HTTPError(
+        "u", 403, "rate limited", {"X-RateLimit-Remaining": "0"}, None,
+    )
+    with patch("urllib.request.urlopen", side_effect=err) as mock:
+        github_client.get_repo_info("owner", "repo")
+        github_client.get_repo_info("owner", "repo")
+    assert mock.call_count == 2
+
+
+def test_head_blob_200_returns_true():
+    with patch("urllib.request.urlopen", return_value=_fake_resp(200)):
+        assert github_client.head_blob("owner", "repo", "main", "src/a.py") is True
+
+
+def test_head_blob_404_returns_false():
+    import urllib.error
+    with patch(
+        "urllib.request.urlopen",
+        side_effect=urllib.error.HTTPError("u", 404, "x", {}, None),
+    ):
+        assert github_client.head_blob("owner", "repo", "main", "src/missing.py") is False
+
+
+def test_head_blob_uses_HEAD_method():
+    captured = {}
+
+    def fake_urlopen(req, **kw):
+        captured["method"] = req.get_method()
+        return _fake_resp(200)
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        github_client.head_blob("owner", "repo", "main", "src/a.py")
+    assert captured["method"] == "HEAD"
