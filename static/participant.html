@@ -23,7 +23,7 @@ body{visibility:hidden}
 .pdf-buffer { position: absolute; inset: 0; }
 .buf-front  { opacity: 1; pointer-events: auto; z-index: 2; }
 .buf-back   { opacity: 0; pointer-events: none; z-index: 1; }
-#notes-badge,#summary-badge,#code-badge{background:#9ca3af}
+#notes-badge,#summary-badge{background:#9ca3af}
 .badge-alert{background:#ef4444!important}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes follow-pulse{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
@@ -532,21 +532,10 @@ body{visibility:hidden}
 <span class="text-base flex-1">Google Drive</span>
 <span class="material-symbols-outlined flex-shrink-0" style="font-size:1rem;opacity:0.5">open_in_new</span>
 </a>
-<div>
-<a data-nav="gitrepos" onclick="toggleRepos()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
+<a data-nav="files" onclick="showView('files')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-size:22px;line-height:1;flex-shrink-0">commit</span>
-<span class="inline-flex items-center gap-1">
-<span class="text-base">Code</span>
-<span class="material-symbols-outlined repos-arrow text-xl transition-transform duration-300">chevron_right</span>
-</span>
-<span id="code-badge" class="badge-new ml-auto" style="display:none"></span>
+<span class="text-base">Files</span>
 </a>
-<div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="repos-list mx-2 rounded-xl bg-surface-container-high">
-<div id="repos-content" class="overflow-y-auto h-full py-1">
-<p class="px-4 py-2 text-sm text-on-surface-variant">Loading…</p>
-</div>
-</div>
-</div>
 <a data-nav="upload-paste" onclick="showView('upload-paste')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">upload</span>
 <span class="text-base">Upload / Paste</span>
@@ -623,6 +612,12 @@ body{visibility:hidden}
   </div>
   <div id="summary-scroll" class="flex-grow overflow-y-auto px-16 py-12" onscroll="saveScroll('summary',this)">
     <div id="summary-content" class="text-on-surface leading-relaxed prose max-w-none">Loading…</div>
+  </div>
+</div>
+<!-- Files View -->
+<div id="files-view" style="display:none" class="h-full flex flex-col">
+  <div id="files-scroll" class="flex-grow overflow-y-auto px-16 py-12" onscroll="saveScroll('files',this)">
+    <div id="files-content" class="text-on-surface leading-relaxed prose max-w-none">Loading…</div>
   </div>
 </div>
 <!-- Agenda View -->
@@ -1235,7 +1230,7 @@ function setActive(name) {
   if (el) el.classList.add('nav-active');
 }
 function openPastSlides() {
-  closeTopics(); closeRepos();
+  closeTopics();
   var arrow = document.querySelector('.past-slides-arrow');
   if (arrow) arrow.style.transform = 'rotate(90deg)';
   _loadSlideHistory();
@@ -1258,7 +1253,6 @@ function _startMenuCollapseTimer() {
   clearTimeout(_menuCollapseTimer);
   _menuCollapseTimer = setTimeout(function() {
     closeTopics();
-    closeRepos();
     closePastSlides({ focusAllTopics: false });
   }, 10000);
 }
@@ -1455,13 +1449,6 @@ function _hideSlideHistory() {
     _historySelectedRowEl = null;
   }
 }
-function _setCodeBadge(total) {
-  var badge = document.getElementById('code-badge');
-  if (!badge) return;
-  var n = Number(total) || 0;
-  badge.textContent = String(n);
-  badge.style.display = n > 0 ? '' : 'none';
-}
 function _setPastSlidesBadge(total) {
   var badge = document.getElementById('past-slides-badge');
   if (!badge) return;
@@ -1587,12 +1574,6 @@ function _recomputeOpenMenuHeights() {
     topics.style.maxHeight = _computeListHeight(topics) + 'px';
     requestAnimationFrame(function() { topics.style.transition = ''; });
   }
-  var repos = document.querySelector('.repos-list');
-  if (repos && repos.style.maxHeight && repos.style.maxHeight !== '0px') {
-    repos.style.transition = 'none';
-    repos.style.maxHeight = _computeListHeight(repos) + 'px';
-    requestAnimationFrame(function() { repos.style.transition = ''; });
-  }
   var pastSlides = document.getElementById('slide-history-list');
   if (pastSlides && pastSlides.style.display !== 'none' && pastSlides.style.display !== '') {
     pastSlides.style.maxHeight = _computeListHeight(pastSlides) + 'px';
@@ -1602,7 +1583,6 @@ window.addEventListener('resize', _recomputeOpenMenuHeights);
 function openTopics(options) {
   options = options || {};
   if (!options.skipCloseSlides) closeSlides({ focusAllTopics: false });
-  closeRepos();
   var list = document.querySelector('.topics-list');
   var arrow = document.querySelector('.topics-arrow');
   list.style.maxHeight = '0px';
@@ -1625,62 +1605,6 @@ function openTopics(options) {
 function closeTopics() {
   var list = document.querySelector('.topics-list');
   var arrow = document.querySelector('.topics-arrow');
-  if (!list) return;
-  list.style.overflowY = 'hidden';
-  list.style.maxHeight = '0px';
-  arrow.style.transform = 'rotate(0deg)';
-}
-function openRepos() {
-  closeSlides({ focusAllTopics: false }); closeTopics();
-  var list = document.querySelector('.repos-list');
-  var arrow = document.querySelector('.repos-arrow');
-  list.style.maxHeight = '0px';
-  requestAnimationFrame(function() {
-    list.style.maxHeight = _computeListHeight(list) + 'px';
-    setTimeout(function() { list.style.overflowY = 'auto'; }, 600);
-  });
-  arrow.style.transform = 'rotate(90deg)';
-  fetch('/' + _sessionId + '/api/participant/git-activity')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var repos = data.git_repos || [];
-      _setCodeBadge(repos.reduce(function(sum, r) { return sum + (r.files ? r.files.length : 0); }, 0));
-      var el = document.getElementById('repos-content');
-      if (!repos.length) {
-        el.innerHTML = '<p class="px-4 py-2 text-sm text-on-surface-variant">No repos tracked yet.</p>';
-        return;
-      }
-      el.innerHTML = repos.map(function(repo) {
-        var base = repo.url.replace(/\.git$/, '');
-        var name = base.split('/').pop() + '.git';
-        var branchUrl = base + '/tree/' + repo.branch;
-        var fileUrls = repo.file_urls || {};
-        var files = repo.files.map(function(f) {
-          var label = fileUrls[f]
-            ? '<a href="' + fileUrls[f] + '" target="_blank" class="truncate hover:underline" style="color:var(--action)">' + f + '</a>'
-            : '<span class="truncate">' + f + '</span>';
-          return '<li class="flex items-center gap-1 min-w-0 py-0.5" style="margin-left:22px">'
-            + '<span class="flex-shrink-0">•</span>'
-            + label
-            + '</li>';
-        }).join('');
-        return '<div class="text-sm">'
-          + '<a href="' + branchUrl + '" target="_blank" class="nav-item rounded-lg px-2 py-1.5 flex items-center gap-2 transition-all cursor-pointer mx-1 min-w-0">'
-          + '<span class="material-symbols-outlined flex-shrink-0" style="font-size:1.25rem">commit</span>'
-          + '<span class="flex-shrink-0">' + name + ' -</span>'
-          + '<span class="min-w-0 text-on-surface-variant font-normal" style="font-size:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + repo.branch + '</span>'
-          + '</a>'
-          + (files ? '<ul class="mt-0 ml-7 mr-2 text-sm text-on-surface-variant list-none space-y-0 pb-1">' + files + '</ul>' : '')
-          + '</div>';
-      }).join('');
-    })
-    .catch(function() {
-      document.getElementById('repos-content').innerHTML = '<p class="px-4 py-2 text-sm text-on-surface-variant">Failed to load.</p>';
-    });
-}
-function closeRepos() {
-  var list = document.querySelector('.repos-list');
-  var arrow = document.querySelector('.repos-arrow');
   if (!list) return;
   list.style.overflowY = 'hidden';
   list.style.maxHeight = '0px';
@@ -2010,7 +1934,7 @@ function scheduleHideOverflow() {
     el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-1');
   }, 120);
 }
-var VIEWS = ['activity', 'slides', 'summary', 'notes', 'agenda', 'feedback', 'upload-paste'];
+var VIEWS = ['activity', 'slides', 'summary', 'notes', 'agenda', 'feedback', 'upload-paste', 'files'];
 var _suppressScrollSave = new Set();
 function saveScroll(name, el) {
   if (_suppressScrollSave.has(name)) return;
@@ -2023,10 +1947,6 @@ function toggleSlidesMenu() {
 function toggleTopics() {
   var list = document.querySelector('.topics-list');
   if (!list.style.maxHeight || list.style.maxHeight === '0px') { openTopics(); } else { closeTopics(); }
-}
-function toggleRepos() {
-  var list = document.querySelector('.repos-list');
-  if (!list.style.maxHeight || list.style.maxHeight === '0px') { openRepos(); } else { closeRepos(); }
 }
 async function selectTopic(el, event, slide, targetPageOverride) {
   if (event) event.stopPropagation();
@@ -2091,7 +2011,6 @@ async function selectTopic(el, event, slide, targetPageOverride) {
   }
 }
 function showView(name) {
-  closeRepos();
   var followLabel = document.querySelector('label[for="slides-follow-checkbox"]');
   if (name !== 'slides') {
     closeTopics();
@@ -2109,6 +2028,7 @@ function showView(name) {
   if (name === 'agenda') loadAgenda();
   if (name === 'notes') { loadNotes(); _applyNotesBadgeUnread(false); }
   if (name === 'summary') { loadSummary(); _applySummaryBadgeUnread(false); }
+  if (name === 'files') { _filesDirty = true; loadFilesMd(); }
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
@@ -2790,7 +2710,6 @@ async function _refreshParticipantState() {
     else { gdriveNav.style.display = 'none'; }
     _applyGdriveToast(state.gdrive_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
-    _setCodeBadge(state.git_files_count || 0);
     var saved = LS.getView();
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
     if (saved === 'notes' && !state.notes_updated_at) saved = 'slides';
@@ -2865,9 +2784,6 @@ function _applyState(msg) {
   }
   if (msg.slides_history_count != null) {
     _setPastSlidesBadge(msg.slides_history_count);
-  }
-  if (msg.git_files_count != null) {
-    _setCodeBadge(msg.git_files_count);
   }
   // Sync name from server
   if (msg.my_name && msg.my_name !== _myName) {
@@ -3706,6 +3622,37 @@ async function loadSummary() {
     _summaryDirty = true;
   } finally {
     _suppressScrollSave.delete('summary');
+  }
+}
+
+var _filesDirty = true;
+var _filesRawMarkdown = '';
+
+async function loadFilesMd() {
+  if (!_filesDirty) return;
+  _filesDirty = false;
+  const el = document.getElementById('files-content');
+  el.textContent = 'Loading…';
+  try {
+    const data = await fetch(`/${_sessionId}/api/participant/files-md`).then(r => r.ok ? r.json() : Promise.reject('not found'));
+    const md = (data && data.raw_markdown) || '';
+    _filesRawMarkdown = md;
+    if (md.trim()) {
+      var _renderer = new marked.Renderer();
+      _renderer.link = function(href, title, text) {
+        var t = title ? ' title="' + title + '"' : '';
+        return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>'
+          + text
+          + '<span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:middle;margin-left:2px;opacity:0.7">open_in_new</span>'
+          + '</a>';
+      };
+      el.innerHTML = marked.parse(md, { renderer: _renderer });
+    } else {
+      el.textContent = 'No files opened yet.';
+    }
+  } catch (e) {
+    el.textContent = 'Failed to load files.';
+    _filesDirty = true;
   }
 }
 
