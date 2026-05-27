@@ -1586,9 +1586,19 @@
     yesno:      { question: 'Had Coffee?', options: ['Yes', 'No'], multi: false },
     truefalse:  { question: '', options: ['True', 'False'], multi: false },
     rating15:   { question: '', options: ['1', '2', '3', '4', '5'], multi: false },
+    hardness:   { question: 'How hard was it?',
+                  options: ['1 Very easy', '2 OK', '3 Hard', '4 Extra hard', "5 I'm dead"], multi: false },
     energy:     { question: "How's the room feeling right now?",
                   options: ['🔥 Fire', '😐 OK', '😴 Sleepy', '💀 Need coffee'], multi: false },
   };
+
+  // ── Poll option sort toggle (host-only presentation, persisted) ──
+  const POLL_SORT_KEY = 'host_poll_sort_by_votes';
+  function _loadPollSortByVotes() {
+    const v = localStorage.getItem(POLL_SORT_KEY);
+    return v === null ? true : v === '1';   // default: sort by votes
+  }
+  let _hostPollSortByVotes = _loadPollSortByVotes();
 
   const pollState = {
     question: '',
@@ -1720,14 +1730,23 @@
 
   function reorderPollCards() {
     const draftIdx = pollState.options.length - 1;
-    // Build realIdxs from CURRENT DOM order, then sort by count desc with
+    // When sort-by-votes is OFF, restore insertion order (data-opt-idx
+    // ascending) so options stay where the host typed them. Otherwise,
+    // build realIdxs from CURRENT DOM order, then sort by count desc with
     // JS's stable sort. Ties preserve the existing position, so an option
     // only moves when its count strictly exceeds (or falls below) a
     // neighbor's — never on a tie.
-    const realIdxs = Array.from(pollOptionsEl.children)
-      .map(c => Number(c.dataset.optIdx))
-      .filter(i => !(i === draftIdx && pollState.options[i] === ''));
-    realIdxs.sort((a, b) => (_hostPollCountsState[b] ?? 0) - (_hostPollCountsState[a] ?? 0));
+    let realIdxs;
+    if (_hostPollSortByVotes) {
+      realIdxs = Array.from(pollOptionsEl.children)
+        .map(c => Number(c.dataset.optIdx))
+        .filter(i => !(i === draftIdx && pollState.options[i] === ''));
+      realIdxs.sort((a, b) => (_hostPollCountsState[b] ?? 0) - (_hostPollCountsState[a] ?? 0));
+    } else {
+      realIdxs = pollState.options
+        .map((_, i) => i)
+        .filter(i => !(i === draftIdx && pollState.options[i] === ''));
+    }
     const desiredOrder = realIdxs.slice();
     if (pollState.options[draftIdx] === '') desiredOrder.push(draftIdx);
 
@@ -1919,6 +1938,20 @@
     flushPollUpdate();   // toggle is structural → immediate
   });
 
+  const pollSortToggleEl   = document.getElementById('poll-sort-toggle');
+  const pollSortEmojiEl    = document.getElementById('poll-sort-toggle-emoji');
+  function _refreshPollSortToggleUI() {
+    pollSortToggleEl.checked = _hostPollSortByVotes;
+    pollSortEmojiEl.textContent = _hostPollSortByVotes ? '↕️' : '⬇️';
+  }
+  _refreshPollSortToggleUI();
+  pollSortToggleEl.addEventListener('change', () => {
+    _hostPollSortByVotes = pollSortToggleEl.checked;
+    localStorage.setItem(POLL_SORT_KEY, _hostPollSortByVotes ? '1' : '0');
+    _refreshPollSortToggleUI();
+    reorderPollCards();   // host-only presentation → no server update
+  });
+
   pollStartBtn.addEventListener('click', async () => {
     if (pollStartBtn.disabled) return;
     await flushPollUpdate();   // await so daemon has the latest draft before /start
@@ -1978,6 +2011,7 @@
   pollQuestionEl.tabIndex = 1;
   pollMultiEl.tabIndex   = -1;
   pollPublicEl.tabIndex  = -1;
+  pollSortToggleEl.tabIndex = -1;
   pollClearBtn.tabIndex  = -1;
   pollStopBtn.tabIndex   = -1;
   pollQuickBtns.forEach(b => b.tabIndex = -1);

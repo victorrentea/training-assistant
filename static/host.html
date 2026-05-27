@@ -128,6 +128,10 @@
             <input type="checkbox" id="poll-public" checked />
             Public
           </label>
+          <label class="poll-multi-label" title="Sort options by vote count (off = preserve original order)">
+            <input type="checkbox" id="poll-sort-toggle" checked />
+            <span id="poll-sort-toggle-emoji">↕️</span>
+          </label>
           <button class="btn btn-danger" id="poll-clear-btn">Clear</button>
           <button class="btn btn-warn" id="poll-stop-btn" disabled>Stop</button>
           <button class="btn btn-success" id="poll-start-btn" disabled>Start</button>
@@ -138,6 +142,7 @@
             <button class="btn btn-secondary poll-quick-btn" data-preset="yesno">Had Coffee: Yes / No</button>
             <button class="btn btn-secondary poll-quick-btn" data-preset="truefalse">True / False</button>
             <button class="btn btn-secondary poll-quick-btn" data-preset="rating15">1-5</button>
+            <button class="btn btn-secondary poll-quick-btn" data-preset="hardness">Hardness: 1=Easy → 5=Dead</button>
             <button class="btn btn-secondary poll-quick-btn" data-preset="energy">Energy: Fire, OK, Sleepy, Need Coffee</button>
           </div>
         </div>
