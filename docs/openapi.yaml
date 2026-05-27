@@ -641,6 +641,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/SummaryResponse'
       x-feature: notes_summary
+  /api/participant/files-md:
+    get:
+      tags:
+      - misc
+      summary: Get Files Md
+      description: Return the per-session files.md content with HTML comments stripped.
+      operationId: get_files_md_api_participant_files_md_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilesMdResponse'
+      x-feature: misc
   /api/participant/slides/decks:
     get:
       tags:
@@ -1186,8 +1201,17 @@ paths:
       tags:
       - session
       summary: Start Session
-      description: Host starts a new session (creates folder, assigns session_id,
+      description: 'Host starts a new session (creates folder, assigns session_id,
         clean slate).
+
+
+        For fresh sessions the local folder is created immediately so DriveFS can
+
+        sync it up to Google Drive; we then poll DriveFS for the resulting URL up
+
+        to 15s before returning. The host UI only navigates into the session once
+
+        we respond, so this guarantees a usable gdrive_url is in place.'
       operationId: start_session_api_session_create_post
       requestBody:
         content:
@@ -1791,6 +1815,21 @@ components:
       required:
       - text
       title: FeedbackRequest
+    FilesMdResponse:
+      properties:
+        raw_markdown:
+          type: string
+          title: Raw Markdown
+        updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Updated At
+      type: object
+      required:
+      - raw_markdown
+      - updated_at
+      title: FilesMdResponse
     FolderInfo:
       properties:
         name:

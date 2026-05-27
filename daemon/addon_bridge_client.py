@@ -25,6 +25,16 @@ _OPEN_TIMEOUT = 5.0
 _NAME = "addons   "
 
 
+def _handle_git_file_opened(data: dict) -> None:
+    from daemon import files_md
+    url = data.get("url", "")
+    file_path = data.get("file", "")
+    if not url or not file_path:
+        return
+    files_md.record_file_opened(url, file_path)
+    log.debug(_NAME, f"← git {url.split('/')[-1]} {file_path}")
+
+
 class AddonBridgeClient:
     def __init__(self):
         self._ws = None
@@ -170,14 +180,7 @@ class AddonBridgeClient:
                     if slides:
                         self._slides_viewed_queue.put(slides)
                 elif data.get("type") == "git_file_opened":
-                    from daemon.participant.state import participant_state
-                    url = data.get("url", "")
-                    branch = data.get("branch", "")
-                    file = data.get("file", "")
-                    file_url = data.get("file_url") or None
-                    if url and branch and file:
-                        participant_state.accumulate_git_file(url, branch, file, file_url)
-                        log.debug(_NAME, f"← git {url.split('/')[-1]}:{branch} {file}")
+                    _handle_git_file_opened(data)
                 if _ctx and _token:
                     context.detach(_token)
         except ConnectionClosed:
