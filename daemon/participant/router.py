@@ -29,7 +29,7 @@ from daemon.participant.names import (
 from daemon.participant.names import (
     refresh_avatar as _refresh_avatar_logic,
 )
-from daemon.participant.state import GitRepoActivity, participant_state
+from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
 from daemon.ws_messages import ParticipantListUpdatedMsg
@@ -67,10 +67,6 @@ class AvatarResponse(BaseModel):
 
 class LocationRequest(BaseModel):
     location: str
-
-
-class GitActivityResponse(BaseModel):
-    git_repos: list[GitRepoActivity]
 
 
 def _http_get_json(url: str, *, timeout: float = 2.5):
@@ -255,7 +251,6 @@ class ParticipantStateResponse(BaseModel):
     notes_updated_at: str | None = None
     summary_updated_at: str | None = None
     slides_history_count: int
-    git_files_count: int
     gdrive_url: str | None = None
     has_agenda: bool = False
 
@@ -694,23 +689,14 @@ async def get_participant_state(request: Request):
         "notes_updated_at": notes_updated_at,
         "summary_updated_at": summary["updated_at"],
         "slides_history_count": len(misc_state.slides_viewed),
-        "git_files_count": sum(len(r.files) for r in ps.git_repos),
         # Google Drive folder link for session materials
         "gdrive_url": session_shared_state.get_gdrive_url(),
         # Agenda .docx availability
         "has_agenda": misc_state.agenda_docx_path is not None
         and misc_state.agenda_docx_path.exists(),
-        # Last git repo URL — used by talk mode to enable the Git Repo top button
-        "last_git_url": ps.git_repos[-1].url if ps.git_repos else None,
     }
 
     return JSONResponse(state_msg)
-
-
-@router.get("/git-activity", response_model=GitActivityResponse)
-async def get_git_activity():
-    """Return accumulated git file-open activity for the current session."""
-    return GitActivityResponse(git_repos=participant_state.git_repos)
 
 
 def _get_current_session_id() -> str | None:

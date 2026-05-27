@@ -80,11 +80,6 @@ slides_viewed?: list[ViewedSlide{
   page:int  # 1-based slide number
   seconds?:int  # Cumulative seconds viewed
 }]  # Accumulated per-slide viewing durations from addons
-git_repos?: list[PersistedGitRepoActivity{
-  url?:string
-  branch?:string
-  files?:list[string]  # File paths opened in this repo+branch
-}]  # Accumulated git file-open events for this session
 emoji_counters?: dict[str, int]  # emoji → cumulative reaction count (talk mode)
 ```
 

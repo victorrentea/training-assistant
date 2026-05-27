@@ -3,18 +3,15 @@ Hermetic E2E tests: daemon integration points.
 
 Tests that verify each daemon external integration works through the stub adapters:
 - PPTX file change detection → slide_invalidated → backend re-downloads
-- Git activity WS tracking → host sees repos + branches
 - Quiz generation via stub LLM → host sees quiz preview
 - Session folder creation + state persistence on disk
 """
 
 import json
 import os
-import queue
 import re
 import subprocess
 import sys
-import threading
 import time
 import urllib.request
 from datetime import datetime
@@ -139,74 +136,6 @@ def test_pptx_change_triggers_slide_invalidation():
 
         print("SUCCESS: PPTX change detected by daemon!")
         browser.close()
-
-
-# ── Git Activity WS Tracker ────────────────────────────────────────────────
-
-
-@pytest.mark.nightly
-def test_git_file_opened_tracked_by_daemon():
-    """Send git_file_opened via addon bridge WS → daemon accumulates it → host badge updates."""
-    from websockets.sync.server import serve as ws_serve
-
-    _ADDON_BRIDGE_PORT = int(os.environ.get("WS_SERVER_PORT", "8765"))
-    connection_event = threading.Event()
-    send_queue: queue.Queue = queue.Queue()
-
-    def _addon_handler(ws):
-        connection_event.set()
-        try:
-            msg = send_queue.get(timeout=15)
-            ws.send(json.dumps(msg))
-            # Keep open so daemon processes it before we close
-            time.sleep(3)
-        except Exception:
-            pass
-
-    server = ws_serve(_addon_handler, "127.0.0.1", _ADDON_BRIDGE_PORT)
-    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
-    server_thread.start()
-
-    try:
-        # Daemon retries addon bridge every 5 s — wait for it to connect
-        assert connection_event.wait(timeout=12), "Daemon did not connect to addon bridge WS server"
-
-        send_queue.put({
-            "type": "git_file_opened",
-            "url": "https://github.com/victorrentea/training-assistant",
-            "branch": "feature/hermetic-tests",
-            "file": "main.py",
-        })
-
-        session_id = fresh_session("Integration")
-
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            host_ctx = browser.new_context(
-                http_credentials={"username": HOST_USER, "password": HOST_PASS}
-            )
-            host_page = host_ctx.new_page()
-            host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
-            expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
-
-            _await_condition(
-                lambda: host_page.evaluate("""() => {
-                    const badge = document.getElementById('git-repos-badge');
-                    if (!badge) return false;
-                    const text = badge.textContent.trim();
-                    const match = text.match(/(\\d+)/);
-                    return match && parseInt(match[1]) > 0;
-                }"""),
-                timeout_ms=15000,
-                msg="Daemon did not push git_repos from WS message to backend (git-repos-badge stayed at 0)"
-            )
-
-            badge_text = host_page.evaluate("() => document.getElementById('git-repos-badge')?.textContent || ''")
-            print(f"Git repos badge: '{badge_text}'")
-            print("SUCCESS: Git activity tracked via addon bridge WS!")
-            browser.close()
-    finally:
-        server.shutdown()
 
 
 # ── Quiz Generation via Stub LLM ──────────────────────────────────────────

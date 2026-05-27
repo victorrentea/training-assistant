@@ -27,8 +27,6 @@ def _feature_for_misc_path(path: str) -> str:
 def _feature_from_tag_and_path(tag: str, path: str) -> str:
     if path == "/api/participant/state":
         return "participant_state"
-    if path == "/api/participant/git-activity":
-        return "activity"
     if path.endswith("/host/state"):
         return "host_state"
     if tag in ("", "_untagged", "session"):

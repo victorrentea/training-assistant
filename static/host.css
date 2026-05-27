@@ -519,7 +519,7 @@ body {
   opacity: 0 !important;
 }
 
-/* git-repos and slides-log popovers: match footer-badge-tooltip style */
+/* slides-log popover: matches footer-badge-tooltip style */
 .activity-log-popover {
   display: block;
   opacity: 0;

@@ -113,21 +113,6 @@ paths:
       x-feature: participant_state
       x-doc-notes:
       - Returns participant-personalized full state snapshot.
-  /api/participant/git-activity:
-    get:
-      tags:
-      - participant
-      summary: Get Git Activity
-      description: Return accumulated git file-open activity for the current session.
-      operationId: get_git_activity_api_participant_git_activity_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GitActivityResponse'
-      x-feature: activity
   /api/{session_id}/host/participants/resolve-locations:
     post:
       tags:
@@ -1857,42 +1842,6 @@ components:
       - error
       - message
       title: GDriveUnavailableResponse
-    GitActivityResponse:
-      properties:
-        git_repos:
-          items:
-            $ref: '#/components/schemas/GitRepoActivity'
-          type: array
-          title: Git Repos
-      type: object
-      required:
-      - git_repos
-      title: GitActivityResponse
-    GitRepoActivity:
-      properties:
-        url:
-          type: string
-          title: Url
-        branch:
-          type: string
-          title: Branch
-        files:
-          items:
-            type: string
-          type: array
-          title: Files
-          default: []
-        file_urls:
-          additionalProperties:
-            type: string
-          type: object
-          title: File Urls
-          default: {}
-      type: object
-      required:
-      - url
-      - branch
-      title: GitRepoActivity
     HostCodeReviewState:
       properties:
         snippet:
@@ -2231,16 +2180,6 @@ components:
           - type: string
           - type: 'null'
           title: Slides Log Topic
-        git_repos:
-          items:
-            $ref: '#/components/schemas/GitRepoActivity'
-          type: array
-          title: Git Repos
-          default: []
-        git_repos_count:
-          type: integer
-          title: Git Repos Count
-          default: 0
         session_id:
           anyOf:
           - type: string
@@ -2511,9 +2450,6 @@ components:
         slides_history_count:
           type: integer
           title: Slides History Count
-        git_files_count:
-          type: integer
-          title: Git Files Count
         gdrive_url:
           anyOf:
           - type: string
@@ -2536,7 +2472,6 @@ components:
       - codereview
       - debate
       - slides_history_count
-      - git_files_count
       title: ParticipantStateResponse
     PasteEntry:
       properties:

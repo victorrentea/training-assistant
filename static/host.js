@@ -28,7 +28,6 @@
   let _currentSessionId = null;
   let _joinBaseUrl = null;   // set from state.join_base_url (daemon config URL)
   let _slidesCatalogHideTimer = null;
-  let _gitRepos = [];
   let _slidesLog = [];
   let _daemonLogLevel = 'info';
   let _logLevelBusy = false;
@@ -50,7 +49,6 @@
     'gdrive-badge': 'Google Drive status',
     'summary-badge': 'Key points summary',
     'log-level-badge': 'Daemon log level (click to toggle)',
-    'git-repos-badge': 'Git repos activity',
     'slides-log-badge': 'Slides activity',
     'slides-catalog-icon': 'Slides catalog status',
   };
@@ -402,14 +400,7 @@
           const count = msg.slides_log_deep_count ?? 0;
           document.getElementById('slides-log-count').textContent = count;
         }
-        if (msg.git_repos !== undefined) _gitRepos = msg.git_repos;
         if (msg.slides_log !== undefined) _slidesLog = msg.slides_log;
-        const gitCount = _gitRepos.length > 0 ? (msg.git_repos_count ?? _gitRepos.length) : 0;
-        const gitBadge = document.getElementById('git-repos-badge');
-        if (gitBadge) {
-          gitBadge.textContent = '⎇ ' + gitCount;
-          _setFooterBadgeTooltip(gitBadge, 'Git repos activity');
-        }
         renderTranscriptStatus(msg.transcript_line_count, msg.transcript_total_lines, msg.transcript_latest_ts, msg.transcript_last_content_at);
         if (msg.railway_connected !== undefined) {
           _railwayConnected = msg.railway_connected;
@@ -990,24 +981,6 @@
     return m > 0 ? h + 'h ' + m + 'm' : h + 'h';
   }
 
-  function _renderGitReposPopover() {
-    const el = document.getElementById('git-repos-content');
-    if (!el) return;
-    if (!_gitRepos.length) { el.innerHTML = '<div style="padding:8px;opacity:0.5">No repos tracked yet</div>'; return; }
-    const sorted = [..._gitRepos].sort((a, b) => (b.files?.length || 0) - (a.files?.length || 0));
-    let html = '';
-    for (const r of sorted) {
-      const repoName = (r.url || '').replace(/.*\//, '') || r.url || '';
-      const fileCount = (r.files || []).length;
-      html += '<div class="slides-catalog-line">'
-        + '<span class="slides-cache-title truncate">' + escHtml(repoName) + '</span>'
-        + '<span class="slides-cache-label" style="color:var(--muted);font-family:monospace">@ ' + escHtml(r.branch || '') + '</span>'
-        + '<span class="slides-cache-detail">' + fileCount + ' file' + (fileCount !== 1 ? 's' : '') + '</span>'
-        + '</div>';
-    }
-    el.innerHTML = html;
-  }
-
   function _renderSlidesLogPopover() {
     const el = document.getElementById('slides-log-content');
     if (!el) return;
@@ -1044,7 +1017,6 @@
       hover.addEventListener('mouseenter', open);
       hover.addEventListener('mouseleave', close);
     }
-    _makeHover('git-repos-hover', 'git-repos-popover', _renderGitReposPopover);
     _makeHover('slides-log-hover', 'slides-log-popover', _renderSlidesLogPopover);
   }
 

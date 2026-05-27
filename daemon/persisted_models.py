@@ -101,13 +101,6 @@ class ViewedSlide(PersistedModel):
     seconds: int = Field(default=0, description="Cumulative seconds viewed")
 
 
-class PersistedGitRepoActivity(PersistedModel):
-    """Single git repo+branch entry with accumulated file paths."""
-    url: str = ""
-    branch: str = ""
-    files: list[str] = Field(default_factory=list, description="File paths opened in this repo+branch")
-
-
 class PersistedSessionState(PersistedModel):
     """Runtime session snapshot persisted in `session-state.json`."""
 
@@ -178,7 +171,6 @@ class PersistedSessionState(PersistedModel):
     talk_presentation_slug: str | None = Field(default=None, description="Railway slug under which the talk PPTX PDF is cached")
     current_slide: dict[str, Any] | None = Field(default=None, description="{slug, page}")
     slides_viewed: list[ViewedSlide] = Field(default_factory=list, description="Accumulated per-slide viewing durations from addons")
-    git_repos: list[PersistedGitRepoActivity] = Field(default_factory=list, description="Accumulated git file-open events for this session")
     emoji_counters: dict[str, int] = Field(default_factory=dict, description="emoji → cumulative reaction count (talk mode)")
 
     @model_validator(mode="before")

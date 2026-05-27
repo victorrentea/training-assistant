@@ -11,7 +11,7 @@ from daemon.codereview.state import codereview_state
 from daemon.debate.state import debate_state
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
 from daemon.misc.state import misc_state
-from daemon.participant.state import GitRepoActivity, participant_state
+from daemon.participant.state import participant_state
 from daemon.qa.state import qa_state
 from daemon.session import state as session_shared_state
 from daemon.wordcloud.state import wordcloud_state
@@ -108,8 +108,6 @@ class HostStateResponse(BaseModel):
     talk_presentation_slug: str | None = None
     slides_log_deep_count: int
     slides_log_topic: str | None = None
-    git_repos: list[GitRepoActivity] = []
-    git_repos_count: int = 0
     session_id: str | None = None
     join_base_url: str
     daemon_session_folder: str | None = None
@@ -296,8 +294,6 @@ async def get_host_state(request: Request, session_id: str):
         "talk_presentation_name": misc_state.talk_presentation_name,
         "talk_presentation_slug": misc_state.talk_presentation_slug,
         **_build_slides_log_fields(),
-        "git_repos": [r.model_dump() for r in participant_state.git_repos],
-        "git_repos_count": len(participant_state.git_repos),
         # Session tracking
         "session_id": _get_current_session_id(),
         "join_base_url": _get_join_base_url(),

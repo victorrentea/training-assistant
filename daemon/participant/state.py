@@ -6,15 +6,6 @@ Initial data comes from session_sync/state_restore on WS connect.
 """
 import threading
 
-from pydantic import BaseModel
-
-
-class GitRepoActivity(BaseModel):
-    url: str
-    branch: str
-    files: list[str] = []
-    file_urls: dict[str, str] = {}
-
 
 def _sync_score_to_daemon(pid: str, score: int):
     """Sync a single restored score to the authoritative daemon.scores singleton."""
@@ -50,29 +41,7 @@ class ParticipantState:
         self.location_countries: dict[str, str] = {}
         self.mode: str = "workshop"
         self.current_activity: str = "none"
-        self.git_repos: list[GitRepoActivity] = []
         self.emoji_counters: dict[str, int] = {}
-
-    def accumulate_git_file(self, url: str, branch: str, file: str, file_url: str | None = None) -> None:
-        """Add a git file-open event to the session's accumulated git activity.
-
-        The macOS addon sends `"(none)"` when IntelliJ has a project open but no
-        file selected. Treat it as "branch active, no file" — ensure the branch
-        entry exists, but don't store the sentinel in `files`.
-        """
-        is_placeholder = not file or not file.strip() or file == "(none)"
-        for entry in self.git_repos:
-            if entry.url == url and entry.branch == branch:
-                if not is_placeholder and file not in entry.files:
-                    entry.files.append(file)
-                if not is_placeholder and file_url:
-                    entry.file_urls[file] = file_url
-                return
-        if is_placeholder:
-            self.git_repos.append(GitRepoActivity(url=url, branch=branch, files=[], file_urls={}))
-        else:
-            urls = {file: file_url} if file_url else {}
-            self.git_repos.append(GitRepoActivity(url=url, branch=branch, files=[file], file_urls=urls))
 
     def sync_from_restore(self, data: dict):
         """Update cache from state_restore or session_sync data.
@@ -141,18 +110,6 @@ class ParticipantState:
                 self.mode = data["mode"]
             if "current_activity" in data:
                 self.current_activity = str(data["current_activity"])
-            raw_git_repos = data.get("git_repos")
-            if isinstance(raw_git_repos, list):
-                self.git_repos.clear()
-                for item in raw_git_repos:
-                    if isinstance(item, dict):
-                        try:
-                            entry = GitRepoActivity.model_validate(item)
-                            entry.files = [f for f in entry.files if f and f.strip() and f != "(none)"]
-                            entry.file_urls = {k: v for k, v in entry.file_urls.items() if k in entry.files}
-                            self.git_repos.append(entry)
-                        except Exception:
-                            pass
             raw_emoji_counters = data.get("emoji_counters")
             if isinstance(raw_emoji_counters, dict):
                 self.emoji_counters.clear()
@@ -171,7 +128,6 @@ class ParticipantState:
                 "location_countries": dict(self.location_countries),
                 "mode": self.mode,
                 "current_activity": self.current_activity,
-                "git_repos": [r.model_dump() for r in self.git_repos],
                 "emoji_counters": dict(self.emoji_counters),
             }
 
@@ -188,7 +144,6 @@ class ParticipantState:
             self.location_countries.clear()
             self.mode = mode
             self.current_activity = "none"
-            self.git_repos.clear()
             self.emoji_counters.clear()
 
 

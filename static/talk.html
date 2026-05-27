@@ -531,13 +531,6 @@ function _renderSpeaker() {
       var sc = state.slides_current || (state.talk_presentation_slug ? { slug: state.talk_presentation_slug, page: 1 } : null);
       if (sc) await _applySlidesCurrent(sc);
       if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
-      if (state.last_git_url) {
-        var gitBtn = document.getElementById('btn-git-repo');
-        if (gitBtn) {
-          gitBtn.disabled = false;
-          gitBtn.addEventListener('click', function() { window.open(state.last_git_url, '_blank'); });
-        }
-      }
     } catch (e) { console.error('[talk] init error', e); }
   })();
 </script>
