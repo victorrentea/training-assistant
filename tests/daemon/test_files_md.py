@@ -139,7 +139,6 @@ def test_record_unknown_repo_public_with_valid_blob(session_folder, monkeypatch)
          patch.object(github_client, "head_blob", return_value=True):
         files_md.record_file_opened(
             url="https://github.com/owner/repo.git",
-            branch="feature/x",
             file_path="src/a.py",
         )
     text = (session_folder / "files.md").read_text()
@@ -155,7 +154,6 @@ def test_record_public_repo_invalid_blob_writes_unlinked(session_folder, monkeyp
          patch.object(github_client, "head_blob", return_value=False):
         files_md.record_file_opened(
             url="https://github.com/owner/repo",
-            branch="main",
             file_path="src/missing.py",
         )
     text = (session_folder / "files.md").read_text()
@@ -166,7 +164,6 @@ def test_record_private_repo_writes_nothing(session_folder, monkeypatch):
     with patch.object(github_client, "get_repo_info", return_value=None):
         files_md.record_file_opened(
             url="https://github.com/owner/private",
-            branch="main",
             file_path="src/a.py",
         )
     assert not (session_folder / "files.md").exists()
@@ -177,7 +174,6 @@ def test_record_rate_limited_on_unknown_repo_drops_event(session_folder, monkeyp
     with patch.object(github_client, "get_repo_info", return_value=github_client.RATE_LIMITED):
         files_md.record_file_opened(
             url="https://github.com/owner/unknown",
-            branch="main",
             file_path="src/a.py",
         )
     assert not (session_folder / "files.md").exists()
@@ -190,11 +186,11 @@ def test_record_rate_limited_on_known_public_repo_writes_unlinked(session_folder
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
          patch.object(github_client, "head_blob", return_value=True):
-        files_md.record_file_opened("https://github.com/owner/repo", "main", "src/first.py")
+        files_md.record_file_opened("https://github.com/owner/repo", "src/first.py")
 
     _freeze_now(monkeypatch, "2026-05-27T10:02:00Z")
     with patch.object(github_client, "get_repo_info", return_value=github_client.RATE_LIMITED):
-        files_md.record_file_opened("https://github.com/owner/repo", "main", "src/second.py")
+        files_md.record_file_opened("https://github.com/owner/repo", "src/second.py")
     text = (session_folder / "files.md").read_text()
     assert "- [first.py](https://github.com/owner/repo/blob/main/src/first.py)" in text
     assert "- second.py <!-- ts:2026-05-27T10:02:00Z reason:rate-limited -->" in text
@@ -205,9 +201,9 @@ def test_record_dedup_same_basename_skips(session_folder, monkeypatch):
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
          patch.object(github_client, "head_blob", return_value=True):
-        files_md.record_file_opened("https://github.com/owner/repo", "main", "src/a.py")
+        files_md.record_file_opened("https://github.com/owner/repo", "src/a.py")
         _freeze_now(monkeypatch, "2026-05-27T10:05:00Z")
-        files_md.record_file_opened("https://github.com/owner/repo", "main", "src/a.py")
+        files_md.record_file_opened("https://github.com/owner/repo", "src/a.py")
     text = (session_folder / "files.md").read_text()
     assert text.count("- [a.py]") == 1
     assert "ts:2026-05-27T10:00:00Z" in text
@@ -219,9 +215,9 @@ def test_record_collision_downgrades_to_unlinked(session_folder, monkeypatch):
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
          patch.object(github_client, "head_blob", return_value=True):
-        files_md.record_file_opened("https://github.com/owner/repo", "main", "src/foo/utils.py")
+        files_md.record_file_opened("https://github.com/owner/repo", "src/foo/utils.py")
         _freeze_now(monkeypatch, "2026-05-27T10:05:00Z")
-        files_md.record_file_opened("https://github.com/owner/repo", "main", "src/bar/utils.py")
+        files_md.record_file_opened("https://github.com/owner/repo", "src/bar/utils.py")
     text = (session_folder / "files.md").read_text()
     assert text.count("utils.py") == 1
     assert "- utils.py <!-- ts:2026-05-27T10:00:00Z reason:ambiguous -->" in text
@@ -232,14 +228,14 @@ def test_record_empty_path_drops_event(session_folder, monkeypatch):
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
          patch.object(github_client, "head_blob", return_value=True) as head:
-        files_md.record_file_opened("https://github.com/owner/repo", "main", "")
+        files_md.record_file_opened("https://github.com/owner/repo", "")
     head.assert_not_called()
     assert not (session_folder / "files.md").exists()
 
 
 def test_record_non_github_host_dropped(session_folder, monkeypatch):
     with patch.object(github_client, "get_repo_info") as info:
-        files_md.record_file_opened("https://gitlab.com/owner/repo", "main", "src/a.py")
+        files_md.record_file_opened("https://gitlab.com/owner/repo", "src/a.py")
     info.assert_not_called()
     assert not (session_folder / "files.md").exists()
 
@@ -250,7 +246,7 @@ def test_repo_url_canonicalisation(session_folder, monkeypatch):
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
          patch.object(github_client, "head_blob", return_value=True):
-        files_md.record_file_opened("https://github.com/owner/repo.git/", "main", "src/a.py")
+        files_md.record_file_opened("https://github.com/owner/repo.git/", "src/a.py")
     text = (session_folder / "files.md").read_text()
     assert "https://github.com/owner/repo)" in text  # canonical form
     assert ".git" not in text

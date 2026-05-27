@@ -200,8 +200,11 @@ def _save_doc(folder: Path, doc: Doc) -> None:
     atomic_write(folder / _FILENAME, doc.render())
 
 
-def record_file_opened(url: str, branch: str, file_path: str) -> None:
+def record_file_opened(url: str, file_path: str) -> None:
     """Process one addon git_file_opened event for the active session.
+
+    The addon's reported `branch` is intentionally ignored — we always resolve
+    against the repo's GitHub default branch so links never go stale.
 
     Pipeline:
       1. Drop non-github.com hosts.
