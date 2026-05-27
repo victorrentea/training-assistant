@@ -25,6 +25,7 @@ export PPTX_DRIVE_POLL_SECONDS=0.5
 export PYTHONUNBUFFERED=1
 export FIXTURE_PDF_DIR=/tmp/fixture-pdfs
 export MOCK_DRIVE_PORT=9090
+export MOCK_GITHUB_PORT=9091
 
 # OpenTelemetry
 export OTEL_TRACES_FILE=/tmp/traces.jsonl
@@ -86,6 +87,16 @@ MOCK_DRIVE_PID=$!
 sleep 0.5
 echo "[startup] Mock Drive server started (PID=$MOCK_DRIVE_PID)"
 
+# Start mock GitHub stub server (used by daemon/github_client.py)
+python /tests/mock_github_server.py &
+MOCK_GITHUB_PID=$!
+sleep 0.5
+echo "[startup] Mock GitHub server started (PID=$MOCK_GITHUB_PID)"
+
+# Point daemon at local GitHub stub instead of real GitHub
+export GITHUB_API_BASE=http://localhost:${MOCK_GITHUB_PORT}
+export GITHUB_BLOB_BASE=http://localhost:${MOCK_GITHUB_PORT}
+
 # Start FastAPI backend
 cd /app
 OTEL_SERVICE_NAME=Railway python -m uvicorn railway.app:app --host 0.0.0.0 --port 8000 &
@@ -127,4 +138,5 @@ TEST_EXIT=$?
 kill $DAEMON_PID 2>/dev/null || true
 kill $BACKEND_PID 2>/dev/null || true
 kill $MOCK_DRIVE_PID 2>/dev/null || true
+kill $MOCK_GITHUB_PID 2>/dev/null || true
 exit $TEST_EXIT

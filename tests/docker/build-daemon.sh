@@ -31,6 +31,7 @@ cp -r "$DOCKER_DIR/features" "$BUILD_DIR/tests/docker/"
 cp -r "$DOCKER_DIR/step_defs" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/generate_fixture_pdfs.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/mock_drive_server.py" "$BUILD_DIR/tests/docker/"
+cp "$DOCKER_DIR/mock_github_server.py" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/start_hermetic.sh" "$BUILD_DIR/tests/docker/"
 cp "$DOCKER_DIR/Dockerfile.daemon" "$BUILD_DIR/"
 
