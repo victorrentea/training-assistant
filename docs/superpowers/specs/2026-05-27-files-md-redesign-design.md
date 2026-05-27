@@ -151,9 +151,12 @@ When the addon delivers a `GitFileOpenedMsg(url, branch, file, file_url)` for th
    c. If unknown → github_client.get_repo_info(owner, repo):
       · Returns RepoInfo → cache as public, store default_branch.
       · Returns None → cache as private, drop event, return.
-      · Rate-limited → treat repo as public-unverified for this event:
-        skip linking entirely, treat as `reason:rate-limited` unlinked.
-        Do NOT cache as public.
+      · Rate-limited → if the repo is ALREADY in files.md (= previously
+        verified public), emit the file as unlinked `reason:rate-limited`
+        under that section. If the repo is not yet in files.md, **drop
+        the event entirely** — we can't prove the repo is public, so
+        listing it would violate the privacy rule. Do NOT cache as
+        public on rate-limit.
 3. Compute basename = basename(file).
 4. Look up (repo_url, basename) in files.md model:
    a. Not present →
