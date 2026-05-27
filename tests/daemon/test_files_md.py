@@ -438,3 +438,38 @@ def test_record_tree_truncated_falls_back_to_head(session_folder, monkeypatch):
     text = (session_folder / "files.md").read_text()
     assert "[x.py]" in text
     assert "path:src/x.py" in text
+
+
+def test_record_noise_basename_dropped(session_folder, monkeypatch):
+    """The Claude Code spinner character `✻` and similar noise must not produce entries."""
+    info = github_client.RepoInfo(default_branch="main")
+    with patch.object(github_client, "get_repo_info", return_value=info) as info_mock, \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
+         patch.object(github_client, "head_blob", return_value=True) as head:
+        files_md.record_file_opened("https://github.com/owner/repo", "✻")
+    info_mock.assert_not_called()  # dropped before repo lookup
+    head.assert_not_called()
+    assert not (session_folder / "files.md").exists()
+
+
+def test_load_doc_strips_existing_noise_entries(session_folder, monkeypatch):
+    """Historical files.md content with noise basenames gets pruned on load + auto-saved."""
+    (session_folder / "files.md").write_text(
+        "# Files opened this session\n\n"
+        "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->\n\n"
+        "- [a.py](https://github.com/owner/repo/blob/main/src/a.py) <!-- ts:2026-05-27T10:00:00Z path:src/a.py -->\n"
+        "- ✻ <!-- ts:2026-05-27T10:01:00Z reason:blob-404 -->\n"
+        "- b.py <!-- ts:2026-05-27T10:02:00Z reason:blob-404 -->\n",
+        encoding="utf-8",
+    )
+    _freeze_now(monkeypatch, "2026-05-27T11:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
+         patch.object(github_client, "head_blob", return_value=False):
+        files_md.record_file_opened("https://github.com/owner/repo", "c.py")
+    text = (session_folder / "files.md").read_text()
+    assert "✻" not in text
+    assert "[a.py]" in text
+    assert "- b.py" in text
+    assert "- c.py <!-- ts:2026-05-27T11:00:00Z reason:blob-404 -->" in text

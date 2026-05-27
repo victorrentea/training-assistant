@@ -147,6 +147,11 @@ _NAME = "files_md"
 _FILENAME = "files.md"
 # Sentinel the macOS IDE addon sends when a project is open but no file is selected.
 _ADDON_NO_FILE_SENTINEL = "(none)"
+# Basenames the IDE addon occasionally reports that are not real files.
+# Drop these events on ingestion AND prune any historical entries on load.
+_NOISE_BASENAMES: frozenset[str] = frozenset({
+    "✻",  # Claude Code spinner character that occasionally leaks through IntelliJ
+})
 
 
 def _get_active_session_folder() -> Path | None:
@@ -187,10 +192,25 @@ def _load_doc(folder: Path) -> Doc:
     if not target.exists():
         return Doc()
     try:
-        return Doc.parse(target.read_text(encoding="utf-8"))
+        doc = Doc.parse(target.read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001
         _log.error(_NAME, f"parse {target} failed: {exc}; starting fresh")
         return Doc()
+    if _strip_noise_entries(doc):
+        _log.info(_NAME, f"pruned noise entries from {target.name}")
+        _save_doc(folder, doc)
+    return doc
+
+
+def _strip_noise_entries(doc: Doc) -> bool:
+    """Remove entries whose basename is a known noise token. Returns True if anything was stripped."""
+    changed = False
+    for repo in doc.repos:
+        before = len(repo.entries)
+        repo.entries = [e for e in repo.entries if e.basename not in _NOISE_BASENAMES]
+        if len(repo.entries) != before:
+            changed = True
+    return changed
 
 
 def _save_doc(folder: Path, doc: Doc) -> None:
@@ -232,6 +252,8 @@ def _record_into_folder(folder: Path, url: str, file_path: str) -> None:
 
     basename = file_path.rsplit("/", 1)[-1].strip()
     if not basename:
+        return
+    if basename in _NOISE_BASENAMES:
         return
 
     owner, repo = _owner_repo(canonical)
