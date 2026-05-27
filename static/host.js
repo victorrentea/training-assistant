@@ -1583,7 +1583,7 @@
 
   // ── Poll composer ──
   const POLL_PRESETS = {
-    yesno:      { question: '', options: ['Yes', 'No'], multi: false },
+    yesno:      { question: 'Had Coffee?', options: ['Yes', 'No'], multi: false },
     truefalse:  { question: '', options: ['True', 'False'], multi: false },
     rating15:   { question: '', options: ['1', '2', '3', '4', '5'], multi: false },
     energy:     { question: "How's the room feeling right now?",
