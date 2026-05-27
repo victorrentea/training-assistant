@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from daemon import files_md
 
@@ -261,3 +262,75 @@ def test_sanitize_for_wire_strips_html_comments():
     assert "<!--" not in out
     assert "## [repo](https://github.com/owner/repo)" in out
     assert "- [a.py](https://github.com/owner/repo/blob/main/src/a.py)" in out
+
+
+def _write_session_json(folder, payload):
+    p = folder / "session-state.json"
+    p.write_text(json.dumps(payload), encoding="utf-8")
+    return p
+
+
+def test_migration_converts_git_repos_and_strips_key(session_folder, monkeypatch):
+    _write_session_json(session_folder, {
+        "mode": "workshop",
+        "git_repos": [
+            {
+                "url": "https://github.com/owner/repo",
+                "branch": "feature/x",
+                "files": ["src/a.py", "src/b.py"],
+                "file_urls": {},
+            },
+        ],
+    })
+    info = github_client.RepoInfo(default_branch="main")
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "head_blob", return_value=True):
+        files_md.migrate_session_if_needed(session_folder)
+
+    md = (session_folder / "files.md").read_text()
+    assert "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->" in md
+    assert "[a.py]" in md and "[b.py]" in md
+
+    js = json.loads((session_folder / "session-state.json").read_text())
+    assert "git_repos" not in js
+
+
+def test_migration_idempotent_when_files_md_exists(session_folder, monkeypatch):
+    (session_folder / "files.md").write_text("# Files opened this session\n\nNo files opened yet\n")
+    _write_session_json(session_folder, {"git_repos": [
+        {"url": "https://github.com/owner/repo", "branch": "main", "files": ["src/a.py"], "file_urls": {}},
+    ]})
+    with patch.object(github_client, "get_repo_info") as info:
+        files_md.migrate_session_if_needed(session_folder)
+    info.assert_not_called()
+    # session-state.json still untouched if files.md was already present
+    js = json.loads((session_folder / "session-state.json").read_text())
+    assert "git_repos" in js
+
+
+def test_migration_no_op_when_no_git_repos(session_folder, monkeypatch):
+    _write_session_json(session_folder, {"mode": "workshop"})
+    with patch.object(github_client, "get_repo_info") as info:
+        files_md.migrate_session_if_needed(session_folder)
+    info.assert_not_called()
+    assert not (session_folder / "files.md").exists()
+
+
+def test_migration_collisions_downgrade_naturally(session_folder, monkeypatch):
+    _write_session_json(session_folder, {
+        "git_repos": [
+            {
+                "url": "https://github.com/owner/repo",
+                "branch": "main",
+                "files": ["src/foo/utils.py", "src/bar/utils.py"],
+                "file_urls": {},
+            },
+        ],
+    })
+    info = github_client.RepoInfo(default_branch="main")
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "head_blob", return_value=True):
+        files_md.migrate_session_if_needed(session_folder)
+    text = (session_folder / "files.md").read_text()
+    assert text.count("utils.py") == 1
+    assert "reason:ambiguous" in text

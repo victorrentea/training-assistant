@@ -8,6 +8,7 @@ HTML comments are stripped before serving to participants — see `sanitize_for_
 """
 from __future__ import annotations
 
+import json as _json
 import os
 import re
 from dataclasses import dataclass, field
@@ -201,6 +202,16 @@ def record_file_opened(url: str, file_path: str) -> None:
 
     The addon's reported `branch` is intentionally ignored — we always resolve
     against the repo's GitHub default branch so links never go stale.
+    """
+    folder = _get_active_session_folder()
+    if folder is None:
+        return
+    migrate_session_if_needed(folder)
+    _record_into_folder(folder, url, file_path)
+
+
+def _record_into_folder(folder: Path, url: str, file_path: str) -> None:
+    """Record one file event into an explicit session folder.
 
     Pipeline:
       1. Drop non-github.com hosts.
@@ -212,10 +223,6 @@ def record_file_opened(url: str, file_path: str) -> None:
       5. If new entry: verify blob against default branch; write linked or unlinked.
       6. If existing linked entry with different path → downgrade to unlinked (ambiguous).
     """
-    folder = _get_active_session_folder()
-    if folder is None:
-        return
-
     canonical = _canonical_repo_url(url)
     if canonical is None:
         return
@@ -289,3 +296,44 @@ def record_file_opened(url: str, file_path: str) -> None:
             Entry(basename=basename, blob_url=None, path=None, ts=ts, reason="blob-404")
         )
     _save_doc(folder, doc)
+
+
+def migrate_session_if_needed(folder: Path) -> None:
+    """One-shot migration: convert session-state.json `git_repos` to files.md
+    and remove the key.
+
+    No-op if files.md already exists (so we never re-migrate or overwrite live state).
+    No-op if session-state.json has no git_repos.
+    """
+    target = folder / _FILENAME
+    if target.exists():
+        return
+
+    js_path = folder / "session-state.json"
+    if not js_path.exists():
+        return
+
+    try:
+        payload = _json.loads(js_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        _log.error(_NAME, f"migration: failed to read {js_path}: {exc}")
+        return
+
+    repos = payload.get("git_repos") if isinstance(payload, dict) else None
+    if not repos:
+        return
+
+    for repo_entry in repos:
+        if not isinstance(repo_entry, dict):
+            continue
+        url = repo_entry.get("url", "")
+        files = repo_entry.get("files", []) or []
+        for f in files:
+            if not isinstance(f, str):
+                continue
+            _record_into_folder(folder, url, f)
+
+    # Strip the key and re-save
+    payload.pop("git_repos", None)
+    js_path.write_text(_json.dumps(payload, indent=2), encoding="utf-8")
+    _log.info(_NAME, f"migrated {len(repos)} repo(s) for session {folder.name}")
