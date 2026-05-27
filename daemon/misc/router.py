@@ -11,6 +11,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from daemon import files_md as _files_md
 from daemon.email_notify import notify as email_notify
 from daemon.misc.content_files import read_notes_content, read_summary_payload
 from daemon.misc.state import misc_state
@@ -133,6 +134,30 @@ async def get_summary():
         raw_markdown=summary["raw_markdown"],
         updated_at=summary["updated_at"],
     )
+
+
+class FilesMdResponse(BaseModel):
+    raw_markdown: str
+    updated_at: str | None
+
+
+@participant_router.get("/files-md", response_model=FilesMdResponse)
+async def get_files_md():
+    """Return the per-session files.md content with HTML comments stripped."""
+    from datetime import datetime, timezone
+    from daemon.misc.content_files import get_active_session_folder
+
+    folder = get_active_session_folder()
+    if folder is None:
+        return FilesMdResponse(raw_markdown=_files_md.EMPTY_STATE, updated_at=None)
+    _files_md.migrate_session_if_needed(folder)
+    target = folder / "files.md"
+    if not target.exists():
+        return FilesMdResponse(raw_markdown=_files_md.EMPTY_STATE, updated_at=None)
+    raw = target.read_text(encoding="utf-8")
+    sanitized = _files_md.sanitize_for_wire(raw)
+    iso = datetime.fromtimestamp(target.stat().st_mtime_ns / 1e9, tz=timezone.utc).isoformat()
+    return FilesMdResponse(raw_markdown=sanitized, updated_at=iso)
 
 
 @participant_router.get("/slides/decks", response_model=DecksResponse)
