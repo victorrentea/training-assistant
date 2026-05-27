@@ -53,6 +53,6 @@ logs/
 # Node.js (Tailwind CSS build)
 node_modules/
 package-lock.json
-/.claude/worktrees/hardcore-driscoll/
+/.claude/worktrees/
 
 /.claude/scheduled_tasks.lock
