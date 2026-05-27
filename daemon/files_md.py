@@ -62,15 +62,6 @@ class Doc:
                 return r
         return None
 
-    def find_entry(self, repo_url: str, basename: str) -> Entry | None:
-        repo = self.find_repo(repo_url)
-        if repo is None:
-            return None
-        for e in repo.entries:
-            if e.basename == basename:
-                return e
-        return None
-
     def render(self) -> str:
         if not self.repos:
             return EMPTY_STATE
@@ -153,6 +144,8 @@ def sanitize_for_wire(text: str) -> str:
 
 _NAME = "files_md"
 _FILENAME = "files.md"
+# Sentinel the macOS IDE addon sends when a project is open but no file is selected.
+_ADDON_NO_FILE_SENTINEL = "(none)"
 
 
 def _get_active_session_folder() -> Path | None:
@@ -181,6 +174,9 @@ def _canonical_repo_url(url: str) -> str | None:
 
 
 def _owner_repo(canonical_url: str) -> tuple[str, str]:
+    # Invariant: callers pass the exact output of _canonical_repo_url(...),
+    # which always has the shape https://github.com/<owner>/<repo> (no trailing
+    # slash, no .git suffix, both segments non-empty).
     parts = canonical_url.rsplit("/", 2)
     return parts[-2], parts[-1]
 
@@ -224,7 +220,7 @@ def record_file_opened(url: str, file_path: str) -> None:
     if canonical is None:
         return
 
-    if not file_path or not file_path.strip() or file_path == "(none)":
+    if not file_path or not file_path.strip() or file_path == _ADDON_NO_FILE_SENTINEL:
         return
 
     basename = file_path.rsplit("/", 1)[-1].strip()
@@ -263,6 +259,11 @@ def record_file_opened(url: str, file_path: str) -> None:
         if existing.path == file_path:
             return  # exact same file already linked
         # Different path under same basename → collision downgrade
+        _log.info(
+            _NAME,
+            f"basename collision in {canonical}: '{basename}' "
+            f"(was: {existing.path}, now: {file_path}) → downgrade to unlinked",
+        )
         existing.blob_url = None
         existing.path = None
         existing.reason = "ambiguous"

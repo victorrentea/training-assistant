@@ -111,7 +111,6 @@ def test_atomic_write_creates_tmp_then_renames(tmp_path: Path, monkeypatch):
     assert any("replace files.md.tmp -> files.md" in s for s in seen)
 
 
-import datetime as _dt
 from unittest.mock import patch
 
 import pytest
