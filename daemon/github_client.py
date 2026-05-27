@@ -44,8 +44,7 @@ def reset_cache() -> None:
     _REPO_CACHE.clear()
 
 
-def _ssl_ctx():
-    return ssl.create_default_context(cafile=certifi.where())
+_SSL_CTX = ssl.create_default_context(cafile=certifi.where())
 
 
 def _is_rate_limited(err: urllib.error.HTTPError) -> bool:
@@ -57,9 +56,10 @@ def _is_rate_limited(err: urllib.error.HTTPError) -> bool:
 
 def get_repo_info(owner: str, repo: str) -> RepoInfo | None | _Sentinel:
     """Look up the repo. Returns:
-       - RepoInfo on success (public)
-       - None for private/missing (negative-cached)
-       - RATE_LIMITED on rate-limit (not cached; caller may degrade gracefully)
+       - RepoInfo on success (public, cached)
+       - None for private/missing (cached deterministically)
+       - RATE_LIMITED on rate-limit (NOT cached)
+       - None on transient network errors / other HTTP codes (NOT cached)
     """
     key = (owner, repo)
     if key in _REPO_CACHE:
@@ -74,7 +74,7 @@ def get_repo_info(owner: str, repo: str) -> RepoInfo | None | _Sentinel:
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=_TIMEOUT_S, context=_ssl_ctx()) as resp:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT_S, context=_SSL_CTX) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         branch = str(data.get("default_branch") or "").strip() or "main"
         info = RepoInfo(default_branch=branch)
@@ -87,12 +87,12 @@ def get_repo_info(owner: str, repo: str) -> RepoInfo | None | _Sentinel:
         if err.code in (404, 403):
             _REPO_CACHE[key] = None
             return None
-        _log.error(_NAME, f"repo lookup {owner}/{repo} failed: {err}")
-        _REPO_CACHE[key] = None
+        # Other HTTP errors (5xx etc.) — transient, do not cache
+        _log.error(_NAME, f"repo lookup {owner}/{repo} HTTP {err.code}")
         return None
     except Exception as exc:  # noqa: BLE001
+        # Network errors (DNS, SSL, timeout) — transient, do not cache
         _log.error(_NAME, f"repo lookup {owner}/{repo} crashed: {exc}")
-        _REPO_CACHE[key] = None
         return None
 
 
@@ -104,7 +104,7 @@ def head_blob(owner: str, repo: str, branch: str, path: str) -> bool:
         headers={"User-Agent": _USER_AGENT},
     )
     try:
-        with urllib.request.urlopen(req, timeout=_TIMEOUT_S, context=_ssl_ctx()) as resp:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT_S, context=_SSL_CTX) as resp:
             return 200 <= resp.status < 300
     except urllib.error.HTTPError as err:
         return 200 <= err.code < 300

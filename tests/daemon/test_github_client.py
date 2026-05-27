@@ -131,3 +131,25 @@ def test_head_blob_uses_HEAD_method():
     with patch("urllib.request.urlopen", side_effect=fake_urlopen):
         github_client.head_blob("owner", "repo", "main", "src/a.py")
     assert captured["method"] == "HEAD"
+
+
+def test_get_repo_info_does_not_cache_network_errors():
+    import urllib.error
+    err = urllib.error.URLError("network down")
+    with patch("urllib.request.urlopen", side_effect=err) as mock:
+        result1 = github_client.get_repo_info("owner", "repo")
+        result2 = github_client.get_repo_info("owner", "repo")
+    assert result1 is None
+    assert result2 is None
+    assert mock.call_count == 2  # NOT cached — retried
+
+
+def test_get_repo_info_does_not_cache_500_error():
+    import urllib.error
+    err = urllib.error.HTTPError("u", 500, "Internal", {}, None)
+    with patch("urllib.request.urlopen", side_effect=err) as mock:
+        result1 = github_client.get_repo_info("owner", "repo")
+        result2 = github_client.get_repo_info("owner", "repo")
+    assert result1 is None
+    assert result2 is None
+    assert mock.call_count == 2  # NOT cached — transient, retried
