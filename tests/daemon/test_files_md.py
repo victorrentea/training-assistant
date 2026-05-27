@@ -473,3 +473,48 @@ def test_load_doc_strips_existing_noise_entries(session_folder, monkeypatch):
     assert "[a.py]" in text
     assert "- b.py" in text
     assert "- c.py <!-- ts:2026-05-27T11:00:00Z reason:blob-404 -->" in text
+
+
+def test_load_doc_upgrades_unlinked_via_tree(session_folder, monkeypatch):
+    """Previously-unlinked entries (blob-404, not-in-repo) get re-resolved when the tree
+    becomes available. The original ts is preserved."""
+    (session_folder / "files.md").write_text(
+        "# Files opened this session\n\n"
+        "## [petclinic](https://github.com/victorrentea/petclinic) <!-- default_branch:main -->\n\n"
+        "- packages.puml <!-- ts:2026-05-27T15:47:58Z reason:blob-404 -->\n"
+        "- C3ArchTest.java <!-- ts:2026-05-27T15:54:15Z reason:blob-404 -->\n",
+        encoding="utf-8",
+    )
+    _freeze_now(monkeypatch, "2026-05-27T16:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    tree = _tree({
+        "packages.puml": ["petclinic-backend/docs/packages.puml"],
+        "C3ArchTest.java": ["petclinic-backend/src/test/java/.../C3ArchTest.java"],
+    })
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=tree):
+        # Any record_file_opened call triggers _load_doc which runs the upgrade.
+        files_md.record_file_opened("https://github.com/victorrentea/petclinic", "noop.txt")
+    text = (session_folder / "files.md").read_text()
+    assert "- [packages.puml](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/docs/packages.puml) <!-- ts:2026-05-27T15:47:58Z path:petclinic-backend/docs/packages.puml -->" in text
+    assert "- [C3ArchTest.java](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/src/test/java/.../C3ArchTest.java) <!-- ts:2026-05-27T15:54:15Z path:petclinic-backend/src/test/java/.../C3ArchTest.java -->" in text
+
+
+def test_load_doc_does_not_upgrade_ambiguous_entries(session_folder, monkeypatch):
+    """Entries flagged `ambiguous` stay unlinked even if tree resolution would help."""
+    (session_folder / "files.md").write_text(
+        "# Files opened this session\n\n"
+        "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->\n\n"
+        "- utils.py <!-- ts:2026-05-27T10:00:00Z reason:ambiguous -->\n",
+        encoding="utf-8",
+    )
+    _freeze_now(monkeypatch, "2026-05-27T11:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    # Tree has exactly one match — but the entry should still stay ambiguous
+    tree = _tree({"utils.py": ["src/utils.py"]})
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=tree):
+        files_md.record_file_opened("https://github.com/owner/repo", "noop.txt")
+    text = (session_folder / "files.md").read_text()
+    assert "- utils.py <!-- ts:2026-05-27T10:00:00Z reason:ambiguous -->" in text
+    assert "[utils.py]" not in text  # still no link

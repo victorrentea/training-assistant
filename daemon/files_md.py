@@ -196,8 +196,14 @@ def _load_doc(folder: Path) -> Doc:
     except Exception as exc:  # noqa: BLE001
         _log.error(_NAME, f"parse {target} failed: {exc}; starting fresh")
         return Doc()
+    changed = False
     if _strip_noise_entries(doc):
         _log.info(_NAME, f"pruned noise entries from {target.name}")
+        changed = True
+    if _upgrade_unlinked_entries(doc):
+        _log.info(_NAME, f"upgraded previously-unlinked entries in {target.name}")
+        changed = True
+    if changed:
         _save_doc(folder, doc)
     return doc
 
@@ -210,6 +216,34 @@ def _strip_noise_entries(doc: Doc) -> bool:
         repo.entries = [e for e in repo.entries if e.basename not in _NOISE_BASENAMES]
         if len(repo.entries) != before:
             changed = True
+    return changed
+
+
+def _upgrade_unlinked_entries(doc: Doc) -> bool:
+    """Retry path resolution for previously-unlinked entries via the (now-cached) repo tree.
+
+    Skips entries flagged `ambiguous` — those have multiple matches in the tree by design.
+    Returns True if any entry was upgraded to linked.
+    """
+    changed = False
+    for repo_obj in doc.repos:
+        owner, repo = _owner_repo(repo_obj.url)
+        tree = github_client.get_repo_tree(owner, repo, repo_obj.default_branch)
+        if tree is None or tree.truncated:
+            continue
+        for e in repo_obj.entries:
+            if e.blob_url is not None:
+                continue
+            if e.reason == "ambiguous":
+                continue
+            matches = tree.paths_by_basename.get(e.basename, [])
+            if len(matches) == 1:
+                e.blob_url = github_client.build_blob_url(
+                    owner, repo, repo_obj.default_branch, matches[0]
+                )
+                e.path = matches[0]
+                e.reason = None
+                changed = True
     return changed
 
 
