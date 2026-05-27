@@ -10,7 +10,7 @@ import os
 import ssl
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Final
 
 import certifi
@@ -33,6 +33,13 @@ class RepoInfo:
     default_branch: str
 
 
+@dataclass(frozen=True)
+class RepoTree:
+    paths: frozenset[str]                   # full paths in the tree (blobs only)
+    paths_by_basename: dict[str, list[str]] # basename → [full paths]
+    truncated: bool
+
+
 class _Sentinel:
     pass
 
@@ -46,9 +53,17 @@ RATE_LIMITED: Final = _Sentinel()
 # RATE_LIMITED responses are NOT cached (so we retry on next event).
 _REPO_CACHE: dict[tuple[str, str], RepoInfo | None] = {}
 
+# Cache: key=(owner, repo, branch). Values:
+#   RepoTree  → successfully fetched tree.
+#   None      → 404/403 or persistent failure (negative cache).
+#   missing key → not yet fetched.
+# Rate-limited responses are NOT cached (retry on next call).
+_TREE_CACHE: dict[tuple[str, str, str], RepoTree | None] = {}
+
 
 def reset_cache() -> None:
     _REPO_CACHE.clear()
+    _TREE_CACHE.clear()
 
 
 _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
@@ -100,6 +115,56 @@ def get_repo_info(owner: str, repo: str) -> RepoInfo | None | _Sentinel:
     except Exception as exc:  # noqa: BLE001
         # Network errors (DNS, SSL, timeout) — transient, do not cache
         _log.error(_NAME, f"repo lookup {owner}/{repo} crashed: {exc}")
+        return None
+
+
+def get_repo_tree(owner: str, repo: str, branch: str) -> RepoTree | None:
+    """Fetch and cache the repo tree. Returns None on network/HTTP error.
+
+    Negative results (404, 403, persistent failures) are cached as None.
+    Rate-limited responses are NOT cached (retry on next call).
+    """
+    key = (owner, repo, branch)
+    if key in _TREE_CACHE:
+        return _TREE_CACHE[key]
+
+    url = f"{_API_BASE}/repos/{owner}/{repo}/git/trees/{branch}?recursive=1"
+    req = urllib.request.Request(
+        url, method="GET",
+        headers={
+            "User-Agent": _USER_AGENT,
+            "Accept": "application/vnd.github+json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT_S, context=_SSL_CTX) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        # Only "blob" entries are files (skip "tree" entries = dirs).
+        paths: list[str] = []
+        for entry in data.get("tree", []):
+            if entry.get("type") == "blob":
+                p = entry.get("path")
+                if isinstance(p, str) and p:
+                    paths.append(p)
+        truncated = bool(data.get("truncated", False))
+        index: dict[str, list[str]] = {}
+        for p in paths:
+            b = p.rsplit("/", 1)[-1]
+            index.setdefault(b, []).append(p)
+        tree = RepoTree(paths=frozenset(paths), paths_by_basename=index, truncated=truncated)
+        _TREE_CACHE[key] = tree
+        return tree
+    except urllib.error.HTTPError as err:
+        if _is_rate_limited(err):
+            _log.error(_NAME, f"rate-limited on /trees/{owner}/{repo}/{branch}")
+            return None  # do NOT cache
+        if err.code in (404, 403):
+            _TREE_CACHE[key] = None
+            return None
+        _log.error(_NAME, f"tree fetch {owner}/{repo}/{branch} HTTP {err.code}")
+        return None
+    except Exception as exc:  # noqa: BLE001
+        _log.error(_NAME, f"tree fetch {owner}/{repo}/{branch} crashed: {exc}")
         return None
 
 

@@ -153,3 +153,92 @@ def test_get_repo_info_does_not_cache_500_error():
     assert result1 is None
     assert result2 is None
     assert mock.call_count == 2  # NOT cached — transient, retried
+
+
+# ---------------------------------------------------------------------------
+# get_repo_tree tests
+# ---------------------------------------------------------------------------
+
+def test_get_repo_tree_indexes_by_basename():
+    import json
+    body = json.dumps({
+        "tree": [
+            {"type": "blob", "path": "docs/packages.puml"},
+            {"type": "blob", "path": "src/a.py"},
+            {"type": "tree", "path": "src"},  # dir, should be skipped
+        ],
+        "truncated": False,
+    }).encode("utf-8")
+    with patch("urllib.request.urlopen", return_value=_fake_resp(200, body)):
+        tree = github_client.get_repo_tree("owner", "repo", "main")
+    assert tree is not None
+    assert tree.truncated is False
+    assert "docs/packages.puml" in tree.paths
+    assert "src/a.py" in tree.paths
+    assert "src" not in tree.paths  # directories excluded
+    assert tree.paths_by_basename["packages.puml"] == ["docs/packages.puml"]
+    assert tree.paths_by_basename["a.py"] == ["src/a.py"]
+
+
+def test_get_repo_tree_truncated_flag_propagated():
+    import json
+    body = json.dumps({
+        "tree": [{"type": "blob", "path": "x.py"}],
+        "truncated": True,
+    }).encode("utf-8")
+    with patch("urllib.request.urlopen", return_value=_fake_resp(200, body)):
+        tree = github_client.get_repo_tree("owner", "repo", "main")
+    assert tree is not None
+    assert tree.truncated is True
+
+
+def test_get_repo_tree_404_returns_none_and_is_cached():
+    import urllib.error
+    err = urllib.error.HTTPError("u", 404, "Not Found", {}, None)
+    with patch("urllib.request.urlopen", side_effect=err) as mock:
+        result1 = github_client.get_repo_tree("owner", "missing", "main")
+        result2 = github_client.get_repo_tree("owner", "missing", "main")
+    assert result1 is None
+    assert result2 is None
+    assert mock.call_count == 1  # cached after first call
+
+
+def test_get_repo_tree_rate_limited_returns_none_and_not_cached():
+    import urllib.error
+    err = urllib.error.HTTPError(
+        "u", 403, "rate limited", {"X-RateLimit-Remaining": "0"}, None,
+    )
+    with patch("urllib.request.urlopen", side_effect=err) as mock:
+        result1 = github_client.get_repo_tree("owner", "repo", "main")
+        result2 = github_client.get_repo_tree("owner", "repo", "main")
+    assert result1 is None
+    assert result2 is None
+    assert mock.call_count == 2  # NOT cached — retried both times
+
+
+def test_get_repo_tree_is_cached_after_success():
+    import json
+    body = json.dumps({"tree": [{"type": "blob", "path": "x.py"}], "truncated": False}).encode()
+    with patch("urllib.request.urlopen", return_value=_fake_resp(200, body)) as mock:
+        github_client.get_repo_tree("owner", "repo", "main")
+        github_client.get_repo_tree("owner", "repo", "main")
+    assert mock.call_count == 1
+
+
+def test_get_repo_tree_skips_directory_entries():
+    import json
+    body = json.dumps({
+        "tree": [
+            {"type": "tree", "path": "src"},
+            {"type": "tree", "path": "docs"},
+            {"type": "blob", "path": "README.md"},
+        ],
+        "truncated": False,
+    }).encode("utf-8")
+    with patch("urllib.request.urlopen", return_value=_fake_resp(200, body)):
+        tree = github_client.get_repo_tree("owner", "repo", "main")
+    assert tree is not None
+    assert "src" not in tree.paths
+    assert "docs" not in tree.paths
+    assert "README.md" in tree.paths
+    assert list(tree.paths_by_basename.keys()) == ["README.md"]

@@ -258,18 +258,45 @@ def _record_into_folder(folder: Path, url: str, file_path: str) -> None:
             repo_obj = Repo(url=canonical, name=repo, default_branch=default_branch)
             doc.repos.append(repo_obj)
 
-    # Dedup / collision
+    # Try tree-based resolution first
+    tree = github_client.get_repo_tree(owner, repo, default_branch) if not rate_limited else None
+    resolved_path: str | None = None
+    reason: str | None = None
+
+    if tree is not None and not tree.truncated:
+        # Tree is authoritative
+        if file_path in tree.paths:
+            resolved_path = file_path
+        else:
+            basename_matches = tree.paths_by_basename.get(basename, [])
+            if len(basename_matches) == 1:
+                resolved_path = basename_matches[0]
+            elif len(basename_matches) >= 2:
+                reason = "ambiguous"
+            else:
+                reason = "not-in-repo"
+    else:
+        # Tree unavailable (rate-limited, truncated, network) — fall back to HEAD
+        if not rate_limited and github_client.head_blob(owner, repo, default_branch, file_path):
+            resolved_path = file_path
+        elif rate_limited:
+            reason = "rate-limited"
+        else:
+            reason = "blob-404"
+
+    # Dedup / collision handling
     existing = next((e for e in repo_obj.entries if e.basename == basename), None)
     if existing is not None:
         if existing.blob_url is None:
             return  # already unlinked, no upgrades
-        if existing.path == file_path:
-            return  # exact same file already linked
-        # Different path under same basename → collision downgrade
+        # If the resolution gives us a path and it matches existing → no-op
+        if resolved_path is not None and existing.path == resolved_path:
+            return
+        # Collision downgrade: different path under same basename
         _log.info(
             _NAME,
             f"basename collision in {canonical}: '{basename}' "
-            f"(was: {existing.path}, now: {file_path}) → downgrade to unlinked",
+            f"(was: {existing.path}, now: {resolved_path or file_path}) → downgrade to unlinked",
         )
         existing.blob_url = None
         existing.path = None
@@ -279,21 +306,14 @@ def _record_into_folder(folder: Path, url: str, file_path: str) -> None:
 
     # New entry
     ts = _utcnow_iso()
-    if rate_limited:
+    if resolved_path is not None:
+        blob_url = github_client.build_blob_url(owner, repo, default_branch, resolved_path)
         repo_obj.entries.append(
-            Entry(basename=basename, blob_url=None, path=None, ts=ts, reason="rate-limited")
-        )
-        _save_doc(folder, doc)
-        return
-
-    blob_url = github_client.build_blob_url(owner, repo, default_branch, file_path)
-    if github_client.head_blob(owner, repo, default_branch, file_path):
-        repo_obj.entries.append(
-            Entry(basename=basename, blob_url=blob_url, path=file_path, ts=ts, reason=None)
+            Entry(basename=basename, blob_url=blob_url, path=resolved_path, ts=ts, reason=None)
         )
     else:
         repo_obj.entries.append(
-            Entry(basename=basename, blob_url=None, path=None, ts=ts, reason="blob-404")
+            Entry(basename=basename, blob_url=None, path=None, ts=ts, reason=reason or "not-in-repo")
         )
     _save_doc(folder, doc)
 

@@ -136,6 +136,7 @@ def _freeze_now(monkeypatch, iso: str):
 def test_record_unknown_repo_public_with_valid_blob(session_folder, monkeypatch):
     _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
     with patch.object(github_client, "get_repo_info", return_value=github_client.RepoInfo(default_branch="main")), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.record_file_opened(
             url="https://github.com/owner/repo.git",
@@ -151,6 +152,7 @@ def test_record_unknown_repo_public_with_valid_blob(session_folder, monkeypatch)
 def test_record_public_repo_invalid_blob_writes_unlinked(session_folder, monkeypatch):
     _freeze_now(monkeypatch, "2026-05-27T10:01:00Z")
     with patch.object(github_client, "get_repo_info", return_value=github_client.RepoInfo(default_branch="main")), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
          patch.object(github_client, "head_blob", return_value=False):
         files_md.record_file_opened(
             url="https://github.com/owner/repo",
@@ -185,6 +187,7 @@ def test_record_rate_limited_on_known_public_repo_writes_unlinked(session_folder
     _freeze_now(monkeypatch, "2026-05-27T09:00:00Z")
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.record_file_opened("https://github.com/owner/repo", "src/first.py")
 
@@ -200,6 +203,7 @@ def test_record_dedup_same_basename_skips(session_folder, monkeypatch):
     _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.record_file_opened("https://github.com/owner/repo", "src/a.py")
         _freeze_now(monkeypatch, "2026-05-27T10:05:00Z")
@@ -211,9 +215,13 @@ def test_record_dedup_same_basename_skips(session_folder, monkeypatch):
 
 
 def test_record_collision_downgrades_to_unlinked(session_folder, monkeypatch):
+    """HEAD-fallback path: two distinct full paths with same basename — first links,
+    second triggers collision downgrade to unlinked."""
     _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
     info = github_client.RepoInfo(default_branch="main")
+    # get_repo_tree=None forces HEAD fallback so head_blob is consulted
     with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.record_file_opened("https://github.com/owner/repo", "src/foo/utils.py")
         _freeze_now(monkeypatch, "2026-05-27T10:05:00Z")
@@ -227,6 +235,7 @@ def test_record_collision_downgrades_to_unlinked(session_folder, monkeypatch):
 def test_record_empty_path_drops_event(session_folder, monkeypatch):
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
          patch.object(github_client, "head_blob", return_value=True) as head:
         files_md.record_file_opened("https://github.com/owner/repo", "")
     head.assert_not_called()
@@ -245,6 +254,7 @@ def test_repo_url_canonicalisation(session_folder, monkeypatch):
     _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.record_file_opened("https://github.com/owner/repo.git/", "src/a.py")
     text = (session_folder / "files.md").read_text()
@@ -284,6 +294,7 @@ def test_migration_converts_git_repos_and_strips_key(session_folder, monkeypatch
     })
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.migrate_session_if_needed(session_folder)
 
@@ -328,9 +339,102 @@ def test_migration_collisions_downgrade_naturally(session_folder, monkeypatch):
         ],
     })
     info = github_client.RepoInfo(default_branch="main")
+    # get_repo_tree=None forces HEAD fallback; head_blob=True causes collision downgrade
     with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=None), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.migrate_session_if_needed(session_folder)
     text = (session_folder / "files.md").read_text()
     assert text.count("utils.py") == 1
     assert "reason:ambiguous" in text
+
+
+# ---------------------------------------------------------------------------
+# Tree-based resolution tests
+# ---------------------------------------------------------------------------
+
+def _tree(paths_by_basename: dict, truncated: bool = False) -> github_client.RepoTree:
+    paths = []
+    for plist in paths_by_basename.values():
+        paths.extend(plist)
+    return github_client.RepoTree(
+        paths=frozenset(paths),
+        paths_by_basename={k: list(v) for k, v in paths_by_basename.items()},
+        truncated=truncated,
+    )
+
+
+def test_record_tree_resolves_basename_to_full_path(session_folder, monkeypatch):
+    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    tree = _tree({"packages.puml": ["petclinic-backend/docs/packages.puml"]})
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=tree):
+        files_md.record_file_opened(
+            "https://github.com/victorrentea/petclinic",
+            "packages.puml",  # addon sent just basename
+        )
+    text = (session_folder / "files.md").read_text()
+    assert "- [packages.puml](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/docs/packages.puml)" in text
+    assert "path:petclinic-backend/docs/packages.puml" in text
+
+
+def test_record_tree_no_match_writes_not_in_repo(session_folder, monkeypatch):
+    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    tree = _tree({"other.py": ["src/other.py"]})  # basename not present
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=tree):
+        files_md.record_file_opened(
+            "https://github.com/owner/repo",
+            "missing.py",
+        )
+    text = (session_folder / "files.md").read_text()
+    assert "- missing.py <!-- ts:2026-05-27T10:00:00Z reason:not-in-repo -->" in text
+
+
+def test_record_tree_multiple_matches_writes_ambiguous(session_folder, monkeypatch):
+    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    tree = _tree({"utils.py": ["src/foo/utils.py", "src/bar/utils.py"]})
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=tree):
+        files_md.record_file_opened(
+            "https://github.com/owner/repo",
+            "utils.py",
+        )
+    text = (session_folder / "files.md").read_text()
+    assert "- utils.py <!-- ts:2026-05-27T10:00:00Z reason:ambiguous -->" in text
+
+
+def test_record_tree_exact_path_match_preferred(session_folder, monkeypatch):
+    """If the addon sends the full path AND it matches the tree, use it directly even if basename is ambiguous."""
+    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    tree = _tree({"a.py": ["src/foo/a.py", "src/bar/a.py"]})  # basename ambiguous
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=tree):
+        files_md.record_file_opened(
+            "https://github.com/owner/repo",
+            "src/foo/a.py",  # exact path → unambiguous link
+        )
+    text = (session_folder / "files.md").read_text()
+    assert "[a.py](https://github.com/owner/repo/blob/main/src/foo/a.py)" in text
+    assert "path:src/foo/a.py" in text
+
+
+def test_record_tree_truncated_falls_back_to_head(session_folder, monkeypatch):
+    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    tree = _tree({"x.py": ["x.py"]}, truncated=True)
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=tree), \
+         patch.object(github_client, "head_blob", return_value=True) as head:
+        files_md.record_file_opened(
+            "https://github.com/owner/repo",
+            "src/x.py",
+        )
+    head.assert_called_once()  # HEAD fallback used because tree truncated
+    text = (session_folder / "files.md").read_text()
+    assert "[x.py]" in text
+    assert "path:src/x.py" in text
