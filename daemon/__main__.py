@@ -236,7 +236,6 @@ def _build_runtime_session_snapshot(
             "round_timer_seconds": debate_snapshot.get("round_timer_seconds"),
             "round_timer_started_at": debate_snapshot.get("round_timer_started_at"),
         },
-        "gdrive_url": session_shared_state.get_gdrive_url(),
         "current_slide": misc_state.current_slide,
         "slides_viewed": [dict(sv) for sv in misc_state.slides_viewed],
         "talk_presentation_name": misc_state.talk_presentation_name,
@@ -274,8 +273,6 @@ def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
     misc_state.sync_from_restore(snapshot)
     codereview_state.sync_from_restore(snapshot)
     debate_state.sync_from_restore(snapshot)
-    if "gdrive_url" in snapshot:
-        session_shared_state.set_gdrive_url(snapshot["gdrive_url"])
 
     from daemon.poll.state import PollData, poll_state
     poll_data = snapshot.get("poll")
@@ -906,30 +903,17 @@ def run() -> None:
     except Exception as e:
         log.error("session", f"Initial sync failed: {e}")
 
-    # Boot-time GDrive URL auto-resolve:
-    # - If session already has a persisted gdrive_url (loaded into session_shared_state via _apply_runtime_snapshot_restore), keep it.
-    # - If not, attempt one resolution; on success persist into session state file and log INFO.
-    # - On failure, log WARN and leave None — next "Start Session" will be blocked until GDrive is up.
+    # Boot-time GDrive URL resolve: live-resolve from DriveFS into in-memory
+    # session_shared_state. Never persisted — the URL is cheap to look up and
+    # persisting it caused stale-URL leakage when the resume path didn't refresh.
     if session_name and config.session_folder:
-        _existing_gdrive_url = session_shared_state.get_gdrive_url()
-        if _existing_gdrive_url:
-            log.info("session", f"Google Drive: {_existing_gdrive_url}")
+        _boot_gdrive_url = _resolve_gdrive_url(config.session_folder)
+        if _boot_gdrive_url:
+            session_shared_state.set_gdrive_url(_boot_gdrive_url)
+            log.info("session", f"Google Drive: {_boot_gdrive_url}")
         else:
-            _boot_gdrive_url = _resolve_gdrive_url(config.session_folder)
-            if _boot_gdrive_url:
-                session_shared_state.set_gdrive_url(_boot_gdrive_url)
-                _boot_folder = config.session_folder
-                try:
-                    _boot_state_raw = load_session_state(_boot_folder)
-                    _boot_state_raw["gdrive_url"] = _boot_gdrive_url
-                    save_session_state(_boot_folder, _boot_state_raw)
-                    if startup_session_state:
-                        startup_session_state["gdrive_url"] = _boot_gdrive_url
-                    log.info("session", f"Google Drive resolved at boot: {_boot_gdrive_url}")
-                except Exception as e:
-                    log.error("session", f"Failed to persist gdrive_url at boot: {e}")
-            else:
-                log.error("session", "Google Drive not available at boot — start GDrive to enable the folder link")
+            session_shared_state.set_gdrive_url(None)
+            log.error("session", "Google Drive not available at boot — start GDrive to enable the folder link")
 
     _prev_slides_history_count = len(misc_state.slides_viewed)
 
@@ -1144,14 +1128,11 @@ def run() -> None:
                             _leaderboard_state.reset()
                             _scores_state.reset()
                             restore_snapshot = _without_session_id(load_session_state(folder))
-                            # Persist gdrive_url from the create request into session state file
+                            # gdrive_url is live-resolved by the create/resume endpoint
+                            # and kept in session_shared_state only (never persisted).
                             _new_gdrive_url = session_req.get("gdrive_url")
+                            session_shared_state.set_gdrive_url(_new_gdrive_url)
                             if _new_gdrive_url:
-                                if isinstance(restore_snapshot, dict):
-                                    restore_snapshot["gdrive_url"] = _new_gdrive_url
-                                else:
-                                    restore_snapshot = {"gdrive_url": _new_gdrive_url}
-                                save_session_state(folder, restore_snapshot)
                                 log.info("session", f"Google Drive: {_new_gdrive_url}")
                             runtime_session_snapshot = restore_snapshot
                             _apply_runtime_snapshot_restore(restore_snapshot)
@@ -1217,6 +1198,7 @@ def run() -> None:
                         session_name = None
                         config = dc_replace(config, session_folder=None, session_notes=None)
                         _active_session_id = None
+                        session_shared_state.set_gdrive_url(None)
                         # Notify addons that session ended
                         from daemon import addon_bridge_client
                         addon_bridge_client.send_session_ended()

@@ -165,7 +165,12 @@ class PersistedSessionState(PersistedModel):
     debate_round_timer_seconds: int | None = Field(default=None, exclude=True)
     debate_round_timer_started_at: str | None = Field(default=None, exclude=True)
 
-    gdrive_url: str | None = Field(default=None, description="Google Drive web URL for the session folder (resolved at session create time)")
+    # Legacy: previously persisted but caused stale-URL leakage across sessions
+    # (resume path didn't re-resolve, so the prior session's in-memory URL got
+    # serialised into the new folder's snapshot). URL is now live-resolved from
+    # DriveFS on every session start/resume and kept only in session_shared_state.
+    # Accept on read for legacy files; never write back.
+    gdrive_url: str | None = Field(default=None, exclude=True)
     talk_presentation_name: str | None = Field(default=None, description="Display name of the last PPTX dropped in talk mode (stem, no extension)")
     talk_presentation_url: str | None = Field(default=None, description="PDF export URL for talk PPTX (docs.google.com/presentation/d/.../export/pdf)")
     talk_presentation_slug: str | None = Field(default=None, description="Railway slug under which the talk PPTX PDF is cached")

@@ -183,7 +183,8 @@ async function doResumeFolder(folder_name) {
     } else {
       const blocker = document.getElementById('session-blocker');
       if (blocker) blocker.style.display = 'none';
-      alert('Failed to resume session: ' + (data.detail || data.error || 'unknown error'));
+      const msg = data.message || data.detail || data.error || 'unknown error';
+      alert('Failed to resume session: ' + msg);
     }
   } catch (e) {
     const blocker = document.getElementById('session-blocker');

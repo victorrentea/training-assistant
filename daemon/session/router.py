@@ -241,21 +241,40 @@ async def end_session():
     return Response(status_code=204)
 
 
-@global_router.post("/resume", response_model=SessionStartResponse)
+@global_router.post("/resume", response_model=SessionStartResponse, responses={503: {"model": GDriveUnavailableResponse}})
 async def resume_session(body: ResumeSessionRequest):
-    """Host resumes an existing session folder. Uses session-state.json as persisted storage."""
+    """Host resumes an existing session folder.
+
+    Like /create, this requires Google Drive to be running so we can resolve the
+    folder's GDrive URL for the participant view. Returns 503 if unavailable.
+    """
     folder_name = normalize_session_name(body.folder)
     session_id = _resolve_session_id_for_folder(folder_name)
 
     root = _get_sessions_root()
-    state = load_session_state(root / folder_name) if root else {}
+    folder = root / folder_name if root else None
+    state = load_session_state(folder) if folder else {}
     session_type = state.get("mode") or state.get("session_type") or "workshop"
+
+    gdrive_url: str | None = None
+    stub_mode = os.environ.get("DAEMON_ADAPTER") == "stub"
+    if folder is not None and not stub_mode:
+        gdrive_url = await _wait_for_gdrive_url(str(folder))
+        if gdrive_url is None:
+            return JSONResponse(
+                status_code=503,
+                content=GDriveUnavailableResponse(
+                    error="gdrive_unavailable",
+                    message="Please start Google Drive",
+                ).model_dump(),
+            )
 
     session_pending.put("session_request", {
         "action": "create",
         "name": folder_name,
         "type": session_type,
         "session_id": session_id,
+        "gdrive_url": gdrive_url,
         "existed": True,
     })
     announce_session_id(session_id, session_type=session_type)
