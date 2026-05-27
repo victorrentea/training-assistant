@@ -20,7 +20,7 @@
 
 | Path | Responsibility |
 | --- | --- |
-| `daemon/files_md.py` | Parse, mutate, atomically write `files.md`. Public entry: `record_file_opened(url, branch, file_path)`. Migration helper. Wire sanitization. |
+| `daemon/files_md.py` | Parse, mutate, atomically write `files.md`. Public entry: `record_file_opened(url, file_path)`. Migration helper. Wire sanitization. |
 | `daemon/github_client.py` | Tiny HTTP wrapper: `get_repo_info(owner, repo)`, `head_blob(owner, repo, branch, path)`, in-process cache. |
 | `tests/daemon/test_files_md.py` | Unit tests for `files_md` (parse, dedup, collision, sanitize, migrate). |
 | `tests/daemon/test_github_client.py` | Unit tests for `github_client` (stubbed urllib). |
@@ -1400,7 +1400,7 @@ def test_addon_git_file_opened_calls_files_md(monkeypatch):
     calls: list[tuple] = []
     monkeypatch.setattr(
         files_md, "record_file_opened",
-        lambda url, branch, file_path: calls.append((url, branch, file_path)),
+        lambda url, file_path: calls.append((url, file_path)),
     )
 
     from daemon.addon_bridge_client import _handle_addon_message  # see Step 3
@@ -1411,7 +1411,7 @@ def test_addon_git_file_opened_calls_files_md(monkeypatch):
         "file": "src/a.py",
     })
 
-    assert calls == [("https://github.com/owner/repo", "main", "src/a.py")]
+    assert calls == [("https://github.com/owner/repo", "src/a.py")]
 ```
 
 - [ ] **Step 3: Refactor & swap the call site**
