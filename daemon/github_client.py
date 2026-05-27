@@ -6,6 +6,7 @@ plenty for typical workshop traffic; we degrade gracefully on rate limits.
 from __future__ import annotations
 
 import json
+import os
 import ssl
 import urllib.error
 import urllib.request
@@ -19,6 +20,12 @@ from daemon import log as _log
 _NAME = "github"
 _TIMEOUT_S = 3.0
 _USER_AGENT = "TrainingAssistant/1.0"
+
+# Override targets for hermetic tests. The user-facing blob URL written to
+# files.md (see build_blob_url) is always real github.com — only the internal
+# verification calls follow these env vars.
+_API_BASE = os.environ.get("GITHUB_API_BASE", "https://api.github.com").rstrip("/")
+_VERIFY_BLOB_BASE = os.environ.get("GITHUB_BLOB_BASE", "https://github.com").rstrip("/")
 
 
 @dataclass(frozen=True)
@@ -65,7 +72,7 @@ def get_repo_info(owner: str, repo: str) -> RepoInfo | None | _Sentinel:
     if key in _REPO_CACHE:
         return _REPO_CACHE[key]
 
-    url = f"https://api.github.com/repos/{owner}/{repo}"
+    url = f"{_API_BASE}/repos/{owner}/{repo}"
     req = urllib.request.Request(
         url, method="GET",
         headers={
@@ -98,7 +105,7 @@ def get_repo_info(owner: str, repo: str) -> RepoInfo | None | _Sentinel:
 
 def head_blob(owner: str, repo: str, branch: str, path: str) -> bool:
     """HEAD the GitHub blob page. Returns True iff 200."""
-    url = f"https://github.com/{owner}/{repo}/blob/{branch}/{path}"
+    url = f"{_VERIFY_BLOB_BASE}/{owner}/{repo}/blob/{branch}/{path}"
     req = urllib.request.Request(
         url, method="HEAD",
         headers={"User-Agent": _USER_AGENT},
