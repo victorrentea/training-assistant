@@ -14,6 +14,7 @@ body{visibility:hidden}
 #notes-content{font-size:calc(1rem * var(--participant-zoom))}
 #summary-content{font-size:calc(1rem * var(--participant-zoom))}
 #files-content{font-size:calc(1rem * var(--participant-zoom))}
+#files-content .file-path-dir{color:var(--color-on-surface-variant,#888);text-decoration:none;font-weight:400;opacity:.7}
 #agenda-content{font-size:calc(0.875rem * var(--participant-zoom))}
 #notes-scroll,#summary-scroll,#agenda-view{overflow-anchor:none}
 .badge-new{margin-left:auto;font-size:calc(.6rem + 1pt);font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
@@ -3646,6 +3647,21 @@ async function loadFilesMd() {
         return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>' + text + '</a>';
       };
       el.innerHTML = marked.parse(md, { renderer: _renderer });
+      el.querySelectorAll('h2 a').forEach(function(a) {
+        if (!/\.git$/.test(a.textContent)) a.textContent = a.textContent + '.git';
+      });
+      el.querySelectorAll('li a').forEach(function(a) {
+        var text = a.textContent;
+        var slash = text.lastIndexOf('/');
+        if (slash < 0) return;
+        var dir = text.slice(0, slash + 1);
+        var base = text.slice(slash + 1);
+        var span = document.createElement('span');
+        span.className = 'file-path-dir';
+        span.textContent = dir;
+        a.textContent = base;
+        a.parentNode.insertBefore(span, a);
+      });
     } else {
       el.textContent = 'No files opened yet.';
     }
