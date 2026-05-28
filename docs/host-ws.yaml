@@ -98,6 +98,7 @@ components:
         - Sent exclusively to the host channel (notify_host). Participants never receive this.
         - "`counts[i]` is the number of votes for `poll.options[i]` (participant_counts[i] + host_extras[i])."
         - "`poll` is null when the host cleared the draft; `started` reflects whether a poll is currently live."
+        - "`ended=true` after host clicked Stop, until Clear; counts + draft preserved, edits locked."
       payload:
         type: object
         required: [type]
@@ -112,6 +113,10 @@ components:
           started:
             type: boolean
             description: True while a poll is live; false after Stop or Clear
+          ended:
+            type: boolean
+            default: false
+            description: True after host clicked Stop, until Clear. Host UI locks edits and keeps showing results.
           counts:
             type: array
             items:

@@ -115,25 +115,40 @@ class TestPollStart:
 
 
 class TestPollStop:
-    def test_stop_preserves_draft_clears_started_and_votes(self, host_client, fresh_poll_state):
+    def test_stop_preserves_draft_and_votes_for_results_view(self, host_client, fresh_poll_state):
+        # Stop must NOT clear votes/host_extras: the host and participants keep
+        # seeing the final tally until the host hits Clear.
         host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
         host_client.post("/api/test-session/host/poll/start")
         fresh_poll_state.cast_vote("p1", [0])
-        assert fresh_poll_state.data is not None
         assert fresh_poll_state.started is True
         assert fresh_poll_state.votes
 
         resp = host_client.post("/api/test-session/host/poll/stop")
         assert resp.status_code == 204
-        # Draft preserved so host can edit and re-start without losing text.
+        # Draft preserved.
         assert fresh_poll_state.data is not None
         assert fresh_poll_state.data.question == "How was lunch?"
         assert fresh_poll_state.started is False
-        # Live state wiped (host_extras may be re-normalized to zeros by the
-        # post-stop snapshot push, so check the effective totals instead).
-        assert fresh_poll_state.votes == {}
-        assert all(x == 0 for x in fresh_poll_state.host_extras)
-        assert fresh_poll_state.vote_counts() == [0, 0]
+        # Votes preserved so results linger until Clear.
+        assert fresh_poll_state.votes
+        assert fresh_poll_state.vote_counts() == [1, 0]
+        # ended_at marker set.
+        assert fresh_poll_state.ended_at is not None
+
+    def test_update_rejected_after_stop(self, host_client, fresh_poll_state):
+        # Once ended, the draft is locked until Clear (or Start) — protects
+        # participants from seeing the question text mutate under them.
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        host_client.post("/api/test-session/host/poll/start")
+        host_client.post("/api/test-session/host/poll/stop")
+
+        resp = host_client.put("/api/test-session/host/poll/update", json={
+            "question": "Different?", "options": ["A", "B"], "multi": False, "public": False,
+        })
+        assert resp.status_code == 409
+        # Original draft untouched.
+        assert fresh_poll_state.data.question == "How was lunch?"
 
     def test_stop_is_idempotent(self, host_client, fresh_poll_state):
         # No draft, no start — stop should still succeed.
@@ -158,15 +173,20 @@ class TestPollClear:
         assert fresh_poll_state.votes == {}
 
     def test_clear_after_stop_drops_draft(self, host_client, fresh_poll_state):
-        # Sequence: edit → start → stop (draft preserved) → clear (draft gone).
+        # Sequence: edit → start → stop (draft + votes preserved) → clear (everything gone).
         host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
         host_client.post("/api/test-session/host/poll/start")
+        fresh_poll_state.cast_vote("p1", [0])
         host_client.post("/api/test-session/host/poll/stop")
         assert fresh_poll_state.data is not None
+        assert fresh_poll_state.ended_at is not None
+        assert fresh_poll_state.votes
 
         resp = host_client.post("/api/test-session/host/poll/clear")
         assert resp.status_code == 204
         assert fresh_poll_state.data is None
+        assert fresh_poll_state.ended_at is None
+        assert fresh_poll_state.votes == {}
 
     def test_clear_is_idempotent(self, host_client, fresh_poll_state):
         resp = host_client.post("/api/test-session/host/poll/clear")
@@ -300,18 +320,48 @@ class TestUpdateWhileRunning:
 
 
 class TestStopBroadcast:
-    def test_stop_broadcasts_activity_none(
+    def test_stop_keeps_activity_poll_so_participants_stay(
         self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
     ):
+        # New contract: Stop does NOT switch activity off, so participants
+        # remain on the poll view looking at the read-only result.
         mock_pstate.current_activity = "poll"
         host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
         host_client.post("/api/test-session/host/poll/start")
+        mock_broadcast.clear()
         host_client.post("/api/test-session/host/poll/stop")
 
-        broadcast_types = [m["type"] for ch, m in mock_broadcast if ch == "broadcast"]
-        assert "activity_updated" in broadcast_types
-        activity_msgs = [m for ch, m in mock_broadcast if ch == "broadcast" and m["type"] == "activity_updated"]
-        assert activity_msgs[-1]["current_activity"] == "none"
+        activity_msgs = [
+            m for ch, m in mock_broadcast
+            if ch == "broadcast" and m["type"] == "activity_updated"
+        ]
+        assert activity_msgs == [], (
+            "Stop must not broadcast activity_updated — participants stay on the poll view"
+        )
+        assert mock_pstate.current_activity == "poll"
+
+    def test_stop_pushes_ended_snapshot_with_counts_regardless_of_public(
+        self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
+    ):
+        # Private poll: counts are hidden while running, but once stopped
+        # the daemon sends them so participants see the final result.
+        host_client.put("/api/test-session/host/poll/update", json={
+            "question": "Q?", "options": ["A", "B"], "multi": False, "public": False,
+        })
+        host_client.post("/api/test-session/host/poll/start")
+        fresh_poll_state.cast_vote("alice", [0])
+        mock_broadcast.clear()
+
+        host_client.post("/api/test-session/host/poll/stop")
+
+        poll_updates = [
+            m for ch, m in mock_broadcast
+            if ch == "broadcast" and m["type"] == "poll_updated"
+        ]
+        assert poll_updates, "Stop must push a poll_updated to participants"
+        last = poll_updates[-1]
+        assert last["ended"] is True
+        assert last["counts"] == [1, 0]
 
 
 @pytest.fixture
@@ -408,7 +458,22 @@ class TestHostGetPoll:
     def test_returns_null_when_no_data(self, host_client, fresh_poll_state):
         resp = host_client.get("/api/test-session/host/poll")
         assert resp.status_code == 200
-        assert resp.json() == {"poll": None, "started": False, "counts": [], "voted_count": 0}
+        assert resp.json() == {
+            "poll": None, "started": False, "ended": False, "counts": [], "voted_count": 0,
+        }
+
+    def test_get_returns_ended_after_stop(
+        self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate
+    ):
+        host_client.put("/api/test-session/host/poll/update", json=_SAMPLE_BODY)
+        host_client.post("/api/test-session/host/poll/start")
+        fresh_poll_state.cast_vote("alice", [0])
+        host_client.post("/api/test-session/host/poll/stop")
+
+        data = host_client.get("/api/test-session/host/poll").json()
+        assert data["started"] is False
+        assert data["ended"] is True
+        assert data["counts"] == [1, 0]
 
     def test_returns_snapshot_when_running(
         self, host_client, fresh_poll_state, mock_broadcast, mock_notify_host, mock_pstate

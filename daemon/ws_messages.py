@@ -88,21 +88,27 @@ class PollOpenedMsg(BaseModel):
 
 
 class PollUpdatedMsg(BaseModel):
-    """Participant-facing snapshot. Fires on Start, host edits, and
-    participant votes when public=true. `counts` present iff poll is
-    public; absent → participant hides per-option bars."""
+    """Participant-facing snapshot. Fires on Start, host edits, Stop, and
+    participant votes when public=true. `counts` present when the poll is
+    public OR has been ended (read-only results); absent → participant
+    hides per-option bars. `ended=True` flips the participant UI to a
+    read-only results view that lingers until Clear."""
     type: Literal["poll_updated"] = "poll_updated"
     poll: dict[str, Any]              # {question, options, multi, public}
     counts: list[int] | None = None
+    ended: bool = False
 
 
 class PollHostUpdateMsg(BaseModel):
     """Host-only snapshot (sent via notify_host). Always carries full
     counts regardless of public flag. `poll` is None when the draft was
-    cleared; `started` reflects whether the poll is currently live."""
+    cleared; `started` reflects whether the poll is currently live;
+    `ended` is True once the poll has been stopped but not yet cleared
+    (host UI locks edits and keeps showing the results)."""
     type: Literal["poll_host_update"] = "poll_host_update"
     poll: dict[str, Any] | None = None
     started: bool = False
+    ended: bool = False
     counts: list[int] = []
     voted_count: int = 0
     participant_counts: list[int] = []   # real-participant counts only (per option)

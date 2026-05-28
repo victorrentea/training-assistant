@@ -207,7 +207,9 @@ def _build_runtime_session_snapshot(
             "data": poll_state.data.model_dump() if poll_state.data else None,
             "started": poll_state.started,
             "opened_at": poll_state.opened_at,
+            "ended_at": poll_state.ended_at,
             "votes": dict(poll_state.votes),
+            "host_extras": list(poll_state.host_extras),
         } if poll_state.data is not None or poll_state.votes else None),
         "qa_questions": qa_payload,
         "wordcloud": {
@@ -281,7 +283,9 @@ def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
             poll_state.data = PollData.model_validate(poll_data["data"])
         poll_state.started = bool(poll_data.get("started", False))
         poll_state.opened_at = poll_data.get("opened_at")
+        poll_state.ended_at = poll_data.get("ended_at")
         poll_state.votes = dict(poll_data.get("votes") or {})
+        poll_state.host_extras = list(poll_data.get("host_extras") or [])
         poll_state.invalidate_counts()
 
 

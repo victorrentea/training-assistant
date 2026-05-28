@@ -218,11 +218,12 @@ components:
             enum: [poll_opened]
 
     poll_updated:
-      summary: Poll snapshot — fires on start, host edits, and votes when public=true
+      summary: Poll snapshot — fires on start, host edits, stop, and votes when public=true
       x-feature: poll
       x-doc-notes:
-        - "`counts` is present only when `poll.public` is true; absent → hide per-option bars."
+        - "`counts` is present when `poll.public` is true OR when the poll has been ended (read-only results until Clear); absent → hide per-option bars."
         - "`counts[i]` is the number of votes for `poll.options[i]`."
+        - "`ended=true` flips the participant UI to a read-only results view that lingers until host clicks Clear."
       payload:
         type: object
         required: [type, poll]
@@ -237,7 +238,11 @@ components:
             items:
               type: integer
             nullable: true
-            description: Per-option vote counts; present only when poll.public is true
+            description: Per-option vote counts; present when poll.public OR poll has been ended
+          ended:
+            type: boolean
+            default: false
+            description: True after host clicked Stop, until Clear is clicked. Participant view becomes read-only.
 
     # ── Scores ────────────────────────────────────────────────────────────────
 

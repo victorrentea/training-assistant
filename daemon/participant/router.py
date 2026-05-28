@@ -354,7 +354,8 @@ def _build_poll_for_participant(pid: str) -> dict:
     """Build poll state personalised for participant pid.
 
     Returns the public snapshot, this participant's own vote (never others'),
-    and the aggregate counts (only when poll.public is True).
+    and the aggregate counts when the poll is public OR ended (stopped but
+    not yet cleared — results are visible read-only).
     """
     from daemon.poll.state import poll_state
 
@@ -362,6 +363,7 @@ def _build_poll_for_participant(pid: str) -> dict:
         return {
             "poll": None,
             "poll_active": False,
+            "poll_ended": False,
             "my_poll_voted_indices": None,
             "poll_vote_counts": None,
         }
@@ -373,10 +375,12 @@ def _build_poll_for_participant(pid: str) -> dict:
         "public": poll_state.data.public,
     }
     my_entry = poll_state.votes.get(pid)
-    counts = poll_state.vote_counts() if poll_state.data.public else None
+    ended = poll_state.ended_at is not None
+    counts = poll_state.vote_counts() if (poll_state.data.public or ended) else None
     return {
         "poll": snapshot,
         "poll_active": poll_state.started,
+        "poll_ended": ended,
         "my_poll_voted_indices": my_entry["option_indices"] if my_entry else None,
         "poll_vote_counts": counts,
     }

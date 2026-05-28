@@ -39,9 +39,9 @@ def _pax_snapshot() -> dict:
 async def _push_poll_state() -> None:
     """Single source of truth for poll updates.
 
-    Broadcasts PollUpdatedMsg to participants (counts gated by public),
-    and notifies the host directly with PollHostUpdateMsg (always full
-    counts). Caller is responsible for first-time signals like
+    Broadcasts PollUpdatedMsg to participants (counts gated by public OR
+    ended), and notifies the host directly with PollHostUpdateMsg (always
+    full counts). Caller is responsible for first-time signals like
     ActivityUpdatedMsg + PollOpenedMsg.
     """
     if poll_state.data is None:
@@ -50,13 +50,14 @@ async def _push_poll_state() -> None:
     pcounts = poll_state.participant_vote_counts()
     extras = list(poll_state.host_extras)
     voted = poll_state.distinct_voter_count()
-    counts_for_pax = counts if poll_state.data.public else None
+    ended = poll_state.ended_at is not None
+    counts_for_pax = counts if (poll_state.data.public or ended) else None
     snapshot = _pax_snapshot()
 
-    broadcast(PollUpdatedMsg(poll=snapshot, counts=counts_for_pax))
+    broadcast(PollUpdatedMsg(poll=snapshot, counts=counts_for_pax, ended=ended))
     await notify_host(
         PollHostUpdateMsg(
-            poll=snapshot, started=poll_state.started,
+            poll=snapshot, started=poll_state.started, ended=ended,
             counts=counts, voted_count=voted,
             participant_counts=pcounts, host_extras=extras,
         )
@@ -67,10 +68,11 @@ async def _push_poll_state() -> None:
 async def get_poll():
     """Host snapshot fetch on tab activation. Subsequent updates via WS."""
     if poll_state.data is None:
-        return {"poll": None, "started": False, "counts": [], "voted_count": 0}
+        return {"poll": None, "started": False, "ended": False, "counts": [], "voted_count": 0}
     return {
         "poll": _pax_snapshot(),
         "started": poll_state.started,
+        "ended": poll_state.ended_at is not None,
         "counts": poll_state.vote_counts(),
         "voted_count": poll_state.distinct_voter_count(),
     }
@@ -80,6 +82,13 @@ async def get_poll():
 async def update_poll(body: PollData):
     """Host pushes latest draft. Validates option deletion + multi flip
     while running, wipes votes on multi flip, broadcasts updates."""
+    if poll_state.ended_at is not None:
+        # Edits are locked while the poll is stopped-with-results.
+        # Host must Clear (or Start again) to mutate the draft.
+        return JSONResponse(
+            {"error": "Poll ended; Clear to start a new draft"},
+            status_code=409,
+        )
     prev = poll_state.data
     if poll_state.started and prev is not None:
         # Forbid shrinking the option list while running. Clearing an option's
@@ -128,7 +137,9 @@ async def start_poll():
 
     poll_state.started = True
     poll_state.opened_at = datetime.now(timezone.utc).isoformat()
+    poll_state.ended_at = None
     poll_state.votes.clear()
+    poll_state.host_extras = []
     poll_state.invalidate_counts()
     participant_state.current_activity = "poll"
 
@@ -142,18 +153,11 @@ async def start_poll():
 
 @host_router.post("/stop", status_code=204)
 async def stop_poll():
-    """End the live poll but keep the draft so the host can edit and restart.
-
-    Clears votes and host extras; preserves question/options/multi/public.
-    Broadcasts activity transition to none and pushes the cleared host snapshot.
-    """
-    was_running = poll_state.started
+    """End the live poll but keep the draft, votes and host_extras so
+    participants and host both see the final results read-only until
+    Clear. current_activity stays "poll" so participants do not get
+    routed away from the view."""
     poll_state.end_live()
-    if was_running and participant_state.current_activity == "poll":
-        participant_state.current_activity = "none"
-    broadcast(ActivityUpdatedMsg(current_activity="none"))
-    await notify_host(ActivityUpdatedMsg(current_activity="none"))
-    # Sync any other host tabs to "stopped but draft intact".
     if poll_state.data is not None:
         await _push_poll_state()
     return Response(status_code=204)

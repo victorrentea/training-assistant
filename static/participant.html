@@ -2183,9 +2183,10 @@ var _quizWsSeq = 0;        // incremented on each WS quiz_opened/quiz_ended; use
 
 // ── Poll state ──
 var _pollActive = false;
+var _pollEnded = false;           // true after host Stop, until Clear: read-only results view
 var _currentPoll = null;          // {question, options, multi, public}
 var _myPollVote = null;           // single: int idx | null;  multi: Set<int>
-var _pollVoteCounts = null;       // list[int] when public, null otherwise
+var _pollVoteCounts = null;       // list[int] when public or ended, null otherwise
 
 // ── Activity tracking ──
 var _currentActivity = 'none';
@@ -2870,6 +2871,7 @@ function _resetActivityState(activity) {
   if (activity === 'poll') {
     _currentPoll = null;
     _pollActive = false;
+    _pollEnded = false;
     _myPollVote = null;
     _pollVoteCounts = null;
   }
@@ -2884,7 +2886,7 @@ function _updateActivityNavLabel() {
   // tabs but hasn't started the activity yet) is not enough.
   var hasContent = false;
   switch (_currentActivity) {
-    case 'poll': hasContent = !!(_pollActive && _currentPoll); break;
+    case 'poll': hasContent = !!((_pollActive || _pollEnded) && _currentPoll); break;
     case 'quiz': hasContent = !!(_quizActive && _currentQuiz); break;
     // Other activities (wordcloud / qa / codereview / debate): no
     // per-activity 'active' flag in participant client yet, so leave them
@@ -2905,6 +2907,7 @@ function _updateActivityNavLabel() {
 function _applyPollState(msg) {
   if (msg.poll !== undefined) _currentPoll = msg.poll;
   if (msg.poll_active !== undefined) _pollActive = !!msg.poll_active;
+  if (msg.poll_ended !== undefined) _pollEnded = !!msg.poll_ended;
 
   if (msg.my_poll_voted_indices !== undefined) {
     if (msg.my_poll_voted_indices === null) {
@@ -3043,7 +3046,7 @@ function _renderActivityPoll() {
   _updateActivityNavLabel();
   var section = document.getElementById('activity-poll-section');
   if (!section) return;
-  if (!_currentPoll || !_pollActive) {
+  if (!_currentPoll || (!_pollActive && !_pollEnded)) {
     section.style.display = 'none';
     _updateActivityIdleSections();
     return;
@@ -3056,6 +3059,7 @@ function _renderActivityPoll() {
   var multi = !!_currentPoll.multi;
   var counts = _pollVoteCounts;
   var maxCount = counts ? Math.max.apply(null, counts.concat([0])) : 0;
+  var ended = _pollEnded;
 
   var optsHtml = _currentPoll.options.map(function(text, idx) {
     var isSel = multi
@@ -3071,7 +3075,10 @@ function _renderActivityPoll() {
     var mark = '<span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true">' +
                  (isSel ? '✓' : '') +
                '</span>';
-    return '<button class="poll-option-btn ' + selClass + '" onclick="castPollVote(' + idx + ')">' +
+    var endedClass = ended ? ' poll-ended' : '';
+    var clickAttr = ended ? '' : ' onclick="castPollVote(' + idx + ')"';
+    var disabledAttr = ended ? ' disabled' : '';
+    return '<button class="poll-option-btn ' + selClass + endedClass + '"' + clickAttr + disabledAttr + '>' +
              '<div class="fill" style="width:' + fillWidth + '%"></div>' +
              countHtml +
              '<div class="row">' +
@@ -3085,7 +3092,9 @@ function _renderActivityPoll() {
   // Always show the status bar so the layout stays stable when the host
   // flips multi on/off — only the text changes.
   var statusBar = document.getElementById('poll-status-bar');
-  var newStatus = multi ? 'Pick as many as you want' : 'Pick one';
+  var newStatus = ended
+    ? 'Voting ended'
+    : (multi ? 'Pick as many as you want' : 'Pick one');
   var prevStatus = statusBar.textContent;
   statusBar.textContent = newStatus;
   statusBar.style.display = '';
@@ -3325,6 +3334,7 @@ function _handleWsMessage(msg) {
       break;
     case 'poll_opened':
       _pollActive = true;
+      _pollEnded = false;
       _myPollVote = (_currentPoll && _currentPoll.multi) ? new Set() : null;
       _renderActivityPoll();
       showView('activity');
@@ -3333,6 +3343,10 @@ function _handleWsMessage(msg) {
       var _prevMulti = _currentPoll ? _currentPoll.multi : null;
       _currentPoll = msg.poll;
       _pollVoteCounts = (msg.counts !== undefined && msg.counts !== null) ? msg.counts : null;
+      if (msg.ended !== undefined) {
+        _pollEnded = !!msg.ended;
+        if (_pollEnded) _pollActive = false;
+      }
       // Multi flip: mirror server-side vote-preservation rule.
       // - single → multi: keep the single vote, wrap in a Set
       // - multi → single: keep iff exactly 1 option was selected; else clear

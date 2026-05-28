@@ -495,13 +495,13 @@ paths:
       tags:
       - poll
       summary: Stop Poll
-      description: 'End the live poll but keep the draft so the host can edit and
-        restart.
+      description: 'End the live poll but keep the draft, votes and host_extras so
 
+        participants and host both see the final results read-only until
 
-        Clears votes and host extras; preserves question/options/multi/public.
+        Clear. current_activity stays "poll" so participants do not get
 
-        Broadcasts activity transition to none and pushes the cleared host snapshot.'
+        routed away from the view.'
       operationId: stop_poll_api__session_id__host_poll_stop_post
       responses:
         '204':
@@ -1235,8 +1235,12 @@ paths:
       tags:
       - session
       summary: Resume Session
-      description: Host resumes an existing session folder. Uses session-state.json
-        as persisted storage.
+      description: 'Host resumes an existing session folder.
+
+
+        Like /create, this requires Google Drive to be running so we can resolve the
+
+        folder''s GDrive URL for the participant view. Returns 503 if unavailable.'
       operationId: resume_session_api_session_resume_post
       requestBody:
         content:
@@ -1251,6 +1255,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SessionStartResponse'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GDriveUnavailableResponse'
       x-feature: session_management
   /api/session/folders:
     get:

@@ -25,6 +25,10 @@ class PollState:
     data: Optional[PollData] = None
     started: bool = False
     opened_at: Optional[str] = None
+    # Set on end_live() and cleared on reset() / start_poll. When non-None,
+    # the poll is in the "ended-but-results-visible" phase: votes/host_extras
+    # are preserved, edits are locked, participants see counts read-only.
+    ended_at: Optional[str] = None
     votes: dict[str, dict] = field(default_factory=dict)
     # votes[participant_uuid] = {"option_indices": list[int], "voted_at": "ISO"}
     host_extras: list[int] = field(default_factory=list)
@@ -114,19 +118,19 @@ class PollState:
         self._vote_counts_dirty = True
 
     def end_live(self) -> None:
-        """End a running poll but preserve the draft (question/options/multi/public).
-        Votes and host extras are cleared so a subsequent /start runs fresh."""
+        """End a running poll. Preserves draft + votes + host_extras so the
+        host and participants keep seeing final results until Clear. Sets
+        ended_at as the "stopped-with-results" marker."""
         self.started = False
         self.opened_at = None
-        self.votes.clear()
-        self.host_extras = []
-        self._vote_counts_cache = None
+        self.ended_at = datetime.now(timezone.utc).isoformat()
         self._vote_counts_dirty = True
 
     def reset(self) -> None:
         self.data = None
         self.started = False
         self.opened_at = None
+        self.ended_at = None
         self.votes.clear()
         self.host_extras = []
         self._vote_counts_cache = None

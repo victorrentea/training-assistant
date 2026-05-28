@@ -468,6 +468,7 @@
         }
         _hostPollCountsState = msg.counts || [];
         _hostPollStarted = !!msg.started;
+        _hostPollEnded = !!msg.ended;
         renderPoll();
       } else if (msg.type === 'poll_opened') {
         // Bare signal — snapshot follows via poll_host_update.
@@ -1581,6 +1582,7 @@
 
   // Live state — set by /api/{sid}/host/poll fetch + poll_host_update WS pushes.
   let _hostPollStarted = false;
+  let _hostPollEnded = false;      // true after Stop, until Clear: counts frozen, edits locked
   let _hostPollCountsState = [];   // per-option vote counts; aligned to pollState.options
 
   const pollQuestionEl  = document.getElementById('poll-question');
@@ -1660,9 +1662,18 @@
         autoGrow(row);
         row.classList.toggle('filled', val.trim() !== '');
       }
-      if (row) row.placeholder = i === desired - 1 ? 'Add option…' : '';
-      card.classList.toggle('started', _hostPollStarted);
+      if (row) {
+        row.placeholder = i === desired - 1 ? 'Add option…' : '';
+        // Lock option text input once the poll is running or stopped-with-results.
+        row.readOnly = _hostPollStarted || _hostPollEnded;
+      }
+      card.classList.toggle('started', _hostPollStarted || _hostPollEnded);
+      card.classList.toggle('ended', _hostPollEnded);
     });
+
+    pollQuestionEl.readOnly = _hostPollStarted || _hostPollEnded;
+    pollMultiEl.disabled = _hostPollStarted || _hostPollEnded;
+    pollPublicEl.disabled = _hostPollStarted || _hostPollEnded;
 
     pollStartBtn.tabIndex = 2 + desired;
     updatePollStartEnabled();
@@ -1671,7 +1682,9 @@
 
   function applyPollLiveResults() {
     const counts = _hostPollCountsState;
-    if (!_hostPollStarted) {
+    // Show counts while live OR after Stop (until Clear) so the host keeps
+    // seeing the final tally. Only a fresh/draft poll wipes them.
+    if (!_hostPollStarted && !_hostPollEnded) {
       pollOptionsEl.querySelectorAll('.poll-option-card').forEach(c => {
         c.classList.remove('started', 'has-votes');
         const countEl = c.querySelector('.poll-option-card-count');
@@ -1775,9 +1788,10 @@
 
   function updatePollStartEnabled() {
     pollStartBtn.textContent = 'Start';
-    pollQuickBtns.forEach(b => { b.disabled = _hostPollStarted; });
+    pollQuickBtns.forEach(b => { b.disabled = _hostPollStarted || _hostPollEnded; });
     pollStopBtn.disabled = !_hostPollStarted;
-    if (_hostPollStarted) {
+    if (_hostPollStarted || _hostPollEnded) {
+      // While running, Stop is the only valid action. Once stopped, Clear is.
       pollStartBtn.disabled = true;
       return;
     }
@@ -1936,6 +1950,7 @@
     }
     if (res.ok) {
       _hostPollStarted = true;
+      _hostPollEnded = false;
       _hostPollCountsState = pollState.options.map(() => 0);
       applyPollLiveResults();
       updatePollStartEnabled();
@@ -1950,9 +1965,10 @@
     if (pollStopBtn.disabled) return;
     // Cancel any pending debounced update — we're about to stop the live run.
     if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
-    // Drop live state locally; question + options stay so the host can edit.
+    // Optimistic local flip: live → ended. Counts are preserved; the WS
+    // push from the daemon will reconcile any drift.
     _hostPollStarted = false;
-    _hostPollCountsState = [];
+    _hostPollEnded = true;
     renderPoll();
     try {
       await fetch(API('/poll/stop'), { method: 'POST' });
@@ -1965,6 +1981,7 @@
     // Cancel any pending debounced update — we're about to wipe.
     if (_pollUpdateTimer) { clearTimeout(_pollUpdateTimer); _pollUpdateTimer = null; }
     _hostPollStarted = false;
+    _hostPollEnded = false;
     _hostPollCountsState = [];
     resetPollLocal();
     pollQuestionEl.focus();
@@ -2051,6 +2068,7 @@
       const data = await resp.json();
       if (!data.poll) {
         _hostPollStarted = false;
+        _hostPollEnded = false;
         _hostPollCountsState = [];
         return;
       }
@@ -2059,6 +2077,7 @@
       pollState.multi = data.poll.multi;
       pollState.public = data.poll.public;
       _hostPollStarted = !!data.started;
+      _hostPollEnded = !!data.ended;
       _hostPollCountsState = data.counts || [];
       renderPoll();
     } catch (e) { /* silent */ }
