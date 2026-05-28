@@ -74,8 +74,11 @@ class Doc:
             parts.append("")
             for e in repo.entries:
                 if e.blob_url and e.path:
+                    # Link text is the full repo-relative path so participants
+                    # see where the file lives (e.g. `src/main/java/Foo.java`)
+                    # instead of just the bare basename.
                     parts.append(
-                        f"- [{e.basename}]({e.blob_url}) <!-- ts:{e.ts} path:{e.path} -->"
+                        f"- [{e.path}]({e.blob_url}) <!-- ts:{e.ts} path:{e.path} -->"
                     )
                 else:
                     parts.append(
@@ -108,11 +111,16 @@ class Doc:
                 continue
             m = _RE_LINKED.match(line)
             if m:
+                # `path:` in the trailing comment is authoritative — older files
+                # rendered the link text as the basename, newer ones render the
+                # full path, but the comment carries the canonical path either way.
+                path = m.group("path")
+                basename = path.rsplit("/", 1)[-1] if path else m.group("basename")
                 current.entries.append(
                     Entry(
-                        basename=m.group("basename"),
+                        basename=basename,
                         blob_url=m.group("blob"),
-                        path=m.group("path"),
+                        path=path,
                         ts=m.group("ts"),
                         reason=None,
                     )

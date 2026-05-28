@@ -32,7 +32,7 @@ def test_render_single_repo_linked():
     expected = (
         "# Files opened this session\n\n"
         "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->\n\n"
-        "- [a.py](https://github.com/owner/repo/blob/main/src/a.py)"
+        "- [src/a.py](https://github.com/owner/repo/blob/main/src/a.py)"
         " <!-- ts:2026-05-27T10:00:00Z path:src/a.py -->\n"
     )
     assert doc.render() == expected
@@ -144,7 +144,7 @@ def test_record_unknown_repo_public_with_valid_blob(session_folder, monkeypatch)
         )
     text = (session_folder / "files.md").read_text()
     assert "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->" in text
-    assert "- [a.py](https://github.com/owner/repo/blob/main/src/a.py)" in text
+    assert "- [src/a.py](https://github.com/owner/repo/blob/main/src/a.py)" in text
     assert "ts:2026-05-27T10:00:00Z" in text
     assert "path:src/a.py" in text
 
@@ -195,7 +195,7 @@ def test_record_rate_limited_on_known_public_repo_writes_unlinked(session_folder
     with patch.object(github_client, "get_repo_info", return_value=github_client.RATE_LIMITED):
         files_md.record_file_opened("https://github.com/owner/repo", "src/second.py")
     text = (session_folder / "files.md").read_text()
-    assert "- [first.py](https://github.com/owner/repo/blob/main/src/first.py)" in text
+    assert "- [src/first.py](https://github.com/owner/repo/blob/main/src/first.py)" in text
     assert "- second.py <!-- ts:2026-05-27T10:02:00Z reason:rate-limited -->" in text
 
 
@@ -209,7 +209,7 @@ def test_record_dedup_same_basename_skips(session_folder, monkeypatch):
         _freeze_now(monkeypatch, "2026-05-27T10:05:00Z")
         files_md.record_file_opened("https://github.com/owner/repo", "src/a.py")
     text = (session_folder / "files.md").read_text()
-    assert text.count("- [a.py]") == 1
+    assert text.count("- [src/a.py]") == 1
     assert "ts:2026-05-27T10:00:00Z" in text
     assert "ts:2026-05-27T10:05:00Z" not in text
 
@@ -266,12 +266,12 @@ def test_sanitize_for_wire_strips_html_comments():
     md = (
         "# Files opened this session\n\n"
         "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->\n\n"
-        "- [a.py](https://github.com/owner/repo/blob/main/src/a.py) <!-- ts:X path:src/a.py -->\n"
+        "- [src/a.py](https://github.com/owner/repo/blob/main/src/a.py) <!-- ts:X path:src/a.py -->\n"
     )
     out = files_md.sanitize_for_wire(md)
     assert "<!--" not in out
     assert "## [repo](https://github.com/owner/repo)" in out
-    assert "- [a.py](https://github.com/owner/repo/blob/main/src/a.py)" in out
+    assert "- [src/a.py](https://github.com/owner/repo/blob/main/src/a.py)" in out
 
 
 def _write_session_json(folder, payload):
@@ -300,7 +300,7 @@ def test_migration_converts_git_repos_and_strips_key(session_folder, monkeypatch
 
     md = (session_folder / "files.md").read_text()
     assert "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->" in md
-    assert "[a.py]" in md and "[b.py]" in md
+    assert "[src/a.py]" in md and "[src/b.py]" in md
 
     js = json.loads((session_folder / "session-state.json").read_text())
     assert "git_repos" not in js
@@ -375,7 +375,7 @@ def test_record_tree_resolves_basename_to_full_path(session_folder, monkeypatch)
             "packages.puml",  # addon sent just basename
         )
     text = (session_folder / "files.md").read_text()
-    assert "- [packages.puml](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/docs/packages.puml)" in text
+    assert "- [petclinic-backend/docs/packages.puml](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/docs/packages.puml)" in text
     assert "path:petclinic-backend/docs/packages.puml" in text
 
 
@@ -419,7 +419,7 @@ def test_record_tree_exact_path_match_preferred(session_folder, monkeypatch):
             "src/foo/a.py",  # exact path → unambiguous link
         )
     text = (session_folder / "files.md").read_text()
-    assert "[a.py](https://github.com/owner/repo/blob/main/src/foo/a.py)" in text
+    assert "[src/foo/a.py](https://github.com/owner/repo/blob/main/src/foo/a.py)" in text
     assert "path:src/foo/a.py" in text
 
 
@@ -436,7 +436,7 @@ def test_record_tree_truncated_falls_back_to_head(session_folder, monkeypatch):
         )
     head.assert_called_once()  # HEAD fallback used because tree truncated
     text = (session_folder / "files.md").read_text()
-    assert "[x.py]" in text
+    assert "[src/x.py]" in text
     assert "path:src/x.py" in text
 
 
@@ -470,7 +470,7 @@ def test_load_doc_strips_existing_noise_entries(session_folder, monkeypatch):
         files_md.record_file_opened("https://github.com/owner/repo", "c.py")
     text = (session_folder / "files.md").read_text()
     assert "✻" not in text
-    assert "[a.py]" in text
+    assert "[src/a.py]" in text
     assert "- b.py" in text
     assert "- c.py <!-- ts:2026-05-27T11:00:00Z reason:blob-404 -->" in text
 
@@ -496,8 +496,8 @@ def test_load_doc_upgrades_unlinked_via_tree(session_folder, monkeypatch):
         # Any record_file_opened call triggers _load_doc which runs the upgrade.
         files_md.record_file_opened("https://github.com/victorrentea/petclinic", "noop.txt")
     text = (session_folder / "files.md").read_text()
-    assert "- [packages.puml](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/docs/packages.puml) <!-- ts:2026-05-27T15:47:58Z path:petclinic-backend/docs/packages.puml -->" in text
-    assert "- [C3ArchTest.java](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/src/test/java/.../C3ArchTest.java) <!-- ts:2026-05-27T15:54:15Z path:petclinic-backend/src/test/java/.../C3ArchTest.java -->" in text
+    assert "- [petclinic-backend/docs/packages.puml](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/docs/packages.puml) <!-- ts:2026-05-27T15:47:58Z path:petclinic-backend/docs/packages.puml -->" in text
+    assert "- [petclinic-backend/src/test/java/.../C3ArchTest.java](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/src/test/java/.../C3ArchTest.java) <!-- ts:2026-05-27T15:54:15Z path:petclinic-backend/src/test/java/.../C3ArchTest.java -->" in text
 
 
 def test_load_doc_does_not_upgrade_ambiguous_entries(session_folder, monkeypatch):

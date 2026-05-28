@@ -3643,10 +3643,7 @@ async function loadFilesMd() {
       var _renderer = new marked.Renderer();
       _renderer.link = function(href, title, text) {
         var t = title ? ' title="' + title + '"' : '';
-        return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>'
-          + text
-          + '<span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:middle;margin-left:2px;opacity:0.7">open_in_new</span>'
-          + '</a>';
+        return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>' + text + '</a>';
       };
       el.innerHTML = marked.parse(md, { renderer: _renderer });
     } else {
