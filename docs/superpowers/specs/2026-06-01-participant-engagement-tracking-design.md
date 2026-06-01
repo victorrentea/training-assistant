@@ -94,9 +94,9 @@ POST /{session}/api/participant/activity   (X-Participant-ID header)
    ▼
 daemon participant router
    │  merge deltas → PersistedParticipant.engagement
-   │  bump runtime last_active_at / last_view
-   │  save_session_state()
-   │  notify host (host-only WS message)
+   │  bump runtime last_active_at / last_view (ephemeral)
+   │  (cumulative engagement persisted by the 3s periodic snapshot loop)
+   │  notify host via existing participant_list_updated message
    ▼
 host.js
    │  stores per-participant engagement snapshot
@@ -194,19 +194,31 @@ ephemeral (not required to persist; rebuilt as reports arrive).
 4. `save_session_state(...)` (the existing periodic-save path already batches;
    reuse it rather than forcing a synchronous disk write per report if that
    matches existing cadence).
-5. Notify the host using the same mechanism `register` already uses to push
-   participant updates (`_notify_host_*` → host-only WS message). The host
-   message carries, per participant: `{ uuid, last_active_at, last_view,
-   engagement: { view: {seconds, visits, clicks} } }`.
+5. Notify the host by calling the existing `_notify_host_participant_list()`
+   (the same path `register`/`rename` already use). **No new WS message type is
+   introduced** — engagement rides along on the existing `participant_list_updated`
+   message, whose `participants` field is already an untyped
+   `list[dict[str, Any]]`. `_build_host_participants_list()` is extended to add
+   three keys to each participant entry: `engagement` (view → {seconds, visits,
+   clicks}), `last_active_at` (epoch ms, server-stamped), and `last_view`.
 
-**Host load** (`daemon/host_state_router.py`): include the same engagement
-snapshot in the `HostStateResponse` returned by `GET /api/{session}/host/state`,
-so a freshly opened/reloaded host page is immediately populated.
+This deliberately avoids adding to the AsyncAPI specs (`docs/host-ws.yaml`) and
+the WS-contract test (`tests/daemon/test_ws_contract.py`) — the contract surface
+stays unchanged.
 
-**WS message contract** (`daemon/ws_messages.py`): register a new host-only
-message type (e.g. `engagement_updated` → `EngagementUpdatedMsg`) in the host
-message registry, following the existing `type: Literal[...]` discriminated
-pattern.
+**Host load** (`daemon/host_state_router.py`): the same three keys are added in
+`_build_host_participants_list()`, so the `participants` array of the
+`HostStateResponse` returned by `GET /api/{session}/host/state` already carries
+engagement and a freshly opened/reloaded host page is immediately populated.
+`HostParticipant` gains the matching optional typed fields for contract honesty
+(this changes the daemon OpenAPI schema → regenerate `docs/openapi.yaml`).
+
+**Timestamp note:** `last_active_at` is stamped by the daemon as epoch
+milliseconds; the host compares it against its own `Date.now()`. The host UI and
+daemon run on the same machine (host REST → `localhost:8081`), so the clocks are
+identical and there is no skew to correct for. Only the cumulative `engagement`
+dict is persisted to `session-state.json`; `last_active_at`/`last_view` live only
+in runtime `ParticipantState` and are rebuilt as reports arrive.
 
 ## Component 4 — Host UI
 
