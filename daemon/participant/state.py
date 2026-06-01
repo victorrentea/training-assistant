@@ -42,6 +42,11 @@ class ParticipantState:
         self.mode: str = "workshop"
         self.current_activity: str = "none"
         self.emoji_counters: dict[str, int] = {}
+        # Engagement: uuid -> {view -> {seconds, visits, clicks}} (cumulative, persisted)
+        self.engagement: dict[str, dict] = {}
+        # Liveness (ephemeral, NOT persisted): host derives "active now" from these
+        self.last_active_at: dict[str, float] = {}
+        self.last_view: dict[str, str] = {}
 
     def sync_from_restore(self, data: dict):
         """Update cache from state_restore or session_sync data.
@@ -60,6 +65,7 @@ class ParticipantState:
                 self.locations.clear()
                 self.location_timezones.clear()
                 self.location_countries.clear()
+                self.engagement.clear()
                 for pid, raw in participants.items():
                     if not isinstance(raw, dict):
                         continue
@@ -82,6 +88,9 @@ class ParticipantState:
                     location_country = raw.get("location_country")
                     if isinstance(location_country, str):
                         self.location_countries[str(pid)] = location_country
+                    engagement = raw.get("engagement")
+                    if isinstance(engagement, dict):
+                        self.engagement[str(pid)] = engagement
             else:
                 self.online_participants.clear()
                 if "participant_names" in data:
@@ -145,6 +154,9 @@ class ParticipantState:
             self.mode = mode
             self.current_activity = "none"
             self.emoji_counters.clear()
+            self.engagement.clear()
+            self.last_active_at.clear()
+            self.last_view.clear()
 
 
 # Module-level singleton
