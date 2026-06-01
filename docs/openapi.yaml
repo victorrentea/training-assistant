@@ -57,6 +57,28 @@ paths:
         '204':
           description: Successful Response
       x-feature: identity
+  /api/participant/activity:
+    post:
+      tags:
+      - participant
+      summary: Report Activity
+      description: 'Merge a participant''s per-view engagement deltas (active seconds/visits/clicks).
+
+
+        Called by the participant page at most every ~30s while active, and on
+
+        tab-hide/unload. Idle/backgrounded tabs send nothing.'
+      operationId: report_activity_api_participant_activity_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityReportRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: identity
   /api/participant/roll-avatar:
     post:
       tags:
@@ -1349,6 +1371,20 @@ paths:
       x-feature: session_management
 components:
   schemas:
+    ActivityReportRequest:
+      properties:
+        current_view:
+          type: string
+          title: Current View
+          default: ''
+        deltas:
+          additionalProperties:
+            $ref: '#/components/schemas/ViewEngagementDelta'
+          type: object
+          title: Deltas
+          default: {}
+      type: object
+      title: ActivityReportRequest
     AdvancePhaseRequest:
       properties:
         phase:
@@ -1936,6 +1972,21 @@ components:
           type: array
           title: Received Files
           default: []
+        engagement:
+          additionalProperties:
+            additionalProperties: true
+            type: object
+          type: object
+          title: Engagement
+          default: {}
+        last_active_at:
+          type: number
+          title: Last Active At
+          default: 0
+        last_view:
+          type: string
+          title: Last View
+          default: ''
       type: object
       required:
       - uuid
@@ -3101,6 +3152,25 @@ components:
       required:
       - argument_id
       title: UpvoteRequest
+    ViewEngagementDelta:
+      properties:
+        seconds:
+          type: integer
+          minimum: 0.0
+          title: Seconds
+          default: 0
+        visits:
+          type: integer
+          minimum: 0.0
+          title: Visits
+          default: 0
+        clicks:
+          type: integer
+          minimum: 0.0
+          title: Clicks
+          default: 0
+      type: object
+      title: ViewEngagementDelta
     VoteRequest:
       properties:
         options:

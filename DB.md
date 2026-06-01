@@ -27,6 +27,11 @@ participants?: dict[str, PersistedParticipant{
   avatar?:string
   score?:int | number
   location?:string
+  engagement?:dict[str, ViewEngagement{
+    seconds?:int
+    visits?:int
+    clicks?:int
+  }]
 }]  # participant_uuid → identity/score
 quiz?: PersistedQuizState{
   definition?:dict[str, any]  # Quiz question and options as shown to participants
