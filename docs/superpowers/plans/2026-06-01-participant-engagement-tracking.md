@@ -267,6 +267,119 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
+## Task 2b: Preserve engagement across `snapshot()`-based saves
+
+**Why this exists (discovered during implementation):** `daemon/emoji/router.py:37` persists session state via `save_session_state(folder, participant_state.snapshot())`, and `save_session_state` (daemon/session_state.py:337) replaces the whole file (only `session_id` + meta keys are preserved from disk). `ParticipantState.snapshot()` emits **flat** per-attribute maps (`participant_names`, `scores`, …) that the model's `_normalize_legacy_participant_maps` validator folds into nested `participants[uuid]`. Engagement is neither emitted by `snapshot()` nor folded by the normalizer, so a `snapshot()`-based save would drop engagement from `session-state.json`; a daemon kill before the next 3s periodic save would lose **all** session engagement (non-re-derivable). Fix: treat engagement exactly like `name`/`avatar`/`score`/`location` — emit a flat `engagement` map from `snapshot()` and fold it in the normalizer (nested values win via `setdefault`).
+
+**Files:**
+- Modify: `daemon/participant/state.py` (`snapshot()` ~line 127)
+- Modify: `daemon/persisted_models.py` (`_normalize_legacy_participant_maps`, the flat-map fold block ~lines 214-248)
+- Test: append to `tests/daemon/test_participant_state.py` and `tests/daemon/test_persisted_models.py`
+
+- [ ] **Step 1: Write the failing tests**
+
+Append to `tests/daemon/test_participant_state.py`:
+
+```python
+def test_snapshot_includes_engagement():
+    ps = ParticipantState()
+    ps.engagement["u1"] = {"slides": {"seconds": 5, "visits": 1, "clicks": 2}}
+    snap = ps.snapshot()
+    assert snap["engagement"] == {"u1": {"slides": {"seconds": 5, "visits": 1, "clicks": 2}}}
+```
+
+Append to `tests/daemon/test_persisted_models.py` (add `PersistedSessionState` to the import line: `from daemon.persisted_models import PersistedParticipant, PersistedSessionState, ViewEngagement`):
+
+```python
+def test_normalizer_folds_flat_engagement_into_participants():
+    state = PersistedSessionState.model_validate(
+        {
+            "session_id": "t",
+            "participant_names": {"u1": "Alice"},
+            "engagement": {"u1": {"slides": {"seconds": 30, "visits": 2, "clicks": 5}}},
+        }
+    )
+    assert state.participants["u1"].engagement["slides"].seconds == 30
+
+
+def test_nested_engagement_wins_over_flat_legacy_map():
+    state = PersistedSessionState.model_validate(
+        {
+            "session_id": "t",
+            "participants": {
+                "u1": {"name": "Alice", "engagement": {"slides": {"seconds": 99, "visits": 9, "clicks": 9}}}
+            },
+            "engagement": {"u1": {"slides": {"seconds": 1, "visits": 1, "clicks": 1}}},
+        }
+    )
+    assert state.participants["u1"].engagement["slides"].seconds == 99
+```
+
+(If `PersistedSessionState.model_validate` rejects this dict for a missing required field other than `session_id`, add the minimal required field(s) to the test inputs — the assertion target is the engagement folding, not the rest of the model.)
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `arch -arm64 uv run --extra dev --extra daemon python -m pytest tests/daemon/test_participant_state.py tests/daemon/test_persisted_models.py --confcutdir=tests/daemon -q`
+Expected: the 3 new tests FAIL (`KeyError: 'engagement'` in snapshot; engagement absent from folded participants).
+
+- [ ] **Step 3: Implement**
+
+(a) In `daemon/participant/state.py`, `snapshot()`, add an `engagement` entry to the returned dict (after `"emoji_counters": dict(self.emoji_counters),`):
+
+```python
+                "emoji_counters": dict(self.emoji_counters),
+                "engagement": {pid: dict(views) for pid, views in self.engagement.items()},
+```
+
+(b) In `daemon/persisted_models.py`, `_normalize_legacy_participant_maps`: after the `locations` flat-map block (the `_locations_raw` / `locations` lines), add:
+
+```python
+        _engagement_raw = data.get("engagement")
+        engagement_map: dict = _engagement_raw if isinstance(_engagement_raw, dict) else {}
+```
+
+Add engagement ids to the `all_ids` union (extend the existing `all_ids |= ...` lines):
+
+```python
+        all_ids |= {str(pid) for pid in engagement_map}
+```
+
+Inside the `for pid in all_ids:` loop, after the `location` `setdefault` block, add:
+
+```python
+            eng = engagement_map.get(pid)
+            if isinstance(eng, dict) and eng:
+                row.setdefault("engagement", eng)
+```
+
+After the loop, before `data["participants"] = participants`, drop the now-folded flat map so it is not persisted as a redundant top-level extra:
+
+```python
+        data.pop("engagement", None)
+        data["participants"] = participants
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `arch -arm64 uv run --extra dev --extra daemon python -m pytest tests/daemon/test_participant_state.py tests/daemon/test_persisted_models.py --confcutdir=tests/daemon -q`
+Expected: all PASS (Task 1 + Task 2 + the 3 new = 10 passed).
+
+- [ ] **Step 5: Guard against regression in the broader load path**
+
+Run: `arch -arm64 uv run --extra dev --extra daemon python -m pytest tests/daemon -k "persist or session or participant" --confcutdir=tests/daemon -q`
+Expected: PASS (the normalizer change does not break existing session-state loading).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add daemon/participant/state.py daemon/persisted_models.py tests/daemon/test_participant_state.py tests/daemon/test_persisted_models.py
+git commit -m "fix(engagement): preserve engagement across snapshot()-based session saves
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
 ## Task 3: Persist engagement in the snapshot builder
 
 **Files:**
