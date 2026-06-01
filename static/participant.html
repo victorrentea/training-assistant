@@ -147,6 +147,31 @@ body{visibility:hidden}
         body.onboarding-phase2 #profile-card { position: relative; z-index: 50; }
         #onboarding-overlay.blocking { pointer-events: auto; }
 
+        /* Break reminder bubble (reuses .onboarding-bubble look; non-blocking, no overlay) */
+        #break-reminder-tooltip {
+          position: fixed;
+          z-index: 51;
+          opacity: 0;
+          transform: translateY(8px);
+          transition: opacity 300ms ease, transform 300ms ease;
+          pointer-events: none;
+        }
+        #break-reminder-tooltip.visible { opacity: 1; transform: translateY(0); }
+        #break-reminder-tooltip.hidden { display: none; }
+        #break-reminder-tooltip .onboarding-bubble { pointer-events: auto; }
+        .break-reminder-gotit {
+          display: block;
+          text-align: right;
+          margin-top: 0.5rem;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: var(--color-on-primary, #fff);
+          opacity: 0.85;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+        .break-reminder-gotit:hover { opacity: 1; }
+
         /* Emoji blink animation */
         @keyframes emoji-blink {
           0%, 100% { transform: scale(1); }
@@ -1207,6 +1232,8 @@ var LS = {
     localStorage.removeItem(LS.ACTIVITY_SEEN);
     localStorage.removeItem(LS.ACCESS_TOAST_DISMISSED);
     localStorage.removeItem('workshop_onboarding_seen');
+    localStorage.removeItem('workshop_break_reminder_5min_seen');
+    localStorage.removeItem('workshop_break_reminder_60min_seen');
     LS._scrollViews().forEach(function(k) { localStorage.removeItem(k); });
   },
   _scrollViews: function() {
@@ -1701,6 +1728,7 @@ function sendUploadPaste() {
   });
 }
 function sendEmoji(emoji, btn) {
+  if (emoji === '☕') _hideBreakReminder();
   showDesktopEmojiFloat(emoji, btn);
   if (!_sessionId) return;
   fetch('/' + _sessionId + '/api/participant/emoji/reaction', {
@@ -2134,6 +2162,8 @@ function resetStatePrompt() {
 }
 function resetOnboardingForTest() {
   localStorage.removeItem('workshop_onboarding_seen');
+  localStorage.removeItem('workshop_break_reminder_5min_seen');
+  localStorage.removeItem('workshop_break_reminder_60min_seen');
   location.reload();
 }
 </script>
@@ -2168,8 +2198,11 @@ var _rejectedAvatars = [];
 var LS_NAME_KEY = 'workshop_participant_name';
 var LS_CUSTOM_NAME_KEY = 'workshop_custom_name';
 var LS_ONBOARDING_KEY = 'workshop_onboarding_seen';
+var LS_BREAK_5MIN_KEY = 'workshop_break_reminder_5min_seen';
+var LS_BREAK_60MIN_KEY = 'workshop_break_reminder_60min_seen';
 
 var _onboardingStep = 0;
+var _breakRemindersScheduled = false;
 
 // ── Quiz state ──
 var _currentQuiz = null;
@@ -2196,13 +2229,13 @@ function _shouldShowOnboarding() {
   return !localStorage.getItem(LS_ONBOARDING_KEY);
 }
 
-function _positionTooltipAboveCoffee() {
+function _positionTooltipAboveCoffee(tooltipId) {
   var coffeeBtn = Array.from(document.querySelectorAll('#emoji-main-bar button')).find(function(b) {
     return b.textContent.trim() === '☕';
   });
   if (!coffeeBtn) return;
   var rect = coffeeBtn.getBoundingClientRect();
-  var tooltip = document.getElementById('onboarding-tooltip');
+  var tooltip = document.getElementById(tooltipId || 'onboarding-tooltip');
   if (!tooltip) return;
   var bubbleW = 300;
   var centerX = rect.left + rect.width / 2;
@@ -2277,6 +2310,41 @@ function _completeOnboarding() {
     tooltip2.classList.remove('visible');
     setTimeout(function () { tooltip2.classList.add('hidden'); }, 300);
   }
+}
+
+// ── Break reminder ──
+// A non-blocking nudge above the ☕ button reminding participants they can ask
+// for a break. Pops at most twice ever per device: 5 min and 60 min after the
+// participant view opens. Each pop is guarded by its own localStorage key, so it
+// never repeats once seen. Dismissed by the "Got it" link or by tapping ☕.
+function _showBreakReminder() {
+  if (_isHostTab) return;
+  var tooltip = document.getElementById('break-reminder-tooltip');
+  if (!tooltip) return;
+  _positionTooltipAboveCoffee('break-reminder-tooltip');
+  tooltip.classList.remove('hidden');
+  requestAnimationFrame(function () { tooltip.classList.add('visible'); });
+}
+
+function _hideBreakReminder() {
+  var tooltip = document.getElementById('break-reminder-tooltip');
+  if (!tooltip) return;
+  tooltip.classList.remove('visible');
+  setTimeout(function () { tooltip.classList.add('hidden'); }, 300);
+}
+
+function _scheduleBreakReminders() {
+  if (_isHostTab) return;
+  if (_breakRemindersScheduled) return;
+  _breakRemindersScheduled = true;
+  [[5, LS_BREAK_5MIN_KEY], [60, LS_BREAK_60MIN_KEY]].forEach(function (pair) {
+    var minutes = pair[0], key = pair[1];
+    if (localStorage.getItem(key)) return;
+    setTimeout(function () {
+      localStorage.setItem(key, '1');
+      _showBreakReminder();
+    }, minutes * 60 * 1000);
+  });
 }
 
 function _hasCustomName() {
@@ -2681,6 +2749,7 @@ async function _refreshParticipantState() {
     _applyState(state);
     document.getElementById('loading-screen').style.display = 'none';
     if (_shouldShowOnboarding()) _showOnboarding();
+    _scheduleBreakReminders();
     initLocationMenuEntry();
 
     document.querySelector('[data-nav="agenda"]').style.display = state.has_agenda ? '' : 'none';
@@ -3733,6 +3802,13 @@ function downloadSummaryPdf() {
     Remember to set a name &mdash; Just click on it
   </div>
   <div class="onboarding-arrow-left"></div>
+</div>
+<div id="break-reminder-tooltip" class="hidden">
+  <div class="onboarding-bubble">
+    Remember to click this in case you need a break.
+    <span class="break-reminder-gotit" onclick="_hideBreakReminder()">Got it</span>
+  </div>
+  <div class="onboarding-arrow"></div>
 </div>
 <div id="pax-lb-overlay" style="display:none">
   <div id="pax-lb-content">
