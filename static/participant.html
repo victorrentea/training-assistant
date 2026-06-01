@@ -2041,6 +2041,72 @@ async function selectTopic(el, event, slide, targetPageOverride) {
     }
   }
 }
+// ===== Participant engagement tracking =====
+// Accumulates per-view active time/visits/clicks and flushes deltas to the
+// daemon (≤ every 30s while active, plus on tab-hide/unload). "Active" = tab
+// visible AND a real interaction within the last 60s. Idle/hidden tabs send nothing.
+var Engagement = (function() {
+  var IDLE_MS = 60000;
+  var FLUSH_MS = 30000;
+  var pending = {};          // view -> {seconds, visits, clicks} not yet flushed
+  var currentView = null;
+  var lastInteractionAt = 0;
+
+  function _bucket(view) {
+    if (!pending[view]) pending[view] = { seconds: 0, visits: 0, clicks: 0 };
+    return pending[view];
+  }
+  function _mark() { lastInteractionAt = Date.now(); }
+  function _isActive() {
+    return document.visibilityState === 'visible' && (Date.now() - lastInteractionAt) < IDLE_MS;
+  }
+  function _tick() {
+    if (currentView && _isActive()) _bucket(currentView).seconds += 1;
+  }
+  function _flush() {
+    var deltas = {};
+    var any = false;
+    for (var v in pending) {
+      var d = pending[v];
+      if (d.seconds || d.visits || d.clicks) { deltas[v] = d; any = true; }
+    }
+    if (!any || !_sessionId) return;
+    pending = {};
+    try {
+      fetch('/' + _sessionId + '/api/participant/activity', {
+        method: 'POST',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+        body: JSON.stringify({ current_view: currentView || '', deltas: deltas })
+      }).catch(function() {});
+    } catch (e) {}
+  }
+  function onView(name) {
+    if (name === currentView) return;
+    var isInitial = (currentView === null);
+    currentView = name;
+    _mark();
+    if (!isInitial && document.visibilityState === 'visible') _bucket(name).visits += 1;
+  }
+  function _onClick() {
+    if (currentView) _bucket(currentView).clicks += 1;
+    _mark();
+  }
+  function init() {
+    ['mousemove', 'scroll', 'keydown', 'touchstart'].forEach(function(ev) {
+      document.addEventListener(ev, _mark, { passive: true });
+    });
+    document.addEventListener('click', _onClick, true);
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'hidden') _flush(); else _mark();
+    });
+    window.addEventListener('pagehide', _flush);
+    _mark();
+    setInterval(_tick, 1000);
+    setInterval(_flush, FLUSH_MS);
+  }
+  return { init: init, onView: onView };
+})();
 function showView(name) {
   var followLabel = document.querySelector('label[for="slides-follow-checkbox"]');
   if (name !== 'slides') {
@@ -2055,6 +2121,7 @@ function showView(name) {
   if (followLabel) { followLabel.classList.remove('follow-notify'); followLabel.classList.remove('follow-blink-red'); }
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
   setActive(name);
+  Engagement.onView(name);
   LS.setView(name);
   if (name === 'agenda') loadAgenda();
   if (name === 'notes') { loadNotes(); _applyNotesBadgeUnread(false); }
@@ -2713,6 +2780,7 @@ async function _refreshParticipantState() {
 
     loadSlidesCatalog();
     _connectWS();
+    Engagement.init();
 
     var _quizWsSeqBeforeFetch = _quizWsSeq;
     // Retry the state fetch indefinitely with exponential backoff. The loading
