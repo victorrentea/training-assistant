@@ -314,6 +314,7 @@
   }
 
   function handleWSMessage(msg) {
+      if (Array.isArray(msg.participants)) _captureEngagement(msg.participants);
       if (msg.type === 'reload') {
         console.log('[static-sync] Reload requested by daemon');
         setTimeout(() => { window.location.reload(); }, 500);
@@ -1007,6 +1008,96 @@
     el.innerHTML = html;
   }
 
+// ===== Participant engagement badge =====
+var _engagementByPid = {};
+var _engagementTotal = 0;
+var ENGAGEMENT_FRESH_MS = 75000;  // 30s flush + 60s idle slack
+var ENGAGEMENT_VIEW_LABELS = {
+  slides: 'Slides', notes: 'Notes', summary: 'Summary', files: 'Files',
+  agenda: 'Agenda', activity: 'Activity', 'upload-paste': 'Upload', feedback: 'Feedback'
+};
+
+function _captureEngagement(participants) {
+  var map = {};
+  for (var i = 0; i < participants.length; i++) {
+    var p = participants[i];
+    if (!p || !p.uuid) continue;
+    map[p.uuid] = {
+      engagement: p.engagement || {},
+      last_active_at: p.last_active_at || 0,
+      last_view: p.last_view || ''
+    };
+  }
+  _engagementByPid = map;
+  _engagementTotal = participants.length;
+  renderEngagementBadge();
+}
+
+function _engagementAggregate() {
+  var now = Date.now();
+  var activeByView = {};
+  var totals = {};
+  var activeCount = 0;
+  for (var pid in _engagementByPid) {
+    var rec = _engagementByPid[pid];
+    if (rec.last_active_at && (now - rec.last_active_at) < ENGAGEMENT_FRESH_MS) {
+      activeCount++;
+      if (rec.last_view) activeByView[rec.last_view] = (activeByView[rec.last_view] || 0) + 1;
+    }
+    var eng = rec.engagement || {};
+    for (var v in eng) {
+      var d = eng[v];
+      if (!totals[v]) totals[v] = { seconds: 0, visits: 0, clicks: 0 };
+      totals[v].seconds += d.seconds || 0;
+      totals[v].visits += d.visits || 0;
+      totals[v].clicks += d.clicks || 0;
+    }
+  }
+  return { activeByView: activeByView, totals: totals, activeCount: activeCount };
+}
+
+function renderEngagementBadge() {
+  var badge = document.getElementById('engagement-badge');
+  var countEl = document.getElementById('engagement-count');
+  if (!badge || !countEl) return;
+  var agg = _engagementAggregate();
+  if (agg.activeCount > 0) {
+    countEl.textContent = agg.activeCount;
+    badge.className = 'badge connected footer-tooltip-target';
+    _setFooterBadgeTooltip(badge, agg.activeCount + ' of ' + _engagementTotal + ' active now');
+  } else {
+    countEl.textContent = '';
+    badge.className = 'badge empty footer-tooltip-target';
+    _setFooterBadgeTooltip(badge, 'No active participants');
+  }
+}
+
+function _renderEngagementPopover() {
+  var el = document.getElementById('engagement-content');
+  if (!el) return;
+  var agg = _engagementAggregate();
+  var views = Object.keys(agg.totals).sort(function(a, b) {
+    return agg.totals[b].seconds - agg.totals[a].seconds;
+  });
+  var html = '<div class="slides-catalog-line" style="opacity:.85;font-weight:600;">'
+    + '<span>Live: ' + agg.activeCount + ' of ' + _engagementTotal + ' active now</span></div>';
+  if (!views.length) {
+    html += '<div style="padding:6px;opacity:0.5">No activity yet</div>';
+  } else {
+    for (var i = 0; i < views.length; i++) {
+      var v = views[i], t = agg.totals[v];
+      var label = ENGAGEMENT_VIEW_LABELS[v] || v;
+      var liveOnView = agg.activeByView[v] ? ' · ' + agg.activeByView[v] + ' now' : '';
+      html += '<div class="slides-catalog-line">'
+        + '<span class="slides-cache-title truncate">' + escHtml(label) + liveOnView + '</span>'
+        + '<span class="slides-cache-label" style="color:var(--muted)">' + t.visits + 'v · ' + t.clicks + 'c</span>'
+        + '<span class="slides-cache-detail">' + _fmtSecs(t.seconds) + '</span>'
+        + '</div>';
+    }
+  }
+  el.innerHTML = html;
+}
+
   function _setupActivityLogHovers() {
     function _makeHover(hoverId, popoverId, renderFn) {
       const hover = document.getElementById(hoverId);
@@ -1019,6 +1110,9 @@
       hover.addEventListener('mouseleave', close);
     }
     _makeHover('slides-log-hover', 'slides-log-popover', _renderSlidesLogPopover);
+  _makeHover('engagement-hover', 'engagement-popover', _renderEngagementPopover);
+  setInterval(renderEngagementBadge, 2000);
+  renderEngagementBadge();
   }
 
   function renderMode(mode) {
