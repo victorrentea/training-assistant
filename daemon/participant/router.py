@@ -7,6 +7,7 @@ import random
 import re
 import secrets
 import ssl
+import time
 import urllib.parse
 import urllib.request
 from types import SimpleNamespace
@@ -16,7 +17,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import certifi
 from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.responses import Response
 
 from daemon.host_state_router import _build_host_participants_list
@@ -67,6 +68,29 @@ class AvatarResponse(BaseModel):
 
 class LocationRequest(BaseModel):
     location: str
+
+
+_KNOWN_VIEWS = {
+    "activity",
+    "slides",
+    "summary",
+    "notes",
+    "agenda",
+    "feedback",
+    "upload-paste",
+    "files",
+}
+
+
+class ViewEngagementDelta(BaseModel):
+    seconds: int = Field(0, ge=0)
+    visits: int = Field(0, ge=0)
+    clicks: int = Field(0, ge=0)
+
+
+class ActivityReportRequest(BaseModel):
+    current_view: str = ""
+    deltas: dict[str, ViewEngagementDelta] = {}
 
 
 def _http_get_json(url: str, *, timeout: float = 2.5):
@@ -574,6 +598,35 @@ async def rename_participant(request: Request, body: RenameRequest):
 
     await _notify_host_participant_list()
 
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/activity", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+async def report_activity(request: Request, body: ActivityReportRequest):
+    """Merge a participant's per-view engagement deltas (active seconds/visits/clicks).
+
+    Called by the participant page at most every ~30s while active, and on
+    tab-hide/unload. Idle/backgrounded tabs send nothing.
+    """
+    pid = request.headers.get("x-participant-id")
+    if not pid:
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+
+    ps = participant_state
+    bucket = ps.engagement.setdefault(pid, {})
+    for view, delta in body.deltas.items():
+        if view not in _KNOWN_VIEWS:
+            continue
+        cur = bucket.setdefault(view, {"seconds": 0, "visits": 0, "clicks": 0})
+        cur["seconds"] += delta.seconds
+        cur["visits"] += delta.visits
+        cur["clicks"] += delta.clicks
+
+    ps.last_active_at[pid] = time.time() * 1000.0  # epoch ms; host compares to Date.now()
+    if body.current_view:
+        ps.last_view[pid] = body.current_view
+
+    await _notify_host_participant_list()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

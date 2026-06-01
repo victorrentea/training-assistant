@@ -328,3 +328,51 @@ class TestNoParticipantWriteBackEvents:
         )
         assert resp.status_code == 204
         assert "X-Write-Back-Events" not in resp.headers
+
+
+class TestActivity:
+    def test_merges_deltas_and_stamps_liveness(self, client, fresh_state):
+        resp = client.post(
+            "/api/participant/activity",
+            json={
+                "current_view": "slides",
+                "deltas": {"slides": {"seconds": 10, "visits": 1, "clicks": 3}},
+            },
+            headers={"X-Participant-ID": "u1"},
+        )
+        assert resp.status_code == 204
+        assert fresh_state.engagement["u1"]["slides"] == {
+            "seconds": 10,
+            "visits": 1,
+            "clicks": 3,
+        }
+        assert fresh_state.last_view["u1"] == "slides"
+        assert fresh_state.last_active_at["u1"] > 0
+
+    def test_accumulates_across_reports(self, client, fresh_state):
+        client.post(
+            "/api/participant/activity",
+            json={"current_view": "notes", "deltas": {"notes": {"seconds": 5, "visits": 1, "clicks": 0}}},
+            headers={"X-Participant-ID": "u1"},
+        )
+        client.post(
+            "/api/participant/activity",
+            json={"current_view": "notes", "deltas": {"notes": {"seconds": 7, "visits": 0, "clicks": 2}}},
+            headers={"X-Participant-ID": "u1"},
+        )
+        assert fresh_state.engagement["u1"]["notes"] == {"seconds": 12, "visits": 1, "clicks": 2}
+
+    def test_missing_participant_id_returns_400(self, client):
+        resp = client.post(
+            "/api/participant/activity",
+            json={"current_view": "slides", "deltas": {}},
+        )
+        assert resp.status_code == 400
+
+    def test_unknown_view_is_ignored(self, client, fresh_state):
+        client.post(
+            "/api/participant/activity",
+            json={"current_view": "slides", "deltas": {"bogus": {"seconds": 99, "visits": 1, "clicks": 1}}},
+            headers={"X-Participant-ID": "u1"},
+        )
+        assert "bogus" not in fresh_state.engagement.get("u1", {})
