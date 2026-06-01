@@ -44,6 +44,9 @@ class HostParticipant(BaseModel):
     avatar: str
     paste_texts: list[PasteEntry] = []
     received_files: list[UploadedFileEntry] = []
+    engagement: dict[str, dict] = {}
+    last_active_at: float = 0
+    last_view: str = ""
 
 
 class HostQAQuestion(BaseModel):
@@ -141,6 +144,9 @@ def _build_host_participants_list() -> list[dict]:
             "location_country": ps.location_countries.get(pid, ""),
             "avatar": ps.participant_avatars.get(pid, ""),
             "online": pid in ps.online_participants,
+            "engagement": ps.engagement.get(pid, {}),
+            "last_active_at": ps.last_active_at.get(pid, 0),
+            "last_view": ps.last_view.get(pid, ""),
         }
         # Include paste texts if present (from misc_state)
         paste_entries = misc_state.paste_texts.get(pid, [])
