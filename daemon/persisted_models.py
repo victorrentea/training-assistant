@@ -25,6 +25,14 @@ class PersistedSessionMeta(PersistedModel):
     session_type: str | None = None
 
 
+class ViewEngagement(PersistedModel):
+    """Per-view cumulative engagement metrics for one participant."""
+
+    seconds: int = 0
+    visits: int = 0
+    clicks: int = 0
+
+
 class PersistedParticipant(PersistedModel):
     """Participant identity persisted in session snapshots."""
 
@@ -32,6 +40,7 @@ class PersistedParticipant(PersistedModel):
     avatar: str | None = None
     score: int | float | None = None
     location: str | None = None
+    engagement: dict[str, ViewEngagement] = Field(default_factory=dict)
 
 
 class PersistedQuizState(PersistedModel):
