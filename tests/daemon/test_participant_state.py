@@ -35,3 +35,10 @@ def test_reset_clears_engagement_and_liveness():
     assert ps.engagement == {}
     assert ps.last_active_at == {}
     assert ps.last_view == {}
+
+
+def test_snapshot_includes_engagement():
+    ps = ParticipantState()
+    ps.engagement["u1"] = {"slides": {"seconds": 5, "visits": 1, "clicks": 2}}
+    snap = ps.snapshot()
+    assert snap["engagement"] == {"u1": {"slides": {"seconds": 5, "visits": 1, "clicks": 2}}}

@@ -219,9 +219,12 @@ class PersistedSessionState(PersistedModel):
         scores: dict = _scores_raw if isinstance(_scores_raw, dict) else {}
         _locations_raw = data.get("locations")
         locations: dict = _locations_raw if isinstance(_locations_raw, dict) else {}
+        _engagement_raw = data.get("engagement")
+        engagement_map: dict = _engagement_raw if isinstance(_engagement_raw, dict) else {}
 
         all_ids = set(participants) | {str(pid) for pid in names} | {str(pid) for pid in avatars}
         all_ids |= {str(pid) for pid in scores} | {str(pid) for pid in locations}
+        all_ids |= {str(pid) for pid in engagement_map}
         for pid in all_ids:
             row = participants.get(pid, {})
             if not isinstance(row, dict):
@@ -243,8 +246,13 @@ class PersistedSessionState(PersistedModel):
             if isinstance(location, str) and location:
                 row.setdefault("location", location)
 
+            eng = engagement_map.get(pid)
+            if isinstance(eng, dict) and eng:
+                row.setdefault("engagement", eng)
+
             participants[pid] = row
 
+        data.pop("engagement", None)
         data["participants"] = participants
 
         # ── Quiz (renamed from Poll) ──

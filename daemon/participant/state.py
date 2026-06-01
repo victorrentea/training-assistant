@@ -138,6 +138,7 @@ class ParticipantState:
                 "mode": self.mode,
                 "current_activity": self.current_activity,
                 "emoji_counters": dict(self.emoji_counters),
+                "engagement": {pid: dict(views) for pid, views in self.engagement.items()},
             }
 
     def reset(self, *, mode: str = "workshop") -> None:
