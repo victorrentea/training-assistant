@@ -172,6 +172,7 @@ def _build_runtime_session_snapshot(
     participant_ids |= set(participant_state.locations)
     participant_ids |= set(participant_state.location_timezones)
     participant_ids |= set(participant_state.location_countries)
+    participant_ids |= set(participant_state.engagement)
     for pid in participant_ids:
         row: dict[str, object] = {}
         if pid in participant_state.participant_names:
@@ -186,6 +187,8 @@ def _build_runtime_session_snapshot(
             row["location_tz"] = participant_state.location_timezones[pid]
         if pid in participant_state.location_countries:
             row["location_country"] = participant_state.location_countries[pid]
+        if pid in participant_state.engagement:
+            row["engagement"] = participant_state.engagement[pid]
         participants_payload[pid] = row
 
     return {
