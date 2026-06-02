@@ -2448,6 +2448,10 @@ function _showAccessToast() {
   if (!toast) return;
   if (LS.isAccessToastDismissedToday()) return;
   toast.classList.add('show');
+  // Record it as handled for today the moment it is shown, so it appears at most
+  // once per day per device — regardless of whether the user clicks × to dismiss.
+  // Without this, re-joining (or a WS reconnect) the same day would re-show it.
+  LS.markAccessToastDismissedToday();
 }
 
 function _hideAccessToast() {

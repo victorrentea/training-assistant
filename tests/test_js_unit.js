@@ -355,6 +355,48 @@ assert(
   /catch\(\(\)\s*=>\s*\{[\s\S]*markLocalDaemonRetry\('daemon_offline'\);/s.test(landingHtmlSource)
 );
 
+// ── access duration toast: show at most once per day (participant.html) ──
+// Regression for: the yellow access-duration toast re-appeared on every re-join
+// the same day, because the per-day flag was written only on manual × dismissal,
+// never when the toast was shown. Fix: mark it handled-for-today on show.
+suite('access duration toast — once per day');
+
+const ACCESS_TOAST_KEY = 'new:access_toast_dismissed_date';
+function _accessTodayLocalDate() {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + m + '-' + dd;
+}
+function isAccessToastSeenToday() {
+  return localStorage.getItem(ACCESS_TOAST_KEY) === _accessTodayLocalDate();
+}
+function markAccessToastSeenToday() {
+  localStorage.setItem(ACCESS_TOAST_KEY, _accessTodayLocalDate());
+}
+// Mirrors participant.html _showAccessToast() guard+mark (DOM omitted):
+// returns true only when the toast would actually be shown to the user.
+function showAccessToastOnce() {
+  if (isAccessToastSeenToday()) return false;
+  markAccessToastSeenToday(); // mark on show — the fix
+  return true;
+}
+
+localStorage.clear();
+assert('first join of the day shows the toast', showAccessToastOnce() === true);
+assert('second join the same day does NOT re-show', showAccessToastOnce() === false);
+assert('third join the same day stays suppressed', showAccessToastOnce() === false);
+localStorage.setItem(ACCESS_TOAST_KEY, '2020-01-01'); // pretend last shown long ago
+assert('a new day shows the toast again', showAccessToastOnce() === true);
+
+// Source-level guard: the real _showAccessToast must record the per-day flag on show.
+const participantHtmlSource = fs.readFileSync('static/participant.html', 'utf8');
+const showAccessFnBody = (participantHtmlSource.match(/function _showAccessToast\(\)\s*\{([\s\S]*?)\n\}/) || [, ''])[1];
+assert(
+  '_showAccessToast records the per-day flag when shown (not only on dismiss)',
+  /markAccessToast\w*Today\(\)/.test(showAccessFnBody)
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 // Summary
 // ═══════════════════════════════════════════════════════════════════════
