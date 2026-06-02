@@ -3348,6 +3348,15 @@ function _handleWsMessage(msg) {
       if (onSummary) loadSummary();
       break;
     }
+    case 'agenda_updated': {
+      document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
+      if (msg.has_agenda) {
+        _agendaDirty = true;
+        var onAgenda = document.getElementById('agenda-view').style.display !== 'none';
+        if (onAgenda) loadAgenda();
+      }
+      break;
+    }
     case 'decks_updated':
       (function(incomingDecks) {
         // Capture active slug; prefer the direct variable over splitting _activeSlideId

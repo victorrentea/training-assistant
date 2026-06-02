@@ -43,6 +43,7 @@ channels:
           - $ref: '#/components/messages/leaderboard_revealed'
           - $ref: '#/components/messages/notes_updated'
           - $ref: '#/components/messages/summary_updated'
+          - $ref: '#/components/messages/agenda_updated'
           - $ref: '#/components/messages/reload'
           - $ref: '#/components/messages/emoji_counters_updated'
 
@@ -487,6 +488,20 @@ components:
             format: date-time
             nullable: true
             description: ISO timestamp of ai-summary.md mtime
+
+    agenda_updated:
+      summary: Agenda .docx availability changed in the session folder
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [agenda_updated]
+          has_agenda:
+            type: boolean
+            description: Whether an agenda .docx is available in the session folder
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 

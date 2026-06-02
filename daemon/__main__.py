@@ -460,19 +460,28 @@ def _resolve_presentation_slide_target(
 
 
 def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
-    """Broadcast notes and/or summary timestamps to participants and host via WS.
+    """Broadcast notes, summary, and/or agenda availability to participants via WS.
 
     Only broadcasts the message(s) for the part(s) that actually changed.
-    Skips broadcasting when both files are absent (e.g., fresh session start) —
-    participants already get nulls from GET /api/participant/state.
+    Skips broadcasting when all session-content files are absent (e.g., fresh session
+    start) — participants already get nulls/false from GET /api/participant/state.
     """
     notes_mtime_ns = probe.get("notes_mtime_ns")
     summary_mtime_ns = probe.get("summary_mtime_ns")
-    if notes_mtime_ns is None and summary_mtime_ns is None:
+    agenda_mtime_ns = probe.get("agenda_mtime_ns")
+    # Suppress only the very first ("initial") probe when nothing exists yet —
+    # participants already get nulls/false from GET /api/participant/state. A later
+    # present->absent transition is a real change and MUST broadcast so navs hide.
+    if (
+        change_parts == "initial"
+        and notes_mtime_ns is None
+        and summary_mtime_ns is None
+        and agenda_mtime_ns is None
+    ):
         return
     from datetime import datetime, timezone
 
-    from daemon.ws_messages import NotesUpdatedMsg, SummaryUpdatedMsg
+    from daemon.ws_messages import AgendaUpdatedMsg, NotesUpdatedMsg, SummaryUpdatedMsg
     from daemon.ws_publish import broadcast
     parts = set(change_parts.split(","))
     if "notes" in parts or "session" in parts or "initial" in parts:
@@ -485,6 +494,8 @@ def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
         if summary_mtime_ns:
             summary_updated_at = datetime.fromtimestamp(summary_mtime_ns / 1e9, tz=timezone.utc).isoformat()
         broadcast(SummaryUpdatedMsg(updated_at=summary_updated_at))
+    if "agenda" in parts or "session" in parts or "initial" in parts:
+        broadcast(AgendaUpdatedMsg(has_agenda=agenda_mtime_ns is not None))
 
 
 
@@ -519,6 +530,7 @@ def _build_notes_summary_probe(session_folder: Path | None) -> dict:
             summary_raw = summary_file.read_text(encoding="utf-8", errors="replace")
         except OSError:
             summary_raw = None
+    agenda_file = _find_agenda_docx(session_folder)
     return {
         "session_folder": str(session_folder) if session_folder else None,
         "notes_file": str(notes_file) if notes_file else None,
@@ -527,6 +539,8 @@ def _build_notes_summary_probe(session_folder: Path | None) -> dict:
         "summary_file": str(summary_file) if summary_file else None,
         "summary_mtime_ns": _file_mtime_ns(summary_file),
         "summary_point_count": len(_parse_summary_points(summary_raw)),
+        "agenda_file": str(agenda_file) if agenda_file else None,
+        "agenda_mtime_ns": _file_mtime_ns(agenda_file),
     }
 
 
@@ -545,6 +559,12 @@ def _find_agenda_docx(session_folder: Path | None) -> Path | None:
     return docx_files[0]
 
 
+def _agenda_path_from_probe(probe: dict) -> Path | None:
+    """Resolve the agenda path captured by the session-content probe (or None)."""
+    agenda_str = probe.get("agenda_file")
+    return Path(agenda_str) if agenda_str else None
+
+
 def _probe_change_parts(previous: dict | None, current: dict) -> str:
     if previous is None:
         return "initial"
@@ -561,10 +581,16 @@ def _probe_change_parts(previous: dict | None, current: dict) -> str:
         or previous.get("summary_mtime_ns") != current.get("summary_mtime_ns")
         or previous.get("summary_point_count") != current.get("summary_point_count")
     )
+    agenda_changed = (
+        previous.get("agenda_file") != current.get("agenda_file")
+        or previous.get("agenda_mtime_ns") != current.get("agenda_mtime_ns")
+    )
     if notes_changed:
         parts.append("notes")
     if summary_changed:
         parts.append("summary")
+    if agenda_changed:
+        parts.append("agenda")
     return ",".join(parts) if parts else "none"
 
 
@@ -572,12 +598,14 @@ def _log_notes_summary_probe(reason: str, probe: dict, change_parts: str | None 
     session_label = probe.get("session_folder") or "<none>"
     notes_label = Path(probe["notes_file"]).name if probe.get("notes_file") else "MISSING"
     summary_label = Path(probe["summary_file"]).name if probe.get("summary_file") else "MISSING"
+    agenda_label = Path(probe["agenda_file"]).name if probe.get("agenda_file") else "MISSING"
     suffix = f" changed={change_parts}" if change_parts else ""
     log.info(
         "notes-summary",
         f"{reason}:{suffix} session={session_label} "
         f"notes_file={notes_label} notes_non_empty_lines={probe['notes_non_empty_lines']} "
-        f"summary_file={summary_label} summary_point_count={probe['summary_point_count']}",
+        f"summary_file={summary_label} summary_point_count={probe['summary_point_count']} "
+        f"agenda_file={agenda_label}",
     )
 
 
@@ -1294,6 +1322,9 @@ def run() -> None:
                         change_parts,
                     )
                     notes_summary_probe_prev = notes_summary_probe
+                    # Keep the served agenda path live so a .docx dropped mid-session is
+                    # picked up without a daemon restart (mirrors notes/summary handling).
+                    misc_state.agenda_docx_path = _agenda_path_from_probe(notes_summary_probe)
                     _broadcast_notes_summary_counts(notes_summary_probe, change_parts)
 
                 if now - last_persist_poll_at >= 3.0:

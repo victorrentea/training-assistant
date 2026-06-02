@@ -266,6 +266,11 @@ class SummaryUpdatedMsg(BaseModel):
     updated_at: str | None = None  # ISO timestamp of ai-summary.md mtime
 
 
+class AgendaUpdatedMsg(BaseModel):
+    type: Literal["agenda_updated"] = "agenda_updated"
+    has_agenda: bool = False  # whether an agenda .docx is available in the session folder
+
+
 # ── Host-only: Talk presentation ──────────────────────────────────────────────
 
 class TalkPdfReadyMsg(BaseModel):
@@ -334,6 +339,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Notes & Summary
     "notes_updated": NotesUpdatedMsg,
     "summary_updated": SummaryUpdatedMsg,
+    "agenda_updated": AgendaUpdatedMsg,
     # Emoji
     "emoji_counters_updated": EmojiCountersUpdatedMsg,
     # Cross-cutting
@@ -410,6 +416,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Notes & Summary
     "notes_updated": "notes_summary",
     "summary_updated": "notes_summary",
+    "agenda_updated": "notes_summary",
     # Emoji
     "emoji_counters_updated": "emoji",
     # Cross-cutting
