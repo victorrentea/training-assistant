@@ -1,11 +1,19 @@
 """
-Hermetic E2E tests: notes/summary timestamp display in participant bar.
+Hermetic E2E tests: notes/summary nav items in the participant sidebar.
+
+The participant UI shows Notes and Summary as sidebar nav items (data-nav="notes"
+/ data-nav="summary") that are hidden until the corresponding file exists. Each nav
+carries a relative-time badge (#notes-badge / #summary-badge) and a red unread alert
+(.badge-alert) that clears once the participant opens the view.
 
 Tests:
-1. Buttons disabled on page load when files are absent
-2. Buttons enabled with HH:MM timestamp from /state (no flash)
-3. notes_updated WS message updates label and triggers flash
-4. summary_updated WS message updates label and triggers flash
+1. Nav items hidden on page load when the files are absent.
+2. Dropping a notes file shows the nav live (WS notes_updated) with a relative-time
+   badge and an unread alert — no page reload.
+3. Same for the summary file.
+4. Opening each view clears its unread alert.
+5. After a reload, the nav items stay visible (state-driven) and the unread alert
+   stays cleared.
 """
 
 import base64
@@ -19,11 +27,9 @@ sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
 import pytest
-from playwright.sync_api import sync_playwright, expect
-
 from pages.participant_page import ParticipantPage
+from playwright.sync_api import expect, sync_playwright
 from session_utils import fresh_session
-
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
@@ -91,108 +97,112 @@ def _remove_summary(session_name: str) -> None:
         pass
 
 
+def _is_relative_time(text: str) -> bool:
+    """A freshly written file renders as 'just now' (or 'Nm/Nh/Nd ago')."""
+    text = (text or "").strip()
+    return text == "just now" or text.endswith("ago")
+
+
+def _has_alert(badge) -> bool:
+    return "badge-alert" in (badge.get_attribute("class") or "")
+
+
 @pytest.mark.nightly
-def test_notes_summary_count_display_and_ws_flash():
+def test_notes_summary_nav_display_and_unread_alert():
     """
     Verifies:
-    - Buttons disabled when counts are 0 on page load
-    - Buttons enabled with correct count labels after state load with non-zero counts
-    - Yellow flash CSS class applied when WS notes_updated/summary_updated message arrives
+    - Notes/Summary nav items hidden when files are absent on page load.
+    - Dropping each file reveals its nav live (WS-driven) with a relative-time badge
+      and an unread alert, without a reload.
+    - Opening each view clears its unread alert.
+    - After reload the navs stay visible (state-driven) with the alert still cleared.
     """
-    session_id = fresh_session("NotesCounts")
+    session_id = fresh_session("NotesSummary")
 
-    # Get the session folder name
     session_name = _await_condition(
         lambda: _get_active_session_name(session_id),
         timeout_ms=5000,
         msg="Could not get active session name from daemon",
     )
 
-    # Ensure no notes/summary files exist at start
+    # Ensure no notes/summary files exist at start.
     _remove_notes(session_name)
     _remove_summary(session_name)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
+        ctx = browser.new_context()
+        # Returning participant: mark the first-visit onboarding tour as already seen
+        # so its blocking overlay never intercepts nav clicks (suppressed across reload).
+        ctx.add_init_script(
+            "try { localStorage.setItem('workshop_onboarding_seen', '1'); } catch (e) {}"
+        )
+        page = ctx.new_page()
+        page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        pax = ParticipantPage(page)
+        pax.join("NavTester")
+        page.wait_for_timeout(500)
 
-        # ── Step 1: Load page with no counts — buttons should be disabled ──
-        pax_ctx = browser.new_context()
-        pax_page = pax_ctx.new_page()
-        pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
-        pax = ParticipantPage(pax_page)
-        pax.join("CountTester")
+        notes_nav = page.locator('[data-nav="notes"]')
+        summary_nav = page.locator('[data-nav="summary"]')
+        notes_badge = page.locator("#notes-badge")
+        summary_badge = page.locator("#summary-badge")
 
-        # Give WS a moment to stabilize
-        pax_page.wait_for_timeout(500)
+        # ── Step 1: no files — nav items hidden ──
+        expect(notes_nav).to_be_hidden(timeout=3000)
+        expect(summary_nav).to_be_hidden(timeout=3000)
+        print("Step 1 OK: notes/summary nav items hidden when files absent")
 
-        notes_btn = pax_page.locator("#notes-btn")
-        summary_btn = pax_page.locator("#summary-btn")
-        expect(notes_btn).to_be_disabled(timeout=3000)
-        expect(summary_btn).to_be_disabled(timeout=3000)
-        print("Step 1 OK: both buttons disabled when counts are 0")
-
-        # ── Step 2: Write files, wait for daemon to broadcast, check WS flash ──
+        # ── Step 2: write notes — nav appears live (WS) with badge + unread alert ──
         _write_notes(session_name, 13)
-        _await_condition(
-            lambda: not pax_page.locator("#notes-btn").is_disabled(),
-            timeout_ms=6000,
-            msg="Notes button did not become enabled after writing notes file",
+        expect(notes_nav).to_be_visible(timeout=8000)
+        notes_text = notes_badge.inner_text().strip()
+        assert _is_relative_time(notes_text), (
+            f"Notes badge should show relative time, got: {notes_text!r}"
         )
-        notes_text = pax_page.locator("#notes-btn").inner_text()
-        # Badge should show HH:MM timestamp format
-        assert ":" in notes_text, f"Notes badge should show HH:MM timestamp, got: {notes_text!r}"
+        assert _has_alert(notes_badge), "Notes badge should have unread alert after WS update"
+        print(f"Step 2 OK: notes nav live, badge={notes_text!r}, unread alert present")
 
-        notes_class = pax_page.locator("#notes-btn").get_attribute("class") or ""
-        assert "count-flash" in notes_class, (
-            f"Notes button should have count-flash CSS class after WS update, got: {notes_class!r}"
-        )
-        print(f"Step 2 OK: notes button enabled, badge shows timestamp, flash class present")
-
-        # ── Step 3: Write summary, wait for broadcast, check WS flash ──
+        # ── Step 3: write summary — nav appears live with badge + unread alert ──
         _write_summary(session_name, 17)
+        expect(summary_nav).to_be_visible(timeout=8000)
+        summary_text = summary_badge.inner_text().strip()
+        assert _is_relative_time(summary_text), (
+            f"Summary badge should show relative time, got: {summary_text!r}"
+        )
+        assert _has_alert(summary_badge), "Summary badge should have unread alert after WS update"
+        print(f"Step 3 OK: summary nav live, badge={summary_text!r}, unread alert present")
+
+        # ── Step 4: opening each view clears its unread alert ──
+        notes_nav.click()
         _await_condition(
-            lambda: not pax_page.locator("#summary-btn").is_disabled(),
-            timeout_ms=6000,
-            msg="Summary button did not become enabled after writing summary file",
+            lambda: not _has_alert(notes_badge),
+            timeout_ms=3000,
+            msg="Notes unread alert did not clear after opening the notes view",
         )
-        summary_text = pax_page.locator("#summary-btn").inner_text()
-        assert ":" in summary_text, f"Summary badge should show HH:MM timestamp, got: {summary_text!r}"
-
-        summary_class = pax_page.locator("#summary-btn").get_attribute("class") or ""
-        assert "count-flash" in summary_class, (
-            f"Summary button should have count-flash CSS class after WS update, got: {summary_class!r}"
+        summary_nav.click()
+        _await_condition(
+            lambda: not _has_alert(summary_badge),
+            timeout_ms=3000,
+            msg="Summary unread alert did not clear after opening the summary view",
         )
-        print("Step 3 OK: summary button enabled, badge shows timestamp, flash class present")
+        print("Step 4 OK: opening each view cleared its unread alert")
 
-        # ── Step 4: Reload page — timestamps should come from /state, no flash ──
-        _write_notes(session_name, 20)
-        _write_summary(session_name, 5)
-        # Wait for daemon to pick up the changes
-        time.sleep(1.5)
-
-        pax_page.reload(wait_until="networkidle")
-        pax_page.wait_for_timeout(1000)
-
-        notes_text_after = pax_page.locator("#notes-btn").inner_text()
-        summary_text_after = pax_page.locator("#summary-btn").inner_text()
-
-        assert ":" in notes_text_after, (
-            f"After reload, notes button should show HH:MM timestamp, got: {notes_text_after!r}"
+        # ── Step 5: reload — navs persist from /state, alert stays cleared ──
+        page.reload(wait_until="networkidle")
+        page.wait_for_timeout(1000)
+        expect(notes_nav).to_be_visible(timeout=5000)
+        expect(summary_nav).to_be_visible(timeout=5000)
+        assert _is_relative_time(notes_badge.inner_text().strip()), (
+            "After reload, notes badge should show relative time from /state"
         )
-        assert ":" in summary_text_after, (
-            f"After reload, summary button should show HH:MM timestamp, got: {summary_text_after!r}"
+        assert _is_relative_time(summary_badge.inner_text().strip()), (
+            "After reload, summary badge should show relative time from /state"
         )
-
-        notes_class_after = pax_page.locator("#notes-btn").get_attribute("class") or ""
-        summary_class_after = pax_page.locator("#summary-btn").get_attribute("class") or ""
-        assert "count-flash" not in notes_class_after, (
-            f"Notes button should NOT flash on page load (state-driven), got: {notes_class_after!r}"
-        )
-        assert "count-flash" not in summary_class_after, (
-            f"Summary button should NOT flash on page load (state-driven), got: {summary_class_after!r}"
-        )
-        print("Step 4 OK: reload shows HH:MM timestamps without flash")
+        assert not _has_alert(notes_badge), "Notes alert should stay cleared after reload"
+        assert not _has_alert(summary_badge), "Summary alert should stay cleared after reload"
+        print("Step 5 OK: reload keeps navs visible (state-driven) with alert cleared")
 
         browser.close()
 
-    print("SUCCESS: Notes/summary count display and WS flash test passed!")
+    print("SUCCESS: notes/summary nav display and unread alert test passed!")
