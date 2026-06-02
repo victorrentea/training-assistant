@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from daemon.transcript.query import QueryRange, query_lines, _resolve_query_range
+from daemon.transcript.query import QueryRange, _resolve_query_range, query_lines
 
 
 class _Args:
@@ -10,13 +10,13 @@ class _Args:
 
 
 def test_query_lines_from_two_days(tmp_path):
-    (tmp_path / "2026-03-25 transcription.txt").write_text(
+    (tmp_path / "2026-03-25-transcription.txt").write_text(
         "[11:59] V: before\n"
         "[12:00] V: start\n"
         "[18:30] A: q1\n",
         encoding="utf-8",
     )
-    (tmp_path / "2026-03-26 transcription.txt").write_text(
+    (tmp_path / "2026-03-26-transcription.txt").write_text(
         "[08:00] V: day2\n"
         "[09:10] A: end\n",
         encoding="utf-8",
