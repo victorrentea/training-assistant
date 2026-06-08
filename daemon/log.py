@@ -23,7 +23,6 @@ import threading
 from datetime import datetime
 from typing import Literal
 
-_PID = os.getpid()
 _level_lock = threading.Lock()
 _output_lock = threading.Lock()
 _level = "info"
