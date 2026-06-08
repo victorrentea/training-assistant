@@ -1823,6 +1823,42 @@ components:
       required:
       - text
       title: EditQuestionTextBody
+    EmojiDef:
+      properties:
+        emoji:
+          type: string
+          title: Emoji
+        title:
+          type: string
+          title: Title
+        section:
+          type: string
+          enum:
+          - primary
+          - signal
+          - overflow
+          title: Section
+        badge:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Badge
+      type: object
+      required:
+      - emoji
+      - title
+      - section
+      title: EmojiDef
+      description: 'One reaction the UI offers.
+
+
+        ``emoji`` is the value that is sent and validated. ``section`` drives
+
+        placement in the participant bar; ``badge`` is a presentation-only overlay
+
+        glyph (the "can''t see your screen" button shows 🖥️ with a small ❌, but
+
+        sends plain 🖥️).'
     EmojiReactionRequest:
       properties:
         emoji:
@@ -2520,6 +2556,11 @@ components:
           type: boolean
           title: Has Agenda
           default: false
+        emoji_catalog:
+          items:
+            $ref: '#/components/schemas/EmojiDef'
+          type: array
+          title: Emoji Catalog
       type: object
       required:
       - mode
@@ -2533,6 +2574,7 @@ components:
       - codereview
       - debate
       - slides_history_count
+      - emoji_catalog
       title: ParticipantStateResponse
     PasteEntry:
       properties:

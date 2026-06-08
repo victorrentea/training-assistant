@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from starlette.responses import Response
 
+from daemon.emoji.catalog import EMOJI_CATALOG, EmojiDef
 from daemon.host_state_router import _build_host_participants_list
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
 from daemon.participant.names import (
@@ -277,6 +278,7 @@ class ParticipantStateResponse(BaseModel):
     slides_history_count: int
     gdrive_url: str | None = None
     has_agenda: bool = False
+    emoji_catalog: list[EmojiDef]
 
 
 def _build_qa_for_participant(pid: str) -> list[dict]:
@@ -751,6 +753,9 @@ async def get_participant_state(request: Request):
         # Agenda .docx availability
         "has_agenda": misc_state.agenda_docx_path is not None
         and misc_state.agenda_docx_path.exists(),
+        # Emoji reaction catalog — single source of truth; the page renders its
+        # bar from this so the buttons and the daemon whitelist cannot drift.
+        "emoji_catalog": [e.model_dump() for e in EMOJI_CATALOG],
     }
 
     return JSONResponse(state_msg)

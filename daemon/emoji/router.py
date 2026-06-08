@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
+from daemon.emoji.catalog import ALLOWED_EMOJI
 from daemon.participant.state import participant_state
 from daemon.ws_messages import EmojiCountersUpdatedMsg, EmojiReactionMsg
 from daemon.ws_publish import broadcast, notify_host
@@ -48,8 +49,9 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
     emoji = body.emoji.strip()
-    if not emoji or len(emoji) > 4:
-        return JSONResponse({"error": "Invalid emoji"}, status_code=400)
+    if emoji not in ALLOWED_EMOJI:
+        # Reject anything not offered by the UI — the catalog is the whitelist.
+        return JSONResponse({"error": "Emoji not allowed"}, status_code=400)
 
     # Forward to desktop overlay via addons bridge WS — fire and forget
     from daemon import addon_bridge_client

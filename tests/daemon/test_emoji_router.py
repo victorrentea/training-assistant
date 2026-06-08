@@ -26,14 +26,14 @@ def mock_externals():
 class TestEmojiReaction:
     def test_valid_emoji(self, emoji_client):
         resp = emoji_client.post("/api/participant/emoji/reaction",
-                                  json={"emoji": "🎉"},
+                                  json={"emoji": "❤️"},
                                   headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 204
         assert resp.content == b""
 
     def test_missing_participant_id(self, emoji_client):
         resp = emoji_client.post("/api/participant/emoji/reaction",
-                                  json={"emoji": "🎉"})
+                                  json={"emoji": "❤️"})
         assert resp.status_code == 400
 
     def test_empty_emoji_rejected(self, emoji_client):
@@ -45,6 +45,17 @@ class TestEmojiReaction:
     def test_long_emoji_rejected(self, emoji_client):
         resp = emoji_client.post("/api/participant/emoji/reaction",
                                   json={"emoji": "12345"},
+                                  headers={"X-Participant-ID": "uuid1"})
+        assert resp.status_code == 400
+
+    def test_non_whitelisted_emoji_rejected(self, emoji_client):
+        """A valid short emoji that the UI does not offer must be rejected.
+
+        This is the pentest guard: only catalog emoji may float on the host
+        and the macOS overlay.
+        """
+        resp = emoji_client.post("/api/participant/emoji/reaction",
+                                  json={"emoji": "🎉"},
                                   headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 400
 
@@ -60,16 +71,16 @@ class TestEmojiReaction:
     def test_sends_to_host_ws(self, emoji_client, mock_externals):
         from daemon.ws_messages import EmojiReactionMsg
         emoji_client.post("/api/participant/emoji/reaction",
-                           json={"emoji": "🎉"},
+                           json={"emoji": "❤️"},
                            headers={"X-Participant-ID": "uuid1"})
         mock_externals["host"].assert_called_once()
         call_msg = mock_externals["host"].call_args[0][0]
         assert isinstance(call_msg, EmojiReactionMsg)
         assert call_msg.model_dump()["type"] == "emoji_reaction"
-        assert call_msg.model_dump()["emoji"] == "🎉"
+        assert call_msg.model_dump()["emoji"] == "❤️"
 
     def test_sends_emoji_to_bridge(self, emoji_client, mock_externals):
         emoji_client.post("/api/participant/emoji/reaction",
-                           json={"emoji": "🎉"},
+                           json={"emoji": "❤️"},
                            headers={"X-Participant-ID": "uuid1"})
-        mock_externals["send_emoji"].assert_called_once_with("🎉")
+        mock_externals["send_emoji"].assert_called_once_with("❤️")
