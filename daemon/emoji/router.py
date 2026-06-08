@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from daemon import log as daemon_log
 from daemon.emoji.catalog import ALLOWED_EMOJI
+from daemon.emoji.rate_limit import SlidingWindowRateLimiter
 from daemon.participant.state import participant_state
 from daemon.ws_messages import EmojiCountersUpdatedMsg, EmojiReactionMsg
 from daemon.ws_publish import broadcast, notify_host
@@ -22,6 +23,13 @@ class EmojiReactionRequest(BaseModel):
 
 class OkResponse(BaseModel):
     ok: bool = True
+
+
+# Allow a burst of up to 15 reactions, but no more than 15 per rolling minute
+# from a single participant — keyed by participant id (the host is exempt).
+EMOJI_RATE_LIMIT = 15
+EMOJI_RATE_WINDOW_S = 60.0
+emoji_rate_limiter = SlidingWindowRateLimiter(EMOJI_RATE_LIMIT, EMOJI_RATE_WINDOW_S)
 
 
 participant_router = APIRouter(prefix="/api/participant/emoji", tags=["emoji"])
@@ -52,6 +60,10 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     if emoji not in ALLOWED_EMOJI:
         # Reject anything not offered by the UI — the catalog is the whitelist.
         return JSONResponse({"error": "Emoji not allowed"}, status_code=400)
+
+    # Throttle bursts: cap each participant at 15 reactions/minute (host exempt).
+    if not pid.startswith("__") and not emoji_rate_limiter.allow(pid):
+        return JSONResponse({"error": "Too many reactions"}, status_code=429)
 
     # Forward to desktop overlay via addons bridge WS — fire and forget
     from daemon import addon_bridge_client

@@ -23,6 +23,15 @@ def mock_externals():
         yield {"host": mock_host, "send_emoji": mock_send_emoji}
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """The emoji rate limiter is module-global — clear it between tests."""
+    from daemon.emoji.router import emoji_rate_limiter
+    emoji_rate_limiter.reset()
+    yield
+    emoji_rate_limiter.reset()
+
+
 class TestEmojiReaction:
     def test_valid_emoji(self, emoji_client):
         resp = emoji_client.post("/api/participant/emoji/reaction",
@@ -84,3 +93,34 @@ class TestEmojiReaction:
                            json={"emoji": "❤️"},
                            headers={"X-Participant-ID": "uuid1"})
         mock_externals["send_emoji"].assert_called_once_with("❤️")
+
+    def test_rate_limit_blocks_sixteenth_per_minute(self, emoji_client):
+        """A burst of 15 is allowed; the 16th within the minute is throttled."""
+        for _ in range(15):
+            resp = emoji_client.post("/api/participant/emoji/reaction",
+                                      json={"emoji": "❤️"},
+                                      headers={"X-Participant-ID": "burst-uuid"})
+            assert resp.status_code == 204
+        resp = emoji_client.post("/api/participant/emoji/reaction",
+                                  json={"emoji": "❤️"},
+                                  headers={"X-Participant-ID": "burst-uuid"})
+        assert resp.status_code == 429
+
+    def test_rate_limit_is_per_participant(self, emoji_client):
+        """One participant hitting the limit does not throttle another."""
+        for _ in range(15):
+            emoji_client.post("/api/participant/emoji/reaction",
+                              json={"emoji": "❤️"},
+                              headers={"X-Participant-ID": "p1"})
+        resp = emoji_client.post("/api/participant/emoji/reaction",
+                                  json={"emoji": "❤️"},
+                                  headers={"X-Participant-ID": "p2"})
+        assert resp.status_code == 204
+
+    def test_host_is_exempt_from_rate_limit(self, emoji_client):
+        """Host reactions (__host__) are never throttled."""
+        for _ in range(20):
+            resp = emoji_client.post("/api/participant/emoji/reaction",
+                                      json={"emoji": "❤️"},
+                                      headers={"X-Participant-ID": "__host__"})
+            assert resp.status_code == 204

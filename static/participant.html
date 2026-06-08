@@ -1726,7 +1726,17 @@ function sendEmoji(emoji, btn) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
     body: JSON.stringify({ emoji: emoji })
+  }).then(function(r) {
+    if (r.status === 429) _showEmojiThrottleToast();
   }).catch(function(e) { console.error('emoji send failed', e); });
+}
+var _emojiThrottleToastAt = 0;
+function _showEmojiThrottleToast() {
+  // Debounce: at most one "slow down" hint every 3s, however fast they tap.
+  var now = Date.now();
+  if (now - _emojiThrottleToastAt < 3000) return;
+  _emojiThrottleToastAt = now;
+  showToast('Slow down 🐢');
 }
 function sendFeedback() {
   var ta = document.getElementById('feedback-textarea');
