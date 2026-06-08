@@ -1,5 +1,6 @@
 /.claude/settings.local.json
 /.claude/skills/
+/.claude/hooks/pushwatch/pushwatch
 /secrets.env
 /wispr-addons/secrets.env
 __pycache__/
