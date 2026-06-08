@@ -145,6 +145,7 @@ class FilesMdResponse(BaseModel):
 async def get_files_md():
     """Return the per-session files.md content with HTML comments stripped."""
     from datetime import datetime, timezone
+
     from daemon.misc.content_files import get_active_session_folder
 
     folder = get_active_session_folder()

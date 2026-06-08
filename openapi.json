@@ -205,11 +205,11 @@
         ]
       }
     },
-    "/api/slides/download-from-gdrive/{slug}": {
+    "/api/slides/refresh/{slug}": {
       "post": {
-        "summary": "Download From Gdrive",
-        "description": "Download PDF from Google Drive, cache it, return SHA256 hash.\n\nCalled by the daemon to populate or refresh Railway's PDF cache.\nThe daemon uses the returned hash to detect content changes.",
-        "operationId": "download_from_gdrive_api_slides_download_from_gdrive__slug__post",
+        "summary": "Refresh Slide",
+        "description": "Ensure cache_dir/{slug}.pdf is the latest version from Google Drive.\n\nUnifies the previous /api/slides/download-from-gdrive (called on\nparticipant cache miss) and /api/slides/invalidate (called when the\ndaemon's PPTX watcher detects a file change). Both did the same\nunderlying work \u2014 fetch from Drive, write to cache, notify daemon \u2014\njust with different sync/async transport choices.\n\nBehavior:\n- Marks status=stale up front so concurrent /check callers wait\n  instead of serving the old PDF.\n- Per-slug deduplication: parallel calls for the same slug share one\n  in-flight fetch (e.g. participant cache miss + PPTX-watcher\n  invalidate firing simultaneously).\n- Deletes the cache file (no-op when absent \u2014 covers cache-miss too).\n- Calls do_download which sends slide_log \"completed\" to the daemon;\n  the daemon broadcasts decks_updated to participants.\n- Returns SHA256 + size so the caller can detect content changes.\n\nSynchronous: the caller awaits the response when it needs the SHA\n(cache-miss path) or fire-and-forgets when it doesn't (PPTX update).",
+        "operationId": "refresh_slide_api_slides_refresh__slug__post",
         "security": [
           {
             "HTTPBasic": []
@@ -231,7 +231,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DownloadFromGdriveRequest"
+                "$ref": "#/components/schemas/RefreshSlideRequest"
               }
             }
           }
@@ -242,7 +242,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DownloadFromGdriveResponse"
+                  "$ref": "#/components/schemas/RefreshSlideResponse"
                 }
               }
             }
@@ -340,75 +340,6 @@
             "HTTPBasic": []
           }
         ]
-      }
-    },
-    "/api/{session_id}/api/slides/invalidate/{slug}": {
-      "post": {
-        "summary": "Invalidate Slide",
-        "description": "Force Railway to re-download and cache-bust the PDF for slug.\n\nCalled by the slides upload daemon after it detects a PPTX was saved and\nGoogle Drive has the updated PDF. Railway deletes the old cached file,\nre-downloads from Drive, then broadcasts slides_updated with\nrefreshed_slugs so connected participants auto-reload the active slide.",
-        "operationId": "invalidate_slide_api__session_id__api_slides_invalidate__slug__post",
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Slug"
-            }
-          },
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/SlideInvalidateRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Body"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/{session_id}/upload/{file_id}": {
@@ -602,45 +533,6 @@
         }
       }
     },
-    "/{session_id}/quiz": {
-      "get": {
-        "summary": "Quiz History Page",
-        "operationId": "quiz_history_page__session_id__quiz_get",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/{session_id}/api/slides": {
       "get": {
         "summary": "Get Slides",
@@ -770,80 +662,6 @@
         }
       }
     },
-    "/{session_id}/api/summary": {
-      "get": {
-        "summary": "Get Summary",
-        "operationId": "get_summary__session_id__api_summary_get",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/{session_id}/api/notes": {
-      "get": {
-        "summary": "Get Notes",
-        "operationId": "get_notes__session_id__api_notes_get",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/{session_id}/api/upload": {
       "post": {
         "summary": "Upload File",
@@ -891,32 +709,10 @@
         }
       }
     },
-    "/api/session/start": {
-      "post": {
-        "summary": "Session Start",
-        "description": "Generate a session_id. Used by conftest when daemon is not running.",
-        "operationId": "session_start_api_session_start_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBasic": []
-          }
-        ]
-      }
-    },
     "/api/session/active": {
       "get": {
         "summary": "Session Active",
-        "description": "Return current session_id. Fallback used by conftest.",
+        "description": "Return current session_id (set on Railway only by the daemon's set_session_id WS push).",
         "operationId": "session_active_api_session_active_get",
         "responses": {
           "200": {
@@ -1073,7 +869,20 @@
         ],
         "title": "DeleteStaticRequest"
       },
-      "DownloadFromGdriveRequest": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "RefreshSlideRequest": {
         "properties": {
           "drive_export_url": {
             "type": "string",
@@ -1084,9 +893,9 @@
         "required": [
           "drive_export_url"
         ],
-        "title": "DownloadFromGdriveRequest"
+        "title": "RefreshSlideRequest"
       },
-      "DownloadFromGdriveResponse": {
+      "RefreshSlideResponse": {
         "properties": {
           "status": {
             "type": "string",
@@ -1107,31 +916,7 @@
         "required": [
           "status"
         ],
-        "title": "DownloadFromGdriveResponse"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
-      "SlideInvalidateRequest": {
-        "properties": {
-          "drive_export_url": {
-            "type": "string",
-            "title": "Drive Export Url",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "title": "SlideInvalidateRequest"
+        "title": "RefreshSlideResponse"
       },
       "UploadStaticRequest": {
         "properties": {

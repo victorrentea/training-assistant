@@ -1,8 +1,7 @@
 import base64
-import json
 import os
 
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from railway.app import app, state
@@ -83,23 +82,6 @@ def test_slides_upload_defaults_to_server_data_dir(monkeypatch, tmp_path):
 # NOTE: /api/{session_id}/slides/catalog-map removed — catalog lives on daemon side.
 
 
-def test_api_slides_returns_ok_when_daemon_offline(monkeypatch, tmp_path):
-    # Railway proxies /api/slides to daemon; if daemon is offline, returns empty slides list
-    monkeypatch.setenv("TRAINING_ASSISTANT_SLIDES_DIR", str(tmp_path / "missing-slides"))
-    monkeypatch.setenv("TRAINING_ASSISTANT_UPLOADED_SLIDES_DIR", str(tmp_path / "uploaded"))
-
-    from unittest.mock import AsyncMock, MagicMock, patch
-    mock_response = MagicMock()
-    mock_response.status_code = 503
-    with patch("railway.features.slides.router.proxy_to_daemon", new_callable=AsyncMock, return_value=mock_response):
-        client = TestClient(app)
-        resp = client.get(f"/{state.session_id}/api/slides")
-
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["slides"] == []
-
-
 def test_api_slides_check_proxies_to_daemon_with_participant_id():
     from unittest.mock import AsyncMock, patch
 
@@ -130,34 +112,6 @@ def test_api_slides_check_propagates_non_200_status():
 
     assert resp.status_code == 503
     assert resp.json() == {"status": "timeout"}
-
-
-def test_api_slides_embeds_status_per_slide(monkeypatch):
-    async def _fake_proxy(**_kwargs):
-        return Response(
-            content=json.dumps(
-                {
-                    "slides": [
-                        {"slug": "reactive", "title": "Reactive/WebFlux", "drive_export_url": "https://example/export.pdf"},
-                    ],
-                    "cache_status": {
-                        "reactive": {"status": "cached", "size_bytes": 1234},
-                    },
-                }
-            ),
-            status_code=200,
-            media_type="application/json",
-        )
-
-    monkeypatch.setattr("railway.features.slides.router.proxy_to_daemon", _fake_proxy)
-    client = TestClient(app)
-    resp = client.get(f"/{state.session_id}/api/slides")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "cache_status" not in body
-    assert body["slides"][0]["slug"] == "reactive"
-    assert body["slides"][0]["status"] == "cached"
-    assert body["slides"][0]["size_bytes"] == 1234
 
 
 def test_api_slides_file_missing_returns_404_when_not_in_cache_or_catalog(monkeypatch, tmp_path):

@@ -50,6 +50,7 @@ repo_top="$(git -C "$REPO_ROOT" rev-parse --show-toplevel 2>/dev/null)"
 if [ -z "$WORKDIR" ]; then
   push_top="$repo_top"
 else
+  # shellcheck disable=SC2088  # "~" are literal case patterns to match, not paths to expand
   case "$WORKDIR" in
     "~") WORKDIR="$HOME" ;;
     "~/"*) WORKDIR="$HOME/${WORKDIR#\~/}" ;;
@@ -84,6 +85,7 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)
 # Hand the agent a single short line to launch. All the polling/watching logic
 # lives in watch-ci.sh, so the instruction stays tiny (minimal tokens spent on
 # the agent side). The exit status of that background task is the CI verdict.
+# shellcheck disable=SC2097,SC2098  # SHA/BRANCH/CMD are env vars for python3 (read via os.environ); the $SHA/$PW_DIR they reference are outer-scope vars
 SHA="$SHA" BRANCH="$BRANCH" CMD="bash $PW_DIR/watch-ci.sh $SHA" python3 -c "
 import json, os
 short = os.environ['SHA'][:7]

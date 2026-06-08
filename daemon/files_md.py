@@ -89,7 +89,7 @@ class Doc:
         return text
 
     @classmethod
-    def parse(cls, text: str) -> "Doc":
+    def parse(cls, text: str) -> Doc:
         doc = cls()
         if not text or text.strip() == EMPTY_STATE.strip():
             return doc

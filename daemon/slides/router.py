@@ -241,9 +241,11 @@ def _slides_updated_with_titles() -> dict[str, dict]:
 
 
 def _broadcast_slides_updated() -> None:
+    from daemon.slides.models import Deck
     from daemon.ws_messages import DecksUpdatedMsg
     from daemon.ws_publish import broadcast
-    broadcast(DecksUpdatedMsg(decks=_slides_updated_with_titles()))
+    decks = {slug: Deck.model_validate(entry) for slug, entry in _slides_updated_with_titles().items()}
+    broadcast(DecksUpdatedMsg(decks=decks))
 
 
 # ── Participant router ──

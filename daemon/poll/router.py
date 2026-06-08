@@ -13,9 +13,9 @@ from daemon.participant.state import participant_state
 from daemon.poll.state import PollData, poll_state
 from daemon.ws_messages import (
     ActivityUpdatedMsg,
+    PollHostUpdateMsg,
     PollOpenedMsg,
     PollUpdatedMsg,
-    PollHostUpdateMsg,
 )
 from daemon.ws_publish import broadcast, notify_host
 

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -22,19 +21,19 @@ class PollData(BaseModel):
 
 @dataclass
 class PollState:
-    data: Optional[PollData] = None
+    data: PollData | None = None
     started: bool = False
-    opened_at: Optional[str] = None
+    opened_at: str | None = None
     # Set on end_live() and cleared on reset() / start_poll. When non-None,
     # the poll is in the "ended-but-results-visible" phase: votes/host_extras
     # are preserved, edits are locked, participants see counts read-only.
-    ended_at: Optional[str] = None
+    ended_at: str | None = None
     votes: dict[str, dict] = field(default_factory=dict)
     # votes[participant_uuid] = {"option_indices": list[int], "voted_at": "ISO"}
     host_extras: list[int] = field(default_factory=list)
     # host_extras[i] >= 0: votes the host added (e.g. for chat-based answers).
     # Total displayed count for option i = participant_count(i) + host_extras[i].
-    _vote_counts_cache: Optional[list[int]] = None
+    _vote_counts_cache: list[int] | None = None
     _vote_counts_dirty: bool = True
 
     def cast_vote(self, pid: str, option_indices: list[int]) -> bool:
