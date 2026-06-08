@@ -35,6 +35,7 @@ COPY tests/docker/test_daemon_connected.py .
 COPY tests/docker/test_slides_view.py .
 COPY tests/docker/test_follow_me.py .
 COPY tests/docker/test_participant_interactions.py .
+COPY tests/docker/test_emoji_master_switch.py .
 COPY tests/docker/test_integrations.py .
 COPY tests/docker/test_high_value.py .
 COPY tests/docker/test_ui_interactions.py .
