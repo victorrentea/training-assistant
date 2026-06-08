@@ -1,13 +1,13 @@
 """Shared log formatter for all training-assistant daemons.
 
-Format: HH:MM:SS.f PID [name___] info message
-        HH:MM:SS.f PID [name___] error message
-        HH:MM:SS.f PID [name___] debug message  ← only when DAEMON_DEBUG=1
+Format: HH:MM:SS.f [name___] info message
+        HH:MM:SS.f [name___] error message
+        HH:MM:SS.f [name___] debug message  ← only when DAEMON_DEBUG=1
 
 Example:
-    18:49:41.4 66405 [daemon ] info Started — polling https://...
-    18:49:41.7 66405 [ws-clie] info Connected to wss://...
-    18:49:41.7 66405 [session] error Failed to load key points
+    18:49:41.4 [daemon ] info Started — polling https://...
+    18:49:41.7 [ws-clie] info Connected to wss://...
+    18:49:41.7 [session] error Failed to load key points
 
 Usage:
     from daemon import log
@@ -47,7 +47,7 @@ def _fmt(name: str, level: str, msg: str) -> str:
         lvl = raw_level.ljust(5)
     else:
         lvl = raw_level[:5].ljust(5)
-    return f"{_ts()} {_PID} [{nm}] {lvl} {msg}"
+    return f"{_ts()} [{nm}] {lvl} {msg}"
 
 
 def _colorize(line: str, level: str, stream) -> str:
