@@ -395,6 +395,7 @@
         updatePaxBadge(msg.participant_count);
         renderParticipantList(cachedParticipantIds);
         updateLeaderboardButton();
+        applyEmojiMasterBadge(msg.emoji_global_enabled !== false);
         document.getElementById('restore-banner').style.display =
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         if (msg.slides_log_deep_count !== undefined || msg.slides_log_topic !== undefined) {
@@ -784,6 +785,25 @@
           }
         }, 8000);
       }
+    }
+  }
+
+  function applyEmojiMasterBadge(enabled) {
+    const b = document.getElementById('emoji-master-badge');
+    if (!b) return;
+    b.className = `badge ${enabled ? 'connected' : 'disabled'} footer-tooltip-target`;
+    _setFooterBadgeTooltip(b, enabled
+      ? 'Emoji reactions ON — click to disable'
+      : 'Emoji reactions OFF — click to enable');
+  }
+
+  async function toggleEmojiGlobal() {
+    try {
+      const r = await fetch(API('/emoji/global-toggle'), { method: 'POST' });
+      const { emoji_global_enabled } = await r.json();
+      applyEmojiMasterBadge(emoji_global_enabled);
+    } catch (e) {
+      console.error('emoji global toggle failed', e);
     }
   }
 

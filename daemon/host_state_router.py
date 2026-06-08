@@ -87,6 +87,7 @@ class HostStateResponse(BaseModel):
     current_activity: str
     participant_count: int
     participants: list[HostParticipant]
+    emoji_global_enabled: bool = True
     daemon_connected: bool
     railway_connected: bool
     overlay_connected: bool
@@ -272,6 +273,7 @@ async def get_host_state(request: Request, session_id: str):
         "current_activity": ps.current_activity,
         "participant_count": participant_count,
         "participants": _build_host_participants_list(),
+        "emoji_global_enabled": ps.emoji_global_enabled,
         "daemon_connected": True,
         "railway_connected": _get_railway_connected(),
         "overlay_connected": _get_overlay_connected(),

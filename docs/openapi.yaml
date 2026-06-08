@@ -233,6 +233,21 @@ paths:
         '204':
           description: Successful Response
       x-feature: emoji
+  /api/{session_id}/host/emoji/global-toggle:
+    post:
+      tags:
+      - emoji
+      summary: Toggle Emoji Global
+      description: Host flips the session-wide emoji master switch and persists it.
+      operationId: toggle_emoji_global_api__session_id__host_emoji_global_toggle_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmojiGlobalStateResponse'
+      x-feature: emoji
   /api/participant/qa/submit:
     post:
       tags:
@@ -1859,6 +1874,15 @@ components:
         glyph (the "can''t see your screen" button shows 🖥️ with a small ❌, but
 
         sends plain 🖥️).'
+    EmojiGlobalStateResponse:
+      properties:
+        emoji_global_enabled:
+          type: boolean
+          title: Emoji Global Enabled
+      type: object
+      required:
+      - emoji_global_enabled
+      title: EmojiGlobalStateResponse
     EmojiReactionRequest:
       properties:
         emoji:
@@ -2172,6 +2196,10 @@ components:
             $ref: '#/components/schemas/HostParticipant'
           type: array
           title: Participants
+        emoji_global_enabled:
+          type: boolean
+          title: Emoji Global Enabled
+          default: true
         daemon_connected:
           type: boolean
           title: Daemon Connected

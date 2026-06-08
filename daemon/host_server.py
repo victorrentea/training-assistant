@@ -143,10 +143,12 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(wc_participant_router)  # /api/participant/wordcloud/*
     app.include_router(wc_host_router)         # /api/{session_id}/wordcloud/*
 
+    from daemon.emoji.router import host_router as emoji_host_router
     from daemon.emoji.router import participant_router as emoji_participant_router
     from daemon.qa.router import host_router as qa_host_router
     from daemon.qa.router import participant_router as qa_participant_router
     app.include_router(emoji_participant_router)  # /api/participant/emoji/*
+    app.include_router(emoji_host_router)          # /api/{session_id}/host/emoji/*
     app.include_router(qa_participant_router)      # /api/participant/qa/*
     app.include_router(qa_host_router)             # /api/{session_id}/qa/*
 

@@ -24,6 +24,9 @@ class EmojiReactionRequest(BaseModel):
 class OkResponse(BaseModel):
     ok: bool = True
 
+class EmojiGlobalStateResponse(BaseModel):
+    emoji_global_enabled: bool
+
 
 # Allow a burst of up to 15 reactions, but no more than 15 per rolling minute
 # from a single participant — keyed by participant id (the host is exempt).
@@ -61,6 +64,12 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
         # Reject anything not offered by the UI — the catalog is the whitelist.
         return JSONResponse({"error": "Emoji not allowed"}, status_code=400)
 
+    # Master switch off: silently drop before any forwarding (host screen +
+    # desktop overlay) or counting. 204 is indistinguishable from success, so
+    # the participant's local float animation still plays and they stay unaware.
+    if not participant_state.emoji_global_enabled:
+        return Response(status_code=204)
+
     # Throttle bursts: cap each participant at 15 reactions/minute (host exempt).
     if not pid.startswith("__") and not emoji_rate_limiter.allow(pid):
         return JSONResponse({"error": "Too many reactions"}, status_code=429)
@@ -86,3 +95,24 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
         _emoji_throttle.schedule()
 
     return Response(status_code=204)
+
+
+# ── Host router (called directly on daemon localhost) ──
+
+host_router = APIRouter(prefix="/api/{session_id}/host/emoji", tags=["emoji"])
+
+
+@host_router.post("/global-toggle", response_model=EmojiGlobalStateResponse)
+async def toggle_emoji_global():
+    """Host flips the session-wide emoji master switch and persists it."""
+    participant_state.emoji_global_enabled = not participant_state.emoji_global_enabled
+    enabled = participant_state.emoji_global_enabled
+
+    from daemon.misc.content_files import get_active_session_folder
+    from daemon.session_state import save_session_state
+    folder = get_active_session_folder()
+    if folder:
+        save_session_state(folder, participant_state.snapshot())
+
+    daemon_log.info("emoji  ", f"❤️ reactions {'enabled' if enabled else 'disabled'} (master switch)")
+    return EmojiGlobalStateResponse(emoji_global_enabled=enabled)

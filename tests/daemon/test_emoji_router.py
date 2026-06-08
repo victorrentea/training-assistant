@@ -4,7 +4,8 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from starlette.testclient import TestClient
 from fastapi import FastAPI
 
-from daemon.emoji.router import participant_router
+from daemon.emoji.router import host_router, participant_router
+from daemon.participant.state import participant_state
 
 
 @pytest.fixture
@@ -12,6 +13,27 @@ def emoji_client():
     app = FastAPI()
     app.include_router(participant_router)
     return TestClient(app)
+
+
+@pytest.fixture
+def emoji_full_client():
+    """Client with both participant and host (toggle) routers mounted."""
+    app = FastAPI()
+    app.include_router(participant_router)
+    app.include_router(host_router)
+    return TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def reset_emoji_global_state():
+    """The master switch + counters live on the participant_state singleton."""
+    participant_state.emoji_global_enabled = True
+    participant_state.emoji_counters.clear()
+    participant_state.mode = "workshop"
+    yield
+    participant_state.emoji_global_enabled = True
+    participant_state.emoji_counters.clear()
+    participant_state.mode = "workshop"
 
 
 @pytest.fixture(autouse=True)
@@ -124,3 +146,58 @@ class TestEmojiReaction:
                                       json={"emoji": "❤️"},
                                       headers={"X-Participant-ID": "__host__"})
             assert resp.status_code == 204
+
+
+class TestEmojiMasterSwitch:
+    def test_disabled_drops_silently_without_forwarding(self, emoji_client, mock_externals):
+        """When the master switch is off, the reaction is accepted (204) but
+        never forwarded to the host screen or the desktop overlay."""
+        participant_state.emoji_global_enabled = False
+        resp = emoji_client.post("/api/participant/emoji/reaction",
+                                  json={"emoji": "❤️"},
+                                  headers={"X-Participant-ID": "uuid1"})
+        assert resp.status_code == 204
+        assert resp.content == b""
+        mock_externals["host"].assert_not_called()
+        mock_externals["send_emoji"].assert_not_called()
+
+    def test_disabled_does_not_bump_counters_in_talk_mode(self, emoji_client):
+        """A dropped reaction must not advance the cumulative talk-mode counter."""
+        participant_state.mode = "talk"
+        participant_state.emoji_global_enabled = False
+        emoji_client.post("/api/participant/emoji/reaction",
+                          json={"emoji": "❤️"},
+                          headers={"X-Participant-ID": "uuid1"})
+        assert participant_state.emoji_counters.get("❤️", 0) == 0
+
+    def test_enabled_forwards_normally(self, emoji_client, mock_externals):
+        """With the switch on (default), forwarding happens as before."""
+        participant_state.emoji_global_enabled = True
+        resp = emoji_client.post("/api/participant/emoji/reaction",
+                                  json={"emoji": "❤️"},
+                                  headers={"X-Participant-ID": "uuid1"})
+        assert resp.status_code == 204
+        mock_externals["host"].assert_called_once()
+        mock_externals["send_emoji"].assert_called_once_with("❤️")
+
+    def test_toggle_endpoint_flips_and_reports(self, emoji_full_client):
+        """POST /global-toggle flips the flag and returns the new value."""
+        with patch("daemon.misc.content_files.get_active_session_folder", return_value=None):
+            r1 = emoji_full_client.post("/api/sid1/host/emoji/global-toggle")
+            assert r1.status_code == 200
+            assert r1.json() == {"emoji_global_enabled": False}
+            assert participant_state.emoji_global_enabled is False
+
+            r2 = emoji_full_client.post("/api/sid1/host/emoji/global-toggle")
+            assert r2.json() == {"emoji_global_enabled": True}
+            assert participant_state.emoji_global_enabled is True
+
+    def test_flag_persists_through_snapshot_restore(self):
+        """The flag round-trips via snapshot() -> sync_from_restore()."""
+        participant_state.emoji_global_enabled = False
+        snap = participant_state.snapshot()
+        assert snap["emoji_global_enabled"] is False
+
+        participant_state.emoji_global_enabled = True  # simulate a fresh process
+        participant_state.sync_from_restore(snap)
+        assert participant_state.emoji_global_enabled is False

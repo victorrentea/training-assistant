@@ -72,19 +72,3 @@ _participant_update_throttle = AsyncThrottle(1.0, _broadcast_participant_update_
 def broadcast_participant_update():
     """Schedule a throttled participant count broadcast (max 1/sec)."""
     _participant_update_throttle.schedule()
-
-
-async def _send_to_special(key: str, message: dict):
-    """Send a message to a special client (e.g. __host__), cleaning up on failure."""
-    ws = state.participants.get(key)
-    if ws is None:
-        return
-    try:
-        await ws.send_text(json.dumps(message))
-    except Exception:
-        state.participants.pop(key, None)
-
-
-async def send_emoji_to_host(emoji: str):
-    """Forward an emoji reaction to the host client if connected."""
-    await _send_to_special("__host__", {"type": "emoji_reaction", "emoji": emoji})

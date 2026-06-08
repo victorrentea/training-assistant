@@ -42,6 +42,9 @@ class ParticipantState:
         self.mode: str = "workshop"
         self.current_activity: str = "none"
         self.emoji_counters: dict[str, int] = {}
+        # Session-wide master switch: when False, the daemon silently drops all
+        # incoming emoji reactions (host screen + desktop overlay). Persisted.
+        self.emoji_global_enabled: bool = True
         # Engagement: uuid -> {view -> {seconds, visits, clicks}} (cumulative, persisted)
         self.engagement: dict[str, dict] = {}
         # Liveness (ephemeral, NOT persisted): host derives "active now" from these
@@ -123,6 +126,8 @@ class ParticipantState:
             if isinstance(raw_emoji_counters, dict):
                 self.emoji_counters.clear()
                 self.emoji_counters.update({k: v for k, v in raw_emoji_counters.items() if isinstance(v, int)})
+            if isinstance(data.get("emoji_global_enabled"), bool):
+                self.emoji_global_enabled = data["emoji_global_enabled"]
 
     def snapshot(self) -> dict:
         """Return a copy of all state (for testing/debugging)."""
@@ -138,6 +143,7 @@ class ParticipantState:
                 "mode": self.mode,
                 "current_activity": self.current_activity,
                 "emoji_counters": dict(self.emoji_counters),
+                "emoji_global_enabled": self.emoji_global_enabled,
                 "engagement": {pid: dict(views) for pid, views in self.engagement.items()},
             }
 
@@ -155,6 +161,7 @@ class ParticipantState:
             self.mode = mode
             self.current_activity = "none"
             self.emoji_counters.clear()
+            self.emoji_global_enabled = True
             self.engagement.clear()
             self.last_active_at.clear()
             self.last_view.clear()
