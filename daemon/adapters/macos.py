@@ -23,6 +23,19 @@ def beep() -> None:
         pass
 
 
+# ── Open file in editor ───────────────────────────────────────────────────────
+
+def open_in_vscode(path) -> None:
+    """Open a file in Visual Studio Code. Best-effort; never raises."""
+    try:
+        subprocess.run(
+            ["open", "-a", "Visual Studio Code", str(path)],
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+    except Exception:
+        pass
+
+
 # ── Google Drive process detection ──────────────────────────────────────────
 
 def is_google_drive_running() -> bool:

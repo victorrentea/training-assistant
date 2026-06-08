@@ -379,6 +379,18 @@ def find_notes_in_folder(folder: Path) -> Path | None:
     return txt_files[-1] if txt_files else None
 
 
+def create_notes_file(folder: Path) -> Path:
+    """Create an empty notes file named '<folder name> - notes.txt' and return it.
+
+    Called at session start when no .txt notes file exists yet, so the trainer
+    always has a notes file to write into. Never clobbers an existing file.
+    """
+    notes_file = folder / f"{folder.name} - notes.txt"
+    if not notes_file.exists():
+        notes_file.write_text("", encoding="utf-8")
+    return notes_file
+
+
 # ── Slides manifest helpers ────────────────────────────────────────────────────
 
 def _slugify(value: str) -> str:

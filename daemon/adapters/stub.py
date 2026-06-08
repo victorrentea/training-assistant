@@ -23,6 +23,11 @@ def beep() -> None:
     _log_call("beep")
 
 
+def open_in_vscode(path) -> None:
+    """No-op (records the call for test observability)."""
+    _log_call("open_in_vscode", path=str(path))
+
+
 def is_google_drive_running() -> bool:
     """Always returns True (assume available)."""
     return True

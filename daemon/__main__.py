@@ -35,6 +35,7 @@ from daemon.session_state import (
     SESSION_STATE_FILENAME,
     announce_session_cleared,
     announce_session_id,
+    create_notes_file,
     find_notes_in_folder,
     find_session_folder_by_id,
     load_daemon_state,
@@ -1179,6 +1180,11 @@ def run() -> None:
                             if notes_file:
                                 notes_lines = len(notes_file.read_text(encoding="utf-8", errors="replace").splitlines())
                                 log.info("session", f"Notes found ({notes_lines} lines): {notes_file.name}")
+                            else:
+                                notes_file = create_notes_file(folder)
+                                log.info("session", f"Notes file created: {notes_file.name}")
+                                from daemon.adapters.loader import adapter as _adapter
+                                _adapter.open_in_vscode(notes_file)
                             config = dc_replace(config, session_folder=folder, session_notes=notes_file)
                             # Refresh agenda for new session
                             _agenda_path = _find_agenda_docx(folder)
