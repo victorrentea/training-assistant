@@ -3500,7 +3500,7 @@ function _handleWsMessage(msg) {
       })(msg.decks);
       break;
     case 'current_slide_updated': _onIncomingHostSlidesCurrent(msg.current_slide || null); break;
-    case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;
+    case 'slides_history_updated': _setPastSlidesBadge(msg.count); break;
     case 'files_count_updated': {
       _setFilesBadge(msg.count);
       var onFiles = document.getElementById('files-view').style.display !== 'none';
