@@ -5,11 +5,12 @@ import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 import uvicorn
 from fastapi import FastAPI, Request, WebSocket, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -26,6 +27,38 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 # Set by __main__ after startup so /api/status can expose it
 code_timestamp: str | None = None
 _persist_log_level = None
+
+# ── Local-only access guard (DNS-rebinding + CSRF defense) ──
+# The daemon binds to 127.0.0.1, but loopback binding alone does NOT stop DNS-rebinding:
+# a malicious page whose domain resolves to 127.0.0.1 still reaches us — with its own Host
+# header. We therefore reject any request whose Host is not a loopback name, and any
+# state-changing request carrying a cross-origin Origin. "testserver" is Starlette's
+# TestClient default Host and is safe to allow (a browser cannot be coerced into sending it).
+_ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1", "testserver"}
+_ALLOWED_ORIGINS = _ALLOWED_HOSTS | {"interact.victorrentea.ro"}
+
+
+def _hostname(value: str) -> str:
+    """Bare hostname (no port) from a Host header or an Origin URL."""
+    value = (value or "").strip()
+    if not value:
+        return ""
+    if "://" in value:
+        return (urlparse(value).hostname or "").lower()
+    if value.startswith("["):  # bracketed IPv6 literal, optionally with :port
+        return value[1:value.index("]")].lower() if "]" in value else ""
+    return (value.rsplit(":", 1)[0] if ":" in value else value).lower()
+
+
+def _local_access_ok(method: str, host: str, origin: str | None) -> bool:
+    """True if a request carrying these headers may reach the local daemon."""
+    if _hostname(host) not in _ALLOWED_HOSTS:
+        return False  # DNS-rebinding / non-loopback Host
+    # CSRF: a present, cross-origin Origin on a state-changing request is rejected.
+    # WebSocket upgrades (method GET) are validated separately by the caller.
+    if origin and method in ("POST", "PUT", "DELETE", "PATCH"):
+        return _hostname(origin) in _ALLOWED_ORIGINS
+    return True
 
 
 class LogLevelResponse(BaseModel):
@@ -89,6 +122,17 @@ def create_app(backend_url: str) -> FastAPI:
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type", "X-Participant-ID"],
     )
+
+    # --- Local-only guard: block DNS-rebinding (non-loopback Host) and cross-site CSRF ---
+    @app.middleware("http")
+    async def _local_access_guard(request: Request, call_next):
+        if not _local_access_ok(
+            request.method,
+            request.headers.get("host", ""),
+            request.headers.get("origin"),
+        ):
+            return JSONResponse({"detail": "Forbidden: local access only"}, status_code=403)
+        return await call_next(request)
 
     # --- No-cache middleware for local dev (prevents stale JS/HTML after daemon restart) ---
     @app.middleware("http")
@@ -219,6 +263,14 @@ def create_app(backend_url: str) -> FastAPI:
     # --- WebSocket proxy ---
     @app.websocket("/ws/{path:path}")
     async def ws_proxy(websocket: WebSocket, path: str):
+        # WebSocket has no CORS preflight, so enforce Host (anti-rebinding) and Origin here,
+        # before proxy_websocket() accepts the connection.
+        origin = websocket.headers.get("origin")
+        host_ok = _hostname(websocket.headers.get("host", "")) in _ALLOWED_HOSTS
+        origin_ok = (not origin) or _hostname(origin) in _ALLOWED_ORIGINS
+        if not (host_ok and origin_ok):
+            await websocket.close(code=1008)  # policy violation
+            return
         await proxy_websocket(websocket, path, ws_url)
 
     # --- API reverse proxy (must come after specific routes) ---

@@ -88,3 +88,49 @@ class TestHostServerCreation:
             assert called == ["debug"]
         finally:
             daemon_log.set_level(previous)
+
+
+class TestLocalAccessGuard:
+    """The daemon must serve only loopback callers (DNS-rebinding defense) and reject
+    cross-site state-changing requests (CSRF defense)."""
+
+    def _client(self):
+        return TestClient(create_app("http://localhost:9999"))
+
+    def test_rejects_non_loopback_host(self):
+        # DNS-rebinding: a malicious site reaches us with its own domain in the Host header.
+        resp = self._client().get("/api/log-level", headers={"host": "attacker.example"})
+        assert resp.status_code == 403
+
+    def test_allows_loopback_host(self):
+        resp = self._client().get("/api/log-level", headers={"host": "127.0.0.1:1234"})
+        assert resp.status_code == 200
+
+    def test_rejects_cross_origin_state_change(self):
+        resp = self._client().post(
+            "/api/log-level",
+            json={"level": "debug"},
+            headers={"origin": "https://evil.example"},
+        )
+        assert resp.status_code == 403
+
+    def test_allows_same_origin_state_change(self):
+        previous = daemon_log.get_level()
+        try:
+            resp = self._client().post(
+                "/api/log-level",
+                json={"level": "debug"},
+                headers={"origin": "http://localhost:1234"},
+            )
+            assert resp.status_code == 204
+        finally:
+            daemon_log.set_level(previous)
+
+    def test_allows_missing_origin_state_change(self):
+        # Non-browser clients (daemon tooling, tests) legitimately send no Origin.
+        previous = daemon_log.get_level()
+        try:
+            resp = self._client().post("/api/log-level", json={"level": "info"})
+            assert resp.status_code == 204
+        finally:
+            daemon_log.set_level(previous)
