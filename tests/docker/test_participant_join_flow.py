@@ -18,6 +18,7 @@ sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
 import pytest
+from pages.participant_page import ParticipantPage
 from playwright.sync_api import expect, sync_playwright
 from session_utils import (
     BASE,
@@ -26,7 +27,6 @@ from session_utils import (
     _req,
     fresh_session,
 )
-from pages.participant_page import ParticipantPage
 
 # ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -74,8 +74,8 @@ def _end_session():
     # Also wait for Railway to reflect no active session
     deadline = time.monotonic() + 8
     while time.monotonic() < deadline:
-        data = _get_json(f"{BASE}/api/status")
-        if not data.get("session_id"):
+        data = _get_json(f"{BASE}/api/is-active-session")
+        if not data.get("active"):
             return
         time.sleep(0.3)
 

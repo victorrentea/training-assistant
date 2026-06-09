@@ -12,21 +12,21 @@ import json
 import os
 import random
 import re
+import ssl
 import subprocess
 import sys
 import threading
 import time
 
+# side-effect import: loads shared secrets (HOST_USERNAME/HOST_PASSWORD) into os.environ
+import auth  # noqa: F401
 import certifi
 import pytest
 import requests
-import ssl
 import websockets
 
 LOAD_TEST_URL = os.environ.get("LOAD_TEST_URL")
 LOAD_TEST_COUNT = int(os.environ.get("LOAD_TEST_COUNT", "30"))
-
-import auth  # noqa: loads shared secrets into os.environ
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 
@@ -34,10 +34,9 @@ HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 @pytest.fixture(scope="module")
 def server_url():
     if LOAD_TEST_URL:
-        # Fetch active session from the remote server
-        r = requests.get(f"{LOAD_TEST_URL}/api/session/active")
-        r.raise_for_status()
-        _load_session_id[0] = r.json().get("session_id")
+        # session_id is no longer publicly discoverable — the operator must provide it.
+        _load_session_id[0] = os.environ.get("LOAD_SESSION_ID")
+        assert _load_session_id[0], "Set LOAD_SESSION_ID env var (session_id is no longer exposed by a public endpoint)"
         yield LOAD_TEST_URL
         return
     server_env = os.environ.copy()

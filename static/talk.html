@@ -514,8 +514,8 @@ function _renderSpeaker() {
 
   (async function init() {
     try {
-      var status = await fetch('/api/status').then(function(r) { return r.json(); });
-      _sessionId = status.session_id;
+      // Served at /{session_id}/ — read the id from the URL path, not from a public endpoint.
+      _sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
       if (!_sessionId) return;
       await fetch('/' + _sessionId + '/api/participant/register', {
         method: 'POST',

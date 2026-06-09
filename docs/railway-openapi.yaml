@@ -7,25 +7,6 @@ info:
     backend. All endpoints require HTTP Basic Auth (HOST_USERNAME / HOST_PASSWORD).
     This spec is separate from the host/participant-facing API (docs/openapi.yaml).
 paths:
-  /api/session/active:
-    get:
-      tags:
-      - session
-      summary: Get Active Session ID
-      description: >
-        Daemon calls on startup to discover if a session is already active on
-        Railway. Returns the current session_id or null if no session is active.
-      operationId: get_active_session_id
-      security:
-      - basicAuth: []
-      responses:
-        '200':
-          description: Active session info
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ActiveSessionResponse'
-      x-feature: session_management
   /api/slides/upload:
     post:
       tags:
@@ -237,16 +218,6 @@ components:
         HTTP Basic Auth using HOST_USERNAME and HOST_PASSWORD from
         ~/.training-assistants-secrets.env.
   schemas:
-    ActiveSessionResponse:
-      type: object
-      properties:
-        session_id:
-          type:
-          - string
-          - 'null'
-          description: Current active session ID, or null if no session is active.
-      required:
-      - session_id
     RefreshSlideRequest:
       type: object
       properties:

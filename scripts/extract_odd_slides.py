@@ -58,13 +58,14 @@ def _fetch(url: str, username: str, password: str) -> bytes:
         return resp.read()
 
 
-def _get_session_id(base_url: str) -> str:
+def _get_session_id() -> str:
     import json
-    with urllib.request.urlopen(f"{base_url}/api/status", context=_SSL_CTX, timeout=10) as resp:
+    # session_id is owned by the local daemon; Railway no longer exposes it publicly.
+    with urllib.request.urlopen("http://localhost:1234/api/session/active", timeout=10) as resp:
         data = json.loads(resp.read())
     sid = data.get("session_id", "")
     if not sid:
-        raise RuntimeError("No active session on Railway")
+        raise RuntimeError("No active session on the local daemon (is the daemon running?)")
     return sid
 
 
@@ -95,7 +96,7 @@ def main() -> None:
     output_path = Path(sys.argv[2]) if len(sys.argv) >= 3 else Path(f"odd_slides_{slug[:8]}.pdf")
 
     # Resolve session_id
-    session_id = _get_session_id(base_url)
+    session_id = _get_session_id()
 
     # Download PDF
     download_url = f"{base_url}/{session_id}/api/slides/download/{slug}"

@@ -16,8 +16,8 @@ import base64
 import json
 import os
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
@@ -102,7 +102,7 @@ def fresh_session(name: str = "Test", session_type: str = "workshop") -> str:
 
     # Step 4: wait for Railway to learn the new session_id
     _wait_until(
-        lambda: _get_json(f"{BASE}/api/status").get("session_id") == session_id,
+        lambda: _get_json(f"{BASE}/{session_id}/api/status").get("session_id") == session_id,
         timeout_ms=10000,
         msg=f"Railway did not activate session_id={session_id!r}",
     )

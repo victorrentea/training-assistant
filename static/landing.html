@@ -333,13 +333,8 @@
     const LS_CUSTOM_NAME_KEY = 'workshop_custom_name';
     const ON_HOST_MACHINE_COOKIE = 'ON_HOST_MACHINE';
 
-    // ── Host detection ──
-    function isHostCookie() {
-      return document.cookie.includes('is_host=1');
-    }
-
     function getStorage() {
-      return isHostCookie() ? sessionStorage : localStorage;
+      return localStorage;
     }
 
     // ── ON_HOST_MACHINE cookie ──
@@ -656,7 +651,6 @@
     // ── Registration + name entry flow ──
     async function registrationFlow(sessionId) {
       const storage = getStorage();
-      const isHost = isHostCookie();
 
       // Get or create UUID
       let uuid = storage.getItem(LS_UUID_KEY);
@@ -680,16 +674,6 @@
       // Returning participant with a custom name — enter directly
       if (hasStoredCustomName) {
         enterApp(sessionId, regData.name);
-        return;
-      }
-
-      // Host flow: append " (host)" and enter immediately
-      if (isHost) {
-        const hostName = regData.name + ' (host)';
-        // Rename to add (host) suffix
-        await renameParticipant(sessionId, uuid, hostName);
-        storage.setItem(LS_CUSTOM_NAME_KEY, '1');
-        enterApp(sessionId, hostName);
         return;
       }
 

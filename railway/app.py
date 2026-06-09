@@ -175,12 +175,6 @@ if os.environ.get("OTEL_TRACES_FILE"):
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.get("/api/session/active")
-async def session_active():
-    """Return current session_id (set on Railway only by the daemon's set_session_id WS push)."""
-    return {"session_id": state.session_id}
-
-
 @app.get("/api/is-active-session")
 async def is_active_session():
     """Public endpoint: returns whether daemon is connected and any session is active.
@@ -207,7 +201,6 @@ async def get_status():
         "daemon_code_timestamp": state.daemon_code_timestamp,
         "railway_started_at": _RAILWAY_STARTED_AT_ISO,
         "session_active": state.session_id is not None,
-        "session_id": state.session_id,
     }
 
 
@@ -221,5 +214,5 @@ async def get_session_status(session_id: str, _=Depends(require_valid_session)):
         "daemon_code_timestamp": state.daemon_code_timestamp,
         "railway_started_at": _RAILWAY_STARTED_AT_ISO,
         "session_active": True,
-        "session_id": state.session_id,
+        "session_id": session_id,
     }

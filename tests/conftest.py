@@ -181,8 +181,8 @@ def server_url(tmp_path_factory):
     # Wait for Railway to receive the WS announcement and populate state.session_id.
     _deadline = time.time() + 5
     while time.time() < _deadline:
-        rs = requests.get(f"{base_url}/api/session/active", timeout=1)
-        if rs.ok and rs.json().get("session_id") == _cached_session_id[0]:
+        rs = requests.get(f"{base_url}/{_cached_session_id[0]}/api/status", timeout=1)
+        if rs.ok:
             break
         time.sleep(0.05)
     else:
@@ -258,10 +258,12 @@ def _get_session_id():
                 port = sp["port"]
                 break
     assert port, "No server port — server_url fixture must run first"
-    r = requests.get(f"http://127.0.0.1:{port}/api/session/active")
+    _daemon_port = os.environ.get("DAEMON_HOST_PORT")
+    daemon = f"http://127.0.0.1:{_daemon_port}" if _daemon_port else (_daemon_url[0] or f"http://127.0.0.1:{port}")
+    r = requests.get(f"{daemon}/api/session/active")
     r.raise_for_status()
     sid = r.json().get("session_id")
-    assert sid, "No session_id in /api/session/active"
+    assert sid, "No session_id in daemon /api/session/active"
     _cached_session_id[0] = sid
     return sid
 

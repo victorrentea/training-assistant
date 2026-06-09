@@ -36,7 +36,7 @@ class TestLandingPage:
         browser.close()
 
     def test_session_active_endpoint(self, server_url):
-        r = requests.get(f"{server_url}/api/session/active")
+        r = requests.get(f"{server_url}/api/is-active-session")
         assert r.status_code == 200
         assert r.json()["active"] is True
 

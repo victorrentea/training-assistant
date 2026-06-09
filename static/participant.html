@@ -2296,7 +2296,6 @@ function resetOnboardingForTest() {
 <script>
 let _sessionId = null;
 var _firstConnect = true;
-var _isHostTab = document.cookie.indexOf('is_host=1') >= 0;
 var _myScore = 0;
 function _updateScoreBadge(score, earned) {
   var badge = document.getElementById('activity-score-badge');
@@ -2309,7 +2308,7 @@ function _updateScoreBadge(score, earned) {
   }
 }
 
-var _uuidStore = _isHostTab ? sessionStorage : localStorage;
+var _uuidStore = localStorage;
 var _myUUID = (function() {
   var key = 'workshop_participant_uuid';
   var uid = _uuidStore.getItem(key);
@@ -2349,7 +2348,6 @@ var _pollVoteCounts = null;       // list[int] when public or ended, null otherw
 var _currentActivity = 'none';
 
 function _shouldShowOnboarding() {
-  if (_isHostTab) return false;
   return !localStorage.getItem(LS_ONBOARDING_KEY);
 }
 
@@ -2442,7 +2440,6 @@ function _completeOnboarding() {
 // participant view opens. Each pop is guarded by its own localStorage key, so it
 // never repeats once seen. Dismissed by the "Got it" link or by tapping ☕.
 function _showBreakReminder() {
-  if (_isHostTab) return;
   var tooltip = document.getElementById('break-reminder-tooltip');
   if (!tooltip) return;
   _positionTooltipAboveCoffee('break-reminder-tooltip');
@@ -2458,7 +2455,6 @@ function _hideBreakReminder() {
 }
 
 function _scheduleBreakReminders() {
-  if (_isHostTab) return;
   if (_breakRemindersScheduled) return;
   _breakRemindersScheduled = true;
   [[5, LS_BREAK_5MIN_KEY], [60, LS_BREAK_60MIN_KEY]].forEach(function (pair) {
@@ -2477,7 +2473,6 @@ function _hasCustomName() {
 
 var _nameNudgeVisible = false;
 function _showNameNudge() {
-  if (_isHostTab) return;
   if (_onboardingStep !== 0) return;
   if (_hasCustomName()) return;
   var tooltip2 = document.getElementById('onboarding-tooltip-2');
@@ -2581,9 +2576,7 @@ function _startTimestampUpdates() {
 }
 
 function _applyHostSuffix(name) {
-  if (!_isHostTab) return name;
-  var SUFFIX = ' (host)';
-  return name.endsWith(SUFFIX) ? name : name + SUFFIX;
+  return name;
 }
 
 function _updateProfileCard(name, avatarStr) {
@@ -2801,8 +2794,9 @@ async function _refreshParticipantState() {
 
 (async function loadParticipantState() {
   try {
-    var status = await fetch('/api/status').then(function(r) { return r.json(); });
-    _sessionId = status.session_id;
+    // Served at /{session_id}/ — the id is already in the (backend-validated) URL path.
+    // Never discover it from a public endpoint: that would let anyone join the active session.
+    _sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
     console.log('[participant] session_id:', _sessionId);
     if (!_sessionId) return;
     if (LS.getSessionId() !== _sessionId) {

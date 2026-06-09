@@ -56,7 +56,7 @@ def _api(method, path, data=None):
 
 def _session_active() -> bool:
     try:
-        return _api("GET", "/api/session/active").get("active", False)
+        return _api("GET", "/api/is-active-session").get("active", False)
     except Exception:
         return False
 
@@ -90,7 +90,7 @@ def backend():
     # Wait until healthy
     for _ in range(60):
         try:
-            urllib.request.urlopen(f"{BASE}/api/session/active")
+            urllib.request.urlopen(f"{BASE}/api/is-active-session")
             break
         except Exception:
             time.sleep(0.3)

@@ -12,8 +12,9 @@ import urllib.request
 from pathlib import Path
 
 from daemon import log
-from daemon.http import get_active_session_id, session_api_url
+from daemon.http import session_api_url
 from daemon.misc.state import misc_state
+from daemon.session.state import get_active_session_id
 from daemon.slides.daemon import SlidesDaemonConfig, _post_json, _ssl_context
 from daemon.slides.drive_sync import _beep_local, _download_pdf_from_url, _is_google_drive_running
 
@@ -104,7 +105,7 @@ def _push_error_status(config: SlidesDaemonConfig, message: str) -> None:
         "slides": [],
     }
     try:
-        sid = get_active_session_id(config.server_url)
+        sid = get_active_session_id()
         _post_json(
             session_api_url(config.server_url, sid, "/poll-status"),
             payload,

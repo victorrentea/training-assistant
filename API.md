@@ -41,11 +41,6 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Host resumes an existing session folder. Like /create, this requires Google Drive to be running so we can resolve the folder's GDrive URL for the participant view. Returns 503 if unavailable.<br>`POST /api/session/resume` | `folder: string` | `session_name: string`<br>`session_id: string` |
 | Talk Presentation Path, host drops a PPTX file during a talk — resolve GDrive URL, trigger Railway download, push current_slide_updated.<br>`POST /api/session/talk-presentation-path` | `path: string` | - |
 
-### Railway REST
-| Endpoint | Request | Response |
-| --- | --- | --- |
-| Get Active Session ID, daemon calls on startup to discover if a session is already active on Railway; returns the current session_id or null if no session is active.<br>`GET /api/session/active` | - | `session_id: any  # Current active session ID, or null if no session is active.` |
-
 ### Railway WS
 | Message | Payload |
 | --- | --- |
