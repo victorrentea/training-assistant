@@ -232,3 +232,172 @@ def test_files_md_two_participants_three_events():
             stop.set()
 
     print("[test] test_files_md_two_participants_three_events PASSED")
+
+
+def _run_controllable_addon_bridge(initial, deferred, send_deferred, stop):
+    """Addon bridge that pushes `initial` events on connect, then `deferred`
+    events only after the test sets `send_deferred` — lets a participant join
+    between the two batches to exercise the live badge update.
+
+    Binds with a short retry so a port lingering from a sibling test (the daemon
+    keeps a persistent client connection to this port) does not flake the run.
+    """
+    import asyncio
+
+    import websockets
+
+    async def handle(websocket):
+        for evt in initial:
+            await websocket.send(json.dumps(evt))
+        await asyncio.get_event_loop().run_in_executor(None, send_deferred.wait, 30)
+        for evt in deferred:
+            await websocket.send(json.dumps(evt))
+        await asyncio.get_event_loop().run_in_executor(None, stop.wait, 30)
+
+    async def serve():
+        last_err = None
+        for _ in range(60):  # up to ~30s waiting for a lingering port to free up
+            if stop.is_set():
+                return
+            try:
+                async with websockets.serve(handle, "127.0.0.1", _ADDON_BRIDGE_PORT):
+                    await asyncio.get_event_loop().run_in_executor(None, stop.wait, 60)
+                    return
+            except OSError as e:  # address already in use — retry
+                last_err = e
+                await asyncio.sleep(0.5)
+        if last_err is not None:
+            raise last_err
+
+    asyncio.run(serve())
+
+
+def test_files_badge_live_seed_red_clear():
+    """Participant 'Files' nav badge:
+      - seeds the file count on join (file already open before joining),
+      - live-updates the number AND turns red when a new file is opened while
+        the participant is NOT viewing the Files panel,
+      - clears the red when the Files panel is opened.
+    """
+    session_id = fresh_session("FilesBadge")
+
+    # Public repo + a single valid blob. The first (initial) file resolves to a
+    # linked entry; the second (deferred) file has no seeded blob → unlinked
+    # entry — both still count toward the badge number.
+    _seed_github_stub(
+        repos=[
+            {
+                "owner": "victorrentea",
+                "repo": "training-assistant",
+                "status": 200,
+                "default_branch": "master",
+            },
+        ],
+        blobs=[
+            {
+                "owner": "victorrentea",
+                "repo": "training-assistant",
+                "path": "static/participant.html",
+                "status": 200,
+            },
+            # totally/missing/path.py intentionally absent → 404 → unlinked entry
+        ],
+    )
+
+    repo_url = "https://github.com/victorrentea/training-assistant"
+    initial = [
+        {"type": "git_file_opened", "url": repo_url, "branch": "x",
+         "file": "static/participant.html"},
+    ]
+    deferred = [
+        {"type": "git_file_opened", "url": repo_url, "branch": "x",
+         "file": "totally/missing/path.py"},
+    ]
+
+    send_deferred = threading.Event()
+    stop = threading.Event()
+    thread = threading.Thread(
+        target=_run_controllable_addon_bridge,
+        args=(initial, deferred, send_deferred, stop),
+        daemon=True,
+    )
+    thread.start()
+    try:
+        time.sleep(0.5)  # let the daemon reconnect to the bridge
+
+        # Wait until the first file is ingested (count == 1)
+        deadline = time.monotonic() + 25
+        while time.monotonic() < deadline:
+            try:
+                md = json.loads(
+                    urllib.request.urlopen(
+                        f"{BASE}/{session_id}/api/participant/files-md", timeout=2
+                    ).read()
+                )
+                if "participant.html" in md.get("raw_markdown", ""):
+                    break
+            except Exception:
+                pass
+            time.sleep(0.5)
+        else:
+            pytest.fail("Daemon did not ingest the first file within 25s")
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            try:
+                ctx = browser.new_context()
+                page = ctx.new_page()
+                page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+                pax = ParticipantPage(page)
+                pax.join("Files Fan")
+
+                badge = page.locator("#files-badge")
+
+                # 1) Seed path: badge shows "1", visible, and NOT red on first join.
+                page.wait_for_function(
+                    "() => { var b = document.getElementById('files-badge');"
+                    " return b && b.style.display !== 'none' && b.textContent === '1'; }",
+                    timeout=10000,
+                )
+                assert "badge-alert" not in (badge.get_attribute("class") or ""), (
+                    "Seeded Files badge must not be red on first join"
+                )
+
+                # Precondition: the participant must NOT be on the Files view, so the
+                # next update is an "unread" change that should turn the badge red.
+                on_files = page.evaluate(
+                    "() => document.getElementById('files-view').style.display !== 'none'"
+                )
+                assert not on_files, "Participant should land on a non-Files view"
+
+                # 2) Live + red: open a second file → badge becomes "2" AND turns red.
+                send_deferred.set()
+                page.wait_for_function(
+                    "() => { var b = document.getElementById('files-badge');"
+                    " return b && b.textContent === '2'"
+                    " && b.classList.contains('badge-alert'); }",
+                    timeout=20000,
+                )
+
+                # Screenshot proof: left menu with the red "2" Files badge.
+                shot_dir = "/app/docs/sequences/extracted"
+                os.makedirs(shot_dir, exist_ok=True)
+                page.screenshot(path=f"{shot_dir}/files-badge-red.png")
+
+                # 3) Clear red: opening the Files panel removes the alert.
+                page.evaluate("showView('files')")
+                page.wait_for_function(
+                    "() => { var b = document.getElementById('files-badge');"
+                    " return b && !b.classList.contains('badge-alert'); }",
+                    timeout=10000,
+                )
+                assert (badge.text_content() or "").strip() == "2"
+                ctx.close()
+            finally:
+                browser.close()
+    finally:
+        # Always release the addon-bridge port so a later test can bind it.
+        stop.set()
+        thread.join(timeout=5)
+
+    print("[test] test_files_badge_live_seed_red_clear PASSED")

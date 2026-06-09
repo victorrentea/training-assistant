@@ -44,6 +44,7 @@ channels:
           - $ref: '#/components/messages/notes_updated'
           - $ref: '#/components/messages/summary_updated'
           - $ref: '#/components/messages/agenda_updated'
+          - $ref: '#/components/messages/files_count_updated'
           - $ref: '#/components/messages/reload'
           - $ref: '#/components/messages/emoji_counters_updated'
 
@@ -502,6 +503,21 @@ components:
           has_agenda:
             type: boolean
             description: Whether an agenda .docx is available in the session folder
+
+    # ── Files ─────────────────────────────────────────────────────────────────
+
+    files_count_updated:
+      summary: Number of files opened this session changed
+      x-feature: files
+      payload:
+        type: object
+        required: [type, count]
+        properties:
+          type:
+            type: string
+            enum: [files_count_updated]
+          count:
+            type: integer
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 

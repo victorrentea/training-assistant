@@ -276,9 +276,18 @@ class ParticipantStateResponse(BaseModel):
     notes_updated_at: str | None = None
     summary_updated_at: str | None = None
     slides_history_count: int
+    files_count: int = 0
     gdrive_url: str | None = None
     has_agenda: bool = False
     emoji_catalog: list[EmojiDef]
+
+
+def _files_count() -> int:
+    """Number of files opened in the active session (0 if none)."""
+    from daemon import files_md
+    from daemon.misc.content_files import get_active_session_folder
+
+    return files_md.count_open_files(get_active_session_folder())
 
 
 def _build_qa_for_participant(pid: str) -> list[dict]:
@@ -748,6 +757,8 @@ async def get_participant_state(request: Request):
         "notes_updated_at": notes_updated_at,
         "summary_updated_at": summary["updated_at"],
         "slides_history_count": len(misc_state.slides_viewed),
+        # Files opened this session (count only — full list fetched on demand)
+        "files_count": _files_count(),
         # Google Drive folder link for session materials
         "gdrive_url": session_shared_state.get_gdrive_url(),
         # Agenda .docx availability

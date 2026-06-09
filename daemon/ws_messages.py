@@ -271,6 +271,14 @@ class AgendaUpdatedMsg(BaseModel):
     has_agenda: bool = False  # whether an agenda .docx is available in the session folder
 
 
+# ── Files ─────────────────────────────────────────────────────────────────────
+
+class FilesCountUpdatedMsg(BaseModel):
+    """Participant-only: total number of files opened this session."""
+    type: Literal["files_count_updated"] = "files_count_updated"
+    count: int
+
+
 # ── Host-only: Talk presentation ──────────────────────────────────────────────
 
 class TalkPdfReadyMsg(BaseModel):
@@ -340,6 +348,8 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "notes_updated": NotesUpdatedMsg,
     "summary_updated": SummaryUpdatedMsg,
     "agenda_updated": AgendaUpdatedMsg,
+    # Files
+    "files_count_updated": FilesCountUpdatedMsg,
     # Emoji
     "emoji_counters_updated": EmojiCountersUpdatedMsg,
     # Cross-cutting
@@ -417,6 +427,8 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "notes_updated": "notes_summary",
     "summary_updated": "notes_summary",
     "agenda_updated": "notes_summary",
+    # Files
+    "files_count_updated": "files",
     # Emoji
     "emoji_counters_updated": "emoji",
     # Cross-cutting

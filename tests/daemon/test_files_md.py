@@ -97,6 +97,42 @@ def test_parse_empty_returns_empty_doc():
     assert files_md.Doc.parse(files_md.EMPTY_STATE).repos == []
 
 
+def test_count_open_files_none_and_missing(tmp_path: Path):
+    assert files_md.count_open_files(None) == 0
+    assert files_md.count_open_files(tmp_path) == 0  # no files.md yet
+
+
+def test_count_open_files_empty_state(tmp_path: Path):
+    (tmp_path / "files.md").write_text(files_md.EMPTY_STATE, encoding="utf-8")
+    assert files_md.count_open_files(tmp_path) == 0
+
+
+def test_count_open_files_counts_entries_across_repos(tmp_path: Path):
+    doc = files_md.Doc(repos=[
+        files_md.Repo(
+            url="https://github.com/owner/repo",
+            name="repo",
+            default_branch="main",
+            entries=[
+                files_md.Entry("a.py", "https://github.com/owner/repo/blob/main/src/a.py",
+                               "src/a.py", "2026-05-27T10:00:00Z", None),
+                files_md.Entry("x.py", None, None, "2026-05-27T10:01:00Z", "blob-404"),
+            ],
+        ),
+        files_md.Repo(
+            url="https://github.com/owner/other",
+            name="other",
+            default_branch="main",
+            entries=[
+                files_md.Entry("c.py", "https://github.com/owner/other/blob/main/c.py",
+                               "c.py", "2026-05-27T10:02:00Z", None),
+            ],
+        ),
+    ])
+    (tmp_path / "files.md").write_text(doc.render(), encoding="utf-8")
+    assert files_md.count_open_files(tmp_path) == 3
+
+
 def test_atomic_write_creates_tmp_then_renames(tmp_path: Path, monkeypatch):
     target = tmp_path / "files.md"
     seen: list[str] = []

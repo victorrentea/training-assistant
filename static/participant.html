@@ -25,7 +25,7 @@ body{visibility:hidden}
 .pdf-buffer { position: absolute; inset: 0; }
 .buf-front  { opacity: 1; pointer-events: auto; z-index: 2; }
 .buf-back   { opacity: 0; pointer-events: none; z-index: 1; }
-#notes-badge,#summary-badge{background:#9ca3af}
+#notes-badge,#summary-badge,#files-badge{background:#9ca3af}
 .badge-alert{background:#ef4444!important}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes follow-pulse{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
@@ -562,6 +562,7 @@ body{visibility:hidden}
 <a data-nav="files" onclick="showView('files')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-size:22px;line-height:1;flex-shrink-0">commit</span>
 <span class="text-base">Files</span>
+<span id="files-badge" class="badge-new" style="display:none"></span>
 </a>
 <a data-nav="upload-paste" onclick="showView('upload-paste')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">upload</span>
@@ -1172,6 +1173,7 @@ var LS = {
   ACTIVE_SLIDE: 'new:active_slide_slug',
   NOTES_UNREAD: 'new:notes_unread',
   SUMMARY_UNREAD: 'new:summary_unread',
+  FILES_UNREAD: 'new:files_unread',
   ACTIVITY_SEEN: 'new:activity_seen',
   ACCESS_TOAST_DISMISSED: 'new:access_toast_dismissed_date',
   SESSION_ID: 'new:session_id',
@@ -1200,6 +1202,8 @@ var LS = {
   setNotesUnread:  function(v) { localStorage.setItem(LS.NOTES_UNREAD, v ? 'true' : 'false'); },
   isSummaryUnread: function()  { return localStorage.getItem(LS.SUMMARY_UNREAD) === 'true'; },
   setSummaryUnread: function(v){ localStorage.setItem(LS.SUMMARY_UNREAD, v ? 'true' : 'false'); },
+  isFilesUnread:   function()  { return localStorage.getItem(LS.FILES_UNREAD) === 'true'; },
+  setFilesUnread:  function(v) { localStorage.setItem(LS.FILES_UNREAD, v ? 'true' : 'false'); },
   isActivitySeen:  function()  { return !!localStorage.getItem(LS.ACTIVITY_SEEN); },
   setActivitySeen: function()  { localStorage.setItem(LS.ACTIVITY_SEEN, '1'); },
   _todayLocalDate: function() {
@@ -1472,6 +1476,13 @@ function _hideSlideHistory() {
 }
 function _setPastSlidesBadge(total) {
   var badge = document.getElementById('past-slides-badge');
+  if (!badge) return;
+  var n = Math.max(0, Number(total || 0));
+  badge.textContent = String(n);
+  badge.style.display = n > 0 ? '' : 'none';
+}
+function _setFilesBadge(total) {
+  var badge = document.getElementById('files-badge');
   if (!badge) return;
   var n = Math.max(0, Number(total || 0));
   badge.textContent = String(n);
@@ -2172,7 +2183,7 @@ function showView(name) {
   if (name === 'agenda') loadAgenda();
   if (name === 'notes') { loadNotes(); _applyNotesBadgeUnread(false); }
   if (name === 'summary') { loadSummary(); _applySummaryBadgeUnread(false); }
-  if (name === 'files') { _filesDirty = true; loadFilesMd(); }
+  if (name === 'files') { _filesDirty = true; loadFilesMd(); _applyFilesBadgeUnread(false); }
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
@@ -2901,6 +2912,8 @@ async function _refreshParticipantState() {
     else { gdriveNav.style.display = 'none'; }
     _applyGdriveToast(state.gdrive_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
+    _setFilesBadge(state.files_count || 0);
+    document.getElementById('files-badge').classList.toggle('badge-alert', (state.files_count || 0) > 0 && LS.isFilesUnread());
     var saved = LS.getView();
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
     if (saved === 'notes' && !state.notes_updated_at) saved = 'slides';
@@ -2922,6 +2935,10 @@ function _applyNotesBadgeUnread(unread) {
 function _applySummaryBadgeUnread(unread) {
   LS.setSummaryUnread(unread);
   document.getElementById('summary-badge').classList.toggle('badge-alert', unread);
+}
+function _applyFilesBadgeUnread(unread) {
+  LS.setFilesUnread(unread);
+  document.getElementById('files-badge').classList.toggle('badge-alert', unread);
 }
 
 function _applyState(msg) {
@@ -2976,6 +2993,9 @@ function _applyState(msg) {
   }
   if (msg.slides_history_count != null) {
     _setPastSlidesBadge(msg.slides_history_count);
+  }
+  if (msg.files_count != null) {
+    _setFilesBadge(msg.files_count);
   }
   // Sync name from server
   if (msg.my_name && msg.my_name !== _myName) {
@@ -3481,6 +3501,13 @@ function _handleWsMessage(msg) {
       break;
     case 'current_slide_updated': _onIncomingHostSlidesCurrent(msg.current_slide || null); break;
     case 'slides_history_count_updated': _setPastSlidesBadge(msg.count); break;
+    case 'files_count_updated': {
+      _setFilesBadge(msg.count);
+      var onFiles = document.getElementById('files-view').style.display !== 'none';
+      if (onFiles) { loadFilesMd(); _applyFilesBadgeUnread(false); }
+      else { _filesDirty = true; _applyFilesBadgeUnread(msg.count > 0); }
+      break;
+    }
     case 'active_participants_count_updated': {
       var paxDisplay = document.getElementById('pax-count-display');
       document.getElementById('pax-count').textContent = msg.count;

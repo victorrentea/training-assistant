@@ -470,6 +470,7 @@ def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
     notes_mtime_ns = probe.get("notes_mtime_ns")
     summary_mtime_ns = probe.get("summary_mtime_ns")
     agenda_mtime_ns = probe.get("agenda_mtime_ns")
+    files_mtime_ns = probe.get("files_mtime_ns")
     # Suppress only the very first ("initial") probe when nothing exists yet —
     # participants already get nulls/false from GET /api/participant/state. A later
     # present->absent transition is a real change and MUST broadcast so navs hide.
@@ -478,11 +479,17 @@ def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
         and notes_mtime_ns is None
         and summary_mtime_ns is None
         and agenda_mtime_ns is None
+        and files_mtime_ns is None
     ):
         return
     from datetime import datetime, timezone
 
-    from daemon.ws_messages import AgendaUpdatedMsg, NotesUpdatedMsg, SummaryUpdatedMsg
+    from daemon.ws_messages import (
+        AgendaUpdatedMsg,
+        FilesCountUpdatedMsg,
+        NotesUpdatedMsg,
+        SummaryUpdatedMsg,
+    )
     from daemon.ws_publish import broadcast
     parts = set(change_parts.split(","))
     if "notes" in parts or "session" in parts or "initial" in parts:
@@ -497,6 +504,8 @@ def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
         broadcast(SummaryUpdatedMsg(updated_at=summary_updated_at))
     if "agenda" in parts or "session" in parts or "initial" in parts:
         broadcast(AgendaUpdatedMsg(has_agenda=agenda_mtime_ns is not None))
+    if "files" in parts or "session" in parts or "initial" in parts:
+        broadcast(FilesCountUpdatedMsg(count=int(probe.get("files_count") or 0)))
 
 
 
@@ -520,6 +529,7 @@ def _file_mtime_ns(path: Path | None) -> int | None:
 
 
 def _build_notes_summary_probe(session_folder: Path | None) -> dict:
+    from daemon import files_md
     from daemon.misc.content_files import _parse_summary_points
     notes_file = find_notes_in_folder(session_folder) if session_folder else None
     summary_file = (session_folder / "ai-summary.md") if session_folder else None
@@ -532,6 +542,9 @@ def _build_notes_summary_probe(session_folder: Path | None) -> dict:
         except OSError:
             summary_raw = None
     agenda_file = _find_agenda_docx(session_folder)
+    files_file = (session_folder / "files.md") if session_folder else None
+    if files_file and not files_file.exists():
+        files_file = None
     return {
         "session_folder": str(session_folder) if session_folder else None,
         "notes_file": str(notes_file) if notes_file else None,
@@ -542,6 +555,9 @@ def _build_notes_summary_probe(session_folder: Path | None) -> dict:
         "summary_point_count": len(_parse_summary_points(summary_raw)),
         "agenda_file": str(agenda_file) if agenda_file else None,
         "agenda_mtime_ns": _file_mtime_ns(agenda_file),
+        "files_file": str(files_file) if files_file else None,
+        "files_mtime_ns": _file_mtime_ns(files_file),
+        "files_count": files_md.count_open_files(session_folder),
     }
 
 
@@ -586,12 +602,19 @@ def _probe_change_parts(previous: dict | None, current: dict) -> str:
         previous.get("agenda_file") != current.get("agenda_file")
         or previous.get("agenda_mtime_ns") != current.get("agenda_mtime_ns")
     )
+    files_changed = (
+        previous.get("files_file") != current.get("files_file")
+        or previous.get("files_mtime_ns") != current.get("files_mtime_ns")
+        or previous.get("files_count") != current.get("files_count")
+    )
     if notes_changed:
         parts.append("notes")
     if summary_changed:
         parts.append("summary")
     if agenda_changed:
         parts.append("agenda")
+    if files_changed:
+        parts.append("files")
     return ",".join(parts) if parts else "none"
 
 

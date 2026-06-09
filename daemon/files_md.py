@@ -216,6 +216,24 @@ def _load_doc(folder: Path) -> Doc:
     return doc
 
 
+def count_open_files(folder: Path | None) -> int:
+    """Number of files recorded in the session's files.md (0 if none/absent).
+
+    Pure read — parses the markdown without the prune/upgrade side effects of
+    `_load_doc`, so it is cheap enough for the main-loop probe and `GET /state`.
+    """
+    if folder is None:
+        return 0
+    target = folder / _FILENAME
+    if not target.exists():
+        return 0
+    try:
+        doc = Doc.parse(target.read_text(encoding="utf-8", errors="replace"))
+    except Exception:  # noqa: BLE001
+        return 0
+    return sum(len(repo.entries) for repo in doc.repos)
+
+
 def _strip_noise_entries(doc: Doc) -> bool:
     """Remove entries whose basename is a known noise token. Returns True if anything was stripped."""
     changed = False

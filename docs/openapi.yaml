@@ -2575,6 +2575,10 @@ components:
         slides_history_count:
           type: integer
           title: Slides History Count
+        files_count:
+          type: integer
+          title: Files Count
+          default: 0
         gdrive_url:
           anyOf:
           - type: string
