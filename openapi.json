@@ -494,11 +494,61 @@
         }
       }
     },
-    "/{session_id}/notes": {
+    "/{session_id}/notes-print": {
       "get": {
-        "summary": "Notes Page",
-        "operationId": "notes_page__session_id__notes_get",
+        "summary": "Notes Print Page",
+        "description": "Standalone read-only session notes page (formerly served at /<session>/notes).",
+        "operationId": "notes_print_page__session_id__notes_print_get",
         "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{session_id}/{tab}": {
+      "get": {
+        "summary": "Participant Tab Page",
+        "description": "Serve the participant SPA for a deep-linked tab (e.g. /<session>/notes).",
+        "operationId": "participant_tab_page__session_id___tab__get",
+        "parameters": [
+          {
+            "name": "tab",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tab"
+            }
+          },
           {
             "name": "session_id",
             "in": "path",
@@ -703,23 +753,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/session/active": {
-      "get": {
-        "summary": "Session Active",
-        "description": "Return current session_id (set on Railway only by the daemon's set_session_id WS push).",
-        "operationId": "session_active_api_session_active_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
               }
             }
           }
