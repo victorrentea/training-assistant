@@ -1,8 +1,12 @@
 """Contract tests for participant HTML page routing (tabs + relocated notes page)."""
 
+import re
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from railway.app import app, state
+from railway.features.pages.router import _PARTICIPANT_TAB_SLUGS
 
 # A marker unique to the participant SPA (present in static/participant.html,
 # absent from the standalone static/notes.html).
@@ -46,3 +50,15 @@ def test_unknown_tab_is_404():
     client = TestClient(app)
     resp = client.get(f"/{state.session_id}/totally-bogus")
     assert resp.status_code == 404
+
+
+def test_frontend_views_are_all_routable():
+    """Every SPA tab (VIEWS in participant.html) must have a backend route slug,
+    else its deep link would 404. Guards manual frontend/backend drift."""
+    html = Path("static/participant.html").read_text(encoding="utf-8")
+    m = re.search(r"var VIEWS\s*=\s*\[([^\]]*)\]", html)
+    assert m, "could not find VIEWS array in static/participant.html"
+    views = re.findall(r"'([^']+)'", m.group(1))
+    assert views, "VIEWS array parsed empty"
+    missing = [v for v in views if v not in _PARTICIPANT_TAB_SLUGS]
+    assert not missing, f"frontend tabs missing backend route slugs: {missing}"
