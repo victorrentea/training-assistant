@@ -1581,8 +1581,10 @@ function togglePastSlides() {
   var isOpen = !!(el && el.style.display !== 'none');
   if (!isOpen) {
     openPastSlides();
+    _setTabUrl('past-slides');
   } else {
     closePastSlides({ focusAllTopics: false });
+    _setTabUrl(LS.getView());
   }
 }
 function _computeListHeight(list) {
@@ -2055,6 +2057,7 @@ async function selectTopic(el, event, slide, targetPageOverride) {
   VIEWS.forEach(function(v) {
     document.getElementById(v + '-view').style.display = v === 'slides' ? '' : 'none';
   });
+  _setTabUrl('slides');
   if (slide && slide.url) {
     if (slide.slug && _sessionId) {
       var hasFront = !!(window.Slides && window.Slides.front && window.Slides.front.pdfDoc);
@@ -2169,6 +2172,16 @@ var Engagement = (function() {
   }
   return { init: init, onView: onView };
 })();
+// Reflect the active tab in the address bar so a tab-specific link can be shared.
+// replaceState (not pushState): switching tabs must not stack browser history
+// entries or turn the mobile back-gesture into "undo tab change".
+function _setTabUrl(slug) {
+  if (!_sessionId || !slug) return;
+  var path = '/' + _sessionId + '/' + slug;
+  if (location.pathname !== path) {
+    try { history.replaceState(null, '', path); } catch (e) {}
+  }
+}
 function showView(name) {
   var followLabel = document.querySelector('label[for="slides-follow-checkbox"]');
   if (name !== 'slides') {
@@ -2185,6 +2198,7 @@ function showView(name) {
   setActive(name);
   Engagement.onView(name);
   LS.setView(name);
+  _setTabUrl(name);
   if (name === 'agenda') loadAgenda();
   if (name === 'notes') { loadNotes(); _applyNotesBadgeUnread(false); }
   if (name === 'summary') { loadSummary(); _applySummaryBadgeUnread(false); }
@@ -2914,11 +2928,21 @@ async function _refreshParticipantState() {
     _setFilesBadge(state.files_count || 0);
     document.getElementById('files-badge').classList.toggle('badge-alert', (state.files_count || 0) > 0 && LS.isFilesUnread());
     var saved = LS.getView();
+    // A tab slug in the URL (e.g. /<session>/notes) overrides the last-used tab,
+    // so a shared deep link opens on the intended tab.
+    var urlTab = (location.pathname.split('/')[2] || '').toLowerCase();
+    if (VIEWS.indexOf(urlTab) !== -1 || urlTab === 'past-slides') saved = urlTab;
     if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
     if (saved === 'notes' && !state.notes_updated_at) saved = 'slides';
     if (saved === 'summary' && !state.summary_updated_at) saved = 'slides';
     _hostSlidesCurrent = state.slides_current || null;
-    showView(saved);
+    if (saved === 'past-slides') {
+      showView('slides');
+      openPastSlides();
+      _setTabUrl('past-slides');
+    } else {
+      showView(saved);
+    }
     var followCb = document.getElementById('slides-follow-checkbox');
     if (followCb) followCb.checked = LS.getFollow(); // init checkbox from LS (handles non-slides landing view)
   } catch (e) {
