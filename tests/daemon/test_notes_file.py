@@ -11,7 +11,8 @@ def test_create_notes_file_uses_folder_name(tmp_path):
 
     assert notes.name == "2026-06-05 AI@Acme#1 - notes.txt"
     assert notes.exists()
-    assert notes.read_text(encoding="utf-8") == ""
+    # First line is the file's own name (self-labelling header).
+    assert notes.read_text(encoding="utf-8") == "2026-06-05 AI@Acme#1 - notes.txt\n"
 
 
 def test_created_notes_file_is_discovered(tmp_path):

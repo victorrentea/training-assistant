@@ -380,14 +380,15 @@ def find_notes_in_folder(folder: Path) -> Path | None:
 
 
 def create_notes_file(folder: Path) -> Path:
-    """Create an empty notes file named '<folder name> - notes.txt' and return it.
+    """Create a notes file named '<folder name> - notes.txt' and return it.
 
-    Called at session start when no .txt notes file exists yet, so the trainer
-    always has a notes file to write into. Never clobbers an existing file.
+    The file's first line is its own filename, so the notes are self-labelling when
+    opened or exported. Called at session start when no .txt notes file exists yet, so
+    the trainer always has a notes file to write into. Never clobbers an existing file.
     """
     notes_file = folder / f"{folder.name} - notes.txt"
     if not notes_file.exists():
-        notes_file.write_text("", encoding="utf-8")
+        notes_file.write_text(f"{notes_file.name}\n", encoding="utf-8")
     return notes_file
 
 
