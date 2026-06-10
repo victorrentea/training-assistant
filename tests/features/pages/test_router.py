@@ -62,3 +62,17 @@ def test_frontend_views_are_all_routable():
     assert views, "VIEWS array parsed empty"
     missing = [v for v in views if v not in _PARTICIPANT_TAB_SLUGS]
     assert not missing, f"frontend tabs missing backend route slugs: {missing}"
+
+
+def test_tab_catchall_does_not_shadow_root_routes():
+    """Regression: the /{session_id}/{tab} catch-all is a two-segment route, so it
+    must NOT swallow two-segment ROOT paths (/api/status, /api/is-active-session,
+    /static/*). It previously did, 307-redirecting them as session 'api'/'static'."""
+    client = TestClient(app, follow_redirects=False)
+    r = client.get("/api/status")
+    assert r.status_code == 200, f"/api/status shadowed by tab route: {r.status_code}"
+    assert "session_active" in r.json()
+    r = client.get("/api/is-active-session")
+    assert r.status_code == 200, f"/api/is-active-session shadowed: {r.status_code}"
+    r = client.get("/static/common.css")
+    assert r.status_code == 200, f"/static/common.css shadowed: {r.status_code}"

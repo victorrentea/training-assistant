@@ -156,7 +156,11 @@ session_host.include_router(upload.router)
 
 app.include_router(session_host)
 
-# ── Session-scoped participant routes (registered LAST — /{session_id} is a catch-all) ──
+# ── Session-scoped participant routes (/{session_id} is a catch-all) ──
+# Defined here, but registration is deferred to the very END of this module: the
+# /{session_id}/{tab} route matches ANY two-segment path, so registering it before
+# the explicit root routes below (/api/status, /api/is-active-session) or the
+# /static mount would shadow them (e.g. /api/status → session "api"). See bottom.
 
 session_participant = APIRouter(
     prefix="/{session_id}",
@@ -166,7 +170,6 @@ session_participant.include_router(participant_router)       # /
 session_participant.include_router(slides.public_router)     # /api/slides, /api/slides/file/{slug}, /api/slides/current
 session_participant.include_router(upload_public_router)     # /api/upload (participant file upload)
 session_participant.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
-app.include_router(session_participant)
 
 if os.environ.get("OTEL_TRACES_FILE"):
     from railway.features.telemetry.router import router as telemetry_router
@@ -216,3 +219,10 @@ async def get_session_status(session_id: str, _=Depends(require_valid_session)):
         "session_active": True,
         "session_id": session_id,
     }
+
+
+# ── Catch-all participant routes — registered ABSOLUTELY LAST ──
+# /{session_id}/{tab} matches any two-segment path, so it must come after every
+# explicit root route and the /static mount above; otherwise it shadows them
+# (e.g. /api/status → session "api", /static/common.css → session "static").
+app.include_router(session_participant)
