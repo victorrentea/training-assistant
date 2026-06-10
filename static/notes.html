@@ -154,10 +154,22 @@
 
     const savedY = sessionStorage.getItem('notes_scrollY');
 
-    fetch(apiBase + '/api/notes')
-      .then(r => {
-        if (r.status === 404) { window.location.href = '/?error=invalid'; throw new Error('redirect'); }
-        return r.json();
+    // Session notes + key points come from two daemon endpoints (proxied via
+    // /api/participant/*). Merge them into the shape the rendering below expects.
+    Promise.all([
+      fetch(apiBase + '/api/participant/notes'),
+      fetch(apiBase + '/api/participant/summary'),
+    ])
+      .then(async ([notesResp, summaryResp]) => {
+        if (notesResp.status === 404) { window.location.href = '/?error=invalid'; throw new Error('redirect'); }
+        const notes = notesResp.ok ? await notesResp.json() : {};
+        const summary = summaryResp.ok ? await summaryResp.json() : {};
+        return {
+          content: notes.notes_content,
+          raw_markdown: summary.raw_markdown,
+          summary_points: summary.points,
+          summary_updated_at: summary.updated_at,
+        };
       })
       .then(data => {
         const notesEl = document.getElementById('notes');
