@@ -85,26 +85,9 @@ body{visibility:hidden}
         .avatar-changed{animation:avatar-changed .4s ease-in-out}
         @keyframes avatar-swap{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
         .avatar-swap{animation:avatar-swap .3s ease-out}
-        #onboarding-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.5);
-          z-index: 40;
-          opacity: 0;
-          transition: opacity 300ms ease;
-          pointer-events: none;
-        }
-        #onboarding-overlay.visible { opacity: 1; }
-        #onboarding-overlay.hidden, #onboarding-tooltip.hidden, #onboarding-tooltip-2.hidden { display: none; }
-        #onboarding-tooltip {
-          position: fixed;
-          z-index: 51;
-          opacity: 0;
-          transform: translateY(8px);
-          transition: opacity 300ms ease, transform 300ms ease;
-          pointer-events: none;
-        }
-        #onboarding-tooltip.visible { opacity: 1; transform: translateY(0); }
+        /* Name-reminder nudge bubble (shown beside the profile card when an
+           activity that needs a name opens). Shares the bubble/arrow look with
+           the break reminder below. No blocking overlay. */
         #onboarding-tooltip-2 {
           position: fixed;
           z-index: 51;
@@ -113,6 +96,7 @@ body{visibility:hidden}
           pointer-events: none;
         }
         #onboarding-tooltip-2.visible { opacity: 1; }
+        #onboarding-tooltip-2.hidden { display: none; }
         .onboarding-bubble {
           position: relative;
           background: var(--color-primary, #4555ba);
@@ -143,9 +127,6 @@ body{visibility:hidden}
           background: var(--color-primary, #4555ba);
           transform: rotate(45deg);
         }
-        body.onboarding-active .absolute.bottom-6.right-6 { z-index: 50; }
-        body.onboarding-phase2 #profile-card { position: relative; z-index: 50; }
-        #onboarding-overlay.blocking { pointer-events: auto; }
 
         /* Break reminder bubble (reuses .onboarding-bubble look; non-blocking, no overlay) */
         #break-reminder-tooltip {
@@ -171,19 +152,6 @@ body{visibility:hidden}
           cursor: pointer;
         }
         .break-reminder-gotit:hover { opacity: 1; }
-
-        /* Emoji blink animation */
-        @keyframes emoji-blink {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.15); }
-        }
-        @keyframes emoji-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(69, 85, 186, 0.7); }
-          50% { box-shadow: 0 0 0 8px rgba(69, 85, 186, 0); }
-        }
-        body.onboarding-active #emoji-main-bar button {
-          animation: emoji-blink 1s ease-in-out infinite, emoji-pulse 1.5s ease-in-out infinite;
-        }
 
         /* Access duration toast */
         #access-duration-toast {
@@ -589,7 +557,7 @@ body{visibility:hidden}
   </button>
 </div>
 </aside>
-<div id="deploy-age-line" onclick="resetOnboardingForTest()" title="Click to reset onboarding (for testing)"
+<div id="deploy-age-line" onclick="resetRemindersForTest()" title="Click to reset break reminders (for testing)"
   class="fixed bottom-0 right-0 px-2 py-1 cursor-pointer select-none"
   style="font-size:0.625rem;line-height:1.3;color:var(--color-outline);opacity:0.5;transition:opacity 0.15s;z-index:100"
   onmouseenter="this.style.opacity='0.9'" onmouseleave="this.style.opacity='0.5'">
@@ -1231,7 +1199,6 @@ var LS = {
     localStorage.removeItem(LS.SUMMARY_UNREAD);
     localStorage.removeItem(LS.ACTIVITY_SEEN);
     localStorage.removeItem(LS.ACCESS_TOAST_DISMISSED);
-    localStorage.removeItem('workshop_onboarding_seen');
     localStorage.removeItem('workshop_break_reminder_5min_seen');
     localStorage.removeItem('workshop_break_reminder_60min_seen');
     LS._scrollViews().forEach(function(k) { localStorage.removeItem(k); });
@@ -2303,8 +2270,7 @@ function resetStatePrompt() {
     location.reload();
   }
 }
-function resetOnboardingForTest() {
-  localStorage.removeItem('workshop_onboarding_seen');
+function resetRemindersForTest() {
   localStorage.removeItem('workshop_break_reminder_5min_seen');
   localStorage.removeItem('workshop_break_reminder_60min_seen');
   location.reload();
@@ -2339,11 +2305,9 @@ var _myName = '';
 var _rejectedAvatars = [];
 var LS_NAME_KEY = 'workshop_participant_name';
 var LS_CUSTOM_NAME_KEY = 'workshop_custom_name';
-var LS_ONBOARDING_KEY = 'workshop_onboarding_seen';
 var LS_BREAK_5MIN_KEY = 'workshop_break_reminder_5min_seen';
 var LS_BREAK_60MIN_KEY = 'workshop_break_reminder_60min_seen';
 
-var _onboardingStep = 0;
 var _breakRemindersScheduled = false;
 
 // ── Quiz state ──
@@ -2366,17 +2330,13 @@ var _pollVoteCounts = null;       // list[int] when public or ended, null otherw
 // ── Activity tracking ──
 var _currentActivity = 'none';
 
-function _shouldShowOnboarding() {
-  return !localStorage.getItem(LS_ONBOARDING_KEY);
-}
-
 function _positionTooltipAboveCoffee(tooltipId) {
   var coffeeBtn = Array.from(document.querySelectorAll('#emoji-main-bar button')).find(function(b) {
     return b.textContent.trim() === '☕';
   });
   if (!coffeeBtn) return;
   var rect = coffeeBtn.getBoundingClientRect();
-  var tooltip = document.getElementById(tooltipId || 'onboarding-tooltip');
+  var tooltip = document.getElementById(tooltipId);
   if (!tooltip) return;
   var bubbleW = 300;
   var centerX = rect.left + rect.width / 2;
@@ -2400,57 +2360,6 @@ function _positionTooltipNearProfileCard() {
   tooltip.style.left = (rect.right + 16) + 'px';
   tooltip.style.top = (rect.top + rect.height / 2) + 'px';
   tooltip.style.transform = 'translateY(-50%)';
-}
-
-function _showOnboarding() {
-  _onboardingStep = 1;
-  document.body.classList.add('onboarding-active');
-  var overlay = document.getElementById('onboarding-overlay');
-  var tooltip = document.getElementById('onboarding-tooltip');
-  if (!overlay || !tooltip) return;
-  _positionTooltipAboveCoffee();
-  overlay.classList.remove('hidden');
-  tooltip.classList.remove('hidden');
-  requestAnimationFrame(function () {
-    overlay.classList.add('visible', 'blocking');
-    tooltip.classList.add('visible');
-  });
-}
-
-function _advanceOnboardingToStep2() {
-  _onboardingStep = 2;
-  var overlay = document.getElementById('onboarding-overlay');
-  var tooltip1 = document.getElementById('onboarding-tooltip');
-  if (overlay) overlay.classList.remove('visible', 'blocking');
-  if (tooltip1) tooltip1.classList.remove('visible');
-  setTimeout(function () {
-    if (overlay) overlay.classList.add('hidden');
-    if (tooltip1) tooltip1.classList.add('hidden');
-    document.body.classList.remove('onboarding-active');
-    document.body.classList.add('onboarding-phase2');
-    // The "Remember to set a name" tooltip is only useful for activities
-    // where names matter (i.e. scored activities like quiz). Skip it for
-    // poll (anonymous) and any other non-quiz activity.
-    var tooltip2 = document.getElementById('onboarding-tooltip-2');
-    if (tooltip2 && _currentActivity === 'quiz') {
-      _positionTooltipNearProfileCard();
-      tooltip2.classList.remove('hidden');
-      requestAnimationFrame(function () { tooltip2.classList.add('visible'); });
-    }
-    _showAccessToast();
-  }, 300);
-}
-
-function _completeOnboarding() {
-  if (_onboardingStep === 0) return;
-  _onboardingStep = 0;
-  localStorage.setItem(LS_ONBOARDING_KEY, '1');
-  document.body.classList.remove('onboarding-phase2');
-  var tooltip2 = document.getElementById('onboarding-tooltip-2');
-  if (tooltip2) {
-    tooltip2.classList.remove('visible');
-    setTimeout(function () { tooltip2.classList.add('hidden'); }, 300);
-  }
 }
 
 // ── Break reminder ──
@@ -2492,7 +2401,6 @@ function _hasCustomName() {
 
 var _nameNudgeVisible = false;
 function _showNameNudge() {
-  if (_onboardingStep !== 0) return;
   if (_hasCustomName()) return;
   var tooltip2 = document.getElementById('onboarding-tooltip-2');
   if (!tooltip2) return;
@@ -2504,7 +2412,6 @@ function _showNameNudge() {
 
 function _hideNameNudge() {
   if (!_nameNudgeVisible) return;
-  if (_onboardingStep !== 0) return;
   _nameNudgeVisible = false;
   var tooltip2 = document.getElementById('onboarding-tooltip-2');
   if (!tooltip2) return;
@@ -2539,21 +2446,6 @@ function _applyGdriveToast(url) {
   if (url) { link.href = url; wrap.style.display = ''; }
   else { wrap.style.display = 'none'; }
 }
-
-document.addEventListener('click', function (e) {
-  if (_onboardingStep === 1) {
-    var bar = document.getElementById('emoji-main-bar');
-    var overflow = document.getElementById('emoji-overflow');
-    if ((bar && bar.contains(e.target)) || (overflow && overflow.contains(e.target))) {
-      _advanceOnboardingToStep2();
-    }
-  } else if (_onboardingStep === 2) {
-    var card = document.getElementById('profile-card');
-    var openNameEdit = card && card.contains(e.target);
-    _completeOnboarding();
-    if (openNameEdit) _startNameEdit();
-  }
-}, true);
 
 function _avatarColorFromUuid(uuid) {
   var hash = parseInt((uuid || '').replace(/-/g, '').slice(0, 8), 16);
@@ -2890,7 +2782,6 @@ async function _refreshParticipantState() {
     }
     _applyState(state);
     document.getElementById('loading-screen').style.display = 'none';
-    if (_shouldShowOnboarding()) _showOnboarding();
     _scheduleBreakReminders();
     initLocationMenuEntry();
 
@@ -3704,11 +3595,9 @@ function _connectWS() {
       _refetchInitialState();
     }
     _firstConnect = false;
-    // Show access duration toast after 10 seconds if not in onboarding
+    // Show access duration toast 10 seconds after connecting
     setTimeout(function() {
-      if (_onboardingStep === 0) {
-        _showAccessToast();
-      }
+      _showAccessToast();
     }, 10000);
   };
   _ws.onmessage = function(e) { try { _handleWsMessage(JSON.parse(e.data)); } catch(err) { console.error('ws msg error', err); } };
@@ -3986,14 +3875,7 @@ function downloadSummaryPdf() {
   setTimeout(function() { w.print(); }, 400);
 }
 </script>
-<!-- Onboarding overlay (workshop mode, first visit) -->
-<div id="onboarding-overlay" class="hidden"></div>
-<div id="onboarding-tooltip" class="hidden">
-  <div class="onboarding-bubble">
-    React as often as you can — tell me how you feel. Tap ☕ when you get tired.
-  </div>
-  <div class="onboarding-arrow"></div>
-</div>
+<!-- Name-reminder nudge: shown beside the profile card when a name-relevant activity opens -->
 <div id="onboarding-tooltip-2" class="hidden">
   <div class="onboarding-bubble">
     Remember to set a name &mdash; Just click on it

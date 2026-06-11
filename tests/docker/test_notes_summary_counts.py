@@ -132,11 +132,6 @@ def test_notes_summary_nav_display_and_unread_alert():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         ctx = browser.new_context()
-        # Returning participant: mark the first-visit onboarding tour as already seen
-        # so its blocking overlay never intercepts nav clicks (suppressed across reload).
-        ctx.add_init_script(
-            "try { localStorage.setItem('workshop_onboarding_seen', '1'); } catch (e) {}"
-        )
         page = ctx.new_page()
         page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
         pax = ParticipantPage(page)

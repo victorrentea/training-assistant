@@ -15,28 +15,9 @@ class ParticipantPage:
 
     # ── Session ──────────────────────────────────────────────────────────────
 
-    def _dismiss_onboarding(self) -> None:
-        """Skip the first-visit onboarding tour so its overlay stops intercepting
-        clicks. Mirrors a returning visitor: set the 'seen' flag and clear the
-        overlay. The tour itself is covered by test_participant_onboarding.py;
-        every other test just needs it out of the way."""
-        self._page.evaluate(
-            """() => {
-                try { localStorage.setItem('workshop_onboarding_seen', '1'); } catch (e) {}
-                const o = document.getElementById('onboarding-overlay');
-                if (o) { o.classList.remove('visible', 'blocking'); o.classList.add('hidden'); }
-                document.body.classList.remove('onboarding-active', 'onboarding-phase2');
-                for (const id of ['onboarding-tooltip', 'onboarding-tooltip-2']) {
-                    const t = document.getElementById(id);
-                    if (t) { t.classList.remove('visible'); t.classList.add('hidden'); }
-                }
-            }"""
-        )
-
     def auto_join(self) -> str:
         """Wait for auto-join to complete and return the server-assigned name (no rename)."""
         expect(self._page.locator("#display-name")).to_be_visible(timeout=10000)
-        self._dismiss_onboarding()
         expect(self._page.locator("#display-name .display-name-text")).not_to_be_empty(timeout=5000)
         return self._page.locator("#display-name .display-name-text").inner_text().strip()
 
@@ -53,7 +34,6 @@ class ParticipantPage:
         auto-join + rename flow otherwise.
         """
         expect(self._page.locator("#display-name")).to_be_visible(timeout=10000)
-        self._dismiss_onboarding()
         expect(self._page.locator("#display-name .display-name-text")).not_to_be_empty(timeout=3000)
         current = (self._page.locator("#display-name .display-name-text").inner_text() or "").strip()
         if current == name:
