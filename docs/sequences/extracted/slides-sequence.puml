@@ -12,41 +12,7 @@ participant "Railway"
 participant "GDrive"
 
 == Second participant gets cached slide with at most 1 Drive call ==
-group #F5F5F5 init
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#BCBD22>[97]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#BCBD22>[97]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#BCBD22>[97]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#E377C2>[98]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#E377C2>[98]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#E377C2>[98]</color>
-  "Host" -> "Daemon": DELETE /api/{session_id}/host/scores <color:#8C564B>[99]</color>
-  "Host" -> "Daemon": GET /host/{session_id} <color:#7F7F7F>[100]</color>
-  "Host" -> "Daemon": GET /api/{session_id}/host/state <color:#1F77B4>[101]</color>
-  "Participant\nAlice" -> "Daemon": POST /api/participant/register <color:#D62728>[102]</color>
-  activate "Daemon"
-  "Daemon" --> "Host": participant_list_updated <color:#D62728>[102]</color>
-  deactivate "Daemon"
-  "Participant\nAlice" -> "Daemon": GET /api/participant/state <color:#2CA02C>[103]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#FF7F0E>[104]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#FF7F0E>[104]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#FF7F0E>[104]</color>
-  "Participant\nAlice" -> "Daemon": PUT /api/participant/name <color:#9467BD>[105]</color>
-  activate "Daemon"
-  "Daemon" --> "Host": participant_list_updated <color:#9467BD>[105]</color>
-  deactivate "Daemon"
-  "Participant\nBob" -> "Daemon": POST /api/participant/register <color:#17BECF>[106]</color>
-  activate "Daemon"
-  "Daemon" --> "Host": participant_list_updated <color:#17BECF>[106]</color>
-  deactivate "Daemon"
-  "Participant\nBob" -> "Daemon": GET /api/participant/state <color:#BCBD22>[107]</color>
-  "Daemon" --> "Participant\nAlice": active_participants_count_updated <color:#E377C2>[108]</color>
-  "Daemon" --> "Participant\nBob": active_participants_count_updated <color:#E377C2>[108]</color>
-  "Daemon" --> "Participant\nDave": active_participants_count_updated <color:#E377C2>[108]</color>
-end
-"Participant\nBob" -> "Daemon": PUT /api/participant/name <color:#8C564B>[109]</color>
-activate "Daemon"
-"Daemon" --> "Host": participant_list_updated <color:#8C564B>[109]</color>
-deactivate "Daemon"
+
 "Participant\nAlice" -> "Daemon": GET /{session_id}/api/slides/check/{slug} <color:#7F7F7F>[110]</color>
 activate "Daemon"
 "Daemon" --> "Participant\nAlice": decks_updated <color:#7F7F7F>[110]</color>
