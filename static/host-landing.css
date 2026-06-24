@@ -125,7 +125,7 @@ body {
   transition: filter .15s, transform .1s;
 }
 
-.create-btn-talk {
+.create-btn-workshop {
   background: var(--danger);
   color: #fff;
   border: none;
