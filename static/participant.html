@@ -4042,4 +4042,120 @@ function downloadSummaryPdf() {
     <p>🧘🏻‍♀️ Relax &mdash; you'll get everything by email after the training.</p>
   </div>
 </div>
+<script>
+/* Host-only summary-refinement pencil. Visible ONLY on the host tab (is_host=1
+   cookie); participants never see it. On a text selection inside the summary, a
+   floating pencil appears; clicking it opens a small note box. Send POSTs the
+   selected text + the note to the local relay listener (127.0.0.1:8765), which
+   Claude Code watches to refine ai-summary.md. Everything is on localhost. */
+(function () {
+  if (document.cookie.indexOf('is_host=1') < 0) return;            // host tab only
+  var RELAY = 'http://127.0.0.1:8765/note';
+  var pencil = null, popup = null, lastSel = '';
+
+  function selectionInSummary() {
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    var content = document.getElementById('summary-content');
+    if (!content) return null;
+    var range = sel.getRangeAt(0);
+    if (!content.contains(range.commonAncestorContainer)) return null;
+    var text = sel.toString().trim();
+    if (!text) return null;
+    return { text: text, rect: range.getBoundingClientRect() };
+  }
+  function removePencil() { if (pencil) { pencil.remove(); pencil = null; } }
+  function removePopup() { if (popup) { popup.remove(); popup = null; } }
+
+  function showPencil(info) {
+    removePencil();
+    lastSel = info.text;
+    pencil = document.createElement('button');
+    pencil.textContent = '✏️';
+    pencil.title = 'Send a refinement note to Claude';
+    Object.assign(pencil.style, {
+      position: 'fixed', zIndex: 2147483647,
+      left: Math.min(window.innerWidth - 44, info.rect.right + 6) + 'px',
+      top: Math.max(6, info.rect.top - 6) + 'px',
+      width: '32px', height: '32px', borderRadius: '50%',
+      border: '1px solid #d0a000', background: '#fffbe6', cursor: 'pointer',
+      fontSize: '16px', lineHeight: '30px', padding: '0',
+      boxShadow: '0 2px 8px rgba(0,0,0,.25)'
+    });
+    pencil.addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep selection
+    pencil.addEventListener('click', function (e) { e.stopPropagation(); openPopup(info); });
+    document.body.appendChild(pencil);
+  }
+
+  function openPopup(info) {
+    removePopup();
+    popup = document.createElement('div');
+    Object.assign(popup.style, {
+      position: 'fixed', zIndex: 2147483647,
+      left: Math.min(window.innerWidth - 320, info.rect.right + 6) + 'px',
+      top: Math.min(window.innerHeight - 170, info.rect.bottom + 8) + 'px',
+      width: '300px', background: '#fff', border: '1px solid #ccc',
+      borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.25)',
+      padding: '10px', font: '13px system-ui, sans-serif', color: '#111'
+    });
+    var quote = document.createElement('div');
+    quote.textContent = '“' + (lastSel.length > 90 ? lastSel.slice(0, 90) + '…' : lastSel) + '”';
+    Object.assign(quote.style, { color: '#666', fontStyle: 'italic', marginBottom: '6px', maxHeight: '48px', overflow: 'hidden' });
+    var ta = document.createElement('textarea');
+    ta.placeholder = 'What should Claude refine here? (you can dictate)';
+    Object.assign(ta.style, { width: '100%', boxSizing: 'border-box', height: '64px', resize: 'vertical', border: '1px solid #ccc', borderRadius: '6px', padding: '6px', font: '13px system-ui' });
+    var row = document.createElement('div');
+    Object.assign(row.style, { display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' });
+    var cancel = document.createElement('button'); cancel.textContent = 'Cancel';
+    var send = document.createElement('button'); send.textContent = 'Send';
+    [cancel, send].forEach(function (b) { Object.assign(b.style, { padding: '4px 12px', borderRadius: '6px', border: '1px solid #bbb', cursor: 'pointer', font: '13px system-ui' }); });
+    Object.assign(send.style, { background: '#2563eb', color: '#fff', borderColor: '#2563eb' });
+    cancel.addEventListener('click', function () { removePopup(); removePencil(); });
+    send.addEventListener('click', function () { submitNote(lastSel, ta.value); });
+    ta.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitNote(lastSel, ta.value); });
+    row.appendChild(cancel); row.appendChild(send);
+    popup.appendChild(quote); popup.appendChild(ta); popup.appendChild(row);
+    document.body.appendChild(popup);
+    ta.focus();
+  }
+
+  function toast(msg, ok) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    Object.assign(t.style, {
+      position: 'fixed', zIndex: 2147483647, bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+      background: ok ? '#16a34a' : '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: '8px',
+      font: '13px system-ui', boxShadow: '0 2px 10px rgba(0,0,0,.3)'
+    });
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2400);
+  }
+
+  function submitNote(selected, comment) {
+    comment = (comment || '').trim();
+    if (!comment) { toast('Write a note first', false); return; }
+    fetch(RELAY, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selected: selected, comment: comment, view: 'summary', ts: new Date().toISOString() })
+    }).then(function (r) {
+      toast(r.status === 204 ? 'Sent to Claude ✓' : ('Error ' + r.status), r.status === 204);
+    }).catch(function () {
+      toast('Relay not running — start the listener', false);
+    }).finally(function () { removePopup(); removePencil(); });
+  }
+
+  document.addEventListener('mouseup', function () {
+    setTimeout(function () {
+      if (popup) return;                       // don't reshow while editing a note
+      var info = selectionInSummary();
+      if (info) showPencil(info); else removePencil();
+    }, 10);
+  });
+  document.addEventListener('mousedown', function (e) {
+    if (pencil && e.target === pencil) return;
+    if (popup && popup.contains(e.target)) return;
+    if (!popup) removePencil();
+  });
+})();
+</script>
 </body></html>
