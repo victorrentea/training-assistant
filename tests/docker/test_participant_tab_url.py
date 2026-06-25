@@ -1,7 +1,8 @@
 """Hermetic E2E: the participant URL reflects the active tab.
 
 - Deep-link /<session>/files lands on the Files tab.
-- Clicking the Activity nav rewrites the address bar to /<session>/activity.
+- Clicking the Activity nav rewrites the address bar to the bare /<session> URL
+  (Activity is the default landing tab, so its link stays clean — no suffix).
 - The standalone read-only notes page lives at /<session>/notes-print.
 """
 
@@ -31,11 +32,12 @@ def test_tab_url_deeplink_and_rewrite():
         ParticipantPage(page).auto_join()
         expect(page.locator("#files-view")).to_be_visible(timeout=10000)
         expect(page.locator("#slides-view")).to_be_hidden()
-        # Switching tabs rewrites the address bar.
+        # Switching to the Activity (default landing) tab rewrites the address bar
+        # back to the bare session URL — its shareable link carries no tab suffix.
         page.locator('[data-nav="activity"]').click()
         expect(page.locator("#activity-view")).to_be_visible(timeout=10000)
-        page.wait_for_url(f"{BASE}/{session_id}/activity", timeout=5000)
-        assert page.url.endswith(f"/{session_id}/activity")
+        page.wait_for_url(f"{BASE}/{session_id}", timeout=5000)
+        assert page.url.rstrip("/").endswith(f"/{session_id}")
         browser.close()
 
 

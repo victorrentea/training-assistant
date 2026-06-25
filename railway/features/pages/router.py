@@ -72,6 +72,7 @@ _PARTICIPANT_TAB_SLUGS = frozenset(
         "upload-paste",
         "files",
         "past-slides",
+        "about",
     }
 )
 
