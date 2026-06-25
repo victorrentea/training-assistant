@@ -4061,7 +4061,7 @@ function downloadSummaryPdf() {
     if (!content.contains(range.commonAncestorContainer)) return null;
     var text = sel.toString().trim();
     if (!text) return null;
-    return { text: text, rect: range.getBoundingClientRect() };
+    return { text: text, rect: range.getBoundingClientRect(), range: range.cloneRange() };
   }
   function removePencil() { if (pencil) { pencil.remove(); pencil = null; } }
   function removePopup() { if (popup) { popup.remove(); popup = null; } }
@@ -4115,6 +4115,9 @@ function downloadSummaryPdf() {
     popup.appendChild(ta); popup.appendChild(row);
     document.body.appendChild(popup);
     ta.focus();
+    // Keep the page selection visible while the dialog is open — focusing the
+    // textarea would otherwise collapse it; re-apply the saved range (shown greyed).
+    if (info.range) { var s = window.getSelection(); s.removeAllRanges(); s.addRange(info.range); }
   }
 
   function toast(msg, ok) {
