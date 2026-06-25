@@ -4097,11 +4097,10 @@ function downloadSummaryPdf() {
       borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.25)',
       padding: '10px', font: '13px system-ui, sans-serif', color: '#111'
     });
-    var quote = document.createElement('div');
-    quote.textContent = '“' + (lastSel.length > 90 ? lastSel.slice(0, 90) + '…' : lastSel) + '”';
-    Object.assign(quote.style, { color: '#666', fontStyle: 'italic', marginBottom: '6px', maxHeight: '48px', overflow: 'hidden' });
+    // The selected text is NOT echoed here (it stays highlighted on the page and
+    // is sent with the note); just the note box.
     var ta = document.createElement('textarea');
-    ta.placeholder = 'What should Claude refine here? (you can dictate)';
+    ta.placeholder = 'What should Claude refine here?';
     Object.assign(ta.style, { width: '100%', boxSizing: 'border-box', height: '64px', resize: 'vertical', border: '1px solid #ccc', borderRadius: '6px', padding: '6px', font: '13px system-ui' });
     var row = document.createElement('div');
     Object.assign(row.style, { display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' });
@@ -4113,7 +4112,7 @@ function downloadSummaryPdf() {
     send.addEventListener('click', function () { submitNote(lastSel, ta.value); });
     ta.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitNote(lastSel, ta.value); });
     row.appendChild(cancel); row.appendChild(send);
-    popup.appendChild(quote); popup.appendChild(ta); popup.appendChild(row);
+    popup.appendChild(ta); popup.appendChild(row);
     document.body.appendChild(popup);
     ta.focus();
   }
@@ -4152,8 +4151,14 @@ function downloadSummaryPdf() {
   });
   document.addEventListener('mousedown', function (e) {
     if (pencil && e.target === pencil) return;
-    if (popup && popup.contains(e.target)) return;
-    if (!popup) removePencil();
+    if (popup) {
+      if (popup.contains(e.target)) return;            // click inside the dialog: ignore
+      var ta = popup.querySelector('textarea');
+      if (ta && ta.value.trim()) return;               // has text: keep the dialog open
+      removePopup(); removePencil();                   // empty: dismiss on outside click
+      return;
+    }
+    removePencil();                                    // no dialog: clicking away hides the pencil
   });
 })();
 </script>
