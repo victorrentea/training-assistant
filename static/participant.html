@@ -4040,13 +4040,15 @@ function downloadSummaryPdf() {
   </div>
 </div>
 <script>
-/* Host-only summary-refinement pencil. Visible ONLY on the host tab (is_host=1
-   cookie); participants never see it. On a text selection inside the summary, a
+/* Host-only summary-refinement pencil. Visible ONLY on the host machine
+   (ON_HOST_MACHINE=true cookie); participants never see it. On a text selection in the summary, a
    floating pencil appears; clicking it opens a small note box. Send POSTs the
    selected text + the note to the local relay listener (127.0.0.1:8765), which
    Claude Code watches to refine ai-summary.md. Everything is on localhost. */
 (function () {
-  if (document.cookie.indexOf('is_host=1') < 0) return;            // host tab only
+  // Host machine only: gate on the JS-readable ON_HOST_MACHINE=true cookie (set by
+  // the landing-page toggle). The is_host cookie is httponly, so JS cannot read it.
+  if (!document.cookie.split(';').some(function (p) { return p.trim() === 'ON_HOST_MACHINE=true'; })) return;
   var RELAY = 'http://127.0.0.1:8765/note';
   var pencil = null, popup = null, lastSel = '';
 
