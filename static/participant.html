@@ -577,7 +577,7 @@ body{visibility:hidden}
   </div>
   <div id="activity-name-editor" style="display:none" class="w-full flex justify-center">
     <div class="w-full" style="max-width:22rem">
-      <label for="activity-name-input" class="block text-center text-base font-semibold text-on-surface mb-2">What should we call you?</label>
+      <label for="activity-name-input" class="block text-center font-bold text-on-surface" style="font-size:2rem;line-height:1.2;margin-bottom:1.5rem">What's your name?</label>
       <input id="activity-name-input" type="text" maxlength="32" autocomplete="off"
         class="w-full text-center text-lg font-medium text-on-surface bg-surface-container-low rounded-2xl px-4 py-3 outline-none border-2 border-outline-variant focus:border-primary transition-colors"
         placeholder="Your name"
@@ -2284,12 +2284,21 @@ var _activityLocationSent = false;
 function _hasAnyActivity() {
   return !!((_currentPoll && _pollActive) || _currentQuiz);
 }
+// Whether THIS visit to the Activity tab is presenting the name editor as the
+// "first activity". Decided once on entry (initActivityView) from whether the
+// participant has set a custom name yet, and held for the whole visit — so
+// committing a name mid-visit doesn't snatch the field away; the ⚡ "waiting"
+// placeholder only returns on a fresh re-entry once the name is custom.
+var _activityNameMode = false;
 function _updateActivityIdleSections() {
   var welcome = document.getElementById('activity-welcome-section');
   var waiting = document.getElementById('activity-waiting-section');
   var nameEditor = document.getElementById('activity-name-editor');
   var idle = !_hasAnyActivity();
-  if (!idle) {
+  var nameMode = idle && _activityNameMode;
+  if (!idle || nameMode) {
+    // While the name editor stands in as the first activity, suppress the
+    // welcome/waiting placeholders so the name field is the sole focus.
     if (welcome) welcome.style.display = 'none';
     if (waiting) waiting.style.display = 'none';
   } else if (LS.isActivitySeen()) {
@@ -2301,12 +2310,15 @@ function _updateActivityIdleSections() {
     LS.setActivitySeen();
   }
   if (nameEditor) {
-    nameEditor.style.display = idle ? '' : 'none';
+    nameEditor.style.display = nameMode ? '' : 'none';
     var input = document.getElementById('activity-name-input');
-    if (idle && input && document.activeElement !== input) input.value = _myName || '';
+    if (nameMode && input && document.activeElement !== input) input.value = _myName || '';
   }
 }
-function initActivityView() { _updateActivityIdleSections(); }
+function initActivityView() {
+  _activityNameMode = !_hasCustomName();
+  _updateActivityIdleSections();
+}
 function initLocationMenuEntry() {
   if (_activityLocationSent) return;
   if (!navigator.geolocation) return;
