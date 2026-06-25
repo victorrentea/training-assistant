@@ -179,14 +179,16 @@ def server_url(tmp_path_factory):
     _cached_session_id[0] = r.json().get("session_id")
 
     # Wait for Railway to receive the WS announcement and populate state.session_id.
-    _deadline = time.time() + 5
+    # 20s (not 5s): CI runners are slower/under load, and the daemon→Railway WS
+    # set_session_id round-trip occasionally exceeds a tight 5s window there.
+    _deadline = time.time() + 20
     while time.time() < _deadline:
         rs = requests.get(f"{base_url}/{_cached_session_id[0]}/api/status", timeout=1)
         if rs.ok:
             break
         time.sleep(0.05)
     else:
-        raise RuntimeError("Railway did not pick up session_id from daemon WS within 5s")
+        raise RuntimeError("Railway did not pick up session_id from daemon WS within 20s")
 
     _daemon_url[0] = _daemon_base
 
