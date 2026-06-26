@@ -60,6 +60,26 @@ class HostPage:
             timeout=5000,
         )
 
+    def wait_for_votes(self, min_count: int = 1, timeout: int = 5000) -> None:
+        """Wait until the host has received at least ``min_count`` votes.
+
+        The participant ``castVote`` is fire-and-forget (the "Vote registered"
+        toast is optimistic), so a test that votes and immediately closes can race
+        the vote POST past ``/quiz/end`` — the daemon then closes with zero votes
+        and the result rows never become markable. Waiting on the live
+        ``#vote-progress-label`` (rendered while voting is open) guarantees the
+        vote is server-registered before the quiz is closed.
+        """
+        self._page.wait_for_function(
+            f"""() => {{
+                const el = document.getElementById('vote-progress-label');
+                if (!el) return false;
+                const m = el.textContent.match(/(\\d+)\\s+of/);
+                return !!m && parseInt(m[1], 10) >= {min_count};
+            }}""",
+            timeout=timeout,
+        )
+
     def start_timer(self, seconds: int) -> None:
         """Start a countdown timer to end the quiz via daemon API."""
         self._page.evaluate(f"""async () => {{
@@ -93,9 +113,16 @@ class HostPage:
         self._page.wait_for_selector("#quiz-display.voting-active", timeout=5000)
 
     def mark_correct(self, *option_texts: str) -> None:
-        """Click result rows to mark options correct (by partial text match)."""
+        """Click result rows to mark options correct (by partial text match).
+
+        Targets the `.markable` row specifically so the click auto-waits until the
+        quiz is closed AND the host has received at least one vote (canMark =
+        !quizActive && totalVotes > 0). Without this, a fast mark after a
+        fire-and-forget participant vote can land before the vote count propagates
+        to the host, leaving the row non-markable and the click a no-op.
+        """
         for text in option_texts:
-            self._page.locator(f".result-row:has-text('{text}')").click()
+            self._page.locator(f".result-row.markable:has-text('{text}')").click()
 
     def reveal_correct(self, correct_ids: list[str]) -> None:
         """Reveal correct answers and award scores via daemon API.
