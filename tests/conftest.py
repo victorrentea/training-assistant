@@ -250,10 +250,22 @@ def _get_session_id():
     """Fetch session ID from running server (cached after first call)."""
     if _cached_session_id[0]:
         return _cached_session_id[0]
+    # The server_url fixture sets _cached_session_id on whichever conftest module
+    # instance pytest imported it under. Because tests/__init__.py makes pytest load
+    # this file as both 'conftest' and 'tests.conftest', helpers imported via
+    # `from conftest import ...` can see a *different* (cold) copy of the cache.
+    # Scan every module copy for an already-resolved id before hitting the daemon —
+    # the daemon's /api/session/active is only populated once a session is activated,
+    # which the e2e fixture (create-only) does not do.
+    import sys
+    for mod in sys.modules.values():
+        csid = getattr(mod, "_cached_session_id", None)
+        if isinstance(csid, list) and csid and csid[0]:
+            _cached_session_id[0] = csid[0]
+            return csid[0]
     port = _server_port.get("port") if isinstance(_server_port, dict) else None
     if not port:
         # Fallback: try all module copies
-        import sys
         for mod in sys.modules.values():
             sp = getattr(mod, "_server_port", None)
             if isinstance(sp, dict) and sp.get("port"):
