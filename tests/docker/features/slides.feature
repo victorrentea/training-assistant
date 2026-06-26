@@ -65,8 +65,11 @@ Feature: Slides Catalog, Viewing, and Follow Mode
     And the active slide is "clean-code"
     And Alice sees page 3 of "clean-code"
 
+  @nightly
   Scenario: Follower auto-advances when host changes slide
-    Given the addons bridge reports current slide is "Clean Code.pptx" page 1
+    Given slide "clean-code" is cached
+    And slide "design-patterns" is cached
+    And the addons bridge reports current slide is "Clean Code.pptx" page 1
     And Alice clicks the Follow button
     And Alice sees the slides overlay
     When the addons bridge reports current slide is "Design Patterns.pptx" page 2

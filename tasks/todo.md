@@ -32,8 +32,17 @@ un-broke every API/own-context test. Also found a fire-and-forget vote-vs-close 
 - [x] 5. Shard 3: whole-file skip features/{debate,wordcloud,codereview}/test_e2e.py
 - [~] 6. Shard 2: triage test_remaining_gaps.py, features/quiz, features/scoring — IN PROGRESS
 - [x] 7. TestProductionSmoke — fixed stale assertion (/api/quiz now 405)
-- [ ] 8. hermetic Docker job — 3 slides-follow timing tests (prime cache + downloaded_at broadcast); subagent analysis done
-- [ ] 9. Run all 3 e2e shards + hermetic locally green/skipped; commit + push to master
+- [x] 8. hermetic Docker job — 3 slides tests failed (NOT selectors; cold-start slides-follow flakiness):
+      - test 3 (auto-reload): real test fix — spy `prefetchInto` too (double-buffered reload path
+        doesn't call `loadPdf`). Stays in every-push.
+      - tests 1 & 2 (follow_me_basic, follower-autoadvances): flaky cold-start (catalog proxy
+        timeout + intermittent mock-Drive 502s). User chose: defer to nightly. Tagged
+        `@pytest.mark.nightly` (test_follow_me.py) / `@nightly` (slides.feature) → excluded from
+        every-push hermetic (`-m "not nightly"`), still run nightly.
+      - NOTE: a runaway subagent also wrote an unvalidated app-side change to static/participant.html
+        (_toggleFollow / _markActiveTopic) on a flawed premise (the non-nightly follow scenario
+        slides.feature:61 already passes → Follow click is NOT broken). Reverted it.
+- [~] 9. Commit hermetic test-side changes + push all to master (after hermetic verify green)
 - [ ] 10. Confirm CI green on push
 
 ## Skip marker convention

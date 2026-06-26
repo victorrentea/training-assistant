@@ -255,17 +255,30 @@ def test_participant_auto_reloads_active_slide_after_refresh():
         pax.open_slide(_SLUG)
         print(f"[test] Slide '{_SLUG}' opened and PDF rendered ✓")
 
-        # Inject a spy on window.loadPdf to detect reloads without relying on network monitoring.
-        # Network monitoring is unreliable (pdf.js may use workers, caching, etc.).
-        # Capture (url, slug, downloadedAt) — cache-busting is now keyed by
+        # Spy on the reload entry points to detect reloads without relying on
+        # network monitoring (pdf.js may use workers, caching, etc.).
+        # When a slide is already open, the front buffer is ready, so the
+        # decks_updated handler reloads via the double-buffered prefetchInto
+        # ({url, slug, downloadedAt, getPage}) rather than loadPdf — wrap both.
+        # Capture (url, slug, downloadedAt): cache-busting is keyed by
         # downloadedAt (PdfCache invalidation), not by a ?v= URL parameter.
         pax_page.evaluate("""() => {
-            const origLoadPdf = window.loadPdf;
             window._loadPdfCalls = [];
-            window.loadPdf = async function(url, slug, downloadedAt, targetPage) {
-                window._loadPdfCalls.push({url: url || '', slug: slug || '', downloadedAt: downloadedAt || null});
-                return origLoadPdf(url, slug, downloadedAt, targetPage);
-            };
+            const origLoadPdf = window.loadPdf;
+            if (typeof origLoadPdf === 'function') {
+                window.loadPdf = async function(url, slug, downloadedAt, targetPage) {
+                    window._loadPdfCalls.push({url: url || '', slug: slug || '', downloadedAt: downloadedAt || null});
+                    return origLoadPdf(url, slug, downloadedAt, targetPage);
+                };
+            }
+            const origPrefetch = window.prefetchInto;
+            if (typeof origPrefetch === 'function') {
+                window.prefetchInto = async function(target) {
+                    target = target || {};
+                    window._loadPdfCalls.push({url: target.url || '', slug: target.slug || '', downloadedAt: target.downloadedAt || null});
+                    return origPrefetch(target);
+                };
+            }
         }""")
 
         # Trigger refresh (simulates daemon notification after PPTX save)
