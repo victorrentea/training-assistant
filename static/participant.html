@@ -2308,14 +2308,31 @@ function _updateActivityIdleSections() {
 function initActivityView() {
   _activityNameMode = !_hasCustomName();
   _updateActivityIdleSections();
+  if (_activityNameMode) _ensureNameInputPreselected();
   _maybePlayIntroBlackout();
+}
+// When the name field is presented as the first activity, drop the cursor into
+// it and pre-select the auto-generated name, so a participant can just start
+// typing to overwrite it (Enter/blur to keep the generated one). One-shot per
+// page load so later idle-section refreshes never steal focus mid-typing.
+var _namePreselected = false;
+function _ensureNameInputPreselected() {
+  if (_namePreselected) return;
+  var input = document.getElementById('activity-name-input');
+  if (!input) return;
+  _namePreselected = true;
+  // Defer one tick so the name editor is shown (and lifted above the blackout)
+  // before we focus; setTimeout (not rAF) so it still fires in a background tab.
+  setTimeout(function() {
+    try { input.focus({ preventScroll: true }); if (input.value) input.select(); } catch (e) {}
+  }, 0);
 }
 // First-entry "spotlight" intro: a brand-new participant (no custom name yet)
 // lands on the Activity tab with the name field as the only lit element. The
 // rest of the app sits under a full-screen black layer that holds for a beat,
-// then fades away to reveal everything. The name field and the floating emoji
-// bar are lifted above the blackout so they read as the call-to-action from the
-// very first frame. Plays once per browser (gated on LS.INTRO_SEEN).
+// then fades away to reveal everything (the emoji bar included). Only the name
+// field is lifted above the blackout, so it reads as the sole call-to-action
+// from the very first frame. Plays once per browser (gated on LS.INTRO_SEEN).
 var _introPlayed = false;
 function _maybePlayIntroBlackout() {
   if (_introPlayed) return;          // at most once per page load
@@ -2327,12 +2344,12 @@ function _maybePlayIntroBlackout() {
   _playIntroBlackout();
 }
 function _playIntroBlackout() {
-  var HOLD_MS = 2000;  // how long the screen stays fully black around the name field
-  var FADE_MS = 5000;  // how long the black layer takes to fade out, revealing the app
+  var HOLD_MS = 5000;  // how long the screen stays fully black around the name field
+  var FADE_MS = 3000;  // how long the black layer takes to fade out, revealing the app
 
-  // Lift the name field and the floating emoji bar above the blackout so they
-  // remain visible (and usable) from the first frame. Remember prior inline
-  // values so we can restore them cleanly once the intro is over.
+  // Lift only the name field above the blackout so it stays visible (and usable)
+  // from the first frame. Everything else — emoji bar included — stays behind the
+  // black and reveals as it fades. Remember prior inline values to restore later.
   var lifted = [];
   function lift(el, makeRelative) {
     if (!el) return;
@@ -2341,7 +2358,6 @@ function _playIntroBlackout() {
     el.style.zIndex = '9001';
   }
   lift(document.getElementById('activity-name-editor'), true);
-  lift(document.getElementById('floating-reactions'), false);
 
   var overlay = document.createElement('div');
   overlay.id = 'intro-blackout';
