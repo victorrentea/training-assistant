@@ -261,6 +261,17 @@ class NotesUpdatedMsg(BaseModel):
     updated_at: str | None = None  # ISO timestamp of notes file mtime
 
 
+class NotesAppendedMsg(BaseModel):
+    """Participant-only: a fresh snippet was appended to the session notes.
+
+    Drives a copy-friendly toaster so participants can grab the shared text/URL
+    without typing. Carries only the newly-appended delta (not the whole file).
+    """
+    type: Literal["notes_appended"] = "notes_appended"
+    text: str  # the newly-appended snippet (bullet stripped, trimmed)
+    at: str  # ISO timestamp when the daemon observed the append
+
+
 class SummaryUpdatedMsg(BaseModel):
     type: Literal["summary_updated"] = "summary_updated"
     updated_at: str | None = None  # ISO timestamp of ai-summary.md mtime
@@ -346,6 +357,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "leaderboard_revealed": LeaderboardRevealedMsg,
     # Notes & Summary
     "notes_updated": NotesUpdatedMsg,
+    "notes_appended": NotesAppendedMsg,
     "summary_updated": SummaryUpdatedMsg,
     "agenda_updated": AgendaUpdatedMsg,
     # Files
@@ -425,6 +437,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "debate_round_ended": "debate",
     # Notes & Summary
     "notes_updated": "notes_summary",
+    "notes_appended": "notes_summary",
     "summary_updated": "notes_summary",
     "agenda_updated": "notes_summary",
     # Files

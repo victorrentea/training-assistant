@@ -460,12 +460,15 @@ def _resolve_presentation_slide_target(
     }
 
 
-def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
+def _broadcast_notes_summary_counts(probe: dict, change_parts: str, prev_probe: dict | None = None) -> None:
     """Broadcast notes, summary, and/or agenda availability to participants via WS.
 
     Only broadcasts the message(s) for the part(s) that actually changed.
     Skips broadcasting when all session-content files are absent (e.g., fresh session
     start) — participants already get nulls/false from GET /api/participant/state.
+
+    When notes grew by a pure append, also emits a `notes_appended` toast carrying
+    just the new snippet (see `_notes_append_snippet`).
     """
     notes_mtime_ns = probe.get("notes_mtime_ns")
     summary_mtime_ns = probe.get("summary_mtime_ns")
@@ -487,6 +490,7 @@ def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
     from daemon.ws_messages import (
         AgendaUpdatedMsg,
         FilesCountUpdatedMsg,
+        NotesAppendedMsg,
         NotesUpdatedMsg,
         SummaryUpdatedMsg,
     )
@@ -497,6 +501,9 @@ def _broadcast_notes_summary_counts(probe: dict, change_parts: str) -> None:
         if notes_mtime_ns:
             notes_updated_at = datetime.fromtimestamp(notes_mtime_ns / 1e9, tz=timezone.utc).isoformat()
         broadcast(NotesUpdatedMsg(updated_at=notes_updated_at))
+    snippet = _notes_append_snippet(prev_probe, probe, change_parts)
+    if snippet:
+        broadcast(NotesAppendedMsg(text=snippet, at=datetime.now(timezone.utc).isoformat()))
     if "summary" in parts or "session" in parts or "initial" in parts:
         summary_updated_at: str | None = None
         if summary_mtime_ns:
@@ -517,6 +524,46 @@ def _read_non_empty_line_count(path: Path | None) -> int:
     except OSError:
         return 0
     return sum(1 for line in content.splitlines() if line.strip())
+
+
+def _read_text_or_none(path: Path | None) -> str | None:
+    if path is None or not path.exists() or not path.is_file():
+        return None
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def _extract_appended_snippet(delta: str) -> str:
+    """Clean an appended notes delta for display in the participant toaster.
+
+    The macOS addon writes one entry per action as a "- <text>" line; strip that
+    leading bullet so participants see just the shared text/URL. Internal newlines
+    (a multi-line clipboard pasted as one entry) are preserved.
+    """
+    s = delta.strip()
+    if s.startswith("-"):
+        s = s[1:].strip()  # drop the leading "- " bullet the addon writes
+    return s
+
+
+def _notes_append_snippet(prev_probe: dict | None, probe: dict, change_parts: str) -> str | None:
+    """Return the snippet to toast when the notes file grew by a pure append, else None.
+
+    Only a genuine append to the *same* notes file toasts. Edits, full rewrites,
+    undo-truncations (file shrank), session switches, and the initial probe are all
+    intentionally silent — so participants only ever see freshly-shared text.
+    """
+    if prev_probe is None or "notes" not in set(change_parts.split(",")):
+        return None
+    if prev_probe.get("notes_file") != probe.get("notes_file"):
+        return None
+    prev_text = prev_probe.get("notes_text") or ""
+    curr_text = probe.get("notes_text") or ""
+    if not prev_text or len(curr_text) <= len(prev_text) or not curr_text.startswith(prev_text):
+        return None
+    return _extract_appended_snippet(curr_text[len(prev_text):]) or None
 
 
 def _file_mtime_ns(path: Path | None) -> int | None:
@@ -550,6 +597,7 @@ def _build_notes_summary_probe(session_folder: Path | None) -> dict:
         "notes_file": str(notes_file) if notes_file else None,
         "notes_mtime_ns": _file_mtime_ns(notes_file),
         "notes_non_empty_lines": _read_non_empty_line_count(notes_file),
+        "notes_text": _read_text_or_none(notes_file),
         "summary_file": str(summary_file) if summary_file else None,
         "summary_mtime_ns": _file_mtime_ns(summary_file),
         "summary_point_count": len(_parse_summary_points(summary_raw)),
@@ -1344,7 +1392,8 @@ def run() -> None:
                 )
                 notes_summary_probe = _build_notes_summary_probe(config.session_folder)
                 if notes_summary_probe_prev != notes_summary_probe:
-                    change_parts = _probe_change_parts(notes_summary_probe_prev, notes_summary_probe)
+                    prev_probe = notes_summary_probe_prev
+                    change_parts = _probe_change_parts(prev_probe, notes_summary_probe)
                     _log_notes_summary_probe(
                         "change-detected",
                         notes_summary_probe,
@@ -1354,7 +1403,7 @@ def run() -> None:
                     # Keep the served agenda path live so a .docx dropped mid-session is
                     # picked up without a daemon restart (mirrors notes/summary handling).
                     misc_state.agenda_docx_path = _agenda_path_from_probe(notes_summary_probe)
-                    _broadcast_notes_summary_counts(notes_summary_probe, change_parts)
+                    _broadcast_notes_summary_counts(notes_summary_probe, change_parts, prev_probe)
 
                 if now - last_persist_poll_at >= 3.0:
                     last_persist_poll_at = now

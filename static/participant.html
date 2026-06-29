@@ -214,6 +214,94 @@ body{visibility:hidden}
         #access-duration-toast li {
           margin: 0.15rem 0;
         }
+
+        /* Notes-append toasters — copy-friendly snippets pushed live from the
+           trainer's notes. Stack top-center, newest on top, auto-dismiss after 5 min. */
+        #notes-toasts {
+          position: fixed;
+          top: 1rem;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          align-items: center;
+          width: min(92vw, 460px);
+          pointer-events: none;
+        }
+        .notes-toast {
+          width: 100%;
+          background: #ecfdf5;
+          border: 2px solid #10b981;
+          border-radius: 12px;
+          padding: 0.7rem 2rem 0.6rem 0.9rem;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+          color: #064e3b;
+          position: relative;
+          pointer-events: auto;
+          opacity: 0;
+          transform: translateY(-12px);
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          overflow-wrap: anywhere;
+        }
+        .notes-toast.show { opacity: 1; transform: translateY(0); }
+        .notes-toast .nt-time {
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #047857;
+          opacity: 0.85;
+          margin-bottom: 0.2rem;
+        }
+        .notes-toast .nt-body {
+          font-size: 0.98rem;
+          font-weight: 600;
+          line-height: 1.35;
+          white-space: pre-wrap;
+        }
+        .notes-toast .nt-body a { color: #065f46; text-decoration: underline; font-weight: 700; }
+        .notes-toast .nt-actions {
+          margin-top: 0.55rem;
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+        }
+        .notes-toast .nt-copy {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          background: #10b981;
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          padding: 0.35rem 0.7rem;
+          font-size: 0.85rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .notes-toast .nt-copy:hover { background: #059669; }
+        .notes-toast .nt-hint { font-size: 0.7rem; color: #047857; opacity: 0.8; }
+        .notes-toast .nt-close {
+          position: absolute;
+          top: 0.35rem;
+          right: 0.5rem;
+          background: transparent;
+          border: none;
+          font-size: 1.2rem;
+          font-weight: bold;
+          color: #064e3b;
+          cursor: pointer;
+          line-height: 1;
+          width: 22px;
+          height: 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+          transition: background 0.2s;
+        }
+        .notes-toast .nt-close:hover { background: rgba(0, 0, 0, 0.1); }
 </style>
 <style>
 /* ── Quiz card styles ── */
@@ -609,6 +697,12 @@ body{visibility:hidden}
   </div>
   <div id="notes-scroll" class="flex-grow overflow-y-auto px-16 pt-12" style="padding-bottom:125px" onscroll="saveScroll('notes',this)">
     <div id="notes-content" class="text-on-surface leading-relaxed whitespace-pre-wrap">Loading…</div>
+    <div class="mt-8 pt-4 border-t border-outline-variant border-opacity-20">
+      <a id="notes-permalink-link" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-1 underline text-primary text-sm font-semibold">
+        Open current session notes
+        <span class="material-symbols-outlined" style="font-size:1rem">open_in_new</span>
+      </a>
+    </div>
   </div>
 </div>
 <div id="summary-view" style="display:none" class="relative h-full flex flex-col">
@@ -1238,6 +1332,10 @@ var LS = {
   setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
   getScroll: function(view) { return localStorage.getItem(LS.scrollKey(view)); },
   setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
+  // Whether the user was parked at the very bottom of a view's scroll. Shares the
+  // 'new:scroll_' prefix so clearScrolls() wipes it alongside the position.
+  getScrollAtBottom: function(view) { return localStorage.getItem('new:scroll_atbottom_' + view) === '1'; },
+  setScrollAtBottom: function(view, v) { localStorage.setItem('new:scroll_atbottom_' + view, v ? '1' : '0'); },
   getView:   function()     { return localStorage.getItem(LS.VIEW) || 'activity'; },
   setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
   getFollow: function()     { var v = localStorage.getItem(LS.FOLLOW); return v === null ? false : v === '1'; },
@@ -2077,6 +2175,9 @@ var _suppressScrollSave = new Set();
 function saveScroll(name, el) {
   if (_suppressScrollSave.has(name)) return;
   LS.setScroll(name, el.scrollTop);
+  // Remember if parked at the very bottom so freshly-appended notes "stick" to the
+  // end when the user returns — but only then; a mid-scroll position is restored as-is.
+  LS.setScrollAtBottom(name, (el.scrollHeight - el.scrollTop - el.clientHeight) <= 8);
 }
 function toggleSlidesMenu() {
   showView('slides');
@@ -2623,6 +2724,109 @@ function _hideAccessToast() {
   LS.markAccessToastDismissedToday();
 }
 
+// ── Notes-append toasters ───────────────────────────────────────────────────
+// A copy-friendly toaster that pops top-center whenever the trainer appends a
+// snippet to the session notes (relayed by the daemon's `notes_appended` WS).
+// Toasts stack newest-on-top, carry a timestamp, copy button, and — when the
+// snippet is a single URL — render it as a clickable link. Copying or clicking
+// the link dismisses that toast; otherwise it auto-closes after 5 minutes.
+var _NOTES_TOAST_TTL_MS = 5 * 60 * 1000;
+
+function _isSingleUrl(text) {
+  var t = (text || '').trim();
+  if (!t || /\s/.test(t)) return false;  // a single whitespace-free token only
+  return /^https?:\/\/[^\s]+$/i.test(t);
+}
+
+function _escapeHtml(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;');
+}
+
+function _copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  // Fallback for non-secure contexts (clipboard API unavailable).
+  return new Promise(function (resolve, reject) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      resolve();
+    } catch (e) { reject(e); }
+  });
+}
+
+// Live "5s ago / 1m ago / 2h ago" delta — recomputed every second per toast.
+function _relativeShort(ms) {
+  var sec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (sec < 1) return 'just now';
+  if (sec < 60) return sec + 's ago';
+  var min = Math.floor(sec / 60);
+  if (min < 60) return min + 'm ago';
+  var hr = Math.floor(min / 60);
+  if (hr < 24) return hr + 'h ago';
+  return Math.floor(hr / 24) + 'd ago';
+}
+
+function _showNotesToast(text, atISO) {
+  var clean = (text || '').trim();
+  if (!clean) return;
+  var container = document.getElementById('notes-toasts');
+  if (!container) return;
+
+  var whenMs = atISO ? new Date(atISO).getTime() : Date.now();
+  if (isNaN(whenMs)) whenMs = Date.now();
+
+  var bodyHtml = _isSingleUrl(clean)
+    ? '<a href="' + _escapeHtml(clean) + '" target="_blank" rel="noopener">' + _escapeHtml(clean) + '</a>'
+    : _escapeHtml(clean);
+
+  // "notes" in the hint is a live link to this session's standalone notes page.
+  var notesHref = _sessionId ? ('/' + _sessionId + '/notes-print') : '';
+  var hintHtml = notesHref
+    ? 'also available in <a href="' + notesHref + '" target="_blank" rel="noopener">notes</a>'
+    : 'also available in notes';
+
+  var toast = document.createElement('div');
+  toast.className = 'notes-toast';
+  toast.innerHTML =
+    '<button class="nt-close" aria-label="Close">&times;</button>' +
+    '<div class="nt-time">' + _relativeShort(whenMs) + '</div>' +
+    '<div class="nt-body">' + bodyHtml + '</div>' +
+    '<div class="nt-actions">' +
+      '<button class="nt-copy"><span class="material-symbols-outlined" style="font-size:1rem">content_copy</span>Copy</button>' +
+      '<span class="nt-hint">' + hintHtml + '</span>' +
+    '</div>';
+
+  var timeEl = toast.querySelector('.nt-time');
+  var tick = setInterval(function () { if (timeEl) timeEl.textContent = _relativeShort(whenMs); }, 1000);
+  var timer = setTimeout(close, _NOTES_TOAST_TTL_MS);
+  function close() {
+    clearTimeout(timer);
+    clearInterval(tick);
+    toast.classList.remove('show');
+    setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+  }
+
+  toast.querySelector('.nt-close').addEventListener('click', close);
+  toast.querySelector('.nt-copy').addEventListener('click', function () {
+    _copyToClipboard(clean).catch(function () {}).then(close);
+  });
+  var bodyLink = toast.querySelector('.nt-body a');
+  if (bodyLink) bodyLink.addEventListener('click', close);
+
+  container.insertBefore(toast, container.firstChild);  // newest on top
+  requestAnimationFrame(function () { toast.classList.add('show'); });
+}
+
 function _applyGdriveToast(url) {
   var wrap = document.getElementById('access-duration-toast-gdrive');
   var link = document.getElementById('access-duration-toast-gdrive-link');
@@ -2927,6 +3131,9 @@ async function _refreshParticipantState() {
     _sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
     console.log('[participant] session_id:', _sessionId);
     if (!_sessionId) return;
+    // Point the notes-view permalink at this session's standalone notes page.
+    var _notesPermalink = document.getElementById('notes-permalink-link');
+    if (_notesPermalink) _notesPermalink.href = '/' + _sessionId + '/notes-print';
     if (LS.getSessionId() !== _sessionId) {
       LS.clearScrolls();
       LS.setSessionId(_sessionId);
@@ -3527,6 +3734,10 @@ function _handleWsMessage(msg) {
       if (onNotes) loadNotes();
       break;
     }
+    case 'notes_appended': {
+      if (msg.text) _showNotesToast(msg.text, msg.at);
+      break;
+    }
     case 'summary_updated': {
       var summaryNav = document.querySelector('[data-nav="summary"]');
       summaryNav.style.display = msg.updated_at ? '' : 'none';
@@ -3954,6 +4165,9 @@ async function loadNotes() {
   // Capture scrollTop BEFORE the 'Loading…' placeholder shrinks content height —
   // otherwise the browser-fired scroll event clobbers LS with 0.
   const priorScroll = viewEl.scrollTop || parseInt(LS.getScroll('notes') || '0', 10);
+  // If the user was at the very bottom, follow freshly-appended notes to the new
+  // end; otherwise restore exactly where they were.
+  const stickToBottom = LS.getScrollAtBottom('notes');
   _suppressScrollSave.add('notes');
   el.textContent = 'Loading…';
   try {
@@ -3964,7 +4178,8 @@ async function loadNotes() {
     } else {
       el.textContent = 'No notes yet.';
     }
-    if (priorScroll) viewEl.scrollTop = priorScroll;
+    if (stickToBottom) viewEl.scrollTop = viewEl.scrollHeight;
+    else if (priorScroll) viewEl.scrollTop = priorScroll;
     LS.setScroll('notes', viewEl.scrollTop);
   } catch (e) {
     el.textContent = 'Failed to load notes.';
@@ -4113,6 +4328,7 @@ function downloadSummaryPdf() {
     <div id="pax-lb-entries"></div>
   </div>
 </div>
+<div id="notes-toasts"></div>
 <div id="access-duration-toast">
   <button class="close-btn" onclick="_hideAccessToast()" aria-label="Close">&times;</button>
   <div style="padding-right: 1.5rem;">
