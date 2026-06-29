@@ -17,6 +17,8 @@ body{visibility:hidden}
 #files-content .file-path-dir{color:var(--color-on-surface-variant,#888);text-decoration:none;font-weight:400;opacity:.7}
 #agenda-content{font-size:calc(0.875rem * var(--participant-zoom))}
 #notes-scroll,#summary-scroll,#agenda-view{overflow-anchor:none}
+/* Notes/agenda/summary get a 3× thicker scrollbar (vs. the 12px global) */
+#notes-scroll::-webkit-scrollbar,#summary-scroll::-webkit-scrollbar,#agenda-view::-webkit-scrollbar{width:36px}
 .badge-new{margin-left:auto;font-size:calc(.6rem + 1pt);font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
 #activity-score-badge{background:#fde047;color:#000}
 @keyframes badge-blink{0%,100%{opacity:1}50%{opacity:0}}
