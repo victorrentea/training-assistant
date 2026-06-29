@@ -1,0 +1,23 @@
+@startuml
+title Feature: Live Quiz — Communication Diagram (post-init flow)
+caption <color:gray>Derived from quiz-sequence.puml; "init" setup group omitted.  → request to Daemon, ← push from Daemon</color>
+
+' Rectangular (orthogonal) link routing, with breathing room around boxes/labels
+skinparam linetype ortho
+skinparam nodesep 90
+skinparam ranksep 90
+skinparam rectangle {
+  BackgroundColor #F0F0F0
+  BorderColor #555555
+}
+
+' Boxes
+rectangle "Host" as Host
+rectangle "Daemon" as Daemon
+rectangle "Participant\nAlice" as Alice
+
+' One link per object-pair; numbered messages listed along the link (step colors preserved)
+Host -- Daemon : <color:#D62728>[1]</color> →  POST /api/{session_id}/host/quiz/end/timer\n<color:#D62728>[1]</color> ←  quiz_end_countdown_started\n<color:#2CA02C>[2]</color> ←  participant_list_updated\n<color:#FF7F0E>[3]</color> →  POST /api/{session_id}/host/quiz/end\n<color:#FF7F0E>[3]</color> ←  quiz_ended\n<color:#9467BD>[4]</color> →  GET /api/{session_id}/host/quiz\n<color:#17BECF>[5]</color> →  GET /api/{session_id}/host/quiz\n<color:#BCBD22>[6]</color> →  GET /api/{session_id}/host/quiz\n<color:#E377C2>[7]</color> →  POST /api/{session_id}/host/quiz/manual/submit\n<color:#E377C2>[7]</color> ←  quiz_opened\n<color:#8C564B>[8]</color> ←  vote_update\n<color:#7F7F7F>[9]</color> →  GET /api/{session_id}/host/quiz
+
+Daemon -- Alice : <color:#D62728>[1]</color> ←  quiz_end_countdown_started\n<color:#2CA02C>[2]</color> →  PUT /api/participant/name\n<color:#FF7F0E>[3]</color> ←  quiz_ended\n<color:#E377C2>[7]</color> ←  quiz_opened\n<color:#8C564B>[8]</color> →  POST /api/participant/quiz/vote
+@enduml
