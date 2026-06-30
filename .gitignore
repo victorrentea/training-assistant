@@ -7,6 +7,7 @@ __pycache__/
 *.pyc
 .playwright-mcp/
 .superpowers/
+.serena/
 .c4views-tmp/
 
 /materials/
