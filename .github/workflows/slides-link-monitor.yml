@@ -1,0 +1,38 @@
+name: Slides link monitor
+
+# Daily check that every Google Slides deck linked on the public slides page
+# still exports to a valid PDF. If any deck breaks (e.g. the source PPTX grew
+# too large for Google to export, or a deck was removed/made private), a
+# detailed email is sent to Victor via Resend. Runs entirely in the cloud --
+# no scheduler on any local machine.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC daily (~08:00-09:00 Europe/Bucharest)
+  workflow_dispatch:        # allow manual "Run workflow" from the Actions tab
+    inputs:
+      simulate_failure:
+        description: "Send a test alert email (injects a fake broken deck)"
+        type: boolean
+        default: false
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify every slide deck exports to a valid PDF
+        # A broken deck sends the detailed alert email from inside the script.
+        # We keep the job green on purpose so GitHub does NOT also send its
+        # generic "workflow failed" notification -- the rich email is the
+        # signal. The step itself still shows red in the UI for run history.
+        continue-on-error: true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL: victorrentea@gmail.com
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SIMULATE_FAILURE: ${{ inputs.simulate_failure }}
+        run: python3 scripts/check_slide_links.py
