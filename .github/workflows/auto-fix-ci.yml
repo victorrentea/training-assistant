@@ -58,7 +58,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
               "from": "Training Assistant Build Fighter <onboarding@resend.dev>",
-              "to": ["victorentea@gmail.com"],
+              "to": ["victorrentea@gmail.com"],
               "subject": "⚠️ CI auto-fix failed — ${{ github.event.workflow_run.head_branch }}",
               "text": "Claude could not fix the CI build after 30 minutes and needs your attention.\n\nBranch: ${{ github.event.workflow_run.head_branch }}\nCommit: ${{ github.event.workflow_run.head_sha }}\nFailed run: https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}\n\nPlease investigate manually."
             }'
