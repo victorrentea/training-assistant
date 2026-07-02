@@ -203,6 +203,14 @@ class SlidesRunner:
             iso = _iso_utc(pptx_mtime)
             if existing.get("modified_at") != iso:
                 misc_state.slides_updated[slug] = {**existing, "modified_at": iso}
+                # Proactively verify Google can still export this (changed) deck
+                # to PDF and alarm the macOS add-on if it keeps failing — runs
+                # for every changed deck, even if no participant requests it.
+                catalog_entry = misc_state.slides_catalog.get(slug, {})
+                drive_url = catalog_entry.get("drive_export_url", "")
+                if drive_url:
+                    from daemon.slides.export_probe import schedule_probe
+                    schedule_probe(slug, catalog_entry.get("title", slug), drive_url)
                 if existing.get("status") == "cached":
                     drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
                     if drive_url:

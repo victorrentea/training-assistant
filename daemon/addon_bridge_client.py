@@ -79,6 +79,26 @@ class AddonBridgeClient:
             log.info(_NAME, "→ ended session")
         return sent
 
+    def send_pdf_export_alarm(self, deck: str, slug: str, failing: bool, detail: str = "") -> bool:
+        """Raise (failing=True) or clear (failing=False) the macOS 'PDF export
+        failing' alarm for a deck. Best-effort; never raises.
+
+        The addon shows a persistent native notification while failing=True and
+        removes it on failing=False (export recovered).
+        """
+        msg = {
+            "type": "pdf_export_alarm",
+            "deck": deck,
+            "slug": slug,
+            "failing": failing,
+            "detail": detail,
+        }
+        sent = self._send(msg)
+        if sent:
+            arrow = "🚨 raise" if failing else "✅ clear"
+            log.info(_NAME, f"→ pdf_export_alarm {arrow} deck={deck!r}")
+        return sent
+
     def drain_slides(self) -> list[dict]:
         """Return all pending slide events. Call from the main thread each loop."""
         events: list[dict] = []
@@ -230,3 +250,8 @@ def send_session_started(participant_url: str, session_folder: str | None = None
 def send_session_ended() -> bool:
     """Best-effort session_ended message to addons. Returns True if sent."""
     return _client is not None and _client.send_session_ended()
+
+
+def send_pdf_export_alarm(deck: str, slug: str, failing: bool, detail: str = "") -> bool:
+    """Best-effort pdf_export_alarm message to addons. Returns True if sent."""
+    return _client is not None and _client.send_pdf_export_alarm(deck, slug, failing, detail)
