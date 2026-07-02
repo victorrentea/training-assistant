@@ -210,7 +210,10 @@ class SlidesRunner:
                 drive_url = catalog_entry.get("drive_export_url", "")
                 if drive_url:
                     from daemon.slides.export_probe import schedule_probe
-                    schedule_probe(slug, catalog_entry.get("title", slug), drive_url)
+                    # Notification shows the pptx filename (source_name), falling
+                    # back to the catalog title, then the slug.
+                    deck_name = catalog_entry.get("source_name") or catalog_entry.get("title") or slug
+                    schedule_probe(slug, deck_name, drive_url)
                 if existing.get("status") == "cached":
                     drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
                     if drive_url:
