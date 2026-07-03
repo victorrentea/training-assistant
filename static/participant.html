@@ -15,6 +15,15 @@ body{visibility:hidden}
 #summary-content{font-size:calc(1rem * var(--participant-zoom))}
 #files-content{font-size:calc(1rem * var(--participant-zoom))}
 #files-content .file-path-dir{color:var(--color-on-surface-variant,#888);text-decoration:none;font-weight:400;opacity:.7}
+/* Host highlighter: the host marks a passage and the agent wraps it in <mark>
+   in ai-summary.md. Warm amber band, legible in light + dark; box-decoration
+   keeps the band continuous across line wraps. Applies to every markdown view. */
+#summary-content mark,#agenda-content mark,#files-content mark{background:#ffe680;color:#3a2f00;border-radius:3px;padding:0 .18em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+@media (prefers-color-scheme: dark){#summary-content mark,#agenda-content mark,#files-content mark{background:rgba(255,214,10,.28);color:#ffe6a1}}
+/* Heavier bold: prose's default weight-600 bold is barely visible in dark mode.
+   Use 800 and inherit the container's theme-aware text colour so it stays crisp
+   and legible in both light and dark. */
+#summary-content strong,#agenda-content strong,#files-content strong{font-weight:800;color:inherit}
 #agenda-content{font-size:calc(0.875rem * var(--participant-zoom))}
 #notes-scroll,#summary-scroll,#agenda-view{overflow-anchor:none}
 /* Notes/agenda/summary get a 3× thicker scrollbar (vs. the 12px global) */
@@ -4351,17 +4360,19 @@ function downloadSummaryPdf() {
   </div>
 </div>
 <script>
-/* Host-only summary-refinement pencil. Visible ONLY on the host machine
+/* Host-only summary-refinement toolbar. Visible ONLY on the host machine
    (ON_HOST_MACHINE=true cookie); participants never see it. On a text selection in the summary, a
-   floating pencil appears; clicking it opens a small note box. Send POSTs the
-   selected text + the note to the local relay listener (127.0.0.1:8765), which
-   Claude Code watches to refine ai-summary.md. Everything is on localhost. */
+   floating toolbar appears ABOVE the selection with two actions:
+     🖍️ highlight — one click; asks the agent to wrap the passage in <mark> (rendered as an amber band)
+     ✏️ comment   — opens a note box to send a free-form refinement request
+   Both POST the selected text (+ note) to the local relay listener (127.0.0.1:8765),
+   which Claude Code watches to refine ai-summary.md. Everything is on localhost. */
 (function () {
   // Host machine only: gate on the JS-readable ON_HOST_MACHINE=true cookie (set by
   // the landing-page toggle). The is_host cookie is httponly, so JS cannot read it.
   if (!document.cookie.split(';').some(function (p) { return p.trim() === 'ON_HOST_MACHINE=true'; })) return;
   var RELAY = 'http://127.0.0.1:8765/note';
-  var pencil = null, popup = null, lastSel = '';
+  var toolbar = null, popup = null, lastSel = '';
 
   // Compact reminder of what's being commented on: for long selections, show
   // the first few words, an ellipsis, and the last word; short ones in full.
@@ -4382,29 +4393,40 @@ function downloadSummaryPdf() {
     if (!text) return null;
     return { text: text, rect: range.getBoundingClientRect(), range: range.cloneRange() };
   }
-  function removePencil() { if (pencil) { pencil.remove(); pencil = null; } }
+  function removeToolbar() { if (toolbar) { toolbar.remove(); toolbar = null; } }
   function removePopup() { if (popup) { popup.remove(); popup = null; } }
 
-  function showPencil(info) {
-    removePencil();
+  function showToolbar(info) {
+    removeToolbar();
     lastSel = info.text;
-    pencil = document.createElement('button');
-    pencil.textContent = '✏️';
-    pencil.title = 'Send a refinement note to Claude';
-    // Sit ABOVE the selection (near its right edge) so it never covers the text
-    // that follows the selection on the same line.
-    Object.assign(pencil.style, {
-      position: 'fixed', zIndex: 2147483647,
-      left: Math.min(window.innerWidth - 44, Math.max(6, info.rect.right - 16)) + 'px',
-      top: Math.max(6, info.rect.top - 40) + 'px',
-      width: '32px', height: '32px', borderRadius: '50%',
-      border: '1px solid #d0a000', background: '#fffbe6', cursor: 'pointer',
-      fontSize: '16px', lineHeight: '30px', padding: '0',
-      boxShadow: '0 2px 8px rgba(0,0,0,.25)'
+    // Sit ABOVE the selection (near its right edge) so the bar never covers the
+    // text that follows the selection on the same line. Two buttons: highlight
+    // and comment.
+    toolbar = document.createElement('div');
+    Object.assign(toolbar.style, {
+      position: 'fixed', zIndex: 2147483647, display: 'flex', gap: '4px',
+      left: Math.min(window.innerWidth - 78, Math.max(6, info.rect.right - 62)) + 'px',
+      top: Math.max(6, info.rect.top - 40) + 'px'
     });
-    pencil.addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep selection
-    pencil.addEventListener('click', function (e) { e.stopPropagation(); openPopup(info); });
-    document.body.appendChild(pencil);
+    function mkBtn(emoji, title) {
+      var b = document.createElement('button');
+      b.textContent = emoji;
+      b.title = title;
+      Object.assign(b.style, {
+        width: '32px', height: '32px', borderRadius: '50%',
+        border: '1px solid #d0a000', background: '#fffbe6', cursor: 'pointer',
+        fontSize: '16px', lineHeight: '30px', padding: '0',
+        boxShadow: '0 2px 8px rgba(0,0,0,.25)'
+      });
+      b.addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep selection
+      return b;
+    }
+    var hi = mkBtn('🖍️', 'Mark as highlight');
+    hi.addEventListener('click', function (e) { e.stopPropagation(); submitHighlight(lastSel); });
+    var note = mkBtn('✏️', 'Send a refinement note to Claude');
+    note.addEventListener('click', function (e) { e.stopPropagation(); openPopup(info); });
+    toolbar.appendChild(hi); toolbar.appendChild(note);
+    document.body.appendChild(toolbar);
   }
 
   function openPopup(info) {
@@ -4437,7 +4459,7 @@ function downloadSummaryPdf() {
     var send = document.createElement('button'); send.textContent = 'Send';
     [cancel, send].forEach(function (b) { Object.assign(b.style, { padding: '4px 12px', borderRadius: '6px', border: '1px solid #bbb', cursor: 'pointer', font: '13px system-ui' }); });
     Object.assign(send.style, { background: '#2563eb', color: '#fff', borderColor: '#2563eb' });
-    cancel.addEventListener('click', function () { removePopup(); removePencil(); });
+    cancel.addEventListener('click', function () { removePopup(); removeToolbar(); });
     send.addEventListener('click', function () { submitNote(lastSel, ta.value); });
     ta.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitNote(lastSel, ta.value); });
     row.appendChild(cancel); row.appendChild(send);
@@ -4461,36 +4483,50 @@ function downloadSummaryPdf() {
     setTimeout(function () { t.remove(); }, 2400);
   }
 
+  function postRelay(payload, okMsg) {
+    return fetch(RELAY, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (r) {
+      toast(r.status === 204 ? okMsg : ('Error ' + r.status), r.status === 204);
+    }).catch(function () {
+      toast('Relay not running — start the listener', false);
+    }).finally(function () { removePopup(); removeToolbar(); });
+  }
+
   function submitNote(selected, comment) {
     comment = (comment || '').trim();
     if (!comment) { toast('Write a note first', false); return; }
-    fetch(RELAY, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ selected: selected, comment: comment, view: 'summary', ts: new Date().toISOString() })
-    }).then(function (r) {
-      toast(r.status === 204 ? 'Sent to Claude ✓' : ('Error ' + r.status), r.status === 204);
-    }).catch(function () {
-      toast('Relay not running — start the listener', false);
-    }).finally(function () { removePopup(); removePencil(); });
+    postRelay({ selected: selected, comment: comment, view: 'summary', ts: new Date().toISOString() }, 'Sent to Claude ✓');
+  }
+
+  // One-click highlight: ask the agent to wrap this exact passage in <mark> in
+  // ai-summary.md (verbatim, no rewording). Rides the same relay as comments.
+  function submitHighlight(selected) {
+    postRelay({
+      selected: selected,
+      comment: 'Highlight this exact passage in ai-summary.md by wrapping it in <mark></mark>. Do not change any wording.',
+      action: 'highlight', view: 'summary', ts: new Date().toISOString()
+    }, 'Highlight sent ✓');
   }
 
   document.addEventListener('mouseup', function () {
     setTimeout(function () {
       if (popup) return;                       // don't reshow while editing a note
       var info = selectionInSummary();
-      if (info) showPencil(info); else removePencil();
+      if (info) showToolbar(info); else removeToolbar();
     }, 10);
   });
   document.addEventListener('mousedown', function (e) {
-    if (pencil && e.target === pencil) return;
+    if (toolbar && toolbar.contains(e.target)) return; // click on a toolbar button: ignore
     if (popup) {
       if (popup.contains(e.target)) return;            // click inside the dialog: ignore
       var ta = popup.querySelector('textarea');
       if (ta && ta.value.trim()) return;               // has text: keep the dialog open
-      removePopup(); removePencil();                   // empty: dismiss on outside click
+      removePopup(); removeToolbar();                  // empty: dismiss on outside click
       return;
     }
-    removePencil();                                    // no dialog: clicking away hides the pencil
+    removeToolbar();                                   // no dialog: clicking away hides the toolbar
   });
 })();
 </script>
