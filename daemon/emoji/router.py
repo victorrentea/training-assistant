@@ -74,9 +74,13 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     if not pid.startswith("__") and not emoji_rate_limiter.allow(pid):
         return JSONResponse({"error": "Too many reactions"}, status_code=429)
 
-    # Forward to desktop overlay via addons bridge WS — fire and forget
+    # Forward to desktop overlay via addons bridge WS — fire and forget. A stable
+    # per-participant colour rides along so the overlay can halo each sender's
+    # emojis distinctly (tells apart 5 people from 1 person spamming).
     from daemon import addon_bridge_client
-    sent = addon_bridge_client.send_emoji(emoji)
+    from daemon.emoji.glow import color_for_participant
+    glow = color_for_participant(pid)
+    sent = addon_bridge_client.send_emoji(emoji, glow)
     participant_name = participant_state.participant_names.get(
         pid, "Host" if pid == "__host__" else pid
     )

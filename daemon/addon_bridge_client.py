@@ -3,8 +3,9 @@
 The addons server runs at ws://127.0.0.1:<WS_SERVER_PORT> (default 8765).
 
 Protocol:
-  Daemon → Addons: {"type": "display_emoji", "emoji": "<char>", "count": 1}
-              — relayed by addons to the desktop overlay for animation
+  Daemon → Addons: {"type": "display_emoji", "emoji": "<char>", "count": 1, "glow": "#rrggbb"?}
+              — relayed by addons to the desktop overlay for animation. "glow" is
+              an optional per-participant halo colour (omitted → no halo).
   Addons → Daemon: {"type": "slide_presenting_now", "deck": "<name>", "slide": <n>, "presenting": <bool>}
               — pushed on every PowerPoint slide/deck change (no message when unchanged)
   Addons → Daemon: {"type": "slides_viewed", "slides": [{"fileName": "<name>", "page": <n>, "seconds": <n>}, ...]}
@@ -56,9 +57,16 @@ class AddonBridgeClient:
         """callback(connected: bool) — called from WS thread on state change."""
         self._on_connection_change = callback
 
-    def send_emoji(self, emoji: str) -> bool:
-        """Forward an emoji reaction to the overlay. Best-effort; never raises."""
-        return self._send({"type": "display_emoji", "emoji": emoji, "count": 1})
+    def send_emoji(self, emoji: str, glow: str | None = None) -> bool:
+        """Forward an emoji reaction to the overlay. Best-effort; never raises.
+
+        glow: optional ``#rrggbb`` halo colour identifying the sender; omitted
+        from the payload when None so older overlays are unaffected.
+        """
+        msg: dict = {"type": "display_emoji", "emoji": emoji, "count": 1}
+        if glow:
+            msg["glow"] = glow
+        return self._send(msg)
 
     def send_session_started(self, participant_url: str, session_folder: str | None = None) -> bool:
         """Notify addons that a session has started with the participant join URL.
@@ -237,9 +245,12 @@ def is_connected() -> bool:
     return _client is not None and _client.connected
 
 
-def send_emoji(emoji: str) -> bool:
-    """Best-effort emoji send to addons overlay. Returns True if sent."""
-    return _client is not None and _client.send_emoji(emoji)
+def send_emoji(emoji: str, glow: str | None = None) -> bool:
+    """Best-effort emoji send to addons overlay. Returns True if sent.
+
+    glow: optional ``#rrggbb`` per-participant halo colour.
+    """
+    return _client is not None and _client.send_emoji(emoji, glow)
 
 
 def send_session_started(participant_url: str, session_folder: str | None = None) -> bool:

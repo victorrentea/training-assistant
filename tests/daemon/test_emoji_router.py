@@ -111,10 +111,11 @@ class TestEmojiReaction:
         assert call_msg.model_dump()["emoji"] == "❤️"
 
     def test_sends_emoji_to_bridge(self, emoji_client, mock_externals):
+        from daemon.emoji.glow import color_for_participant
         emoji_client.post("/api/participant/emoji/reaction",
                            json={"emoji": "❤️"},
                            headers={"X-Participant-ID": "uuid1"})
-        mock_externals["send_emoji"].assert_called_once_with("❤️")
+        mock_externals["send_emoji"].assert_called_once_with("❤️", color_for_participant("uuid1"))
 
     def test_rate_limit_blocks_sixteenth_per_minute(self, emoji_client):
         """A burst of 15 is allowed; the 16th within the minute is throttled."""
@@ -178,7 +179,8 @@ class TestEmojiMasterSwitch:
                                   headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 204
         mock_externals["host"].assert_called_once()
-        mock_externals["send_emoji"].assert_called_once_with("❤️")
+        from daemon.emoji.glow import color_for_participant
+        mock_externals["send_emoji"].assert_called_once_with("❤️", color_for_participant("uuid1"))
 
     def test_toggle_endpoint_flips_and_reports(self, emoji_full_client):
         """POST /global-toggle flips the flag and returns the new value."""
