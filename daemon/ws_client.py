@@ -192,7 +192,7 @@ class DaemonWsClient:
                     _slug = re.sub(r'-[0-9a-f]{32}$', '', _full_slug)
                     _labels = {
                         "download_slide_request": "pdf download",
-                        "download_slide_completed": "pdf downloaded ok",
+                        "download_slide_completed": "✅ pdf downloaded ok",
                         "download_failed": "pdf download failed",
                     }
                     _label = _labels.get(_event, _event)
