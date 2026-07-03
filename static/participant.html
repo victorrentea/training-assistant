@@ -4363,6 +4363,14 @@ function downloadSummaryPdf() {
   var RELAY = 'http://127.0.0.1:8765/note';
   var pencil = null, popup = null, lastSel = '';
 
+  // Compact reminder of what's being commented on: for long selections, show
+  // the first few words, an ellipsis, and the last word; short ones in full.
+  function snippet(text) {
+    var words = text.split(/\s+/).filter(Boolean);
+    if (words.length <= 8) return text;
+    return words.slice(0, 6).join(' ') + ' … ' + words[words.length - 1];
+  }
+
   function selectionInSummary() {
     var sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
@@ -4383,10 +4391,12 @@ function downloadSummaryPdf() {
     pencil = document.createElement('button');
     pencil.textContent = '✏️';
     pencil.title = 'Send a refinement note to Claude';
+    // Sit ABOVE the selection (near its right edge) so it never covers the text
+    // that follows the selection on the same line.
     Object.assign(pencil.style, {
       position: 'fixed', zIndex: 2147483647,
-      left: Math.min(window.innerWidth - 44, info.rect.right + 6) + 'px',
-      top: Math.max(6, info.rect.top - 6) + 'px',
+      left: Math.min(window.innerWidth - 44, Math.max(6, info.rect.right - 16)) + 'px',
+      top: Math.max(6, info.rect.top - 40) + 'px',
       width: '32px', height: '32px', borderRadius: '50%',
       border: '1px solid #d0a000', background: '#fffbe6', cursor: 'pointer',
       fontSize: '16px', lineHeight: '30px', padding: '0',
@@ -4403,13 +4413,21 @@ function downloadSummaryPdf() {
     Object.assign(popup.style, {
       position: 'fixed', zIndex: 2147483647,
       left: Math.min(window.innerWidth - 320, info.rect.right + 6) + 'px',
-      top: Math.min(window.innerHeight - 170, info.rect.bottom + 8) + 'px',
+      top: Math.min(window.innerHeight - 210, info.rect.bottom + 8) + 'px',
       width: '300px', background: '#fff', border: '1px solid #ccc',
       borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.25)',
       padding: '10px', font: '13px system-ui, sans-serif', color: '#111'
     });
-    // The selected text is NOT echoed here (it stays highlighted on the page and
-    // is sent with the note); just the note box.
+    // Echo a compact reminder of the selection (first words … last word) above
+    // the note box so the host sees exactly what they're commenting on. The full
+    // selection stays highlighted on the page and is what actually gets sent.
+    var ctx = document.createElement('div');
+    ctx.textContent = '“' + snippet(info.text) + '”';
+    Object.assign(ctx.style, {
+      marginBottom: '8px', paddingLeft: '8px', color: '#555', fontStyle: 'italic',
+      fontSize: '12px', lineHeight: '1.35', borderLeft: '3px solid #d0a000',
+      maxHeight: '54px', overflow: 'hidden'
+    });
     var ta = document.createElement('textarea');
     ta.placeholder = 'What should Claude refine here?';
     Object.assign(ta.style, { width: '100%', boxSizing: 'border-box', height: '64px', resize: 'vertical', border: '1px solid #ccc', borderRadius: '6px', padding: '6px', font: '13px system-ui' });
@@ -4423,7 +4441,7 @@ function downloadSummaryPdf() {
     send.addEventListener('click', function () { submitNote(lastSel, ta.value); });
     ta.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitNote(lastSel, ta.value); });
     row.appendChild(cancel); row.appendChild(send);
-    popup.appendChild(ta); popup.appendChild(row);
+    popup.appendChild(ctx); popup.appendChild(ta); popup.appendChild(row);
     document.body.appendChild(popup);
     ta.focus();
     // Keep the page selection visible while the dialog is open — focusing the
