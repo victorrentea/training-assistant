@@ -140,6 +140,20 @@
   }
 }
 
+/* ── Prose inline-code: drop Tailwind Typography's literal backticks ──
+   Tailwind's typography plugin decorates every <code> with a backtick via
+   `code::before { content: "`" }` / `code::after`. marked already emits a
+   clean <code>~</code>, so those pseudo-elements render as visible `~`
+   characters in the participant summary/files/agenda views. Remove them;
+   the monospace font + subtle background from prose stay intact.
+   Specificity (0,1,2) outranks Tailwind's (0,1,1), so this wins regardless
+   of stylesheet order — no !important needed.
+   ─────────────────────────────────────────────────────────── */
+.prose code::before,
+.prose code::after {
+  content: none;
+}
+
 /* ── Green hover utility (follow button, download icons) ─────── */
 .hover-green:hover {
   background-color: #4caf50;
