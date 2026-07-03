@@ -91,6 +91,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: gitleaks-action scans a `before^..after` commit range on
+          # pushes, which fails on a shallow (depth-1) clone when the base's parent
+          # isn't present ("unknown revision"). Fetch everything so the range resolves.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
