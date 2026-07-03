@@ -4364,7 +4364,7 @@ function downloadSummaryPdf() {
    (ON_HOST_MACHINE=true cookie); participants never see it. On a text selection in the summary, a
    floating toolbar appears ABOVE the selection with two actions:
      🖍️ highlight — one click; asks the agent to wrap the passage in <mark> (rendered as an amber band)
-     ✏️ comment   — opens a note box to send a free-form refinement request
+     💬 comment   — opens a note box to send a free-form refinement request
    Both POST the selected text (+ note) to the local relay listener (127.0.0.1:8765),
    which Claude Code watches to refine ai-summary.md. Everything is on localhost. */
 (function () {
@@ -4423,7 +4423,7 @@ function downloadSummaryPdf() {
     }
     var hi = mkBtn('🖍️', 'Mark as highlight');
     hi.addEventListener('click', function (e) { e.stopPropagation(); submitHighlight(lastSel); });
-    var note = mkBtn('✏️', 'Send a refinement note to Claude');
+    var note = mkBtn('💬', 'Send a refinement note to Claude');
     note.addEventListener('click', function (e) { e.stopPropagation(); openPopup(info); });
     toolbar.appendChild(hi); toolbar.appendChild(note);
     document.body.appendChild(toolbar);
