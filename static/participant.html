@@ -4210,6 +4210,93 @@ async function loadNotes() {
   }
 }
 
+// ── Flicker-free summary rendering ───────────────────────────────────────────
+// Render the summary as keyed top-level blocks and reconcile in place on every
+// update, so a host/AI change only touches the block(s) that changed: no full
+// re-render, no flicker, and any text selection outside the changed block
+// survives. Each block carries data-key (source hash) + data-s/data-e (its char
+// range in the markdown) — the offsets also feed the deterministic highlighter.
+function makeSummaryRenderer() {
+  var r = new marked.Renderer();
+  r.link = function(href, title, text) {
+    var t = title ? ' title="' + title + '"' : '';
+    return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>'
+      + text
+      + '<span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:middle;margin-left:2px;opacity:0.7">open_in_new</span>'
+      + '</a>';
+  };
+  return r;
+}
+
+function _hashStr(s) {
+  var h = 5381, i = s.length;
+  while (i) h = (h * 33) ^ s.charCodeAt(--i);
+  return (h >>> 0).toString(36);
+}
+
+// Split markdown into top-level blocks, each a DOM element tagged with
+// data-key/data-s/data-e. One block token -> one element (heading, list,
+// paragraph, hr…); a rare multi-element block is wrapped in a <div>.
+function summaryBlocks(md) {
+  var renderer = makeSummaryRenderer();
+  var tokens = marked.lexer(md);
+  var out = [], pos = 0, seen = {};
+  var tmpl = document.createElement('template');
+  tokens.forEach(function(tok) {
+    var raw = tok.raw || '';
+    var s = pos; pos += raw.length;
+    if (tok.type === 'space') return;                 // blank lines: no DOM node
+    tmpl.innerHTML = marked.parser([tok], { renderer: renderer }).trim();
+    var els = Array.prototype.filter.call(tmpl.content.childNodes, function(n) { return n.nodeType === 1; });
+    var el;
+    if (els.length === 1) { el = els[0]; }
+    else { el = document.createElement('div'); el.className = 'summary-block-group'; while (tmpl.content.firstChild) el.appendChild(tmpl.content.firstChild); }
+    var base = _hashStr(raw);
+    var key = base + '.' + (seen[base] = (seen[base] || 0) + 1);
+    el.setAttribute('data-key', key);
+    el.setAttribute('data-s', s);
+    el.setAttribute('data-e', pos);
+    out.push({ key: key, el: el });
+  });
+  return out;
+}
+
+// Reconcile #summary-content's children to the block list: reuse unchanged nodes
+// (keeps their DOM, so a selection inside survives), insert new, drop gone.
+// Falls back to a full parse if anything throws — the summary must never blank.
+function renderSummary(container, md) {
+  try {
+    var blocks = summaryBlocks(md);
+    var existing = {};
+    Array.prototype.forEach.call(container.children, function(ch) {
+      var k = ch.getAttribute('data-key');
+      if (k) existing[k] = ch;
+    });
+    var desired = blocks.map(function(b) {
+      var node = existing[b.key];
+      if (node) {
+        delete existing[b.key];
+        node.setAttribute('data-s', b.el.getAttribute('data-s'));
+        node.setAttribute('data-e', b.el.getAttribute('data-e'));
+        return node;                                   // unchanged -> keep DOM node
+      }
+      return b.el;
+    });
+    Object.keys(existing).forEach(function(k) { existing[k].remove(); });        // gone
+    Array.prototype.slice.call(container.childNodes).forEach(function(n) {       // stray / 'Loading…'
+      if (n.nodeType !== 1 || !n.getAttribute('data-key')) container.removeChild(n);
+    });
+    desired.forEach(function(node, i) {                                          // reorder + insert
+      if (container.children[i] !== node) container.insertBefore(node, container.children[i] || null);
+    });
+    container.dataset.rendered = '1';
+  } catch (e) {
+    container.innerHTML = marked.parse(md, { renderer: makeSummaryRenderer() });
+    container.dataset.rendered = '1';
+    if (window.console) console.warn('[summary] reconcile failed; full render', e);
+  }
+}
+
 async function loadSummary() {
   if (!_summaryDirty) return;
   _summaryDirty = false;
@@ -4217,7 +4304,7 @@ async function loadSummary() {
   const viewEl = document.getElementById('summary-scroll');
   const priorScroll = viewEl.scrollTop || parseInt(LS.getScroll('summary') || '0', 10);
   _suppressScrollSave.add('summary');
-  el.textContent = 'Loading…';
+  if (!el.dataset.rendered) el.textContent = 'Loading…';
   try {
     const data = await fetch(`/${_sessionId}/api/participant/summary`).then(r => r.ok ? r.json() : Promise.reject('not found'));
     if (data) {
@@ -4225,15 +4312,7 @@ async function loadSummary() {
         (data.points || []).map(p => '- ' + (typeof p === 'string' ? p : p.text)).join('\n');
       _summaryRawMarkdown = md || '';
       if (md) {
-        var _summaryRenderer = new marked.Renderer();
-        _summaryRenderer.link = function(href, title, text) {
-          var t = title ? ' title="' + title + '"' : '';
-          return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>'
-            + text
-            + '<span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:middle;margin-left:2px;opacity:0.7">open_in_new</span>'
-            + '</a>';
-        };
-        el.innerHTML = marked.parse(md, { renderer: _summaryRenderer });
+        renderSummary(el, md);
       } else {
         el.textContent = 'No summary yet.';
       }
