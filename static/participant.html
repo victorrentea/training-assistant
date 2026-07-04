@@ -4454,6 +4454,9 @@ function downloadSummaryPdf() {
   // the landing-page toggle). The is_host cookie is httponly, so JS cannot read it.
   if (!document.cookie.split(';').some(function (p) { return p.trim() === 'ON_HOST_MACHINE=true'; })) return;
   var RELAY = 'http://127.0.0.1:8765/note';
+  // Session id from the URL path (this IIFE is a separate <script> block, so the
+  // page-level `let _sessionId` is out of scope here).
+  var SID = (location.pathname.split('/')[1] || '').toLowerCase();
   var toolbar = null, popup = null, lastSel = '';
 
   // Compact reminder of what's being commented on: for long selections, show
@@ -4504,7 +4507,7 @@ function downloadSummaryPdf() {
       return b;
     }
     var hi = mkBtn('🖍️', 'Mark as highlight');
-    hi.addEventListener('click', function (e) { e.stopPropagation(); submitHighlight(lastSel); });
+    hi.addEventListener('click', function (e) { e.stopPropagation(); submitHighlight(); });
     var note = mkBtn('💬', 'Send a refinement note to Claude');
     note.addEventListener('click', function (e) { e.stopPropagation(); openPopup(info); });
     toolbar.appendChild(hi); toolbar.appendChild(note);
@@ -4582,14 +4585,75 @@ function downloadSummaryPdf() {
     postRelay({ selected: selected, comment: comment, view: 'summary', ts: new Date().toISOString() }, 'Sent to Claude ✓');
   }
 
-  // One-click highlight: ask the agent to wrap this exact passage in <mark> in
-  // ai-summary.md (verbatim, no rewording). Rides the same relay as comments.
-  function submitHighlight(selected) {
-    postRelay({
-      selected: selected,
-      comment: 'Highlight this exact passage in ai-summary.md by wrapping it in <mark></mark>. Do not change any wording.',
-      action: 'highlight', view: 'summary', ts: new Date().toISOString()
-    }, 'Highlight sent ✓');
+  // One-click highlight: DETERMINISTIC, no AI. Build a SOURCE text-quote anchor
+  // (exact + prefix/suffix context, plus the block's source offsets) from the
+  // selection and POST it to the daemon, which splices <mark> into ai-summary.md
+  // under a lock and re-broadcasts. Race-safe: if a concurrent edit (a summariser
+  // link-checker minion, or a host update) moved the passage, the daemon
+  // relocates it by snippet or rejects (409) — it never scrambles content.
+  function _closestBlock(node, content) {
+    var el = node.nodeType === 1 ? node : node.parentElement;
+    while (el && el.parentElement && el.parentElement !== content) el = el.parentElement;
+    return (el && el.parentElement === content && el.hasAttribute('data-s')) ? el : null;
+  }
+  function _renderedOffsetWithin(blockEl, node, offset) {
+    var r = document.createRange();
+    r.setStart(blockEl, 0); r.setEnd(node, offset);
+    return r.toString().length;
+  }
+  function _nearestIndexOf(hay, needle, hint) {
+    if (!needle) return -1;
+    var best = -1, bestD = Infinity, i = hay.indexOf(needle);
+    while (i !== -1) { var d = Math.abs(i - hint); if (d < bestD) { bestD = d; best = i; } i = hay.indexOf(needle, i + 1); }
+    return best;
+  }
+  // Map the selection to a SOURCE anchor. Plain-text selections map precisely;
+  // a selection spanning markdown syntax falls back to the rendered text (the
+  // daemon then relocates or 409s rather than mis-placing the mark).
+  function computeHighlightAnchor() {
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    var content = document.getElementById('summary-content');
+    if (!content) return null;
+    var range = sel.getRangeAt(0);
+    if (!content.contains(range.commonAncestorContainer)) return null;
+    var selText = sel.toString();
+    if (!selText.trim()) return null;
+    var md = _summaryRawMarkdown || '';
+    var startBlock = _closestBlock(range.startContainer, content);
+    var endBlock = _closestBlock(range.endContainer, content);
+    var exact, start = null, end = null;
+    if (startBlock) {
+      var blockS = parseInt(startBlock.getAttribute('data-s'), 10);
+      var blockE = parseInt((endBlock || startBlock).getAttribute('data-e'), 10);
+      if (isFinite(blockS) && isFinite(blockE)) {
+        var src = md.slice(blockS, blockE);
+        var hint = _renderedOffsetWithin(startBlock, range.startContainer, range.startOffset);
+        var idx = _nearestIndexOf(src, selText, hint);
+        if (idx >= 0) { start = blockS + idx; end = start + selText.length; exact = selText; }
+        else { start = blockS; }  // offset hint only; exact set below
+      }
+    }
+    if (exact === undefined) exact = selText;  // fallback: daemon relocates or 409s
+    return {
+      exact: exact,
+      prefix: (start != null) ? md.slice(Math.max(0, start - 24), start) : '',
+      suffix: (start != null && end != null) ? md.slice(end, end + 24) : '',
+      start: start, end: end
+    };
+  }
+  function submitHighlight() {
+    var anchor = computeHighlightAnchor();
+    if (!anchor) { toast('Select text in the summary first', false); return; }
+    fetch('/api/' + SID + '/host/summary/highlight', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(anchor)
+    }).then(function (r) {
+      if (r.status === 409) { toast('Passage moved — re-select', false); return; }
+      toast(r.ok ? 'Highlighted ✓' : ('Error ' + r.status), r.ok);
+    }).catch(function () {
+      toast('Highlight failed — daemon not reachable', false);
+    }).finally(function () { removePopup(); removeToolbar(); });
   }
 
   document.addEventListener('mouseup', function () {
