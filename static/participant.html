@@ -12,6 +12,10 @@
 body{visibility:hidden}
 :root{--participant-zoom:1}
 #notes-content{font-size:calc(1rem * var(--participant-zoom))}
+/* Notes render as blank-line-delimited paragraphs; single newlines inside a
+   paragraph stay tight (sub-items), a small gap separates paragraphs. */
+#notes-content .notes-para{white-space:pre-wrap}
+#notes-content .notes-para:not(:last-child){margin-bottom:0.6em}
 #summary-content{font-size:calc(1rem * var(--participant-zoom))}
 #files-content{font-size:calc(1rem * var(--participant-zoom))}
 #files-content .file-path-dir{color:var(--color-on-surface-variant,#888);text-decoration:none;font-weight:400;opacity:.7}
@@ -705,13 +709,7 @@ body{visibility:hidden}
     </button>
   </div>
   <div id="notes-scroll" class="flex-grow overflow-y-auto px-16 pt-12" style="padding-bottom:125px" onscroll="saveScroll('notes',this)">
-    <div id="notes-content" class="text-on-surface leading-relaxed whitespace-pre-wrap">Loading…</div>
-    <div class="mt-8 pt-4 border-t border-outline-variant border-opacity-20">
-      <a id="notes-permalink-link" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-1 underline text-primary text-sm font-semibold">
-        Open current session notes
-        <span class="material-symbols-outlined" style="font-size:1rem">open_in_new</span>
-      </a>
-    </div>
+    <div id="notes-content" class="text-on-surface leading-relaxed">Loading…</div>
   </div>
 </div>
 <div id="summary-view" style="display:none" class="relative h-full flex flex-col">
@@ -3149,9 +3147,6 @@ async function _refreshParticipantState() {
     _sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
     console.log('[participant] session_id:', _sessionId);
     if (!_sessionId) return;
-    // Point the notes-view permalink at this session's standalone notes page.
-    var _notesPermalink = document.getElementById('notes-permalink-link');
-    if (_notesPermalink) _notesPermalink.href = '/' + _sessionId + '/notes-print';
     if (LS.getSessionId() !== _sessionId) {
       LS.clearScrolls();
       LS.setSessionId(_sessionId);
@@ -4175,6 +4170,14 @@ function linkifyText(text) {
   return escaped.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" class="underline text-primary">$1</a>');
 }
 
+// Render notes as blank-line-delimited paragraphs so each gets a small gap;
+// single newlines inside a paragraph stay tight (they are sub-items).
+function renderNotesHtml(text) {
+  return text.split(/\n[ \t]*\n+/)
+    .map(function (block) { return '<div class="notes-para">' + linkifyText(block) + '</div>'; })
+    .join('');
+}
+
 async function loadNotes() {
   if (!_notesDirty) return;
   _notesDirty = false;
@@ -4192,7 +4195,7 @@ async function loadNotes() {
     const data = await fetch(`/${_sessionId}/api/participant/notes`).then(r => r.ok ? r.json() : Promise.reject('not found'));
     if (data && data.notes_content) {
       _notesRawText = data.notes_content;
-      el.innerHTML = linkifyText(data.notes_content);
+      el.innerHTML = renderNotesHtml(data.notes_content);
     } else {
       el.textContent = 'No notes yet.';
     }
