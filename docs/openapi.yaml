@@ -772,6 +772,34 @@ paths:
               schema:
                 $ref: '#/components/schemas/SummaryResponse'
       x-feature: notes_summary
+  /api/{session_id}/host/summary/highlight:
+    post:
+      tags:
+      - misc
+      summary: Highlight Summary
+      description: 'Wrap a host-selected passage of ai-summary.md in <mark>, deterministically.
+
+
+        Race-safe against a concurrent AI editing the same file: the anchor is
+
+        resolved against the current file at write time, or the request is rejected
+
+        (409) if the passage moved/changed — so content is never scrambled.'
+      operationId: highlight_summary_api__session_id__host_summary_highlight_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HighlightRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HighlightResponse'
+      x-feature: notes_summary
   /api/{session_id}/host/uploads/seen:
     post:
       tags:
@@ -1948,6 +1976,58 @@ components:
       - error
       - message
       title: GDriveUnavailableResponse
+    HighlightRequest:
+      properties:
+        exact:
+          type: string
+          title: Exact
+        prefix:
+          type: string
+          title: Prefix
+          default: ''
+        suffix:
+          type: string
+          title: Suffix
+          default: ''
+        start:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start
+        end:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: End
+        base_rev:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Base Rev
+      type: object
+      required:
+      - exact
+      title: HighlightRequest
+      description: A host-selected passage to wrap in <mark>, as a race-safe text-quote
+        anchor.
+    HighlightResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+        updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Updated At
+        reason:
+          type: string
+          title: Reason
+          default: ''
+      type: object
+      required:
+      - status
+      title: HighlightResponse
     HostCodeReviewState:
       properties:
         snippet:

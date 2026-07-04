@@ -27,8 +27,10 @@ which would otherwise emit malformed nesting like
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 MARK_OPEN = "<mark>"
 MARK_CLOSE = "</mark>"
@@ -164,3 +166,38 @@ def apply_highlight(markdown: str, anchor: HighlightAnchor) -> HighlightResult:
         return HighlightResult(status, markdown, s, "already highlighted")
     new_md = markdown[:s] + _mark_region(markdown[s:e]) + markdown[e:]
     return HighlightResult(status, new_md, s, "")
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def apply_highlight_to_file(path: str | Path, anchor: HighlightAnchor) -> HighlightResult:
+    """Read the summary file, apply the highlight, and atomically write it back.
+
+    Re-reads the file just before writing: if a concurrent writer (e.g. an AI
+    editing ``ai-summary.md``) changed it since we read, the anchor is re-resolved
+    against the *fresh* content — so the concurrent edit is folded in and its
+    passage relocated (or cleanly rejected) rather than clobbered. The write
+    itself is an atomic ``os.replace`` (whole-file swap, no partial state).
+    """
+    p = Path(path)
+    try:
+        text = p.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return HighlightResult(REJECTED, "", None, "summary file not found")
+
+    result = apply_highlight(text, anchor)
+    if result.status == REJECTED or result.markdown == text:
+        return result
+
+    current = p.read_text(encoding="utf-8")
+    if current != text:  # a concurrent edit landed — re-resolve on fresh content
+        result = apply_highlight(current, anchor)
+        if result.status == REJECTED or result.markdown == current:
+            return result
+
+    _atomic_write(p, result.markdown)
+    return result

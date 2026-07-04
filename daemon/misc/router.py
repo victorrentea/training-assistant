@@ -13,12 +13,18 @@ from pydantic import BaseModel
 
 from daemon import files_md as _files_md
 from daemon.email_notify import notify as email_notify
-from daemon.misc.content_files import read_notes_content, read_summary_payload
+from daemon.misc.content_files import (
+    get_active_session_folder,
+    read_notes_content,
+    read_summary_payload,
+)
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
 from daemon.slides.models import Deck, SlidesHistoryResponse, SlidesLogEntry
-from daemon.ws_messages import PasteReceivedMsg
-from daemon.ws_publish import notify_host
+from daemon.summary.highlight import REJECTED, HighlightAnchor, apply_highlight_to_file
+from daemon.summary.loop import AI_SUMMARY_FILE, get_ai_summary_mtime
+from daemon.ws_messages import PasteReceivedMsg, SummaryUpdatedMsg
+from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +48,20 @@ class SummaryResponse(BaseModel):
     points: list[SummaryPoint] = []
     raw_markdown: Optional[str] = None
     updated_at: Optional[str] = None
+
+class HighlightRequest(BaseModel):
+    """A host-selected passage to wrap in <mark>, as a race-safe text-quote anchor."""
+    exact: str
+    prefix: str = ""
+    suffix: str = ""
+    start: Optional[int] = None
+    end: Optional[int] = None
+    base_rev: Optional[str] = None
+
+class HighlightResponse(BaseModel):
+    status: str  # applied | relocated | rejected
+    updated_at: Optional[str] = None
+    reason: str = ""
 
 class AgendaResponse(BaseModel):
     data: str  # base64-encoded .docx content
@@ -220,6 +240,39 @@ async def get_host_summary():
         raw_markdown=summary["raw_markdown"],
         updated_at=summary["updated_at"],
     )
+
+
+# Serializes concurrent highlight applies within the daemon; cross-process races
+# (an AI editing ai-summary.md) are handled by the resolver's re-read + relocate.
+_highlight_lock = asyncio.Lock()
+
+
+@host_router.post("/summary/highlight", response_model=HighlightResponse)
+async def highlight_summary(body: HighlightRequest):
+    """Wrap a host-selected passage of ai-summary.md in <mark>, deterministically.
+
+    Race-safe against a concurrent AI editing the same file: the anchor is
+    resolved against the current file at write time, or the request is rejected
+    (409) if the passage moved/changed — so content is never scrambled.
+    """
+    folder = get_active_session_folder()
+    if folder is None:
+        return JSONResponse(status_code=404, content={"detail": "no active session"})
+    anchor = HighlightAnchor(
+        exact=body.exact, prefix=body.prefix, suffix=body.suffix,
+        start=body.start, end=body.end, base_rev=body.base_rev,
+    )
+    async with _highlight_lock:
+        result = await asyncio.to_thread(
+            apply_highlight_to_file, folder / AI_SUMMARY_FILE, anchor
+        )
+    if result.status == REJECTED:
+        return JSONResponse(
+            status_code=409, content={"status": REJECTED, "reason": result.reason},
+        )
+    updated_at = get_ai_summary_mtime(folder)
+    broadcast(SummaryUpdatedMsg(updated_at=updated_at))  # participants refresh the summary
+    return HighlightResponse(status=result.status, updated_at=updated_at, reason=result.reason)
 
 
 @host_router.post("/uploads/seen", status_code=204)

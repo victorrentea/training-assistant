@@ -386,6 +386,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- | --- |
 | Get Host Notes, return current session notes content.<br>`GET /api/{session_id}/host/notes` | - | `notes_content?: string` |
 | Get Host Summary, return summary points, raw markdown, and updated_at timestamp.<br>`GET /api/{session_id}/host/summary` | - | `points?: list[SummaryPoint{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`text:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`source:string`<br>`}]`<br>`raw_markdown?: string`<br>`updated_at?: string` |
+| Highlight Summary, wrap a host-selected passage of ai-summary.md in <mark>, deterministically; race-safe against a concurrent AI editing the same file: the anchor is resolved against the current file at write time, or the request is rejected (409) if the passage moved/changed — so content is never scrambled.<br>`POST /api/{session_id}/host/summary/highlight` | `exact: string`<br>`prefix?: string`<br>`suffix?: string`<br>`start?: int`<br>`end?: int`<br>`base_rev?: string` | `status: string`<br>`updated_at?: string`<br>`reason?: string` |
 
 ### Host WS
 | Message | Payload |

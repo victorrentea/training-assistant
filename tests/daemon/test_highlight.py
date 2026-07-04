@@ -7,6 +7,7 @@ from daemon.summary.highlight import (
     RELOCATED,
     HighlightAnchor,
     apply_highlight,
+    apply_highlight_to_file,
     compute_rev,
 )
 
@@ -103,3 +104,28 @@ def test_idempotent_when_already_marked():
     anchor = HighlightAnchor(exact="beta", start=8, end=12, base_rev=compute_rev(md))
     r = apply_highlight(md, anchor)
     assert r.markdown == md  # no double-wrap
+
+
+def test_apply_to_file_writes_mark(tmp_path):
+    f = tmp_path / "ai-summary.md"
+    md = "alpha beta gamma"
+    f.write_text(md, encoding="utf-8")
+    anchor = HighlightAnchor(exact="beta", start=6, end=10, base_rev=compute_rev(md))
+    r = apply_highlight_to_file(f, anchor)
+    assert r.status == APPLIED
+    assert f.read_text(encoding="utf-8") == "alpha <mark>beta</mark> gamma"
+
+
+def test_apply_to_file_rejects_and_leaves_file_unchanged(tmp_path):
+    f = tmp_path / "ai-summary.md"
+    md = "alpha beta gamma"
+    f.write_text(md, encoding="utf-8")
+    r = apply_highlight_to_file(f, HighlightAnchor(exact="zzz"))
+    assert r.status == REJECTED
+    assert f.read_text(encoding="utf-8") == md  # untouched
+
+
+def test_apply_to_file_missing_file_is_rejected(tmp_path):
+    r = apply_highlight_to_file(tmp_path / "nope.md", HighlightAnchor(exact="x"))
+    assert r.status == REJECTED
+    assert "not found" in r.reason
