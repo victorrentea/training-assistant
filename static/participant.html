@@ -4522,11 +4522,11 @@ function downloadSummaryPdf() {
     popup = document.createElement('div');
     Object.assign(popup.style, {
       position: 'fixed', zIndex: 2147483647,
-      left: Math.min(window.innerWidth - 320, info.rect.right + 6) + 'px',
-      top: Math.min(window.innerHeight - 210, info.rect.bottom + 8) + 'px',
-      width: '300px', background: '#fff', border: '1px solid #ccc',
-      borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.25)',
-      padding: '10px', font: '13px system-ui, sans-serif', color: '#111'
+      left: Math.min(window.innerWidth - 620, info.rect.right + 6) + 'px',
+      top: Math.min(window.innerHeight - 420, info.rect.bottom + 8) + 'px',
+      width: '600px', background: '#fff', border: '1px solid #ccc',
+      borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,.25)',
+      padding: '20px', font: '26px system-ui, sans-serif', color: '#111'
     });
     // Echo a compact reminder of the selection (first words … last word) above
     // the note box so the host sees exactly what they're commenting on. The full
@@ -4534,29 +4534,29 @@ function downloadSummaryPdf() {
     var ctx = document.createElement('div');
     ctx.textContent = '“' + snippet(info.text) + '”';
     Object.assign(ctx.style, {
-      marginBottom: '8px', paddingLeft: '8px', color: '#555', fontStyle: 'italic',
-      fontSize: '12px', lineHeight: '1.35', borderLeft: '3px solid #d0a000',
-      maxHeight: '54px', overflow: 'hidden'
+      marginBottom: '16px', paddingLeft: '16px', color: '#555', fontStyle: 'italic',
+      fontSize: '24px', lineHeight: '1.35', borderLeft: '6px solid #d0a000',
+      maxHeight: '108px', overflow: 'hidden'
     });
     var ta = document.createElement('textarea');
     ta.placeholder = 'What should Claude refine here?';
-    Object.assign(ta.style, { width: '100%', boxSizing: 'border-box', height: '64px', resize: 'vertical', border: '1px solid #ccc', borderRadius: '6px', padding: '6px', font: '13px system-ui' });
+    Object.assign(ta.style, { width: '100%', boxSizing: 'border-box', height: '128px', resize: 'vertical', border: '1px solid #ccc', borderRadius: '12px', padding: '12px', font: '26px system-ui' });
     var row = document.createElement('div');
-    Object.assign(row.style, { display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' });
+    Object.assign(row.style, { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' });
     var cancel = document.createElement('button'); cancel.textContent = 'Cancel';
     var send = document.createElement('button'); send.textContent = 'Send';
-    [cancel, send].forEach(function (b) { Object.assign(b.style, { padding: '4px 12px', borderRadius: '6px', border: '1px solid #bbb', cursor: 'pointer', font: '13px system-ui' }); });
+    [cancel, send].forEach(function (b) { Object.assign(b.style, { padding: '8px 24px', borderRadius: '12px', border: '1px solid #bbb', cursor: 'pointer', font: '26px system-ui' }); });
     Object.assign(send.style, { background: '#2563eb', color: '#fff', borderColor: '#2563eb' });
     cancel.addEventListener('click', function () { removePopup(); removeToolbar(); });
     send.addEventListener('click', function () { submitNote(lastSel, ta.value); });
-    ta.addEventListener('keydown', function (e) { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitNote(lastSel, ta.value); });
+    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitNote(lastSel, ta.value); } });
     row.appendChild(cancel); row.appendChild(send);
     popup.appendChild(ctx); popup.appendChild(ta); popup.appendChild(row);
     document.body.appendChild(popup);
-    ta.focus();
     // Keep the page selection visible while the dialog is open — focusing the
     // textarea would otherwise collapse it; re-apply the saved range (shown greyed).
     if (info.range) { var s = window.getSelection(); s.removeAllRanges(); s.addRange(info.range); }
+    setTimeout(function () { ta.focus(); }, 0);
   }
 
   function toast(msg, ok) {
