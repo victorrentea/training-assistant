@@ -14,10 +14,16 @@ offsets never scramble the file, they either relocate by snippet or fail cleanly
 Resolution order:
   1. **Fast path** — ``base_rev`` matches the current file *and* the offsets still
      spell ``exact`` → wrap at those offsets.
-  2. **Relocate** — otherwise search the current file for ``prefix+exact+suffix``
-     (then ``exact`` alone); unique → wrap there, multiple → the occurrence
-     nearest the original offset.
-  3. **Reject** — not found → return the markdown unchanged with a reason.
+  2. **Relocate** — otherwise find every occurrence of ``exact`` in the current
+     file and pick the one whose *actual* surrounding text best matches the
+     anchor's ``prefix``/``suffix`` (scored by how many characters of context
+     agree), using the original ``start`` offset only as a tiebreaker. This
+     honours the anchor even when the surrounding markdown has drifted slightly
+     (a concurrent writer reworded a neighbour), which a rigid ``prefix+exact+
+     suffix`` substring match would miss — and it keeps a repeated short word
+     (``context`` …) from collapsing onto the first occurrence.
+  3. **Reject** — ``exact`` not present at all → return the markdown unchanged
+     with a reason.
 
 The insertion also snaps ``<mark>`` boundaries so a mark never straddles a
 markdown inline token (``**bold**`` / ``*italic*`` / `` `code` `` / ``[t](url)``),
@@ -78,10 +84,59 @@ def _all_indices(haystack: str, needle: str) -> list[int]:
     return out
 
 
-def _pick_nearest(indices: list[int], target: int | None) -> int:
-    if target is None:
-        return indices[0]
-    return min(indices, key=lambda i: abs(i - target))
+def _common_suffix_len(a: str, b: str) -> int:
+    """How many trailing characters ``a`` and ``b`` share (from the right)."""
+    n, la, lb = 0, len(a), len(b)
+    limit = min(la, lb)
+    while n < limit and a[la - 1 - n] == b[lb - 1 - n]:
+        n += 1
+    return n
+
+
+def _common_prefix_len(a: str, b: str) -> int:
+    """How many leading characters ``a`` and ``b`` share (from the left)."""
+    n = 0
+    limit = min(len(a), len(b))
+    while n < limit and a[n] == b[n]:
+        n += 1
+    return n
+
+
+def _context_score(md: str, i: int, exact: str, anchor: HighlightAnchor) -> int:
+    """How well the text around occurrence ``i`` matches the anchor's context.
+
+    The anchor's ``prefix``/``suffix`` are the source text that *immediately*
+    surrounded the selection, so the strongest signal is how many characters of
+    the prefix agree with the text ending at ``i`` (compared right-to-left) plus
+    how many characters of the suffix agree with the text starting after the
+    occurrence (left-to-right). Partial agreement still counts, so a neighbour
+    reworded by a concurrent writer degrades the score gracefully instead of
+    dropping the occurrence entirely.
+    """
+    before = md[:i]
+    after = md[i + len(exact):]
+    return (
+        _common_suffix_len(anchor.prefix, before)
+        + _common_prefix_len(anchor.suffix, after)
+    )
+
+
+def _pick_occurrence(md: str, hits: list[int], exact: str, anchor: HighlightAnchor) -> int:
+    """Choose the occurrence of ``exact`` the anchor points at.
+
+    Primary key: most surrounding context in common with ``prefix``/``suffix``.
+    Tiebreaker: nearest to the anchor's original ``start`` offset. Final
+    tiebreaker: earliest occurrence — so the result is fully deterministic.
+    """
+    if len(hits) == 1:
+        return hits[0]
+
+    def key(i: int) -> tuple[int, int, int]:
+        score = _context_score(md, i, exact, anchor)
+        dist = abs(i - anchor.start) if anchor.start is not None else 0
+        return (-score, dist, i)  # max score, then min distance, then earliest
+
+    return min(hits, key=key)
 
 
 def _find_span(md: str, anchor: HighlightAnchor) -> tuple[int, int, str] | None:
@@ -101,21 +156,18 @@ def _find_span(md: str, anchor: HighlightAnchor) -> tuple[int, int, str] | None:
     ):
         return (anchor.start, anchor.end, APPLIED)
 
-    # 2) Relocate by the full text-quote (prefix+exact+suffix) — most specific.
-    if anchor.prefix or anchor.suffix:
-        quote = anchor.prefix + exact + anchor.suffix
-        hits = _all_indices(md, quote)
-        if hits:
-            base = _pick_nearest(hits, anchor.start)
-            s = base + len(anchor.prefix)
-            return (s, s + len(exact), RELOCATED)
-
-    # 3) Relocate by exact alone — nearest occurrence to the original offset.
+    # 2) Relocate: among every occurrence of `exact`, pick the one whose actual
+    #    surrounding text best matches the anchor's prefix/suffix (start offset
+    #    only breaks ties). Using prefix/suffix as a *soft* per-occurrence score
+    #    — rather than requiring a rigid contiguous `prefix+exact+suffix` match —
+    #    disambiguates a repeated short word robustly even when a neighbour has
+    #    drifted, instead of collapsing onto the first occurrence.
     hits = _all_indices(md, exact)
     if hits:
-        s = _pick_nearest(hits, anchor.start)
+        s = _pick_occurrence(md, hits, exact, anchor)
         return (s, s + len(exact), RELOCATED)
 
+    # 3) Reject: the passage no longer exists verbatim.
     return None
 
 

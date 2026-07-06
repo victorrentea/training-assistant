@@ -58,6 +58,46 @@ def test_ambiguous_falls_back_to_nearest_offset():
     assert r.markdown == "x cat y <mark>cat</mark> z"
 
 
+def test_repeated_short_word_uses_prefix_suffix_not_first_occurrence():
+    # A short word repeated 3× — the host selected the SECOND one. The anchor's
+    # prefix/suffix identify it; the daemon must not collapse onto the first.
+    md = "we set the context here, use the context now, drop the context later"
+    second = md.index("context", md.index("context") + 1)  # offset of the 2nd
+    anchor = HighlightAnchor(
+        exact="context",
+        prefix=md[second - 24:second],           # "here, use the "
+        suffix=md[second + len("context"):second + len("context") + 24],  # " now, drop the context l"
+        start=second,
+    )
+    r = apply_highlight(md, anchor)
+    assert r.status == RELOCATED
+    # exactly one mark, and it wraps the SECOND occurrence
+    assert r.markdown == (
+        "we set the context here, use the <mark>context</mark> now, drop the context later"
+    )
+
+
+def test_repeated_word_disambiguated_by_context_after_reflow():
+    # Regression for the wrong-occurrence bug: a concurrent AI writer reflowed
+    # ai-summary.md so the selected sentence moved LAST and a neighbour word was
+    # reworded. The rigid `prefix+exact+suffix` quote no longer matches and the
+    # stale `start` now points nearest the FIRST occurrence — yet the surviving
+    # prefix/suffix context still identifies the occurrence the host selected.
+    current = "widget aaa here. widget bbb there. Use the special widget here now."
+    anchor = HighlightAnchor(
+        exact="widget",
+        prefix="the ordinary special ",   # drifted; shares the tail "special " with `current`
+        suffix=" here now.",              # faithful to the selected occurrence
+        start=3,                           # stale small offset -> nearest to the 1st occurrence
+    )
+    r = apply_highlight(current, anchor)
+    assert r.status == RELOCATED
+    # the LAST widget (the one the host selected), not the first
+    assert r.markdown == (
+        "widget aaa here. widget bbb there. Use the special <mark>widget</mark> here now."
+    )
+
+
 def test_missing_passage_is_rejected_and_unchanged():
     md = "hello world"
     anchor = HighlightAnchor(exact="zzz", start=3, base_rev=compute_rev(md))
