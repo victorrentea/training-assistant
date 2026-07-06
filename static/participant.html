@@ -4454,7 +4454,8 @@ function downloadSummaryPdf() {
   // Host machine only: gate on the JS-readable ON_HOST_MACHINE=true cookie (set by
   // the landing-page toggle). The is_host cookie is httponly, so JS cannot read it.
   if (!document.cookie.split(';').some(function (p) { return p.trim() === 'ON_HOST_MACHINE=true'; })) return;
-  var RELAY = 'http://127.0.0.1:8766/note';
+  var RELAY = 'http://127.0.0.1:8766/note';      // comments → Claude-watched relay
+  var DAEMON = 'http://127.0.0.1:1234';          // highlights → local daemon (deterministic)
   // Session id from the URL path (this IIFE is a separate <script> block, so the
   // page-level `let _sessionId` is out of scope here).
   var SID = (location.pathname.split('/')[1] || '').toLowerCase();
@@ -4646,14 +4647,19 @@ function downloadSummaryPdf() {
   function submitHighlight() {
     var anchor = computeHighlightAnchor();
     if (!anchor) { toast('Select text in the summary first', false); return; }
-    fetch('/api/' + SID + '/host/summary/highlight', {
+    // Deterministic highlight (no AI): the LOCAL daemon splices <mark> into
+    // ai-summary.md. It's a host-machine-only action, so it goes STRAIGHT to
+    // localhost — no railway gateway, no session_id (the daemon serves the one
+    // active session). If a concurrent edit moved the passage, the daemon
+    // relocates it or replies 409 rather than mis-placing the mark.
+    fetch(DAEMON + '/summary/highlight', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(anchor)
     }).then(function (r) {
       if (r.status === 409) { toast('Passage moved — re-select', false); return; }
       toast(r.ok ? 'Highlighted ✓' : ('Error ' + r.status), r.ok);
     }).catch(function () {
-      toast('Highlight failed — daemon not reachable', false);
+      toast('Highlight failed — is the daemon running?', false);
     }).finally(function () { removePopup(); removeToolbar(); });
   }
 

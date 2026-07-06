@@ -275,6 +275,20 @@ async def highlight_summary(body: HighlightRequest):
     return HighlightResponse(status=result.status, updated_at=updated_at, reason=result.reason)
 
 
+# Local-only alias for the highlight above, reachable at a simple URL with NO
+# {session_id} in the path. A highlight is a host-machine-only action and the
+# daemon already serves a single active session, so it needs no session scoping —
+# the handler resolves the target file from the active session on its own. The
+# host summary page (served from Railway) calls this directly on 127.0.0.1, never
+# via the Railway gateway.
+local_router = APIRouter(tags=["misc"])
+
+
+@local_router.post("/summary/highlight", response_model=HighlightResponse)
+async def highlight_summary_local(body: HighlightRequest):
+    return await highlight_summary(body)
+
+
 @host_router.post("/uploads/seen", status_code=204)
 async def mark_uploaded_file_seen(body: UploadSeenRequest):
     """Mark an uploaded-file indicator as seen by host in daemon session state."""

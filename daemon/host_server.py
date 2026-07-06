@@ -115,12 +115,16 @@ def create_app(backend_url: str) -> FastAPI:
     except ImportError:
         pass
 
-    # Allow the Railway participant landing page to fetch session info from localhost
+    # Allow the Railway participant/host page to reach this loopback daemon directly.
+    # allow_private_network=True answers Chrome's Private-Network Access preflight
+    # (an HTTPS "public" page → http://127.0.0.1 "private") so the host summary page
+    # can POST highlights straight here instead of via the Railway gateway.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["https://interact.victorrentea.ro"],
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type", "X-Participant-ID"],
+        allow_private_network=True,
     )
 
     # --- Local-only guard: block DNS-rebinding (non-loopback Host) and cross-site CSRF ---
@@ -208,9 +212,11 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(leaderboard_router)        # /api/{session_id}/leaderboard/*
 
     from daemon.misc.router import host_router as misc_host_router
+    from daemon.misc.router import local_router as misc_local_router
     from daemon.misc.router import participant_router as misc_participant_router
     app.include_router(misc_participant_router)   # /api/participant/misc/*
     app.include_router(misc_host_router)          # /api/{session_id}/misc/*
+    app.include_router(misc_local_router)         # /summary/highlight (host-local, no session_id)
 
     from daemon.quiz_queue.router import router as quiz_queue_router
     app.include_router(quiz_queue_router)         # /api/{session_id}/host/quiz/queue
