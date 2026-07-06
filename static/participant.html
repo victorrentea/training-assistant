@@ -294,7 +294,8 @@ body{visibility:hidden}
           transition: background 0.2s;
         }
         .notes-toast .nt-copy:hover { background: #059669; }
-        .notes-toast .nt-hint { font-size: 0.7rem; color: #047857; opacity: 0.8; }
+        .notes-toast .nt-hint { font-size: 0.95rem; color: #047857; opacity: 0.9; }
+        .notes-toast .nt-hint a { color: inherit; text-decoration: underline; font-weight: 600; }
         .notes-toast .nt-close {
           position: absolute;
           top: 0.35rem;
@@ -2808,8 +2809,8 @@ function _showNotesToast(text, atISO) {
   // "notes" in the hint is a live link to this session's standalone notes page.
   var notesHref = _sessionId ? ('/' + _sessionId + '/notes-print') : '';
   var hintHtml = notesHref
-    ? 'also available in <a href="' + notesHref + '" target="_blank" rel="noopener">notes</a>'
-    : 'also available in notes';
+    ? 'all pasted snippets are in <a href="' + notesHref + '" target="_blank" rel="noopener">notes</a>'
+    : 'all pasted snippets are in <u>notes</u>';
 
   var toast = document.createElement('div');
   toast.className = 'notes-toast';
