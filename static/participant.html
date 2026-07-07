@@ -548,7 +548,7 @@ body{visibility:hidden}
 </div>
 <!-- Shown when auto-reconnect gives up after too many failed attempts (see _connectWS) -->
 <div id="reconnect-giveup" style="display:none;position:fixed;top:0;left:0;right:0;z-index:10000;background:#b91c1c;color:#fff;padding:.7rem 1rem;text-align:center;font-weight:600;font-size:.95rem;box-shadow:0 2px 10px rgba(0,0,0,.35)">
-  Connection lost &mdash; please refresh this page to reconnect.
+  Connection lost &mdash; reconnecting…
   <button onclick="location.reload()" style="margin-left:.75rem;background:#fff;color:#b91c1c;border:none;border-radius:999px;padding:.35rem 1.1rem;font-weight:700;cursor:pointer">Refresh</button>
 </div>
 <div class="flex h-screen w-full">
@@ -4012,13 +4012,21 @@ async function _refetchInitialState() {
     if (!r.ok) return;
     var state = await r.json();
     _applyState(state);
+    // On reconnect the rendered summary may be stale — a `summary_updated`
+    // broadcast can be missed while the socket is down (e.g. a daemon restart).
+    // Re-render it here so live-update survives reconnects without a manual refresh.
+    if (state.summary_updated_at) {
+      _summaryDirty = true;
+      var _sv = document.getElementById('summary-view');
+      if (_sv && _sv.style.display !== 'none') loadSummary();
+    }
   } catch (e) { /* silent — next push will reconcile */ }
 }
 
-// Reconnect backoff: delays (ms) before each successive retry. After the last
-// delay is consumed and that final attempt also fails, give up auto-retrying
-// and tell the participant to refresh — see #reconnect-giveup banner.
-// 10 attempts total, ~12.5s before giving up.
+// Reconnect backoff: delays (ms) before each successive retry. After these are
+// consumed we keep retrying at the capped delay (never give up) and show a
+// "reconnecting…" banner — so the page recovers on its own whenever the server
+// returns, without a manual refresh.
 var _WS_RECONNECT_DELAYS = [500, 500, 1000, 1000, 1500, 1500, 2000, 2000, 2500];
 var _wsReconnectAttempts = 0;
 
@@ -4045,12 +4053,14 @@ function _connectWS() {
   _ws.onmessage = function(e) { try { _handleWsMessage(JSON.parse(e.data)); } catch(err) { console.error('ws msg error', err); } };
   _ws.onclose = function(e) {
     if (e.code === 1008) { window.location.href = '/'; return; }
-    var _delay = _WS_RECONNECT_DELAYS[_wsReconnectAttempts++];
-    if (_delay === undefined) {
-      var _giveup = document.getElementById('reconnect-giveup');
-      if (_giveup) _giveup.style.display = 'block';
-      return; // give up auto-retrying; participant must refresh
-    }
+    // Never permanently give up: keep retrying with capped backoff so the page
+    // reconnects on its own whenever the server returns (no manual refresh). The
+    // reconnect re-renders the summary (see _refetchInitialState), so live-update
+    // survives daemon restarts.
+    var _delay = _WS_RECONNECT_DELAYS[_wsReconnectAttempts] || 3000;
+    _wsReconnectAttempts++;
+    var _giveup = document.getElementById('reconnect-giveup');
+    if (_giveup && _wsReconnectAttempts > _WS_RECONNECT_DELAYS.length) _giveup.style.display = 'block';
     setTimeout(_connectWS, _delay);
   };
   _ws.onerror = function(e) { console.error('ws error', e); };
