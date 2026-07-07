@@ -74,6 +74,51 @@ body{visibility:hidden}
             background: rgba(247, 249, 251, 0.8);
             backdrop-filter: blur(20px);
         }
+        /* ── Summary download control ─────────────────────────────
+           Collapsed to a single PDF download icon; on hover the pill
+           expands leftward to reveal the .md button and the .pdf label.
+           The PDF download icon is the stationary anchor (rightmost,
+           constant right padding) so it stays put under the cursor —
+           making PDF the default click target. */
+        #summary-dl .summary-dl-md,
+        #summary-dl .summary-dl-pdf { white-space: nowrap; }
+        #summary-dl .summary-dl-pdf {
+            padding-left: 0.9rem;
+            padding-right: 0.9rem;
+        }
+        #summary-dl .summary-dl-md {
+            max-width: 0;
+            padding-left: 0;
+            padding-right: 0;
+            margin-right: 0;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+            transition: max-width .25s ease, padding .25s ease, margin .25s ease, opacity .2s ease;
+        }
+        #summary-dl .summary-dl-pdf-label {
+            display: inline-block;
+            max-width: 0;
+            margin-right: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-width .25s ease, margin .25s ease, opacity .2s ease;
+        }
+        #summary-dl:hover .summary-dl-md,
+        #summary-dl:focus-within .summary-dl-md {
+            max-width: 8rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            margin-right: 0.5rem;
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #summary-dl:hover .summary-dl-pdf-label,
+        #summary-dl:focus-within .summary-dl-pdf-label {
+            max-width: 4rem;
+            margin-right: 0.25rem;
+            opacity: 1;
+        }
         ::-webkit-scrollbar {
             width: 12px;
         }
@@ -714,14 +759,14 @@ body{visibility:hidden}
   </div>
 </div>
 <div id="summary-view" style="display:none" class="relative h-full flex flex-col">
-  <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
-    <button onclick="downloadSummaryMd()" class="px-4 py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" title="Download as Markdown">
+  <div id="summary-dl" class="absolute top-6 right-6 z-20 flex items-center p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
+    <button onclick="downloadSummaryMd()" class="summary-dl-md py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" title="Download as Markdown">
       <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
       <span>.md</span>
     </button>
-    <button onclick="downloadSummaryPdf()" class="px-4 py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" title="Download as PDF">
+    <button onclick="downloadSummaryPdf()" class="summary-dl-pdf py-2 rounded-full text-on-surface-variant transition-all flex items-center hover-green text-sm font-semibold" title="Download as PDF">
+      <span class="summary-dl-pdf-label">.pdf</span>
       <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
-      <span>.pdf</span>
     </button>
   </div>
   <div id="summary-scroll" class="flex-grow overflow-y-auto px-16 pt-12" style="padding-bottom:125px" onscroll="saveScroll('summary',this)">
