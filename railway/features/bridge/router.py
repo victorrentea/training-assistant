@@ -23,10 +23,11 @@ its correlation id. The Mac runs the request through its own existing route
 table (the same one serving LAN/USB HTTP), so every endpoint works over the
 bridge with no per-endpoint code here.
 
-Auth: a shared ``BRIDGE_TOKEN`` (env), sent as ``?token=`` or the
-``X-Bridge-Token`` header. **Fail-closed** — if ``BRIDGE_TOKEN`` is unset, or a
-client omits/mismatches it, the connection is refused. This is the one door from
-the public internet to Victor's Mac, so it must be authenticated.
+Auth: a shared ``TABLET_BRIDGE_TOKEN`` (env; ``BRIDGE_TOKEN`` accepted as a
+fallback), sent as ``?token=`` or the ``X-Bridge-Token`` header. **Fail-closed**
+— if it's unset, or a client omits/mismatches it, the connection is refused.
+This is the one door from the public internet to Victor's Mac, so it must be
+authenticated.
 """
 import asyncio
 import json
@@ -61,9 +62,11 @@ _send_lock = asyncio.Lock()
 
 
 def _token_ok(websocket: WebSocket) -> bool:
-    expected = os.environ.get("BRIDGE_TOKEN", "")
+    # TABLET_BRIDGE_TOKEN is the canonical Railway env var; BRIDGE_TOKEN is
+    # accepted as a fallback.
+    expected = os.environ.get("TABLET_BRIDGE_TOKEN") or os.environ.get("BRIDGE_TOKEN") or ""
     if not expected:
-        logger.warning("BRIDGE_TOKEN unset — refusing bridge connection (fail-closed)")
+        logger.warning("TABLET_BRIDGE_TOKEN unset — refusing bridge connection (fail-closed)")
         return False
     supplied = (
         websocket.query_params.get("token")
