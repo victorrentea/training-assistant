@@ -28,7 +28,7 @@ class EmojiDef(BaseModel):
 # Display order matters: this is the order the participant bar renders.
 EMOJI_CATALOG: list[EmojiDef] = [
     EmojiDef(emoji="❤️", title="Genuinely love this.", section="primary"),
-    EmojiDef(emoji="☕", title="I need a break. Now.", section="primary"),
+    EmojiDef(emoji="☕", title="I need a coffee in a maximum of 10 minutes.", section="primary"),
     EmojiDef(emoji="👍", title="Yes. More of this.", section="primary"),
     EmojiDef(emoji="🔥", title="This is absolute fire.", section="primary"),
     EmojiDef(emoji="🤔", title="Hmm... not convinced yet.", section="primary"),

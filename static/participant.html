@@ -204,6 +204,29 @@ body{visibility:hidden}
         }
         .break-reminder-gotit:hover { opacity: 1; }
 
+        /* Custom reaction-emoji tooltip. The native `title` tooltip can't be made
+           bigger or faster, so we render our own: ~2x larger text, shown ~150ms
+           after hover (roughly 3x faster than the browser's ~500ms title delay). */
+        #emoji-tooltip {
+          position: fixed;
+          left: 0; top: 0;
+          z-index: 60;
+          pointer-events: none;
+          background: rgba(20, 20, 22, 0.96);
+          color: #fff;
+          font-size: 1.25rem;         /* ~2x a native ~11-13px tooltip */
+          font-weight: 600;
+          line-height: 1.25;
+          padding: 0.6rem 0.9rem;
+          border-radius: 0.6rem;
+          max-width: 22rem;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+          opacity: 0;
+          transform: translateY(4px);
+          transition: opacity 120ms ease, transform 120ms ease;
+        }
+        #emoji-tooltip.visible { opacity: 1; transform: translateY(0); }
+
         /* Access duration toast */
         #access-duration-toast {
           position: fixed;
@@ -2151,6 +2174,59 @@ function downloadTopic(url, name) {
 // Shared reaction-button styling — defined once so the catalog-driven bar and
 // the promote-to-bar path stay visually identical.
 var EMOJI_BTN_CLASS = 'w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110';
+// --- Custom reaction tooltip (bigger + faster than the native `title`) ---------
+var _emojiTip = null;
+var _emojiTipTimer = null;
+function _emojiTipEl() {
+  if (!_emojiTip) {
+    _emojiTip = document.createElement('div');
+    _emojiTip.id = 'emoji-tooltip';
+    document.body.appendChild(_emojiTip);
+  }
+  return _emojiTip;
+}
+function _showEmojiTip(btn) {
+  var text = btn.dataset.tip;
+  if (!text) return;
+  var el = _emojiTipEl();
+  el.textContent = text;
+  var r = btn.getBoundingClientRect();
+  var m = 8;                                   // viewport edge margin
+  var left = r.left + r.width / 2 - el.offsetWidth / 2;
+  left = Math.max(m, Math.min(left, window.innerWidth - el.offsetWidth - m));
+  var top = r.top - el.offsetHeight - 10;      // above the button…
+  if (top < m) top = r.bottom + 10;            // …or below if there's no room
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+  el.classList.add('visible');
+}
+function _hideEmojiTip() {
+  clearTimeout(_emojiTipTimer);
+  if (_emojiTip) _emojiTip.classList.remove('visible');
+}
+// Set the (custom) tooltip on a reaction button and drop the native `title` so
+// only our bigger/faster bubble shows; keep the text as aria-label for a11y.
+function applyEmojiTip(btn, text) {
+  btn.dataset.tip = text || '';
+  if (text) btn.setAttribute('aria-label', text);
+  btn.removeAttribute('title');
+}
+(function _wireEmojiTips() {
+  var host = document.getElementById('floating-reactions');
+  if (!host) return;
+  host.addEventListener('mouseover', function(e) {
+    var btn = e.target.closest('[data-tip]');
+    if (!btn || !host.contains(btn)) return;
+    clearTimeout(_emojiTipTimer);
+    _emojiTipTimer = setTimeout(function() { _showEmojiTip(btn); }, 150);
+  });
+  host.addEventListener('mouseout', function(e) {
+    var btn = e.target.closest('[data-tip]');
+    if (!btn) return;
+    if (e.relatedTarget && btn.contains(e.relatedTarget)) return;  // still inside
+    _hideEmojiTip();
+  });
+})();
 // Build the reaction bar from the daemon's emoji catalog (the single source of
 // truth — there is deliberately no hardcoded emoji list here). Runs once; the
 // catalog is static for the life of the page.
@@ -2163,7 +2239,7 @@ function renderEmojiBar(catalog) {
   catalog.forEach(function(def) {
     var btn = document.createElement('button');
     btn.className = EMOJI_BTN_CLASS;
-    btn.title = def.title || '';
+    applyEmojiTip(btn, def.title || '');
     if (def.section === 'overflow') {
       btn.textContent = def.emoji;
       btn.setAttribute('onclick', 'addEmojiToBar(this)');
@@ -2196,7 +2272,7 @@ function renderEmojiBar(catalog) {
 function _promoteEmoji(emoji, title, animate, sourceBtn) {
   var newBtn = document.createElement('button');
   newBtn.textContent = emoji;
-  newBtn.title = title;
+  applyEmojiTip(newBtn, title);
   newBtn.className = EMOJI_BTN_CLASS;
   newBtn.setAttribute('onclick', 'sendEmoji(this.textContent.trim(), this)');
   var sep = document.getElementById('emoji-tv-sep');
@@ -2217,10 +2293,10 @@ function addEmojiToBar(btn) {
   var emoji = btn.textContent.trim();
   var promoted = LS.getEmoji();
   if (!promoted.find(function(e) { return e.emoji === emoji; })) {
-    promoted.push({ emoji: emoji, title: btn.title });
+    promoted.push({ emoji: emoji, title: btn.dataset.tip || '' });
     LS.setEmoji(promoted);
   }
-  _promoteEmoji(emoji, btn.title, true, btn);
+  _promoteEmoji(emoji, btn.dataset.tip || '', true, btn);
   scheduleHideOverflow();
 }
 function restorePromotedEmojis() {
