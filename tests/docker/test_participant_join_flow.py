@@ -158,6 +158,30 @@ class TestCodeEntry:
         finally:
             ctx.close()
 
+    def test_prefilled_code_from_last_session(self, browser, session_id):
+        """Returning participant: the code box is pre-filled from the last session
+        this browser joined (localStorage['new:session_id'], written by the
+        participant page), so pressing Enter rejoins without retyping the code."""
+        ctx = browser.new_context()
+        # Seed localStorage before any page script runs, mimicking a browser that
+        # joined this session on a previous day.
+        ctx.add_init_script(
+            "try { localStorage.setItem('new:session_id', %r); } catch (e) {}" % session_id
+        )
+        page = ctx.new_page()
+        try:
+            page.goto(f"{BASE}/", wait_until="networkidle")
+            expect(page.locator("#screen-code-entry")).to_be_visible(timeout=10000)
+            code_input = page.locator("#code-input")
+            expect(code_input).to_have_value(session_id.lower(), timeout=5000)
+            # No auto-submit: still on the code-entry screen, Join enabled.
+            expect(page.locator("#join-btn")).to_be_enabled()
+            # Pressing Enter rejoins the pre-filled session.
+            code_input.press("Enter")
+            page.wait_for_url(f"**/{session_id}/**", timeout=10000)
+        finally:
+            ctx.close()
+
 
 # ── 4. TestSessionMismatch (Case B) ────────────────────────────────────────
 

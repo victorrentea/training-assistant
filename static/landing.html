@@ -331,6 +331,12 @@
     const LS_UUID_KEY = 'workshop_participant_uuid';
     const LS_NAME_KEY = 'workshop_participant_name';
     const LS_CUSTOM_NAME_KEY = 'workshop_custom_name';
+    // Last session code this browser successfully joined. Written by the
+    // participant page (participant.html) as 'new:session_id' on every load,
+    // so it survives across days and however the user reached the session
+    // (direct /{code}/ URL or via this landing page). Read here to pre-fill
+    // the code box for returning participants who open the bare root URL.
+    const LS_LAST_SESSION_KEY = 'new:session_id';
     const ON_HOST_MACHINE_COOKIE = 'ON_HOST_MACHINE';
 
     function getStorage() {
@@ -643,7 +649,21 @@
         });
 
         btn.addEventListener('click', submit);
-        input.focus();
+
+        // Pre-fill with the code this browser last joined (stored by the
+        // participant page). A returning participant who opens the bare root
+        // URL sees yesterday's code already filled in and just presses Enter to
+        // rejoin. We deliberately do NOT auto-submit: if a different session is
+        // active now, the remembered code stays visible and selected for
+        // one-keystroke editing, and the user keeps control of when to join.
+        const remembered = normalizeCode(getStorage().getItem(LS_LAST_SESSION_KEY));
+        if (isCompleteCode(remembered)) {
+          input.value = remembered;
+          input.focus();
+          input.select();
+        } else {
+          input.focus();
+        }
         updateBtn();
       });
     }
