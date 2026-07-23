@@ -24,6 +24,12 @@ body{visibility:hidden}
    keeps the band continuous across line wraps. Applies to every markdown view. */
 #summary-content mark,#agenda-content mark,#files-content mark{background:#ffe680;color:#3a2f00;border-radius:3px;padding:0 .18em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 @media (prefers-color-scheme: dark){#summary-content mark,#agenda-content mark,#files-content mark{background:rgba(255,214,10,.28);color:#ffe6a1}}
+/* A highlight can land *inside* an inline code span or a fenced block (the
+   summary renderer revives the <mark> that markdown would otherwise escape).
+   Keep the band tight against the monospace glyphs and opaque enough to stay
+   visible on top of the code element's own background, in light and dark. */
+#summary-content code mark,#agenda-content code mark,#files-content code mark{padding:0 .06em;background:#ffd23f;color:#2b2200}
+@media (prefers-color-scheme: dark){#summary-content code mark,#agenda-content code mark,#files-content code mark{background:rgba(255,214,10,.34);color:#ffe6a1}}
 /* Heavier bold: prose's default weight-600 bold is barely visible in dark mode.
    Use 800 and inherit the container's theme-aware text colour so it stays crisp
    and legible in both light and dark. */
@@ -4408,6 +4414,29 @@ async function loadNotes() {
 // re-render, no flicker, and any text selection outside the changed block
 // survives. Each block carries data-key (source hash) + data-s/data-e (its char
 // range in the markdown) — the offsets also feed the deterministic highlighter.
+// Host highlights are spliced into ai-summary.md as literal <mark>…</mark>.
+// Markdown does NOT parse HTML inside code, so `marked` escapes those tags and
+// the reader sees the raw text `<mark>proposal</mark>.md` in monospace instead
+// of a highlight. Un-escape the highlighter's own sentinels *after* `marked`
+// has escaped the code text: everything else stays escaped, so the visible text
+// is byte-for-byte what it was — only the amber band is added.
+// Tags that are not a well-formed, non-nested open/close run (a selection that
+// started outside the span, or markdown that happens to contain the literal
+// text) are dropped instead of emitted, so code never shows stray markup.
+function restoreMarkTagsInCode(escapedHtml) {
+  if (escapedHtml.indexOf('&lt;mark&gt;') < 0 && escapedHtml.indexOf('&lt;/mark&gt;') < 0) return escapedHtml;
+  var depth = 0, wellFormed = true;
+  escapedHtml.replace(/&lt;(\/?)mark&gt;/g, function(_, slash) {
+    depth += slash ? -1 : 1;
+    if (depth < 0 || depth > 1) wellFormed = false;   // stray close / nested open
+    return '';
+  });
+  if (depth !== 0) wellFormed = false;                // unbalanced run
+  return wellFormed
+    ? escapedHtml.replace(/&lt;mark&gt;/g, '<mark>').replace(/&lt;\/mark&gt;/g, '</mark>')
+    : escapedHtml.replace(/&lt;\/?mark&gt;/g, '');
+}
+
 function makeSummaryRenderer() {
   var r = new marked.Renderer();
   r.link = function(href, title, text) {
@@ -4416,6 +4445,16 @@ function makeSummaryRenderer() {
       + text
       + '<span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:middle;margin-left:2px;opacity:0.7">open_in_new</span>'
       + '</a>';
+  };
+  // Delegate to marked's own escaping, then revive only the <mark> sentinels —
+  // so a highlight landing inside `code` or a fenced block renders as a real
+  // highlight. Outside code, marked already passes <mark> through untouched.
+  var baseCodespan = r.codespan, baseCode = r.code;
+  r.codespan = function(text) {
+    return restoreMarkTagsInCode(baseCodespan.call(this, text));
+  };
+  r.code = function(code, infostring, escaped) {
+    return restoreMarkTagsInCode(baseCode.call(this, code, infostring, escaped));
   };
   return r;
 }

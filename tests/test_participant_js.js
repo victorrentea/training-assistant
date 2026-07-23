@@ -1,5 +1,28 @@
-// Tests for largestRemainder() in participant.js
+// Tests for pure helpers in static/participant.html
 // Run with: node test_participant_js.js
+
+const fs = require('fs');
+const path = require('path');
+
+// Pull a top-level `function name(...) { ... }` verbatim out of a source file,
+// so the test exercises the SHIPPED code instead of a copy that can drift.
+function extractFunction(file, name) {
+  const src = fs.readFileSync(file, 'utf8');
+  const start = src.indexOf('function ' + name + '(');
+  if (start < 0) throw new Error('function not found: ' + name + ' in ' + file);
+  let depth = 0, end = -1;
+  for (let i = src.indexOf('{', start); i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}' && --depth === 0) { end = i + 1; break; }
+  }
+  if (end < 0) throw new Error('unterminated function: ' + name);
+  return src.slice(start, end);
+}
+
+const PARTICIPANT_HTML = path.join(__dirname, '..', 'static', 'participant.html');
+const restoreMarkTagsInCode = new Function(
+  extractFunction(PARTICIPANT_HTML, 'restoreMarkTagsInCode') + '; return restoreMarkTagsInCode;'
+)();
 
 function largestRemainder(floats) {
   const floors = floats.map(Math.floor);
@@ -50,6 +73,40 @@ assert('8 options small fractions sum to 100',
 const r = largestRemainder([33.33, 33.33, 33.34]);
 assert('largest fraction gets the extra point (index 2 = 34)',
   r[2] === 34
+);
+
+// ── restoreMarkTagsInCode() — host highlights inside code spans ──────────────
+// Regression: the host highlighted `proposal` inside `` `proposal.md` `` and the
+// summary rendered the literal text "<mark>proposal</mark>.md" in monospace,
+// because markdown does not parse HTML inside code. The summary renderer now
+// revives the highlighter's own <mark> sentinels after marked escaped them.
+console.log('\nrestoreMarkTagsInCode()');
+
+assert('code with no marks is returned untouched',
+  restoreMarkTagsInCode('npm i -g foo') === 'npm i -g foo'
+);
+assert('the reported bug: `<mark>proposal</mark>.md` becomes a real highlight',
+  restoreMarkTagsInCode('&lt;mark&gt;proposal&lt;/mark&gt;.md') === '<mark>proposal</mark>.md'
+);
+assert('other escaped angle brackets stay escaped (text unchanged)',
+  restoreMarkTagsInCode('npm i&lt;mark&gt; -g &lt;anythin&lt;/mark&gt;g&gt;')
+    === 'npm i<mark> -g &lt;anythin</mark>g&gt;'
+);
+assert('several marks in one span are all revived',
+  restoreMarkTagsInCode('a&lt;mark&gt;b&lt;/mark&gt;c&lt;mark&gt;d&lt;/mark&gt;')
+    === 'a<mark>b</mark>c<mark>d</mark>'
+);
+assert('unbalanced open tag is dropped, never printed literally',
+  restoreMarkTagsInCode('foo&lt;mark&gt;bar') === 'foobar'
+);
+assert('stray close tag is dropped, never printed literally',
+  restoreMarkTagsInCode('foo&lt;/mark&gt;bar') === 'foobar'
+);
+assert('out-of-order tags are dropped',
+  restoreMarkTagsInCode('&lt;/mark&gt;a&lt;mark&gt;') === 'a'
+);
+assert('nested opens are dropped (never emit invalid nesting)',
+  restoreMarkTagsInCode('&lt;mark&gt;a&lt;mark&gt;b&lt;/mark&gt;c&lt;/mark&gt;') === 'abc'
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);
