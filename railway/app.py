@@ -97,9 +97,12 @@ if _otel_active:
 async def _redirect_invalid_session(request: Request, exc: InvalidSessionRedirect):
     from fastapi.responses import RedirectResponse
 
-    from railway.shared.state import state as _state
-    if _state.session_id:
-        return RedirectResponse(f"/{_state.session_id}")
+    # SECURITY: a stale/unknown session link must NEVER be redirected onto the
+    # currently-active session — that leaks one cohort into another (session
+    # hijack via redirect). Always land on the neutral page instead.
+    # TODO(security): follow-ups (out of scope here) — populate session_registry
+    # so genuinely-recent past sessions resolve, and use a non-guessable
+    # session-id generator.
     return RedirectResponse("/?error=invalid")
 
 

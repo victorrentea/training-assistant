@@ -335,8 +335,11 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
             await websocket.close(code=1000)
         else:
             await websocket.accept()
-            if state.session_id:
-                await websocket.send_text(json.dumps({"type": "redirect", "url": f"/{state.session_id}"}))
+            # SECURITY: never steer a stale/unknown session onto the active one —
+            # that leaks one cohort into another (session hijack via redirect).
+            # Send the participant to the neutral landing; the SPA obeys this
+            # generic `redirect` frame, so no client change is needed.
+            await websocket.send_text(json.dumps({"type": "redirect", "url": "/?error=invalid"}))
             await websocket.close(code=1008)
         return
 
