@@ -16,7 +16,6 @@ through the real browser + Railway + daemon:
 
 import re
 import sys
-import time
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
@@ -24,7 +23,7 @@ sys.path.insert(0, "/app/tests")
 import pytest
 from pages.participant_page import ParticipantPage
 from playwright.sync_api import expect, sync_playwright
-from session_utils import BASE, daemon_has_participant, fresh_session
+from session_utils import BASE, _wait_until, daemon_has_participant, fresh_session
 
 _UUID_RE = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
@@ -269,9 +268,9 @@ class TestNoUuidBroadcast:
                 "Heidi", timeout=10000
             )
             # Wait for A to receive at least one names broadcast with both names.
-            _wait(lambda: any(
+            _wait_until(lambda: any(
                 "participant_names_updated" in f and "Heidi" in f for f in frames
-            ), "A never received a names broadcast including Heidi")
+            ), timeout_ms=10000, msg="A never received a names broadcast including Heidi")
             name_frames = [f for f in frames if "participant_names_updated" in f]
             assert name_frames, "no participant_names_updated frames captured"
             for f in name_frames:
@@ -313,18 +312,8 @@ class TestConcurrentSameName:
 
 # ── shared waits ─────────────────────────────────────────────────────────────
 
-def _wait(fn, msg, timeout_ms=10000, poll_ms=250):
-    deadline = time.monotonic() + timeout_ms / 1000
-    while time.monotonic() < deadline:
-        try:
-            if fn():
-                return
-        except Exception:
-            pass
-        time.sleep(poll_ms / 1000)
-    raise AssertionError(f"Timed out: {msg}")
-
-
 def _wait_host(session_id, name):
-    _wait(lambda: daemon_has_participant(session_id, name),
-          f"host never saw participant {name!r}")
+    # daemon_has_participant already swallows transient request errors.
+    _wait_until(lambda: daemon_has_participant(session_id, name),
+                timeout_ms=10000,
+                msg=f"host never saw participant {name!r}")

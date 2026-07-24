@@ -3339,22 +3339,19 @@ function _commitName(rawName) {
   if (displayText) displayText.textContent = _myName;
   var activityInput = document.getElementById('activity-name-input');
   if (activityInput && document.activeElement !== activityInput) activityInput.value = _myName;
-  // PUT /name now returns 200 + {name_conflict} (never a 409). We read the flag
-  // but show NO blocking dialog — the in-session indicator (driven by the names
+  // PUT /name now returns 200 + {name_conflict} (never a 409). The response
+  // flag is deliberately ignored — the in-session indicator (driven by the names
   // re-broadcast) is the sole duplicate signal. Optimistically recompute now so
   // resolving a duplicate clears our own indicator immediately.
   fetch('/' + _sessionId + '/api/participant/name', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
     body: JSON.stringify({ name: _myName })
-  }).then(function(r) { return r.ok ? r.json().catch(function() { return null; }) : null; })
-    .then(function(data) { if (data) _lastNameConflict = !!data.name_conflict; })
-    .catch(function() {});
+  }).catch(function() {});
   _recomputeDuplicateIndicator();
   _hideNameNudge();
   return true;
 }
-var _lastNameConflict = false;
 
 function _confirmNameEdit() {
   _commitName(document.getElementById('name-edit-input').value);
@@ -3729,9 +3726,9 @@ function _applyState(msg) {
     _myName = _applyHostSuffix(msg.my_name);
     localStorage.setItem(LS_NAME_KEY, _myName);
     document.querySelector('#display-name .display-name-text').textContent = _myName;
-    _recomputeDuplicateIndicator();
   }
-  // Roster names (UUID-free) — recompute the duplicate indicator on initial load.
+  // Roster names (UUID-free) — one recompute covers both a just-synced my_name
+  // and the fresh list (/state always carries both fields).
   if (Array.isArray(msg.participant_names)) {
     _participantNames = msg.participant_names;
     _recomputeDuplicateIndicator();

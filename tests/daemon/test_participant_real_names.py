@@ -192,6 +192,44 @@ class TestNamesBroadcastSecurity:
             assert "other-uuid-xyz" not in repr(state)
 
 
+# ── Broadcast throttle: unchanged name-sets are not re-broadcast ─────────────
+
+def _heartbeat(client, uuid):
+    return client.post(
+        "/api/participant/activity",
+        json={"current_view": "slides", "deltas": {}},
+        headers={"X-Participant-ID": uuid},
+    )
+
+
+class TestNamesBroadcastThrottle:
+    def test_activity_heartbeat_does_not_rebroadcast_names(self):
+        with _client() as (client, ps, rec):
+            _register(client, "u1", "Alice")
+            before = len(rec.broadcasts("participant_names_updated"))
+            assert _heartbeat(client, "u1").status_code == 204
+            assert len(rec.broadcasts("participant_names_updated")) == before
+
+    def test_rename_after_heartbeat_still_broadcasts(self):
+        with _client() as (client, ps, rec):
+            _register(client, "u1", "Alice")
+            _heartbeat(client, "u1")
+            before = len(rec.broadcasts("participant_names_updated"))
+            _rename(client, "u1", "Alicia")
+            assert len(rec.broadcasts("participant_names_updated")) == before + 1
+            assert rec.last_names() == ["Alicia"]
+
+    def test_state_reset_forces_next_broadcast(self):
+        """A new session re-broadcasts even if the first joiner reuses the exact
+        name-set last broadcast in the previous session."""
+        with _client() as (client, ps, rec):
+            _register(client, "u1", "Alice")
+            before = len(rec.broadcasts("participant_names_updated"))
+            ps.reset(mode="workshop")
+            _register(client, "u2", "Alice")
+            assert len(rec.broadcasts("participant_names_updated")) == before + 1
+
+
 # ── Race conditions / simultaneous changes (8.10) ────────────────────────────
 # Driven with true async concurrency (asyncio.gather over the ASGI app).
 

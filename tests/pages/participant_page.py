@@ -34,6 +34,14 @@ class ParticipantPage:
         """Click the gate's Anonymous button (ignores any typed text)."""
         self._page.locator("#name-gate-anon").click()
 
+    def dismiss_gate_anonymous(self, timeout: int = 5000) -> None:
+        """If the join-time name gate appears, enter as Anonymous; no-op otherwise.
+
+        For tests that only need to get past the gate (returning participants or
+        pre-seeded ?as= joins never see it)."""
+        if self._wait_for_gate(timeout):
+            self.enter_anonymous_at_gate()
+
     def auto_join(self) -> str:
         """Enter the session and return the server-assigned name (no explicit name).
 

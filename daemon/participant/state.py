@@ -50,6 +50,12 @@ class ParticipantState:
         # Liveness (ephemeral, NOT persisted): host derives "active now" from these
         self.last_active_at: dict[str, float] = {}
         self.last_view: dict[str, str] = {}
+        # Sorted name multiset of the last participant_names_updated broadcast
+        # (ephemeral, NOT persisted). Roster notifications fire on every activity
+        # heartbeat, but names only change on register/rename — the router skips
+        # re-broadcasting an unchanged multiset. Lives here (not module-level in
+        # the router) so reset()/sync_from_restore() invalidate it with the roster.
+        self.last_broadcast_names: list[str] | None = None
 
     def sync_from_restore(self, data: dict):
         """Update cache from state_restore or session_sync data.
@@ -59,6 +65,8 @@ class ParticipantState:
         silently lose their writes.
         """
         with self._lock:
+            # Roster may be replaced wholesale — force the next names broadcast.
+            self.last_broadcast_names = None
             participants = data.get("participants")
             if isinstance(participants, dict):
                 self.participant_names.clear()
@@ -165,6 +173,7 @@ class ParticipantState:
             self.engagement.clear()
             self.last_active_at.clear()
             self.last_view.clear()
+            self.last_broadcast_names = None
 
 
 # Module-level singleton

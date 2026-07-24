@@ -50,6 +50,18 @@ class TestRender:
         out = attendees_md.render_attendees_md(folder, [], None)
         assert "No attendees yet" in out
 
+    def test_pool_exhaustion_fallback_names_are_anonymous(self, tmp_path):
+        # Guest-<hex> / Hero-<id> are auto-generated when the fictional pools run
+        # out — they must not render as confirmed real names.
+        folder = tmp_path / "2026-07-24 Session"
+        folder.mkdir()
+        out = attendees_md.render_attendees_md(
+            folder, [_p("Ada"), _p("Guest-a1b2c3"), _p("Hero-x9")], None
+        )
+        assert "_Guest-a1b2c3_ (anonymous)" in out
+        assert "_Hero-x9_ (anonymous)" in out
+        assert "(2 anonymous)" in out
+
     def test_blank_names_excluded(self, tmp_path):
         folder = tmp_path / "2026-07-24 Session"
         folder.mkdir()
@@ -58,20 +70,35 @@ class TestRender:
 
 
 class TestLifecycle:
-    def test_init_creates_clean_file(self, tmp_path):
-        folder = tmp_path / "2026-07-24 Session"
-        folder.mkdir()
-        target = attendees_md.init_attendees(folder)
-        assert target == folder / "attendees.md"
-        assert target.exists()
-        assert "No attendees yet" in target.read_text()
+    # Session (re)init goes through regenerate_attendees() with the (reset or
+    # restored) live roster — same path daemon/__main__.py uses.
 
-    def test_init_clears_stale_content(self, tmp_path):
-        folder = tmp_path / "2026-07-24 Session"
-        folder.mkdir()
-        (folder / "attendees.md").write_text("STALE Previous Session Attendee")
-        attendees_md.init_attendees(folder)
-        assert "STALE" not in (folder / "attendees.md").read_text()
+    def test_regenerate_with_empty_roster_creates_clean_file(self, tmp_path):
+        from daemon.participant.state import participant_state as ps
+
+        ps.reset(mode="workshop")
+        try:
+            folder = tmp_path / "2026-07-24 Session"
+            folder.mkdir()
+            target = attendees_md.regenerate_attendees(folder=folder)
+            assert target == folder / "attendees.md"
+            assert target.exists()
+            assert "No attendees yet" in target.read_text()
+        finally:
+            ps.reset(mode="workshop")
+
+    def test_regenerate_clears_stale_content(self, tmp_path):
+        from daemon.participant.state import participant_state as ps
+
+        ps.reset(mode="workshop")
+        try:
+            folder = tmp_path / "2026-07-24 Session"
+            folder.mkdir()
+            (folder / "attendees.md").write_text("STALE Previous Session Attendee")
+            attendees_md.regenerate_attendees(folder=folder)
+            assert "STALE" not in (folder / "attendees.md").read_text()
+        finally:
+            ps.reset(mode="workshop")
 
     def test_regenerate_reflects_live_roster(self, tmp_path):
         from daemon.participant.state import participant_state as ps

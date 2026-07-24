@@ -14,11 +14,17 @@ are rendered distinctly from confirmed real names.
 """
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
 ATTENDEES_FILENAME = "attendees.md"
 
+# Prefixes of auto-generated fallback names assigned when the fictional pools
+# are exhausted (Guest-<hex> in workshop mode, Hero-<id> in talk mode).
+_FALLBACK_NAME_PREFIXES = ("Guest-", "Hero-")
 
+
+@lru_cache(maxsize=1)
 def _fictional_names() -> frozenset[str]:
     """Names the daemon can auto-assign — used to flag anonymous attendees.
 
@@ -29,6 +35,12 @@ def _fictional_names() -> frozenset[str]:
     from daemon.participant.names import CHARACTER_NAMES, LOTR_NAMES
 
     return frozenset(LOTR_NAMES) | frozenset(n for n, _u in CHARACTER_NAMES)
+
+
+def _is_anonymous_name(name: str) -> bool:
+    """True for auto-assigned names: fictional-pool members and pool-exhaustion
+    fallbacks (Guest-XXXX / Hero-XXXX)."""
+    return name in _fictional_names() or name.startswith(_FALLBACK_NAME_PREFIXES)
 
 
 def _parse_header(folder: Path | None) -> tuple[str, str | None]:
@@ -61,11 +73,10 @@ def render_attendees_md(
 ) -> str:
     """Render the whole `attendees.md` from the live roster (full regeneration)."""
     title, date_line = _parse_header(folder)
-    fictional = _fictional_names()
 
     # Stable, human-friendly order: real names first (alphabetical), then anonymous.
     def _is_anon(entry: dict) -> bool:
-        return str(entry.get("name", "")) in fictional
+        return _is_anonymous_name(str(entry.get("name", "")))
 
     named = [p for p in participants if str(p.get("name", "")).strip()]
     real = sorted((p for p in named if not _is_anon(p)), key=lambda p: str(p["name"]).lower())
@@ -134,22 +145,6 @@ def regenerate_attendees(folder: Path | None = None, gdrive_url: str | None = No
 
     participants = _build_host_participants_list()
     text = render_attendees_md(folder, participants, gdrive_url)
-    target = _target_path(folder)
-    atomic_write(target, text)
-    return target
-
-
-def init_attendees(folder: Path | None, gdrive_url: str | None = None) -> Path | None:
-    """Create / reset `attendees.md` for a freshly (re)initialized session.
-
-    Writes a clean file with an empty roster so a new session never carries
-    stale attendees from a previous one.
-    """
-    from daemon.files_md import atomic_write
-
-    if folder is None:
-        return None
-    text = render_attendees_md(folder, [], gdrive_url)
     target = _target_path(folder)
     atomic_write(target, text)
     return target

@@ -38,6 +38,9 @@ from daemon.ws_messages import ParticipantListUpdatedMsg, ParticipantNamesUpdate
 from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
+# Server-side cap on participant display names; mirrored by maxlength="64" on
+# the participant page's three name inputs.
+_MAX_NAME_LEN = 64
 _COORDS_RE = re.compile(r"^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$")
 _TIMEZONE_RE = re.compile(r"^🕐\s+(.+)$")
 
@@ -437,19 +440,24 @@ def _build_poll_for_participant(pid: str) -> dict:
 def _participant_display_names() -> list[str]:
     """Roster display names only — the UUID-free payload for participants.
 
-    SECURITY: derived from the host enumerator but stripped down to names only.
-    A participant's identity is their X-Participant-ID UUID; never leak it here.
+    SECURITY: names only, never UUIDs or any stable per-user id. A participant's
+    identity is their X-Participant-ID UUID; leaking it enables impersonation.
+    Reads the name dict directly (same filtering as the host enumerator: skip
+    internal __ ids and blank names) without building the full host payload.
     """
     return [
-        str(p.get("name", ""))
-        for p in _build_host_participants_list()
-        if str(p.get("name", "")).strip()
+        name
+        for pid, name in participant_state.participant_names.items()
+        if not pid.startswith("__") and str(name).strip()
     ]
 
 
-def _broadcast_participant_names() -> None:
-    """Broadcast the roster's display NAMES (no UUIDs) to all participants."""
-    broadcast(ParticipantNamesUpdatedMsg(names=_participant_display_names()))
+def _is_name_taken(pid: str, name: str) -> bool:
+    """True iff another participant already holds `name` (soft-conflict check)."""
+    return any(
+        other_pid != pid and other_name == name
+        for other_pid, other_name in participant_state.participant_names.items()
+    )
 
 
 def _regenerate_attendees() -> None:
@@ -462,19 +470,41 @@ def _regenerate_attendees() -> None:
         logger.warning("attendees.md regeneration failed: %s", exc)
 
 
+def _publish_names_if_changed() -> None:
+    """On a real name-set change: broadcast the UUID-free names + regen attendees.md.
+
+    Both side effects derive purely from the name multiset, so they share one
+    change gate. Skipped when the multiset is unchanged since the last publish:
+    the roster notification also fires on activity heartbeats (~every 30s per
+    participant), where names never change — re-broadcasting would fan out
+    O(participants²) redundant messages and rewrite attendees.md for nothing.
+    Clients only count occurrences of their own name, so the comparison is
+    order-insensitive (sorted).
+    """
+    ps = participant_state
+    names = _participant_display_names()
+    names_key = sorted(names)
+    if names_key == ps.last_broadcast_names:
+        return
+    ps.last_broadcast_names = names_key
+    broadcast(ParticipantNamesUpdatedMsg(names=names))
+    _regenerate_attendees()
+
+
 async def _notify_host_participant_list():
     """Push the roster to the host, and the UUID-free names to all participants.
 
-    The host payload keeps UUIDs (host is trusted); the participant broadcast is
-    names-only. Fired on every roster change (join / rename / leave / activity /
-    avatar / location), so participants' in-session duplicate indicator stays live.
+    The host payload keeps UUIDs (host is trusted) and goes out on every roster
+    change (join / rename / activity / avatar / location). The participant
+    names broadcast + attendees.md regen ride the same hook but only fire when
+    the set of names actually changed (join / rename), not on heartbeats.
     """
     await notify_host(
         ParticipantListUpdatedMsg(
             participants=_build_host_participants_list(),
         )
     )
-    _broadcast_participant_names()
+    _publish_names_if_changed()
 
 
 router = APIRouter(prefix="/api/participant", tags=["participant"])
@@ -552,15 +582,14 @@ async def register_participant(request: Request, body: RegisterRequest):
 
     # New participant — assign identity
     raw_name: str
-    explicit_name = (body.name or "").strip()[:64]
+    explicit_name = (body.name or "").strip()[:_MAX_NAME_LEN]
     name_conflict = False
 
     if explicit_name:
         # Uniqueness is checked but NEVER blocks: a taken name is accepted and
         # a soft conflict flag is returned (no 409). The in-session duplicate
         # indicator (driven by the names broadcast) handles it on the client.
-        taken = {v for k, v in ps.participant_names.items() if k != pid}
-        name_conflict = explicit_name in taken
+        name_conflict = _is_name_taken(pid, explicit_name)
         raw_name = explicit_name
     elif ps.mode == "talk":
         # Conference mode: auto-assign character name
@@ -628,7 +657,6 @@ async def register_participant(request: Request, body: RegisterRequest):
                 ps.location_countries.pop(pid, None)
 
     await _notify_host_participant_list()
-    _regenerate_attendees()
 
     return RegisterResponse(name=raw_name, avatar=avatar, name_conflict=name_conflict)
 
@@ -651,18 +679,16 @@ async def rename_participant(request: Request, body: RenameRequest):
             {"error": "Participant not registered — call /register first"}, status_code=400
         )
 
-    raw_name = body.name.strip()[:64]
+    raw_name = body.name.strip()[:_MAX_NAME_LEN]
     if not raw_name:
         return JSONResponse({"error": "Name required"}, status_code=400)
 
     # Uniqueness is checked but NEVER blocks — accept the rename, flag the collision.
-    taken = {v for k, v in ps.participant_names.items() if k != pid}
-    name_conflict = raw_name in taken
+    name_conflict = _is_name_taken(pid, raw_name)
 
     ps.participant_names[pid] = raw_name
 
     await _notify_host_participant_list()
-    _regenerate_attendees()
 
     return RenameResponse(name_conflict=name_conflict)
 
