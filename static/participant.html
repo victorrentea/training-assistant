@@ -612,6 +612,80 @@ body{visibility:hidden}
   100% { background: rgba(127, 127, 127, 0.08); color: var(--color-on-surface-variant, #566166); font-weight: 400; }
 }
 .poll-status-bar.flash { animation: poll-status-bar-flash 2.5s ease-out; }
+
+/* ── Join-time name gate ─────────────────────────────────────────────────── */
+#name-gate {
+  position: fixed; inset: 0; z-index: 10001;
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+  background: var(--color-surface, #f5f5f5);
+}
+.name-gate-card {
+  width: 100%; max-width: 460px;
+  background: var(--color-surface-container-lowest, #ffffff);
+  border-radius: 24px;
+  padding: 40px 36px;
+  box-shadow: 0 12px 32px rgba(42, 52, 57, 0.08);
+  display: flex; flex-direction: column; gap: 16px;
+}
+.name-gate-card h2 {
+  font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em;
+  color: var(--color-on-surface, #2a3439); margin: 0;
+}
+.name-gate-card .name-gate-hint {
+  font-size: 0.9rem; color: var(--color-on-surface-variant, #566166); margin: 0;
+}
+#name-gate-input {
+  width: 100%; font-size: 1.1rem; padding: 14px 16px;
+  border-radius: 14px; outline: none; border: none;
+  background: var(--color-surface-container-highest, #e2e8ee);
+  color: var(--color-on-surface, #2a3439);
+}
+#name-gate-input::placeholder { color: var(--color-on-surface-variant, #8a969c); opacity: 0.8; }
+.name-gate-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+#name-gate-enter {
+  width: 100%; padding: 13px 20px; border: none; border-radius: 999px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  color: var(--color-on-primary, #ffffff);
+  background: var(--color-primary, #4555ba);
+}
+#name-gate-enter:disabled { opacity: 0.45; cursor: not-allowed; }
+#name-gate-anon {
+  width: 100%; padding: 11px 20px; border: none; border-radius: 999px;
+  font-size: 0.92rem; font-weight: 600; cursor: pointer;
+  color: var(--color-on-surface-variant, #566166); background: transparent;
+}
+#name-gate-anon:hover { background: var(--color-surface-container, #e8eff3); }
+#name-gate-anon-warning {
+  font-size: 0.8rem; color: var(--color-error, #dc2626);
+  text-align: center; min-height: 1.1em; opacity: 0; transition: opacity 0.15s;
+}
+#name-gate-anon:hover ~ #name-gate-anon-warning,
+#name-gate-anon:focus ~ #name-gate-anon-warning { opacity: 1; }
+#name-gate-error { font-size: 0.85rem; color: var(--color-error, #dc2626); text-align: center; }
+#name-gate-error a { text-decoration: underline; cursor: pointer; }
+
+/* ── In-session duplicate-name indicator (participant's own card) ─────────── */
+@keyframes dup-name-blink {
+  0%, 100% { color: var(--color-error, #dc2626); }
+  50%      { color: var(--color-on-surface, #2a3439); }
+}
+.display-name-text.name-duplicate {
+  animation: dup-name-blink 1.6s ease-in-out infinite;
+  text-decoration: underline;
+  text-decoration-color: var(--color-error, #dc2626);
+  text-underline-offset: 2px;
+}
+#dup-name-prefix { display: none; margin-right: 2px; }
+#display-name.is-duplicate #dup-name-prefix { display: inline; }
+#dup-indicator {
+  display: none;
+  margin: 2px 0 6px 0.5rem;
+  font-size: 0.72rem; line-height: 1.2;
+  color: var(--color-error, #dc2626);
+}
+#dup-indicator.show { display: block; }
+#dup-indicator .dup-change-link { text-decoration: underline; cursor: pointer; font-weight: 600; }
 </style>
 <link rel="stylesheet" href="/static/participant-theme.css"/>
 </head>
@@ -619,6 +693,26 @@ body{visibility:hidden}
 <div id="loading-screen" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--color-surface,#f5f5f5)">
   <div style="width:40px;height:40px;border:4px solid var(--color-outline-variant,#ccc);border-top-color:var(--color-primary,#4555ba);border-radius:50%;animation:spin 0.8s linear infinite"></div>
   <span style="font-size:0.95rem;color:var(--color-outline,#888)">Connecting&hellip;</span>
+</div>
+<!-- Join-time name gate: single free-text field + Enter / Anonymous. Shown by
+     _showNameGate() before the socket connects, only when the server has no
+     committed name for this UUID in the active session. -->
+<div id="name-gate">
+  <div class="name-gate-card">
+    <h2>Welcome! What's your name?</h2>
+    <p class="name-gate-hint">Your name is used to build this session's attendance sheet.</p>
+    <input id="name-gate-input" type="text" maxlength="64" autocomplete="off"
+           placeholder="Type your name (e.g. Ada Lovelace)" aria-label="Your name" />
+    <div class="name-gate-buttons">
+      <button id="name-gate-enter" type="button" disabled>Enter</button>
+      <button id="name-gate-anon" type="button"
+              title="You might not appear correctly in the attendance sheet.">Enter as anonymous</button>
+      <div id="name-gate-anon-warning">You might not appear correctly in the attendance sheet.</div>
+    </div>
+    <div id="name-gate-error" style="display:none">
+      Couldn't join. <a id="name-gate-retry">Retry</a> or use "Enter as anonymous".
+    </div>
+  </div>
 </div>
 <!-- Shown when auto-reconnect gives up after too many failed attempts (see _connectWS) -->
 <div id="reconnect-giveup" style="display:none;position:fixed;top:0;left:0;right:0;z-index:10000;background:#b91c1c;color:#fff;padding:.7rem 1rem;text-align:center;font-weight:600;font-size:.95rem;box-shadow:0 2px 10px rgba(0,0,0,.35)">
@@ -721,14 +815,17 @@ body{visibility:hidden}
     <img id="my-avatar" alt="Avatar" class="w-full h-full rounded-full object-cover" style="display:none" src=""/>
     <span id="my-avatar-letter" class="w-full h-full rounded-full flex items-center justify-center text-white font-extrabold text-xs" style="display:none"></span>
   </div>
-  <span id="display-name" class="text-base flex-1 cursor-pointer" title="Click to edit name" style="display:none"><span class="display-name-text"></span><span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-60 transition-opacity ml-1" style="font-size:14px;vertical-align:middle">edit</span></span>
+  <span id="display-name" class="text-base flex-1 cursor-pointer" title="Click to edit name" style="display:none"><span id="dup-name-prefix" title="Duplicate name">⚠️</span><span class="display-name-text"></span><span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-60 transition-opacity ml-1" style="font-size:14px;vertical-align:middle">edit</span></span>
   <span id="name-edit-wrap" style="display:none" class="flex-1">
-    <input id="name-edit-input" type="text" maxlength="32" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
+    <input id="name-edit-input" type="text" maxlength="64" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
   </span>
   <button id="share-location-btn" onclick="requestParticipantLocation(); event.stopPropagation();" title="Share your location with host" style="display:none" class="flex-shrink-0 opacity-60 transition-all">
     <span class="material-symbols-outlined" style="font-size:1.25rem">location_on</span>
   </button>
 </div>
+<!-- In-session duplicate-name indicator: shown only when this participant's own
+     name occurs >=2 times in the participant_names_updated broadcast. -->
+<div id="dup-indicator">⚠️ <b>duplicate</b> name — <span class="dup-change-link" onclick="_startNameEdit()">click here to change</span></div>
 </aside>
 <div id="deploy-age-line" onclick="resetRemindersForTest()" title="Click to reset break reminders (for testing)"
   class="fixed bottom-0 right-0 px-2 py-1 cursor-pointer select-none"
@@ -756,7 +853,7 @@ body{visibility:hidden}
   <div id="activity-name-editor" style="display:none" class="w-full flex justify-center">
     <div class="w-full" style="max-width:22rem">
       <label for="activity-name-input" class="block text-center font-bold text-on-surface" style="font-size:2rem;line-height:1.2;margin-bottom:1.5rem">What's your name?</label>
-      <input id="activity-name-input" type="text" maxlength="32" autocomplete="off"
+      <input id="activity-name-input" type="text" maxlength="64" autocomplete="off"
         class="w-full text-center text-lg font-medium text-on-surface bg-surface-container-low rounded-2xl px-4 py-3 outline-none border-2 border-outline-variant focus:border-primary transition-colors"
         placeholder="Your name"
         oninput="_onActivityNameInput()"
@@ -3242,14 +3339,22 @@ function _commitName(rawName) {
   if (displayText) displayText.textContent = _myName;
   var activityInput = document.getElementById('activity-name-input');
   if (activityInput && document.activeElement !== activityInput) activityInput.value = _myName;
+  // PUT /name now returns 200 + {name_conflict} (never a 409). We read the flag
+  // but show NO blocking dialog — the in-session indicator (driven by the names
+  // re-broadcast) is the sole duplicate signal. Optimistically recompute now so
+  // resolving a duplicate clears our own indicator immediately.
   fetch('/' + _sessionId + '/api/participant/name', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
     body: JSON.stringify({ name: _myName })
-  }).catch(function() {});
+  }).then(function(r) { return r.ok ? r.json().catch(function() { return null; }) : null; })
+    .then(function(data) { if (data) _lastNameConflict = !!data.name_conflict; })
+    .catch(function() {});
+  _recomputeDuplicateIndicator();
   _hideNameNudge();
   return true;
 }
+var _lastNameConflict = false;
 
 function _confirmNameEdit() {
   _commitName(document.getElementById('name-edit-input').value);
@@ -3328,6 +3433,86 @@ async function _refreshParticipantState() {
   }
 }
 
+// ── Join-time name gate ─────────────────────────────────────────────────────
+// Full-screen overlay with a single free-text name field. Enter submits the
+// typed name (register/rename); Anonymous ignores the input and uses the
+// fictional-name path. Resolves with the identity {name, avatar, name_conflict}.
+// Fails open: on a failed register it shows a retry and keeps Anonymous usable.
+function _showNameGate() {
+  return new Promise(function(resolve) {
+    var gate = document.getElementById('name-gate');
+    var input = document.getElementById('name-gate-input');
+    var enterBtn = document.getElementById('name-gate-enter');
+    var anonBtn = document.getElementById('name-gate-anon');
+    var errEl = document.getElementById('name-gate-error');
+    var retryEl = document.getElementById('name-gate-retry');
+    var loading = document.getElementById('loading-screen');
+    if (loading) loading.style.display = 'none';
+    gate.style.display = 'flex';
+    setTimeout(function() { try { input.focus(); } catch (e) {} }, 50);
+
+    var busy = false;
+    function syncEnter() { enterBtn.disabled = busy || input.value.trim().length === 0; }
+    function setBusy(on) { busy = on; anonBtn.disabled = on; syncEnter(); }
+
+    async function submit(name) {  // name null/'' => anonymous (empty body)
+      if (busy) return;
+      setBusy(true);
+      errEl.style.display = 'none';
+      try {
+        var resp = await _registerRailway(name ? { name: name } : {});
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        var identity = await resp.json();
+        gate.style.display = 'none';
+        if (loading) loading.style.display = 'flex';
+        resolve(identity);
+      } catch (e) {
+        console.warn('[participant] name gate register failed:', e);
+        setBusy(false);
+        errEl.style.display = '';  // fail open: retry or Anonymous
+      }
+    }
+
+    input.addEventListener('input', syncEnter);
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && input.value.trim()) submit(input.value.trim());
+    });
+    enterBtn.addEventListener('click', function() {
+      if (!enterBtn.disabled) submit(input.value.trim());
+    });
+    anonBtn.addEventListener('click', function() { submit(null); });
+    if (retryEl) retryEl.addEventListener('click', function() {
+      if (input.value.trim()) submit(input.value.trim());
+    });
+    syncEnter();
+  });
+}
+
+// ── In-session duplicate-name indicator ─────────────────────────────────────
+// Driven purely by the UUID-free participant_names_updated broadcast: count how
+// many times our OWN name appears in the roster (>=2 => duplicate). Self-clears
+// for both sides when either renames, because every client recomputes from the
+// re-broadcast list.
+var _participantNames = [];
+function _recomputeDuplicateIndicator() {
+  var mine = (_myName || '').trim();
+  var count = 0;
+  if (mine) {
+    for (var i = 0; i < _participantNames.length; i++) {
+      if (_participantNames[i] === mine) count++;
+    }
+  }
+  _setDuplicateIndicator(count >= 2);
+}
+function _setDuplicateIndicator(isDup) {
+  var display = document.getElementById('display-name');
+  var text = display ? display.querySelector('.display-name-text') : null;
+  var indicator = document.getElementById('dup-indicator');
+  if (text) text.classList.toggle('name-duplicate', isDup);
+  if (display) display.classList.toggle('is-duplicate', isDup);
+  if (indicator) indicator.classList.toggle('show', isDup);
+}
+
 (async function loadParticipantState() {
   try {
     // Served at /{session_id}/ — the id is already in the (backend-validated) URL path.
@@ -3340,23 +3525,26 @@ async function _refreshParticipantState() {
       LS.setSessionId(_sessionId);
     }
 
-    // Register or rejoin. ?as=Alice in the URL pre-seeds the desired name
-    // so first-visit registration is one server round-trip (register-with-name)
-    // instead of register → auto-LotR-name → rename. Used by the hermetic
-    // sequence-extraction tests; harmless for normal users.
+    // Register or rejoin, then gate. ?as=Alice in the URL pre-seeds the desired
+    // name so first-visit registration is one server round-trip and the gate is
+    // skipped (used by the hermetic sequence-extraction tests; harmless for
+    // normal users). Otherwise the name gate is shown before _connectWS()
+    // whenever the server has no committed name for this UUID in the active
+    // session (first visit + next-day / new session). A returning participant
+    // with a committed name (rejoin 200) skips the gate.
     var _asName = (new URLSearchParams(location.search)).get('as') || '';
     var identity = null;
-    if (_isFirstVisit) {
-      var regResp = await _registerRailway(_asName ? { name: _asName } : {});
+    if (_asName) {
+      var regResp = await _registerRailway({ name: _asName });
       if (regResp.ok) identity = await regResp.json();
-    } else {
+    } else if (!_isFirstVisit) {
       var rejoinResp = await _rejoinRailway();
-      if (rejoinResp.status === 200) {
-        identity = await rejoinResp.json();
-      } else {
-        var regResp2 = await _registerRailway(_asName ? { name: _asName } : {});
-        if (regResp2.ok) identity = await regResp2.json();
-      }
+      if (rejoinResp.status === 200) identity = await rejoinResp.json();
+    }
+    if (!identity) {
+      // No committed name for this UUID → show the single-field gate (Enter /
+      // Anonymous). _showNameGate() performs the register and resolves identity.
+      identity = await _showNameGate();
     }
     _uuidStore.setItem('workshop_participant_uuid_seen', '1');
 
@@ -3541,6 +3729,12 @@ function _applyState(msg) {
     _myName = _applyHostSuffix(msg.my_name);
     localStorage.setItem(LS_NAME_KEY, _myName);
     document.querySelector('#display-name .display-name-text').textContent = _myName;
+    _recomputeDuplicateIndicator();
+  }
+  // Roster names (UUID-free) — recompute the duplicate indicator on initial load.
+  if (Array.isArray(msg.participant_names)) {
+    _participantNames = msg.participant_names;
+    _recomputeDuplicateIndicator();
   }
   // Sync avatar from server
   if (msg.my_avatar) {
@@ -4055,6 +4249,13 @@ function _handleWsMessage(msg) {
       var paxDisplay = document.getElementById('pax-count-display');
       document.getElementById('pax-count').textContent = msg.count;
       paxDisplay.style.display = '';
+      break;
+    }
+    case 'participant_names_updated': {
+      // UUID-free roster names. Recompute the in-session duplicate indicator by
+      // counting occurrences of our OWN name (>=2 => duplicate).
+      _participantNames = Array.isArray(msg.names) ? msg.names : [];
+      _recomputeDuplicateIndicator();
       break;
     }
     case 'quiz_opened':

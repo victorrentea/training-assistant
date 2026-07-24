@@ -45,7 +45,12 @@ paths:
       tags:
       - participant
       summary: Rename Participant
-      description: Rename a registered participant. Returns 400 if not yet registered.
+      description: 'Rename a registered participant. Returns 400 if not yet registered.
+
+
+        A duplicate name is accepted (never a 409): the response carries a soft
+
+        `name_conflict` flag and the participant stays admitted.'
       operationId: rename_participant_api_participant_name_put
       requestBody:
         content:
@@ -54,8 +59,12 @@ paths:
               $ref: '#/components/schemas/RenameRequest'
         required: true
       responses:
-        '204':
+        '200':
           description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RenameResponse'
       x-feature: identity
   /api/participant/activity:
     post:
@@ -2577,6 +2586,12 @@ components:
           - type: string
           - type: 'null'
           title: Session Name
+        participant_names:
+          items:
+            type: string
+          type: array
+          title: Participant Names
+          default: []
         wordcloud:
           $ref: '#/components/schemas/WordcloudData'
         qa_questions:
@@ -2934,6 +2949,10 @@ components:
         avatar:
           type: string
           title: Avatar
+        name_conflict:
+          type: boolean
+          title: Name Conflict
+          default: false
       type: object
       required:
       - name
@@ -2948,6 +2967,14 @@ components:
       required:
       - name
       title: RenameRequest
+    RenameResponse:
+      properties:
+        name_conflict:
+          type: boolean
+          title: Name Conflict
+          default: false
+      type: object
+      title: RenameResponse
     ResumeSessionRequest:
       properties:
         folder:

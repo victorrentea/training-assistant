@@ -15,8 +15,34 @@ class ParticipantPage:
 
     # ── Session ──────────────────────────────────────────────────────────────
 
+    def _wait_for_gate(self, timeout: int = 4000) -> bool:
+        """Return True if the join-time name gate became visible within timeout."""
+        try:
+            self._page.locator("#name-gate").wait_for(state="visible", timeout=timeout)
+            return True
+        except Exception:
+            return False
+
+    def enter_name_at_gate(self, name: str) -> None:
+        """Type a name into the gate and click Enter (registers the typed name)."""
+        self._page.locator("#name-gate-input").fill(name)
+        enter = self._page.locator("#name-gate-enter")
+        expect(enter).to_be_enabled(timeout=3000)
+        enter.click()
+
+    def enter_anonymous_at_gate(self) -> None:
+        """Click the gate's Anonymous button (ignores any typed text)."""
+        self._page.locator("#name-gate-anon").click()
+
     def auto_join(self) -> str:
-        """Wait for auto-join to complete and return the server-assigned name (no rename)."""
+        """Enter the session and return the server-assigned name (no explicit name).
+
+        First-visit participants see the name gate; we click Anonymous to obtain
+        an auto-assigned fictional name (the pre-gate 'auto-join' semantics). A
+        pre-seeded (?as=) or returning participant skips the gate.
+        """
+        if self._wait_for_gate():
+            self.enter_anonymous_at_gate()
         expect(self._page.locator("#display-name")).to_be_visible(timeout=10000)
         expect(self._page.locator("#display-name .display-name-text")).not_to_be_empty(timeout=5000)
         return self._page.locator("#display-name .display-name-text").inner_text().strip()
@@ -29,10 +55,16 @@ class ParticipantPage:
     def join(self, name: str) -> None:
         """Join session with a given name.
 
-        Prefers single-shot register-with-name when the page was loaded with
-        ?as=NAME (the seq-extraction harness does this). Falls back to the
-        auto-join + rename flow otherwise.
+        On first visit the name gate is shown: we type the name and click Enter.
+        With a ?as=NAME pre-seed (the seq-extraction harness) or a returning
+        participant, the gate is skipped and we fall back to rename if needed.
         """
+        if self._wait_for_gate():
+            self.enter_name_at_gate(name)
+            expect(self._page.locator("#display-name .display-name-text")).to_have_text(
+                name, timeout=8000
+            )
+            return
         expect(self._page.locator("#display-name")).to_be_visible(timeout=10000)
         expect(self._page.locator("#display-name .display-name-text")).not_to_be_empty(timeout=3000)
         current = (self._page.locator("#display-name .display-name-text").inner_text() or "").strip()

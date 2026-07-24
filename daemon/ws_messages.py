@@ -54,6 +54,19 @@ class ParticipantListUpdatedMsg(BaseModel):
     participants: list[dict[str, Any]]  # [{uuid, name, score, location, avatar, engagement, last_active_at, last_view}]
 
 
+class ParticipantNamesUpdatedMsg(BaseModel):
+    """Participant-facing: the roster's display NAMES only.
+
+    SECURITY: this payload MUST carry display names only — never UUIDs or any
+    stable per-user id. A participant's identity is their X-Participant-ID UUID;
+    leaking it would let one participant impersonate another. The in-session
+    duplicate indicator is deliberately UUID-free — each client counts how many
+    times its own name appears in this list (>=2 => duplicate).
+    """
+    type: Literal["participant_names_updated"] = "participant_names_updated"
+    names: list[str]
+
+
 # ── Quiz ──────────────────────────────────────────────────────────────────────
 
 class QuizQueueUpdatedMsg(BaseModel):
@@ -328,6 +341,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "activity_updated": ActivityUpdatedMsg,
     # Identity
     "active_participants_count_updated": ActiveParticipantsCountUpdatedMsg,
+    "participant_names_updated": ParticipantNamesUpdatedMsg,
     "slides_history_updated": SlidesHistoryCountUpdatedMsg,
     # Quiz
     "quiz_opened": QuizOpenedMsg,
@@ -409,6 +423,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "activity_updated": "activity",
     # Identity
     "active_participants_count_updated": "identity",
+    "participant_names_updated": "identity",
     "slides_history_updated": "slides",
     # Quiz
     "quiz_opened": "quiz",

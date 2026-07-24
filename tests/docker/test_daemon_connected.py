@@ -97,6 +97,13 @@ def test_host_starts_session_with_real_daemon():
         pax_page = pax_ctx.new_page()
         pax_page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
 
+        # First-visit name gate: choose Anonymous for an auto-assigned name.
+        try:
+            pax_page.locator("#name-gate").wait_for(state="visible", timeout=5000)
+            pax_page.locator("#name-gate-anon").click()
+        except Exception:
+            pass
+
         # Wait for auto-name assignment
         display_name = pax_page.locator("#display-name .display-name-text")
         display_name.wait_for(state="visible", timeout=10000)

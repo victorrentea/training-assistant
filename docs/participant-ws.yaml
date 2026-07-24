@@ -22,6 +22,7 @@ channels:
           - $ref: '#/components/messages/decks_updated'
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/active_participants_count_updated'
+          - $ref: '#/components/messages/participant_names_updated'
           - $ref: '#/components/messages/slides_history_updated'
           - $ref: '#/components/messages/quiz_opened'
           - $ref: '#/components/messages/quiz_ended'
@@ -117,6 +118,24 @@ components:
             enum: [active_participants_count_updated]
           count:
             type: integer
+
+    participant_names_updated:
+      summary: Roster display names changed (join / rename / leave)
+      x-feature: identity
+      x-doc-notes:
+        - "SECURITY: display names only — never UUIDs or any stable per-user id (a leaked UUID enables impersonation via X-Participant-ID)."
+        - "In-session duplicate detection is UUID-free: count occurrences of your own name in 'names' (>=2 => duplicate)."
+      payload:
+        type: object
+        required: [type, names]
+        properties:
+          type:
+            type: string
+            enum: [participant_names_updated]
+          names:
+            type: array
+            items:
+              type: string
 
     slides_history_updated:
       summary: Participant slide history count changed
