@@ -296,6 +296,8 @@ class ParticipantStateResponse(BaseModel):
     gdrive_url: str | None = None
     has_agenda: bool = False
     emoji_catalog: list[EmojiDef]
+    # Attention master switch — drives the bell button + notification affordance.
+    attention_enabled: bool = False
 
 
 def _files_count() -> int:
@@ -850,6 +852,9 @@ async def get_participant_state(request: Request):
         # Emoji reaction catalog — single source of truth; the page renders its
         # bar from this so the buttons and the daemon whitelist cannot drift.
         "emoji_catalog": [e.model_dump() for e in EMOJI_CATALOG],
+        # Attention master switch — a fresh load / reconnect renders the bell +
+        # permission affordance only when the host has enabled the capability.
+        "attention_enabled": ps.attention_enabled,
     }
 
     return JSONResponse(state_msg)

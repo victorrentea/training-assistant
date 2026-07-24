@@ -68,6 +68,16 @@ class AddonBridgeClient:
             msg["glow"] = glow
         return self._send(msg)
 
+    def send_bell(self, caller_name: str) -> bool:
+        """Forward an attention bell to the overlay. Best-effort; never raises.
+
+        Emits exactly ``{"type":"bell_ring","caller":"<name>"}`` — the shared wire
+        contract the merged Swift receiver expects verbatim. Returns True if sent,
+        False when the bridge is disconnected (caller logs the drop).
+        """
+        msg = {"type": "bell_ring", "caller": caller_name}
+        return self._send(msg)
+
     def send_session_started(self, participant_url: str, session_folder: str | None = None) -> bool:
         """Notify addons that a session has started with the participant join URL.
 
@@ -251,6 +261,11 @@ def send_emoji(emoji: str, glow: str | None = None) -> bool:
     glow: optional ``#rrggbb`` per-participant halo colour.
     """
     return _client is not None and _client.send_emoji(emoji, glow)
+
+
+def send_bell(caller_name: str) -> bool:
+    """Best-effort bell_ring send to addons overlay. Returns True if sent."""
+    return _client is not None and _client.send_bell(caller_name)
 
 
 def send_session_started(participant_url: str, session_folder: str | None = None) -> bool:

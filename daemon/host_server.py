@@ -200,6 +200,11 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(qa_participant_router)      # /api/participant/qa/*
     app.include_router(qa_host_router)             # /api/{session_id}/qa/*
 
+    from daemon.attention.router import host_router as attention_host_router
+    from daemon.attention.router import participant_router as bell_participant_router
+    app.include_router(bell_participant_router)    # /api/participant/bell
+    app.include_router(attention_host_router)      # /api/{session_id}/host/attention/*
+
     from daemon.leaderboard.router import router as leaderboard_router
     from daemon.poll.router import host_router as poll_host_router
     from daemon.poll.router import participant_router as poll_participant_router

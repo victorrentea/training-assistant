@@ -396,6 +396,7 @@
         renderParticipantList(cachedParticipantIds);
         updateLeaderboardButton();
         applyEmojiMasterBadge(msg.emoji_global_enabled !== false);
+        applyAttentionMasterBadge(msg.attention_enabled === true);
         document.getElementById('restore-banner').style.display =
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         if (msg.slides_log_deep_count !== undefined || msg.slides_log_topic !== undefined) {
@@ -513,6 +514,11 @@
         }
       } else if (msg.type === 'emoji_reaction') {
         showHostEmoji(msg.emoji);
+      } else if (msg.type === 'bell_rung') {
+        // Dual-render: the overlay shows the persistent card; the host browser
+        // gets a light transient nudge too.
+        showHostEmoji('🔔');
+        toast(`🔔 ${msg.caller || 'Someone'} is calling you`);
       } else if (msg.type === 'paste_received') {
         const pid = msg.uuid;
         if (pid) {
@@ -804,6 +810,75 @@
       applyEmojiMasterBadge(emoji_global_enabled);
     } catch (e) {
       console.error('emoji global toggle failed', e);
+    }
+  }
+
+  // ── Attention master switch (bell + host notifications) ──────────────────
+  function applyAttentionMasterBadge(enabled) {
+    const b = document.getElementById('attention-master-badge');
+    if (b) {
+      b.className = `badge ${enabled ? 'connected' : 'disabled'} footer-tooltip-target`;
+      _setFooterBadgeTooltip(b, enabled
+        ? 'Attention ON — participants can ring the bell & receive notifications (click to disable)'
+        : 'Attention OFF — click to enable the bell & host notifications');
+    }
+    // The "notify all participants" affordance only exists while attention is on.
+    const wrap = document.getElementById('attention-notify-wrap');
+    if (wrap) {
+      wrap.style.display = enabled ? '' : 'none';
+      if (!enabled) {
+        const pop = document.getElementById('attention-notify-popover');
+        if (pop) pop.style.display = 'none';
+      }
+    }
+  }
+
+  async function toggleAttentionGlobal() {
+    try {
+      const r = await fetch(API('/attention/global-toggle'), { method: 'POST' });
+      const { attention_enabled } = await r.json();
+      applyAttentionMasterBadge(attention_enabled);
+    } catch (e) {
+      console.error('attention global toggle failed', e);
+    }
+  }
+
+  function toggleAttentionNotifyPopover(ev) {
+    if (ev) ev.stopPropagation();
+    const pop = document.getElementById('attention-notify-popover');
+    if (!pop) return;
+    const showing = pop.style.display !== 'none';
+    pop.style.display = showing ? 'none' : 'block';
+    if (!showing) {
+      const inp = document.getElementById('attention-notify-input');
+      if (inp) { inp.focus(); _syncAttentionNotifyBtn(); }
+    }
+  }
+
+  function _syncAttentionNotifyBtn() {
+    const inp = document.getElementById('attention-notify-input');
+    const btn = document.getElementById('attention-notify-btn');
+    if (inp && btn) btn.disabled = !inp.value.trim();
+  }
+
+  async function sendHostNotification() {
+    const inp = document.getElementById('attention-notify-input');
+    if (!inp) return;
+    const text = inp.value.trim();
+    if (!text) return;
+    try {
+      const r = await fetch(API('/attention/notify'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (!r.ok) throw new Error(r.status);
+      inp.value = '';
+      _syncAttentionNotifyBtn();
+      const pop = document.getElementById('attention-notify-popover');
+      if (pop) pop.style.display = 'none';
+    } catch (e) {
+      console.error('host notification send failed', e);
     }
   }
 

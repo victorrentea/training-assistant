@@ -56,6 +56,7 @@ COPY tests/docker/test_follow_uncached_slide.py .
 COPY tests/docker/test_session_state_participant_name_restore.py .
 COPY tests/docker/test_participant_name_host.py .
 COPY tests/docker/test_participant_real_names_e2e.py .
+COPY tests/docker/test_attention_notifications_e2e.py .
 COPY tests/docker/test_poll_live.py .
 COPY tests/docker/features/ ./features/
 COPY tests/docker/step_defs/ ./step_defs/

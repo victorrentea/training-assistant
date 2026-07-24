@@ -42,11 +42,7 @@ async def _broadcast_emoji_counters_now() -> None:
     counters = dict(participant_state.emoji_counters)
     broadcast(EmojiCountersUpdatedMsg(counters=counters))
     # Persist to session-state.json
-    from daemon.misc.content_files import get_active_session_folder
-    from daemon.session_state import save_session_state
-    folder = get_active_session_folder()
-    if folder:
-        save_session_state(folder, participant_state.snapshot())
+    participant_state.persist()
 
 
 _emoji_throttle = AsyncThrottle(0.5, _broadcast_emoji_counters_now)
@@ -112,11 +108,7 @@ async def toggle_emoji_global():
     participant_state.emoji_global_enabled = not participant_state.emoji_global_enabled
     enabled = participant_state.emoji_global_enabled
 
-    from daemon.misc.content_files import get_active_session_folder
-    from daemon.session_state import save_session_state
-    folder = get_active_session_folder()
-    if folder:
-        save_session_state(folder, participant_state.snapshot())
+    participant_state.persist()
 
     daemon_log.info("emoji  ", f"❤️ reactions {'enabled' if enabled else 'disabled'} (master switch)")
     return EmojiGlobalStateResponse(emoji_global_enabled=enabled)

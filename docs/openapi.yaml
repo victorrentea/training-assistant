@@ -385,6 +385,53 @@ paths:
         '204':
           description: Successful Response
       x-feature: qa
+  /api/participant/bell:
+    post:
+      tags:
+      - attention
+      summary: Ring Bell
+      description: Participant rings the attention bell (no request body).
+      operationId: ring_bell_api_participant_bell_post
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: attention
+  /api/{session_id}/host/attention/global-toggle:
+    post:
+      tags:
+      - attention
+      summary: Toggle Attention Global
+      description: 'Host flips the session-wide attention master switch, persists
+        it, and
+
+        broadcasts the new state so every connected participant updates live.'
+      operationId: toggle_attention_global_api__session_id__host_attention_global_toggle_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttentionGlobalStateResponse'
+      x-feature: attention
+  /api/{session_id}/host/attention/notify:
+    post:
+      tags:
+      - attention
+      summary: Send Host Notification
+      description: Host broadcasts a text notification to all participants (Direction
+        A).
+      operationId: send_host_notification_api__session_id__host_attention_notify_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HostNotificationRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: attention
   /api/participant/quiz/vote:
     post:
       tags:
@@ -1490,6 +1537,15 @@ components:
       required:
       - text
       title: ArgumentRequest
+    AttentionGlobalStateResponse:
+      properties:
+        attention_enabled:
+          type: boolean
+          title: Attention Enabled
+      type: object
+      required:
+      - attention_enabled
+      title: AttentionGlobalStateResponse
     AvatarRequest:
       properties:
         rejected:
@@ -2084,6 +2140,15 @@ components:
           title: Line Counts
       type: object
       title: HostCodeReviewState
+    HostNotificationRequest:
+      properties:
+        text:
+          type: string
+          title: Text
+      type: object
+      required:
+      - text
+      title: HostNotificationRequest
     HostParticipant:
       properties:
         uuid:
@@ -2289,6 +2354,10 @@ components:
           type: boolean
           title: Emoji Global Enabled
           default: true
+        attention_enabled:
+          type: boolean
+          title: Attention Enabled
+          default: false
         daemon_connected:
           type: boolean
           title: Daemon Connected
@@ -2688,6 +2757,10 @@ components:
             $ref: '#/components/schemas/EmojiDef'
           type: array
           title: Emoji Catalog
+        attention_enabled:
+          type: boolean
+          title: Attention Enabled
+          default: false
       type: object
       required:
       - mode

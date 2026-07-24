@@ -21,14 +21,25 @@ class SlidingWindowRateLimiter:
         fall inside the trailing window.
         """
         now = time.monotonic() if now is None else now
-        hits = self._hits[key]
         cutoff = now - self.window_seconds
+        self._prune(cutoff)
+        hits = self._hits[key]
         while hits and hits[0] <= cutoff:
             hits.popleft()
         if len(hits) >= self.max_events:
             return False
         hits.append(now)
         return True
+
+    def _prune(self, cutoff: float) -> None:
+        """Evict keys whose whole window has expired.
+
+        Keeps memory bounded by *currently active* senders instead of growing
+        one deque per lifetime-distinct participant id.
+        """
+        stale = [k for k, h in self._hits.items() if not h or h[-1] <= cutoff]
+        for k in stale:
+            del self._hits[k]
 
     def reset(self) -> None:
         """Forget all recorded hits — used by tests for isolation."""

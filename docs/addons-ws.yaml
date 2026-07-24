@@ -26,6 +26,7 @@ channels:
       message:
         oneOf:
           - $ref: '#/components/messages/display_emoji'
+          - $ref: '#/components/messages/bell_ring'
           - $ref: '#/components/messages/session_started'
           - $ref: '#/components/messages/session_ended'
     publish:
@@ -69,6 +70,25 @@ components:
           count:
             type: integer
             description: Number of times to show the animation
+
+    bell_ring:
+      summary: Participant rang the attention bell — overlay alerts the host
+      x-feature: attention
+      x-doc-notes:
+        - Fire-and-forget, best-effort. If the overlay is not connected the daemon
+          logs the drop and still returns success to the participant.
+        - On receipt the overlay plays a bell sound and shows a persistent,
+          hover-dismissible bottom-left card reading "🔔 [caller] is calling you".
+      payload:
+        type: object
+        required: [type, caller]
+        properties:
+          type:
+            type: string
+            enum: [bell_ring]
+          caller:
+            type: string
+            description: Resolved display name of the ringing participant (never the raw UUID when a name is known)
 
     session_started:
       summary: Notify addons that a workshop session has started
