@@ -29,6 +29,7 @@ channels:
           - $ref: '#/components/messages/qa_updated'
           - $ref: '#/components/messages/codereview_selections_updated'
           - $ref: '#/components/messages/emoji_reaction'
+          - $ref: '#/components/messages/bell_rung'
           - $ref: '#/components/messages/paste_received'
           - $ref: '#/components/messages/file_uploaded'
           - $ref: '#/components/messages/participant_list_updated'
@@ -211,6 +212,22 @@ components:
           emoji:
             type: string
             maxLength: 4
+
+    # ── Attention (bell dual-render) ──────────────────────────────────────────
+
+    bell_rung:
+      summary: Participant rang the attention bell — optional host-screen render
+      x-feature: attention
+      payload:
+        type: object
+        required: [type, caller]
+        properties:
+          type:
+            type: string
+            enum: [bell_rung]
+          caller:
+            type: string
+            description: Resolved display name of the participant who rang
 
     # ── Paste & File Upload ───────────────────────────────────────────────────
 

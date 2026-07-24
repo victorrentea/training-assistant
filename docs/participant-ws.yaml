@@ -49,6 +49,8 @@ channels:
           - $ref: '#/components/messages/files_count_updated'
           - $ref: '#/components/messages/reload'
           - $ref: '#/components/messages/emoji_counters_updated'
+          - $ref: '#/components/messages/attention_enabled'
+          - $ref: '#/components/messages/host_notification'
 
 components:
   messages:
@@ -589,6 +591,46 @@ components:
             additionalProperties:
               type: integer
             description: Map of emoji character to total reaction count
+
+    # ── Attention (bell + host notifications) ─────────────────────────────────
+
+    attention_enabled:
+      summary: Host flipped the attention master switch — participants update live
+      x-feature: attention
+      x-doc-notes:
+        - Carries a boolean only (no UUIDs). Show/hide the bell button and the
+          notification-permission indicator without reloading the page.
+      payload:
+        type: object
+        required: [type, enabled]
+        properties:
+          type:
+            type: string
+            enum: [attention_enabled]
+          enabled:
+            type: boolean
+            description: Whether the attention capability is now on
+
+    host_notification:
+      summary: Host broadcast a text notification to all participants
+      x-feature: attention
+      x-doc-notes:
+        - Carries free text + a timestamp only (no UUIDs). Rendered as a native
+          OS Notification when permission is granted, otherwise an in-page toast;
+          both paths play a sound.
+      payload:
+        type: object
+        required: [type, text, at]
+        properties:
+          type:
+            type: string
+            enum: [host_notification]
+          text:
+            type: string
+            description: The host's notification message
+          at:
+            type: string
+            description: ISO-8601 timestamp when the daemon broadcast it
 
   schemas:
 

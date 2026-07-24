@@ -242,6 +242,38 @@ class EmojiCountersUpdatedMsg(BaseModel):
     counters: dict[str, int]
 
 
+# ── Attention (bell + host notifications) ─────────────────────────────────────
+
+class AttentionEnabledMsg(BaseModel):
+    """Participant-facing: the host flipped the attention master switch.
+
+    SECURITY: carries a single boolean only — no UUIDs or per-user identifiers.
+    Drives live show/hide of the bell button and the notification-permission
+    affordance on every connected participant, without a page reload.
+    """
+    type: Literal["attention_enabled"] = "attention_enabled"
+    enabled: bool
+
+
+class HostNotificationMsg(BaseModel):
+    """Participant-facing: the host broadcast a text notification to everyone.
+
+    SECURITY: carries free text + a timestamp only — no UUIDs or per-user
+    identifiers. Rendered as a native OS Notification (permission granted) or an
+    in-page toast fallback (permission absent), always with a sound.
+    """
+    type: Literal["host_notification"] = "host_notification"
+    text: str
+    at: str
+
+
+class BellRungMsg(BaseModel):
+    """Host-only: a participant rang the attention bell (dual-render, mirrors
+    the emoji_reaction host message). Carries the resolved display name."""
+    type: Literal["bell_rung"] = "bell_rung"
+    caller: str
+
+
 # ── Host-only: Addon bridge status ────────────────────────────────────────────
 
 class OverlayConnectedMsg(BaseModel):
@@ -378,6 +410,9 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "files_count_updated": FilesCountUpdatedMsg,
     # Emoji
     "emoji_counters_updated": EmojiCountersUpdatedMsg,
+    # Attention (bell + host notifications)
+    "attention_enabled": AttentionEnabledMsg,
+    "host_notification": HostNotificationMsg,
     # Cross-cutting
     "reload": ReloadMsg,
 }
@@ -398,6 +433,8 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     "codereview_selections_updated": CodereviewSelectionsUpdatedMsg,
     # Emoji
     "emoji_reaction": EmojiReactionMsg,
+    # Attention (bell dual-render)
+    "bell_rung": BellRungMsg,
     # Paste & Upload
     "paste_received": PasteReceivedMsg,
     "file_uploaded": FileUploadedMsg,
@@ -459,6 +496,9 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "files_count_updated": "files",
     # Emoji
     "emoji_counters_updated": "emoji",
+    # Attention (bell + host notifications)
+    "attention_enabled": "attention",
+    "host_notification": "attention",
     # Cross-cutting
     "reload": "reload",
 }
@@ -479,6 +519,8 @@ HOST_MESSAGE_FEATURES: dict[str, str] = {
     "codereview_selections_updated": "codereview",
     # Emoji
     "emoji_reaction": "emoji",
+    # Attention (bell dual-render)
+    "bell_rung": "attention",
     # Paste & Upload
     "paste_received": "paste_upload",
     "file_uploaded": "paste_upload",

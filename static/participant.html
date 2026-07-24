@@ -1089,6 +1089,24 @@ body{visibility:hidden}
 </div>
 </main>
 </div>
+<!-- Attention: pinned notification-permission indicator (Direction A).
+     Fixed + always-visible, but only shown while the attention capability is on.
+     Requesting permission + unlocking audio happen ONLY inside its click handler
+     (a user gesture) — never on load. -->
+<div id="attention-permission-bar"
+     onclick="_onAttentionPermissionClick()"
+     style="display:none;position:fixed;left:1rem;bottom:1rem;z-index:40;cursor:pointer;
+            align-items:center;gap:.5rem;padding:.5rem .9rem;border-radius:999px;
+            font-weight:600;font-size:.85rem;color:#fff;background:var(--color-primary,#4555ba);
+            box-shadow:0 6px 18px rgba(0,0,0,.28);user-select:none;max-width:min(88vw,22rem)">
+  <span id="attention-permission-icon">🔔</span>
+  <span id="attention-permission-text">Enable notifications</span>
+</div>
+<!-- Attention: notification sound. Unlocked (play+pause) during the permission
+     gesture so it can later play from a backgrounded tab. -->
+<audio id="attention-audio" preload="auto" style="display:none"
+       src="data:audio/wav;base64,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">
+</audio>
 <script>
 var PdfCache = (function() {
   var DB_NAME = 'workshop-pdf-cache';
@@ -2093,6 +2111,153 @@ function _showEmojiThrottleToast() {
   if (now - _emojiThrottleToastAt < 3000) return;
   _emojiThrottleToastAt = now;
   showToast('Slow down 🐢');
+}
+
+// ── Attention: bell (Direction B) + host notifications (Direction A) ─────────
+// The whole capability is gated behind the host master switch. `attention_enabled`
+// arrives on page-load state, on WS reconnect, and live via the `attention_enabled`
+// broadcast — driving show/hide of the bell button and the permission indicator.
+var _attentionEnabled = false;
+
+function _applyAttentionEnabled(enabled) {
+  _attentionEnabled = !!enabled;
+  if (_attentionEnabled) {
+    _renderBellButton();
+    _showAttentionPermissionBar();
+  } else {
+    _removeBellButton();
+    _hideAttentionPermissionBar();
+  }
+}
+
+function _renderBellButton() {
+  if (document.getElementById('attention-bell-btn')) return;
+  var bar = document.getElementById('emoji-main-bar');
+  if (!bar) return;
+  var btn = document.createElement('button');
+  btn.id = 'attention-bell-btn';
+  btn.className = EMOJI_BTN_CLASS;
+  btn.setAttribute('onclick', 'ringBell(this)');
+  if (typeof applyEmojiTip === 'function') applyEmojiTip(btn, 'Ring the bell — get the trainer’s attention');
+  btn.textContent = '🔔';
+  // Front of the bar so it reads as a distinct "call the trainer" control.
+  bar.insertBefore(btn, bar.firstChild);
+  return btn;
+}
+
+function _removeBellButton() {
+  var b = document.getElementById('attention-bell-btn');
+  if (b && b.parentNode) b.parentNode.removeChild(b);
+}
+
+// Light client-side throttle mirroring the emoji debounce.
+var _lastBellAt = 0;
+function ringBell(btn) {
+  if (!_attentionEnabled) return;
+  var now = Date.now();
+  if (now - _lastBellAt < 1500) { _showEmojiThrottleToast(); return; }
+  _lastBellAt = now;
+  if (btn && typeof showDesktopEmojiFloat === 'function') showDesktopEmojiFloat('🔔', btn);
+  if (!_sessionId) return;
+  fetch('/' + _sessionId + '/api/participant/bell', {
+    method: 'POST',
+    headers: { 'X-Participant-ID': _myUUID }   // no body — daemon resolves the name from the UUID
+  }).then(function(r) {
+    if (r.status === 429) _showEmojiThrottleToast();
+  }).catch(function(e) { console.error('bell send failed', e); });
+}
+
+// ── Notification-permission affordance (pinned, gesture-only request) ──────
+function _notificationPermission() {
+  try { return (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported'; }
+  catch (e) { return 'unsupported'; }
+}
+function _showAttentionPermissionBar() {
+  var bar = document.getElementById('attention-permission-bar');
+  if (!bar) return;
+  bar.style.display = 'flex';
+  _updateAttentionPermissionBar();
+}
+function _hideAttentionPermissionBar() {
+  var bar = document.getElementById('attention-permission-bar');
+  if (bar) bar.style.display = 'none';
+}
+function _updateAttentionPermissionBar() {
+  var bar = document.getElementById('attention-permission-bar');
+  if (!bar || bar.style.display === 'none') return;
+  var icon = document.getElementById('attention-permission-icon');
+  var text = document.getElementById('attention-permission-text');
+  var perm = _notificationPermission();
+  if (perm === 'granted') {
+    icon.textContent = '🔔'; text.textContent = 'Notifications on';
+    bar.style.background = 'var(--color-primary,#4555ba)'; bar.style.opacity = '0.7';
+    bar.dataset.state = 'granted';
+  } else if (perm === 'denied') {
+    icon.textContent = '🔕'; text.textContent = 'Notifications blocked — enable in browser settings';
+    bar.style.background = '#b3261e'; bar.style.opacity = '1';
+    bar.dataset.state = 'denied';
+  } else {
+    icon.textContent = '🔔'; text.textContent = 'Tap to enable notifications';
+    bar.style.background = 'var(--color-primary,#4555ba)'; bar.style.opacity = '1';
+    bar.dataset.state = 'default';
+  }
+}
+// Permission is requested ONLY here (a user gesture) — never on page load.
+function _onAttentionPermissionClick() {
+  _unlockAttentionAudio(); // unlock in the SAME gesture so sound can play later
+  var perm = _notificationPermission();
+  if (perm === 'granted') { _updateAttentionPermissionBar(); return; }
+  if (perm === 'denied') {
+    showToast('Notifications are blocked — re-enable them in your browser settings 🔕');
+    return;
+  }
+  try {
+    var p = Notification.requestPermission(function() { _updateAttentionPermissionBar(); });
+    if (p && typeof p.then === 'function') p.then(function() { _updateAttentionPermissionBar(); });
+  } catch (e) { _updateAttentionPermissionBar(); }
+}
+var _attentionAudioUnlocked = false;
+function _unlockAttentionAudio() {
+  var a = document.getElementById('attention-audio');
+  if (!a) return;
+  try {
+    a.muted = true;
+    var pr = a.play();
+    if (pr && typeof pr.then === 'function') {
+      pr.then(function() { a.pause(); a.currentTime = 0; a.muted = false; _attentionAudioUnlocked = true; })
+        .catch(function() { a.muted = false; });
+    } else { a.pause(); a.currentTime = 0; a.muted = false; _attentionAudioUnlocked = true; }
+  } catch (e) { /* best-effort */ }
+}
+function _playAttentionSound() {
+  var a = document.getElementById('attention-audio');
+  if (!a) return;
+  try { a.currentTime = 0; a.muted = false; var pr = a.play(); if (pr && pr.catch) pr.catch(function() {}); }
+  catch (e) { /* best-effort */ }
+}
+function _pulseAttentionPermissionBar() {
+  var bar = document.getElementById('attention-permission-bar');
+  if (!bar || bar.style.display === 'none') return;
+  var n = 0;
+  var iv = setInterval(function() {
+    bar.style.transform = (n % 2 === 0) ? 'scale(1.08)' : 'scale(1)';
+    if (++n >= 6) { clearInterval(iv); bar.style.transform = 'scale(1)'; }
+  }, 150);
+}
+// Direction A receipt: OS notification (permission granted) or toast fallback,
+// always with a sound. The Notification API makes its OWN OS sound (reliable on
+// a backgrounded tab); the unlocked <audio> is belt-and-suspenders + the toast path.
+function _handleHostNotification(msg) {
+  var text = (msg && msg.text) ? String(msg.text) : '';
+  if (!text) return;
+  if (_notificationPermission() === 'granted') {
+    try { new Notification(text); } catch (e) { showToast(text); }
+    _playAttentionSound();
+  } else {
+    showToast(text);
+    _playAttentionSound();
+    _pulseAttentionPermissionBar();
+  }
 }
 function sendFeedback() {
   var ta = document.getElementById('feedback-textarea');
@@ -3667,6 +3832,8 @@ function _applyFilesBadgeUnread(unread) {
 
 function _applyState(msg) {
   if (msg.emoji_catalog) renderEmojiBar(msg.emoji_catalog);
+  // Attention master switch — render/remove the bell + permission affordance.
+  if (msg.attention_enabled !== undefined) _applyAttentionEnabled(msg.attention_enabled);
   if (msg.session_name != null) {
     var sn = msg.session_name;
     var spaceIdx = sn.indexOf(' ');
@@ -4108,6 +4275,8 @@ function _handleWsMessage(msg) {
     case 'reload': location.reload(); break;
     case 'redirect': window.location.href = msg.url || '/'; break;
     case 'state': _applyState(msg); break;
+    case 'attention_enabled': _applyAttentionEnabled(msg.enabled); break;
+    case 'host_notification': _handleHostNotification(msg); break;
     case 'notes_updated': {
       document.querySelector('[data-nav="notes"]').style.display = msg.updated_at ? '' : 'none';
       var notesBadge = document.getElementById('notes-badge');

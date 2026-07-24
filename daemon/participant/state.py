@@ -45,6 +45,11 @@ class ParticipantState:
         # Session-wide master switch: when False, the daemon silently drops all
         # incoming emoji reactions (host screen + desktop overlay). Persisted.
         self.emoji_global_enabled: bool = True
+        # Session-wide master switch for the whole "attention" capability (both
+        # directions: participant→host bell + host→participant OS notifications).
+        # Unlike the emoji switch it DEFAULTS OFF and resets OFF every session —
+        # the host must explicitly opt in from the host UI. Persisted.
+        self.attention_enabled: bool = False
         # Engagement: uuid -> {view -> {seconds, visits, clicks}} (cumulative, persisted)
         self.engagement: dict[str, dict] = {}
         # Liveness (ephemeral, NOT persisted): host derives "active now" from these
@@ -136,6 +141,9 @@ class ParticipantState:
                 self.emoji_counters.update({k: v for k, v in raw_emoji_counters.items() if isinstance(v, int)})
             if isinstance(data.get("emoji_global_enabled"), bool):
                 self.emoji_global_enabled = data["emoji_global_enabled"]
+            # A restore that omits the flag leaves it at its safe default (OFF).
+            if isinstance(data.get("attention_enabled"), bool):
+                self.attention_enabled = data["attention_enabled"]
 
     def snapshot(self) -> dict:
         """Return a copy of all state (for testing/debugging)."""
@@ -152,6 +160,7 @@ class ParticipantState:
                 "current_activity": self.current_activity,
                 "emoji_counters": dict(self.emoji_counters),
                 "emoji_global_enabled": self.emoji_global_enabled,
+                "attention_enabled": self.attention_enabled,
                 "engagement": {pid: dict(views) for pid, views in self.engagement.items()},
             }
 
@@ -170,6 +179,8 @@ class ParticipantState:
             self.current_activity = "none"
             self.emoji_counters.clear()
             self.emoji_global_enabled = True
+            # Attention always starts OFF — every session is explicit opt-in.
+            self.attention_enabled = False
             self.engagement.clear()
             self.last_active_at.clear()
             self.last_view.clear()
