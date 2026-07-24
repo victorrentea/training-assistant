@@ -2244,11 +2244,17 @@ function _pulseAttentionPermissionBar() {
 // always with a sound. The Notification API makes its OWN OS sound (reliable on
 // a backgrounded tab); the unlocked <audio> is belt-and-suspenders + the toast path.
 function _handleHostNotification(msg) {
+  // Defense in depth: ignore host notifications while attention is disabled
+  // locally, even if one slips through (the server also gates this).
+  if (!_attentionEnabled) return;
   var text = (msg && msg.text) ? String(msg.text) : '';
   if (!text) return;
   if (_notificationPermission() === 'granted') {
-    try { new Notification(text); } catch (e) { showToast(text); }
-    _playAttentionSound();
+    // The OS Notification makes its OWN sound — do NOT also fire the <audio>
+    // (that double-beeps). Only the toast FALLBACK (Notification threw) needs
+    // our sound, so play it inside the catch.
+    try { new Notification(text); }
+    catch (e) { showToast(text); _playAttentionSound(); }
   } else {
     showToast(text);
     _playAttentionSound();
@@ -3340,6 +3346,23 @@ function _applyHostSuffix(name) {
   return name;
 }
 
+// Sanitize a name that did NOT pass through the single-line gate input (which
+// already blocks newlines and caps length via maxlength=64) — currently the
+// ?as= query param. Strip C0/C1 control chars & newlines, strip Unicode
+// bidi/zero-width formatting overrides (which can visually spoof or reorder
+// text), collapse internal whitespace runs to a single space, trim, then hard
+// cap to 64 chars. Keeps ?as= usable for pre-seeding a name while preventing a
+// raw / uncapped / newline / bidi injection vector.
+function _sanitizeName(raw) {
+  return String(raw == null ? '' : raw)
+    // C0 controls (incl. \n \r \t), DEL + C1 controls, zero-width & bidi
+    // marks/embeddings/overrides/isolates, word-joiner family, and BOM.
+    .replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 64);
+}
+
 function _updateProfileCard(name, avatarStr) {
   if (name) {
     _myName = name;
@@ -3487,6 +3510,15 @@ function _startNameEdit() {
   editInput.select();
 }
 
+// Sequence guard for the rename race: _commitName optimistically sets _myName
+// and PUTs it, but a `state` snapshot computed BEFORE the server processed our
+// PUT can arrive AFTER and revert the name (falsely resurrecting the duplicate
+// warning). After a local rename we remember the committed name; _applyState
+// ignores a snapshot my_name that differs from it until the server echoes our
+// name back (mirrors the quiz path's _quizWsSeq guard). A safety timeout clears
+// the guard so we can never get permanently stuck ignoring server updates.
+var _pendingRenameName = null;
+
 // Persist a new participant name everywhere it surfaces: local state, the
 // bottom-left profile card, the activity-view inline field, and the server.
 // Returns true only when the name actually changed (so callers can flash a hint).
@@ -3494,6 +3526,10 @@ function _commitName(rawName) {
   var newName = _applyHostSuffix((rawName || '').trim());
   if (!newName || newName === _myName) return false;
   _myName = newName;
+  _pendingRenameName = _myName;
+  (function(committed) {
+    setTimeout(function() { if (_pendingRenameName === committed) _pendingRenameName = null; }, 5000);
+  })(_myName);
   localStorage.setItem(LS_NAME_KEY, _myName);
   localStorage.setItem(LS_CUSTOM_NAME_KEY, '1');
   var displayText = document.querySelector('#display-name .display-name-text');
@@ -3690,7 +3726,10 @@ function _setDuplicateIndicator(isDup) {
     // whenever the server has no committed name for this UUID in the active
     // session (first visit + next-day / new session). A returning participant
     // with a committed name (rejoin 200) skips the gate.
-    var _asName = (new URLSearchParams(location.search)).get('as') || '';
+    // ?as= bypasses the gate, so it must get the same guarantees the single-line
+    // gate input gives typed names: capped to 64 chars and stripped of control /
+    // newline / bidi chars (collapse whitespace). Never register it raw.
+    var _asName = _sanitizeName((new URLSearchParams(location.search)).get('as') || '');
     var identity = null;
     if (_asName) {
       var regResp = await _registerRailway({ name: _asName });
@@ -3884,11 +3923,22 @@ function _applyState(msg) {
   if (msg.files_count != null) {
     _setFilesBadge(msg.files_count);
   }
-  // Sync name from server
-  if (msg.my_name && msg.my_name !== _myName) {
-    _myName = _applyHostSuffix(msg.my_name);
-    localStorage.setItem(LS_NAME_KEY, _myName);
-    document.querySelector('#display-name .display-name-text').textContent = _myName;
+  // Sync name from server — but ignore a snapshot that predates our last local
+  // rename (its my_name differs from what we just committed). Once the server
+  // echoes our committed name, clear the guard and resume normal syncing.
+  if (msg.my_name) {
+    if (_pendingRenameName !== null && msg.my_name !== _pendingRenameName) {
+      // Stale pre-rename snapshot — keep our optimistic name, don't revert.
+    } else {
+      if (_pendingRenameName !== null && msg.my_name === _pendingRenameName) {
+        _pendingRenameName = null;  // server caught up to our rename
+      }
+      if (msg.my_name !== _myName) {
+        _myName = _applyHostSuffix(msg.my_name);
+        localStorage.setItem(LS_NAME_KEY, _myName);
+        document.querySelector('#display-name .display-name-text').textContent = _myName;
+      }
+    }
   }
   // Roster names (UUID-free) — one recompute covers both a just-synced my_name
   // and the fresh list (/state always carries both fields).
@@ -4269,7 +4319,7 @@ function _handleWsMessage(msg) {
   console.log('[WS]', msg.type, msg);
   switch (msg.type) {
     case 'reload': location.reload(); break;
-    case 'redirect': window.location.href = msg.url || '/'; break;
+    case 'redirect': _redirecting = true; window.location.href = msg.url || '/'; break;
     case 'state': _applyState(msg); break;
     case 'attention_enabled': _applyAttentionEnabled(msg.enabled); break;
     case 'host_notification': _handleHostNotification(msg); break;
@@ -4579,6 +4629,11 @@ async function _refetchInitialState() {
 // returns, without a manual refresh.
 var _WS_RECONNECT_DELAYS = [500, 500, 1000, 1000, 1500, 1500, 2000, 2000, 2500];
 var _wsReconnectAttempts = 0;
+// Set true once a `redirect` frame has been received / navigation is underway.
+// The gateway sends {type:redirect,url:...} immediately before close(1008) for a
+// no-longer-valid socket; onclose must NOT clobber that explanatory redirect
+// (e.g. /?error=invalid) with a bare '/'.
+var _redirecting = false;
 
 function _connectWS() {
   if (!_sessionId) return;
@@ -4602,7 +4657,15 @@ function _connectWS() {
   };
   _ws.onmessage = function(e) { try { _handleWsMessage(JSON.parse(e.data)); } catch(err) { console.error('ws msg error', err); } };
   _ws.onclose = function(e) {
-    if (e.code === 1008) { window.location.href = '/'; return; }
+    if (e.code === 1008) {
+      // The gateway sends {type:redirect,url:/?error=invalid} right before this
+      // 1008 close (session no longer valid). onmessage already navigated there;
+      // honor it instead of overriding with a bare '/'. If somehow no redirect
+      // frame arrived, fall back to the neutral landing (/?error=invalid) so
+      // landing.html can show the "session ended…" message — never bare '/'.
+      if (!_redirecting) window.location.href = '/?error=invalid';
+      return;
+    }
     // Never permanently give up: keep retrying with capped backoff so the page
     // reconnects on its own whenever the server returns (no manual refresh). The
     // reconnect re-renders the summary (see _refetchInitialState), so live-update

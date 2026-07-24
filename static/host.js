@@ -396,7 +396,7 @@
         renderParticipantList(cachedParticipantIds);
         updateLeaderboardButton();
         applyEmojiMasterBadge(msg.emoji_global_enabled !== false);
-        applyAttentionMasterBadge(msg.attention_enabled === true);
+        applyAttentionSnapshotBadge(msg.attention_enabled === true);
         document.getElementById('restore-banner').style.display =
           (msg.needs_restore && !msg.daemon_connected) ? '' : 'none';
         if (msg.slides_log_deep_count !== undefined || msg.slides_log_topic !== undefined) {
@@ -518,7 +518,12 @@
         // Dual-render: the overlay shows the persistent card; the host browser
         // gets a light transient nudge too.
         showHostEmoji('🔔');
-        toast(`🔔 ${msg.caller || 'Someone'} is calling you`);
+        // The daemon flags an anonymous ringer (no committed display name) with
+        // `anonymous: true`. Render an inert "(anonymous)" marker rather than
+        // leaking the fallback identifier the daemon would otherwise resolve.
+        // toast() uses textContent, so this stays inert regardless.
+        const _bellWho = (msg.anonymous === true) ? 'Someone (anonymous)' : (msg.caller || 'Someone');
+        toast(`🔔 ${_bellWho} is calling you`);
       } else if (msg.type === 'paste_received') {
         const pid = msg.uuid;
         if (pid) {
@@ -833,13 +838,42 @@
     }
   }
 
+  // Guards for the attention master switch:
+  //  - _attentionToggleInFlight blocks a second toggle while a POST is
+  //    outstanding (rapid double-clicks would otherwise send two flips).
+  //  - _attentionExpected / _attentionSettleUntil let `state` snapshots be
+  //    reconciled: a snapshot computed BEFORE our toggle can land AFTER the POST
+  //    resolves and would otherwise flip the badge back to the stale value.
+  let _attentionToggleInFlight = false;
+  let _attentionExpected = null;   // authoritative value from our last toggle
+  let _attentionSettleUntil = 0;   // ignore disagreeing snapshots until this ts
+
+  // Apply an attention_enabled value coming from a `state` snapshot, respecting
+  // an in-flight toggle and a short settle window so a stale snapshot cannot
+  // clobber the optimistic/authoritative value we just set.
+  function applyAttentionSnapshotBadge(enabled) {
+    if (_attentionToggleInFlight) return;
+    if (_attentionExpected !== null && Date.now() < _attentionSettleUntil && enabled !== _attentionExpected) return;
+    applyAttentionMasterBadge(enabled);
+  }
+
   async function toggleAttentionGlobal() {
+    if (_attentionToggleInFlight) return;  // debounce: a flip is already in flight
+    _attentionToggleInFlight = true;
+    const badge = document.getElementById('attention-master-badge');
+    const _prevPe = badge ? badge.style.pointerEvents : '';
+    if (badge) { badge.style.pointerEvents = 'none'; badge.style.opacity = '0.5'; }
     try {
       const r = await fetch(API('/attention/global-toggle'), { method: 'POST' });
       const { attention_enabled } = await r.json();
-      applyAttentionMasterBadge(attention_enabled);
+      _attentionExpected = attention_enabled === true;
+      _attentionSettleUntil = Date.now() + 1500;
+      applyAttentionMasterBadge(_attentionExpected);
     } catch (e) {
       console.error('attention global toggle failed', e);
+    } finally {
+      _attentionToggleInFlight = false;
+      if (badge) { badge.style.pointerEvents = _prevPe; badge.style.opacity = ''; }
     }
   }
 
@@ -1314,6 +1348,22 @@ function _renderEngagementPopover() {
     URL.revokeObjectURL(a.href);
   }
 
+  // Wire the reset-score control via a single delegated listener on the (stable)
+  // #pax-list element, attached once. The list is re-rendered by replacing
+  // innerHTML, so per-element handlers would be lost; delegation survives every
+  // re-render. Identity is read from data-* (set with escAttr), never from an
+  // inline onclick, so a participant name can never inject executable JS.
+  let _paxScoreDelegated = false;
+  function _ensurePaxScoreDelegation(ul) {
+    if (_paxScoreDelegated || !ul) return;
+    _paxScoreDelegated = true;
+    ul.addEventListener('click', (e) => {
+      const el = e.target.closest && e.target.closest('.pax-score');
+      if (!el || !ul.contains(el)) return;
+      resetOneScore(el.dataset.uuid, el.dataset.name || 'Unknown', Number(el.dataset.pts) || 0);
+    });
+  }
+
   function renderParticipantList(participantIds, flashPids) {
     cachedParticipantIds = participantIds;
     const sorted = Object.keys(scores).length > 0
@@ -1326,12 +1376,17 @@ function _renderEngagementPopover() {
         })
       : participantIds;
     const ul = document.getElementById('pax-list');
+    _ensurePaxScoreDelegation(ul);
     ul.innerHTML = sorted.map(pid => {
       const participant = participantDataById[pid] || {};
       const name = participant.name || 'Unknown';
       const loc = participant.location || '';
       const pts = scores[pid] || 0;
-      const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" onclick="resetOneScore('${escHtml(pid)}','${escHtml(name)}',${pts})">⭐ ${pts} pts</span>` : '';
+      // Reset-score control: carry the participant identity in data-* attributes
+      // (quote-safe via escAttr) and wire the click via delegation (see
+      // _ensurePaxScoreDelegation). NEVER interpolate the name into an inline
+      // onclick JS string — a name with ' or " would break out and inject.
+      const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" data-uuid="${escAttr(pid)}" data-name="${escAttr(name)}" data-pts="${pts}">⭐ ${pts} pts</span>` : '';
       const locLabel = _formatParticipantLocation(participant) || null;
       const tzForColor = String(participant?.location_tz || _extractTimezone(loc) || '').trim();
       const hhmmForColor = tzForColor ? _rawHhmmForTimezone(tzForColor) : '';
@@ -1356,12 +1411,12 @@ function _renderEngagementPopover() {
       const pasteTexts = participant.paste_texts || [];
       const pasteIcons = pasteTexts.map((entry, i) => {
         const preview = (entry.text.length > 100 ? entry.text.substring(0, 100) + '…' : entry.text).replace(/\n/g, ' ');
-        return `<span class="paste-icon" title="${escHtml(preview)}" data-uuid="${escHtml(pid)}" data-paste-id="${entry.id}" onclick="copyAndDismissPaste(this)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="2"/><path d="M3 10.5H2.5a1.5 1.5 0 0 1-1.5-1.5V2.5A1.5 1.5 0 0 1 2.5 1h6.5A1.5 1.5 0 0 1 11 2.5V3"/></svg></span>`;
+        return `<span class="paste-icon" title="${escAttr(preview)}" data-uuid="${escAttr(pid)}" data-paste-id="${entry.id}" onclick="copyAndDismissPaste(this)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="2"/><path d="M3 10.5H2.5a1.5 1.5 0 0 1-1.5-1.5V2.5A1.5 1.5 0 0 1 2.5 1h6.5A1.5 1.5 0 0 1 11 2.5V3"/></svg></span>`;
       }).join('');
       const receivedFiles = participant.received_files || [];
       const uploadIcons = receivedFiles.map(entry => {
         const copiedClass = (entry.copied || entry.seen_by_host) ? ' downloaded' : '';
-        return `<span class="upload-icon${copiedClass}" title="${escHtml(entry.disk_path)}" data-uuid="${escHtml(pid)}" data-file-id="${escHtml(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
+        return `<span class="upload-icon${copiedClass}" title="${escAttr(entry.disk_path)}" data-uuid="${escAttr(pid)}" data-file-id="${escAttr(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
       return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}</li>`;
     }).join('');
@@ -1425,7 +1480,7 @@ function _renderEngagementPopover() {
       points.push(coords);
       L.marker(coords)
         .addTo(leafletMap)
-        .bindPopup(`<strong>${name}</strong><br>${loc}`);
+        .bindPopup(`<strong>${escHtml(name)}</strong><br>${escHtml(loc)}`);
     }));
 
     // Fit map to markers

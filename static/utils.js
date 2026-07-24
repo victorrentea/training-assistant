@@ -1,6 +1,20 @@
-/** HTML-escape a string */
+/** HTML-escape a string (text-node context: &, <, >). NOT safe for quoted
+ *  attribute values or JS-string contexts — use escAttr for those. */
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/** Escape a string for safe insertion inside a single- OR double-quoted HTML
+ *  attribute value. Escapes &, <, >, " and ' so a quote in participant-controlled
+ *  text (e.g. a name/paste containing ' or ") cannot break out of the attribute
+ *  (and therefore cannot inject a new attribute or an inline event handler). */
+function escAttr(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
 }
 
 /** HTML-escape a string and render `backticked` substrings as <code>…</code>. Unmatched backticks are kept literal. */
