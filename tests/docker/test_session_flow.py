@@ -148,6 +148,15 @@ def test_host_starts_session_participant_joins():
         pax_page.goto(participant_url, wait_until="networkidle")
         pax_page.wait_for_load_state("networkidle")
 
+        # First-visit name gate: choose Anonymous for an auto-assigned name.
+        # Kept inline (vs ParticipantPage.dismiss_gate_anonymous): this test runs
+        # in Dockerfile.session, whose image does not ship tests/pages/.
+        try:
+            pax_page.locator("#name-gate").wait_for(state="visible", timeout=5000)
+            pax_page.locator("#name-gate-anon").click()
+        except Exception:
+            pass
+
         # Participant auto-joins: calls /api/participant/register, connects WS
         # Wait for the display-name element to appear (proves WS connected + name set)
         display_name = pax_page.locator("#display-name")

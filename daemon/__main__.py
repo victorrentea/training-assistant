@@ -1245,6 +1245,19 @@ def run() -> None:
                             _apply_runtime_snapshot_restore(restore_snapshot)
                             last_session_state_hash = _state_hash(runtime_session_snapshot)
 
+                            # Create/clear attendees.md for the (re)initialized session.
+                            # A full regeneration both wipes any stale roster from a
+                            # previous session and reflects names restored from
+                            # session-state.json (so a resumed session keeps real names).
+                            try:
+                                from daemon import attendees_md as _attendees_md
+
+                                _attendees_md.regenerate_attendees(
+                                    folder=folder, gdrive_url=_new_gdrive_url
+                                )
+                            except Exception as _att_exc:
+                                log.error("session", f"attendees.md init failed: {_att_exc}")
+
                             session_name = name
                             _do_save_daemon_state()
                             notes_file = find_notes_in_folder(folder)

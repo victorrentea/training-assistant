@@ -92,8 +92,9 @@ def test_autojoin_with_saved_name_no_js_error():
         js_errors = []
         pax_page.on("pageerror", lambda err: js_errors.append(str(err)))
 
-        # Reload — should auto-join with saved name
+        # Reload — first-visit name gate appears (fresh UUID); Anonymous to enter.
         pax_page.reload(wait_until="networkidle")
+        ParticipantPage(pax_page).dismiss_gate_anonymous()
 
         # Wait for display-name to appear (auto-join complete)
         expect(pax_page.locator("#display-name")).to_be_visible(timeout=10000)

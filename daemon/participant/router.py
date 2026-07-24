@@ -34,10 +34,13 @@ from daemon.participant.names import (
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
-from daemon.ws_messages import ParticipantListUpdatedMsg
-from daemon.ws_publish import notify_host
+from daemon.ws_messages import ParticipantListUpdatedMsg, ParticipantNamesUpdatedMsg
+from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
+# Server-side cap on participant display names; mirrored by maxlength="64" on
+# the participant page's three name inputs.
+_MAX_NAME_LEN = 64
 _COORDS_RE = re.compile(r"^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$")
 _TIMEZONE_RE = re.compile(r"^🕐\s+(.+)$")
 
@@ -48,6 +51,9 @@ _TIMEZONE_RE = re.compile(r"^🕐\s+(.+)$")
 class RegisterResponse(BaseModel):
     name: str
     avatar: str
+    # Soft, non-blocking duplicate flag: true iff an explicitly-typed name
+    # collided with another participant at write time. NEVER a 409.
+    name_conflict: bool = False
 
 
 class RegisterRequest(BaseModel):
@@ -57,6 +63,12 @@ class RegisterRequest(BaseModel):
 
 class RenameRequest(BaseModel):
     name: str
+
+
+class RenameResponse(BaseModel):
+    # PUT /name returns 200 + this body (symmetric with register) instead of a
+    # bare 204, so the client can read the soft duplicate flag. NEVER a 409.
+    name_conflict: bool = False
 
 
 class AvatarRequest(BaseModel):
@@ -259,6 +271,10 @@ class ParticipantStateResponse(BaseModel):
     my_avatar: str
     current_activity: str
     session_name: str | None = None
+    # Roster display NAMES only (UUID-free) so the client can compute the
+    # in-session duplicate indicator immediately on load, before the first
+    # participant_names_updated broadcast arrives.
+    participant_names: list[str] = []
     wordcloud: WordcloudData
     qa_questions: list[QAQuestionRaw]
     quiz: QuizData | None = None
@@ -421,13 +437,74 @@ def _build_poll_for_participant(pid: str) -> dict:
     }
 
 
+def _participant_display_names() -> list[str]:
+    """Roster display names only — the UUID-free payload for participants.
+
+    SECURITY: names only, never UUIDs or any stable per-user id. A participant's
+    identity is their X-Participant-ID UUID; leaking it enables impersonation.
+    Reads the name dict directly (same filtering as the host enumerator: skip
+    internal __ ids and blank names) without building the full host payload.
+    """
+    return [
+        name
+        for pid, name in participant_state.participant_names.items()
+        if not pid.startswith("__") and str(name).strip()
+    ]
+
+
+def _is_name_taken(pid: str, name: str) -> bool:
+    """True iff another participant already holds `name` (soft-conflict check)."""
+    return any(
+        other_pid != pid and other_name == name
+        for other_pid, other_name in participant_state.participant_names.items()
+    )
+
+
+def _regenerate_attendees() -> None:
+    """Fully regenerate the live attendees.md from the roster (best-effort)."""
+    try:
+        from daemon import attendees_md
+
+        attendees_md.regenerate_attendees()
+    except Exception as exc:  # never let attendance-sheet I/O break a join/rename
+        logger.warning("attendees.md regeneration failed: %s", exc)
+
+
+def _publish_names_if_changed() -> None:
+    """On a real name-set change: broadcast the UUID-free names + regen attendees.md.
+
+    Both side effects derive purely from the name multiset, so they share one
+    change gate. Skipped when the multiset is unchanged since the last publish:
+    the roster notification also fires on activity heartbeats (~every 30s per
+    participant), where names never change — re-broadcasting would fan out
+    O(participants²) redundant messages and rewrite attendees.md for nothing.
+    Clients only count occurrences of their own name, so the comparison is
+    order-insensitive (sorted).
+    """
+    ps = participant_state
+    names = _participant_display_names()
+    names_key = sorted(names)
+    if names_key == ps.last_broadcast_names:
+        return
+    ps.last_broadcast_names = names_key
+    broadcast(ParticipantNamesUpdatedMsg(names=names))
+    _regenerate_attendees()
+
+
 async def _notify_host_participant_list():
-    """Push the current participant list to the host browser directly."""
+    """Push the roster to the host, and the UUID-free names to all participants.
+
+    The host payload keeps UUIDs (host is trusted) and goes out on every roster
+    change (join / rename / activity / avatar / location). The participant
+    names broadcast + attendees.md regen ride the same hook but only fire when
+    the set of names actually changed (join / rename), not on heartbeats.
+    """
     await notify_host(
         ParticipantListUpdatedMsg(
             participants=_build_host_participants_list(),
         )
     )
+    _publish_names_if_changed()
 
 
 router = APIRouter(prefix="/api/participant", tags=["participant"])
@@ -505,12 +582,14 @@ async def register_participant(request: Request, body: RegisterRequest):
 
     # New participant — assign identity
     raw_name: str
-    explicit_name = (body.name or "").strip()[:32]
+    explicit_name = (body.name or "").strip()[:_MAX_NAME_LEN]
+    name_conflict = False
 
     if explicit_name:
-        taken = {v for k, v in ps.participant_names.items() if k != pid}
-        if explicit_name in taken:
-            return Response(status_code=409)
+        # Uniqueness is checked but NEVER blocks: a taken name is accepted and
+        # a soft conflict flag is returned (no 409). The in-session duplicate
+        # indicator (driven by the names broadcast) handles it on the client.
+        name_conflict = _is_name_taken(pid, explicit_name)
         raw_name = explicit_name
     elif ps.mode == "talk":
         # Conference mode: auto-assign character name
@@ -579,12 +658,16 @@ async def register_participant(request: Request, body: RegisterRequest):
 
     await _notify_host_participant_list()
 
-    return RegisterResponse(name=raw_name, avatar=avatar)
+    return RegisterResponse(name=raw_name, avatar=avatar, name_conflict=name_conflict)
 
 
-@router.put("/name", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+@router.put("/name", response_model=RenameResponse)
 async def rename_participant(request: Request, body: RenameRequest):
-    """Rename a registered participant. Returns 400 if not yet registered."""
+    """Rename a registered participant. Returns 400 if not yet registered.
+
+    A duplicate name is accepted (never a 409): the response carries a soft
+    `name_conflict` flag and the participant stays admitted.
+    """
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
@@ -596,20 +679,18 @@ async def rename_participant(request: Request, body: RenameRequest):
             {"error": "Participant not registered — call /register first"}, status_code=400
         )
 
-    raw_name = body.name.strip()[:32]
+    raw_name = body.name.strip()[:_MAX_NAME_LEN]
     if not raw_name:
         return JSONResponse({"error": "Name required"}, status_code=400)
 
-    # Check for duplicate names — reject with 409 if name is taken
-    taken = {v for k, v in ps.participant_names.items() if k != pid}
-    if raw_name in taken:
-        return Response(status_code=409)
+    # Uniqueness is checked but NEVER blocks — accept the rename, flag the collision.
+    name_conflict = _is_name_taken(pid, raw_name)
 
     ps.participant_names[pid] = raw_name
 
     await _notify_host_participant_list()
 
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return RenameResponse(name_conflict=name_conflict)
 
 
 @router.post("/activity", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
@@ -719,6 +800,8 @@ async def get_participant_state(request: Request):
         "my_avatar": ps.participant_avatars.get(pid, ""),
         "current_activity": ps.current_activity,
         "session_name": get_active_session_name(),
+        # Roster display names only (UUID-free) — feeds the duplicate indicator.
+        "participant_names": _participant_display_names(),
         # Wordcloud
         "wordcloud": {
             "words": wc.words,

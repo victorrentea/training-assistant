@@ -175,11 +175,15 @@ def test_avatar_refresh_gives_unique_avatar_to_second_participant():
         browser.close()
 
 
-# ── 3. Rename rejection ───────────────────────────────────────────────────────
+# ── 3. Duplicate rename is allowed (non-blocking) + flags a duplicate ─────────
 
-def test_rename_rejected_when_name_already_taken():
-    """P1 renames to 'Myname'. P2 tries to rename to 'Myname' → rejected."""
-    session_id = fresh_session("RenameRejection")
+def test_rename_to_taken_name_is_allowed_and_flags_duplicate():
+    """P1 renames to 'Myname'. P2 also renames to 'Myname' → BOTH keep it.
+
+    Per participant-real-names: duplicate names are never blocked (no 409); the
+    duplicate is surfaced via the in-session indicator instead.
+    """
+    session_id = fresh_session("RenameDuplicate")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
@@ -188,22 +192,13 @@ def test_rename_rejected_when_name_already_taken():
         pax1.rename("Myname")
 
         page2, pax2 = _open_participant(browser, session_id)
-        pax2.auto_join()  # should be Frodo
+        pax2.auto_join()
 
-        # P2 tries to take P1's name — server reassigns to next available LOTR name
-        page2.evaluate("_startNameEdit()")
-        edit_input = page2.locator("#name-edit-input")
-        expect(edit_input).to_be_visible(timeout=3000)
-        edit_input.fill("Myname")
-        edit_input.press("Enter")
+        # P2 takes P1's name — accepted, not reassigned.
+        pax2.rename("Myname")
 
-        # Wait for server round-trip to complete
-        page2.wait_for_timeout(1500)
-
-        # participant.js sets the display name optimistically and ignores server response,
-        # so we cannot check the browser DOM. Instead, check daemon's authoritative state:
-        # P2 must NOT have name "Myname" in daemon (server reassigned to another LOTR name)
-        def _p2_does_not_have_myname():
+        # Daemon authoritative state now has TWO participants named "Myname".
+        def _two_mynames():
             try:
                 req = urllib.request.Request(
                     f"{DAEMON_BASE}/api/{session_id}/host/state",
@@ -211,36 +206,25 @@ def test_rename_rejected_when_name_already_taken():
                 )
                 with urllib.request.urlopen(req, timeout=5) as resp:
                     data = json.loads(resp.read())
-                    participants = data.get("participants", [])
-                    # P2's daemon name must NOT be "Myname" (only P1 should have it)
-                    myname_owners = [p for p in participants if p.get("name") == "Myname"]
-                    return len(myname_owners) <= 1  # only P1 has it
+                    names = [p.get("name") for p in data.get("participants", [])]
+                    return names.count("Myname") == 2
             except Exception:
                 return False
 
-        deadline = time.monotonic() + 3
+        deadline = time.monotonic() + 5
+        ok = False
         while time.monotonic() < deadline:
-            if _p2_does_not_have_myname():
+            if _two_mynames():
+                ok = True
                 break
             time.sleep(0.3)
+        assert ok, "Both participants should keep 'Myname' (duplicates are never blocked)"
 
-        # Verify P1 still has "Myname" and P2 has a different name in daemon state
-        req = urllib.request.Request(
-            f"{DAEMON_BASE}/api/{session_id}/host/state",
-            headers={"Authorization": f"Basic {base64.b64encode(f'{HOST_USER}:{HOST_PASS}'.encode()).decode()}"},
-        )
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            state_data = json.loads(resp.read())
-        participants = state_data.get("participants", [])
-        names_in_daemon = [p.get("name") for p in participants]
-        myname_count = names_in_daemon.count("Myname")
-        print(f"Daemon participants: {names_in_daemon}")
+        # Both show the in-session duplicate indicator.
+        expect(page1.locator("#dup-indicator")).to_be_visible(timeout=10000)
+        expect(page2.locator("#dup-indicator")).to_be_visible(timeout=10000)
 
-        assert myname_count == 1, (
-            f"Expected exactly one participant named 'Myname', got {myname_count}: {names_in_daemon}"
-        )
-
-        print("SUCCESS: Duplicate rename correctly rejected!")
+        print("SUCCESS: Duplicate rename allowed + flagged on both cards")
         browser.close()
 
 

@@ -102,7 +102,8 @@ class TestRegister:
         assert data["avatar"]
         assert fresh_state.participant_names["uuid-explicit"] == "Alice"
 
-    def test_explicit_name_duplicate_returns_409(self, client, fresh_state):
+    def test_explicit_name_duplicate_is_accepted_with_conflict_flag(self, client, fresh_state):
+        """Duplicate names are NEVER blocked: register succeeds with name_conflict=true."""
         fresh_state.participant_names["uuid1"] = "Alice"
         fresh_state.participant_avatars["uuid1"] = "gandalf.png"
 
@@ -111,7 +112,32 @@ class TestRegister:
             json={"name": "Alice"},
             headers={"X-Participant-ID": "uuid2"},
         )
-        assert resp.status_code == 409
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "Alice"
+        assert data["name_conflict"] is True
+        assert fresh_state.participant_names["uuid2"] == "Alice"
+
+    def test_unique_explicit_name_has_no_conflict_flag(self, client, fresh_state):
+        fresh_state.participant_names["uuid1"] = "Alice"
+        resp = client.post(
+            "/api/participant/register",
+            json={"name": "Bob"},
+            headers={"X-Participant-ID": "uuid2"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["name_conflict"] is False
+
+    def test_explicit_name_allows_up_to_64_chars(self, client, fresh_state):
+        long_name = "A" * 64
+        resp = client.post(
+            "/api/participant/register",
+            json={"name": long_name},
+            headers={"X-Participant-ID": "uuid-long"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["name"] == long_name
+        assert len(fresh_state.participant_names["uuid-long"]) == 64
 
     def test_returning_participant_register_ignores_new_name(self, client, fresh_state):
         fresh_state.participant_names["uuid1"] = "Persisted Name"
@@ -123,7 +149,9 @@ class TestRegister:
             headers={"X-Participant-ID": "uuid1"},
         )
         assert resp.status_code == 200
-        assert resp.json() == {"name": "Persisted Name", "avatar": "persisted-avatar.png"}
+        data = resp.json()
+        assert data["name"] == "Persisted Name"
+        assert data["avatar"] == "persisted-avatar.png"
 
     def test_explicit_name_gets_available_avatar_not_used_by_others(self, client, fresh_state):
         fresh_state.participant_names["uuid1"] = "Gandalf"
@@ -155,7 +183,9 @@ class TestRejoin:
 
         resp = client.post("/api/participant/rejoin", headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 200
-        assert resp.json() == {"name": "Bob", "avatar": "letter:BO:#abc"}
+        data = resp.json()
+        assert data["name"] == "Bob"
+        assert data["avatar"] == "letter:BO:#abc"
 
     def test_rejoin_unknown_uuid_returns_404(self, client, fresh_state):
         resp = client.post("/api/participant/rejoin", headers={"X-Participant-ID": "missing"})
@@ -172,8 +202,22 @@ class TestRename:
             json={"name": "CustomName"},
             headers={"X-Participant-ID": "uuid1"},
         )
-        assert resp.status_code == 204
+        assert resp.status_code == 200
+        assert resp.json()["name_conflict"] is False
         assert fresh_state.participant_names["uuid1"] == "CustomName"
+
+    def test_rename_to_taken_name_is_accepted_with_conflict_flag(self, client, fresh_state):
+        """Renaming to a taken name is NEVER blocked (no 409)."""
+        fresh_state.participant_names["uuid1"] = "Gandalf"
+        fresh_state.participant_names["uuid2"] = "Alice"
+        resp = client.put(
+            "/api/participant/name",
+            json={"name": "Alice"},
+            headers={"X-Participant-ID": "uuid1"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["name_conflict"] is True
+        assert fresh_state.participant_names["uuid1"] == "Alice"
 
     def test_rename_rejects_unregistered(self, client, fresh_state):
         resp = client.put(
@@ -183,14 +227,15 @@ class TestRename:
         )
         assert resp.status_code == 400
 
-    def test_rename_truncated_to_32_chars(self, client, fresh_state):
+    def test_rename_allows_up_to_64_chars(self, client, fresh_state):
         fresh_state.participant_names["uuid1"] = "Gandalf"
-        long_name = "A" * 50
+        long_name = "A" * 64
         resp = client.put(
             "/api/participant/name", json={"name": long_name}, headers={"X-Participant-ID": "uuid1"}
         )
-        assert resp.status_code == 204
-        assert len(fresh_state.participant_names["uuid1"]) <= 32
+        assert resp.status_code == 200
+        assert fresh_state.participant_names["uuid1"] == long_name
+        assert len(fresh_state.participant_names["uuid1"]) == 64
 
     def test_missing_participant_id_returns_400(self, client):
         resp = client.put("/api/participant/name", json={"name": "Alice"})
@@ -304,7 +349,7 @@ class TestNoParticipantWriteBackEvents:
             json={"name": "CustomName"},
             headers={"X-Participant-ID": "uuid1"},
         )
-        assert resp.status_code == 204
+        assert resp.status_code == 200
         assert "X-Write-Back-Events" not in resp.headers
 
     def test_roll_avatar_does_not_emit_write_back_events(
