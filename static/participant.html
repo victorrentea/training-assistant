@@ -2191,15 +2191,12 @@ function _updateAttentionPermissionBar() {
   if (perm === 'granted') {
     icon.textContent = '🔔'; text.textContent = 'Notifications on';
     bar.style.background = 'var(--color-primary,#4555ba)'; bar.style.opacity = '0.7';
-    bar.dataset.state = 'granted';
   } else if (perm === 'denied') {
     icon.textContent = '🔕'; text.textContent = 'Notifications blocked — enable in browser settings';
     bar.style.background = '#b3261e'; bar.style.opacity = '1';
-    bar.dataset.state = 'denied';
   } else {
     icon.textContent = '🔔'; text.textContent = 'Tap to enable notifications';
     bar.style.background = 'var(--color-primary,#4555ba)'; bar.style.opacity = '1';
-    bar.dataset.state = 'default';
   }
 }
 // Permission is requested ONLY here (a user gesture) — never on page load.
@@ -2216,7 +2213,6 @@ function _onAttentionPermissionClick() {
     if (p && typeof p.then === 'function') p.then(function() { _updateAttentionPermissionBar(); });
   } catch (e) { _updateAttentionPermissionBar(); }
 }
-var _attentionAudioUnlocked = false;
 function _unlockAttentionAudio() {
   var a = document.getElementById('attention-audio');
   if (!a) return;
@@ -2224,9 +2220,9 @@ function _unlockAttentionAudio() {
     a.muted = true;
     var pr = a.play();
     if (pr && typeof pr.then === 'function') {
-      pr.then(function() { a.pause(); a.currentTime = 0; a.muted = false; _attentionAudioUnlocked = true; })
+      pr.then(function() { a.pause(); a.currentTime = 0; a.muted = false; })
         .catch(function() { a.muted = false; });
-    } else { a.pause(); a.currentTime = 0; a.muted = false; _attentionAudioUnlocked = true; }
+    } else { a.pause(); a.currentTime = 0; a.muted = false; }
   } catch (e) { /* best-effort */ }
 }
 function _playAttentionSound() {

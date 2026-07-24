@@ -164,6 +164,20 @@ class ParticipantState:
                 "engagement": {pid: dict(views) for pid, views in self.engagement.items()},
             }
 
+    def persist(self) -> None:
+        """Persist a snapshot of this state to the active session folder.
+
+        No-op while no session is active. Single home for the
+        get-folder + save_session_state(snapshot) idiom the feature routers
+        (emoji, attention, …) all need after mutating persisted fields.
+        """
+        # Deferred imports: keep this low-level state module import-light.
+        from daemon.misc.content_files import get_active_session_folder
+        from daemon.session_state import save_session_state
+        folder = get_active_session_folder()
+        if folder:
+            save_session_state(folder, self.snapshot())
+
     def reset(self, *, mode: str = "workshop") -> None:
         """Reset participant-related runtime state for a fresh session."""
         with self._lock:

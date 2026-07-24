@@ -10,7 +10,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from starlette.testclient import TestClient
 from fastapi import FastAPI
 
-from daemon.bell.router import participant_router
+from daemon.attention.router import participant_router
 from daemon.participant.state import participant_state
 from daemon.ws_messages import BellRungMsg
 
@@ -33,7 +33,7 @@ def reset_state():
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter():
-    from daemon.bell.router import bell_rate_limiter
+    from daemon.attention.router import bell_rate_limiter
     bell_rate_limiter.reset()
     yield
     bell_rate_limiter.reset()
@@ -42,7 +42,7 @@ def reset_rate_limiter():
 @pytest.fixture(autouse=True)
 def mock_externals():
     import daemon.addon_bridge_client  # ensure loaded before patching
-    with patch("daemon.bell.router.notify_host", new_callable=AsyncMock) as mock_host, \
+    with patch("daemon.attention.router.notify_host", new_callable=AsyncMock) as mock_host, \
          patch("daemon.addon_bridge_client.send_bell", return_value=True) as mock_send_bell:
         yield {"host": mock_host, "send_bell": mock_send_bell}
 
@@ -77,7 +77,7 @@ class TestResolveLogForward:
 
     def test_logs_the_caller(self, bell_client, mock_externals):
         participant_state.participant_names["u1"] = "Alice"
-        with patch("daemon.bell.router.daemon_log.info") as mock_log:
+        with patch("daemon.attention.router.daemon_log.info") as mock_log:
             bell_client.post("/api/participant/bell", headers={"X-Participant-ID": "u1"})
         logged = " ".join(str(c.args) for c in mock_log.call_args_list)
         assert "rang the bell" in logged and "Alice" in logged
@@ -103,11 +103,25 @@ class TestErrorsAndLimits:
         mock_externals["send_bell"].assert_not_called()
 
     def test_rate_limit_blocks_excess(self, bell_client, mock_externals):
-        from daemon.bell.router import BELL_RATE_LIMIT
+        from daemon.attention.router import BELL_RATE_LIMIT
         for _ in range(BELL_RATE_LIMIT):
             r = bell_client.post("/api/participant/bell", headers={"X-Participant-ID": "spammer"})
             assert r.status_code == 204
         r = bell_client.post("/api/participant/bell", headers={"X-Participant-ID": "spammer"})
+        assert r.status_code == 429
+
+    def test_no_rate_limit_exemption_for_crafted_host_prefix(self, bell_client, mock_externals):
+        """SECURITY: a crafted '__'-prefixed X-Participant-ID gets NO exemption.
+
+        The host page has no bell control, so unlike emoji there is no
+        legitimate '__host__' caller — an id-prefix exemption would just be a
+        rate-limit bypass for anyone who edits the header.
+        """
+        from daemon.attention.router import BELL_RATE_LIMIT
+        for _ in range(BELL_RATE_LIMIT):
+            r = bell_client.post("/api/participant/bell", headers={"X-Participant-ID": "__host__"})
+            assert r.status_code == 204
+        r = bell_client.post("/api/participant/bell", headers={"X-Participant-ID": "__host__"})
         assert r.status_code == 429
 
     def test_bridge_down_still_204(self, bell_client, mock_externals):

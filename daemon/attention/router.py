@@ -1,22 +1,26 @@
-"""Daemon attention router — host master switch + host→participant notifications.
+"""Daemon attention router — host master switch + both directions.
 
-This is Direction A of the attention feature (host → all participants) plus the
-shared master enable-gate. Direction B (participant → host bell) lives in
-``daemon/bell/router.py``. Modelled on the emoji master switch
-(``daemon/emoji/router.py``), with two deliberate differences: the switch
-defaults OFF and it broadcasts an ``attention_enabled`` message so participants
-show/hide the bell + permission affordance live.
+Modelled on the emoji feature (``daemon/emoji/router.py``): one module holds the
+host router (master switch + Direction A host→participant notifications) and the
+participant router (Direction B: the bell). Two deliberate differences from the
+emoji master switch: this one defaults OFF, and toggling broadcasts an
+``attention_enabled`` message so participants show/hide the bell + permission
+affordance live.
 """
+import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon import log as daemon_log
+from daemon.emoji.rate_limit import SlidingWindowRateLimiter
 from daemon.participant.state import participant_state
-from daemon.ws_messages import AttentionEnabledMsg, HostNotificationMsg
-from daemon.ws_publish import broadcast
+from daemon.ws_messages import AttentionEnabledMsg, BellRungMsg, HostNotificationMsg
+from daemon.ws_publish import broadcast, notify_host
+
+logger = logging.getLogger(__name__)
 
 
 # ── Pydantic models ──
@@ -34,14 +38,6 @@ class HostNotificationRequest(BaseModel):
 host_router = APIRouter(prefix="/api/{session_id}/host/attention", tags=["attention"])
 
 
-def _persist_state() -> None:
-    from daemon.misc.content_files import get_active_session_folder
-    from daemon.session_state import save_session_state
-    folder = get_active_session_folder()
-    if folder:
-        save_session_state(folder, participant_state.snapshot())
-
-
 @host_router.post("/global-toggle", response_model=AttentionGlobalStateResponse)
 async def toggle_attention_global():
     """Host flips the session-wide attention master switch, persists it, and
@@ -49,7 +45,7 @@ async def toggle_attention_global():
     participant_state.attention_enabled = not participant_state.attention_enabled
     enabled = participant_state.attention_enabled
 
-    _persist_state()
+    participant_state.persist()
 
     # Live push so the bell button + permission indicator appear/disappear on
     # every participant without a reload. Carries a boolean only — no UUIDs.
@@ -74,4 +70,52 @@ async def send_host_notification(body: HostNotificationRequest):
     at = datetime.now(timezone.utc).isoformat()
     broadcast(HostNotificationMsg(text=text, at=at))
     daemon_log.info("host", f"🔔 host notification broadcast: {text!r}")
+    return Response(status_code=204)
+
+
+# ── Participant router (Direction B: the bell) ──
+
+# Allow a small burst of rings, but no more than this per rolling minute from a
+# single participant — keyed by participant id. Unlike emoji there is NO host
+# id exemption: the host page has no bell control, so an exempt id prefix would
+# only hand participants a crafted-header bypass of the limit.
+BELL_RATE_LIMIT = 6
+BELL_RATE_WINDOW_S = 60.0
+bell_rate_limiter = SlidingWindowRateLimiter(BELL_RATE_LIMIT, BELL_RATE_WINDOW_S)
+
+
+participant_router = APIRouter(prefix="/api/participant/bell", tags=["attention"])
+
+
+@participant_router.post("", status_code=204)
+async def ring_bell(request: Request):
+    """Participant rings the attention bell (no request body)."""
+    # Master switch off: reject/ignore before resolving, logging, forwarding, or
+    # notifying — so a hand-crafted POST achieves nothing while disabled.
+    if not participant_state.attention_enabled:
+        return Response(status_code=204)
+
+    pid = request.headers.get("x-participant-id")
+    if not pid:
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+
+    # Server-side rate limit protects the host's overlay from spam.
+    if not bell_rate_limiter.allow(pid):
+        return JSONResponse({"error": "Too many rings"}, status_code=429)
+
+    caller = participant_state.participant_names.get(pid, pid)
+
+    # Forward to the desktop overlay via the addons bridge — best-effort. One
+    # `addons` log line per ring, success or drop (mirrors the emoji router).
+    from daemon import addon_bridge_client
+    sent = addon_bridge_client.send_bell(caller)
+    if sent:
+        daemon_log.info("addons   ", f"🔔 {caller!r} rang the bell")
+    else:
+        logger.warning("Overlay bell drop: bridge disconnected pid=%s", pid)
+        daemon_log.info("addons   ", f"✗ {caller!r} rang the bell (bridge unavailable)")
+
+    # Dual-render: the host browser surfaces the bell too (mirrors emoji_reaction).
+    await notify_host(BellRungMsg(caller=caller))
+
     return Response(status_code=204)
