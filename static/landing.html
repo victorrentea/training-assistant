@@ -596,6 +596,14 @@
         const btn = document.getElementById('join-btn');
         const errorMsg = document.getElementById('code-error-msg');
 
+        // Arrived here from a stale/unknown session link (see /?error=invalid):
+        // explain why the old link no longer works instead of silently showing
+        // an empty code box. Cleared as soon as the user starts typing a code.
+        if (new URLSearchParams(window.location.search).get('error') === 'invalid') {
+          errorMsg.textContent =
+            'This session has ended or the link is no longer valid. Please ask the host for the current link.';
+        }
+
         function updateBtn() {
           const code = normalizeCode(input.value);
           btn.disabled = !isCompleteCode(code);
