@@ -123,7 +123,8 @@ def test_participant_identity_rows_have_expected_response_shapes():
 
     rename_row = re.search(r"^\| .*`PUT /api/participant/name`.*\|$", output, re.MULTILINE)
     assert rename_row, "Missing table row for PUT /api/participant/name"
-    assert "| `name: string` | -" in rename_row.group(0)
+    # Rename returns 200 + the soft duplicate flag (RenameResponse), never a bare 204.
+    assert "| `name: string` | `name_conflict?: bool` |" in rename_row.group(0)
 
 
 def test_generator_pretty_prints_multi_field_shapes_one_per_line():
@@ -134,9 +135,11 @@ def test_generator_pretty_prints_multi_field_shapes_one_per_line():
     assert "`name: string`<br>`type: 'workshop' \\| 'talk'`" in start_session_row.group(0)
     assert "{name: string, type?: string}" not in start_session_row.group(0)
 
-    quiz_closed_row = re.search(r"^\| .*`quiz_closed`.*\|$", output, re.MULTILINE)
-    assert quiz_closed_row, "Missing WS table row for quiz_closed"
-    assert "`vote_counts: list[int]  # Vote count per option, indexed by option position`" in quiz_closed_row.group(0)
+    # A multi-field WS payload renders one field per line, each with its own
+    # inline comment (here: a per-option vote-count list).
+    poll_update_row = re.search(r"^\| .*`poll_host_update`.*\|$", output, re.MULTILINE)
+    assert poll_update_row, "Missing WS table row for poll_host_update"
+    assert "`counts?: list[int]  # Per-option total vote counts (participant + host extras)`" in poll_update_row.group(0)
 
 
 def test_generator_expands_referenced_response_types():
@@ -151,10 +154,14 @@ def test_generator_expands_referenced_response_types():
 def test_generator_expands_nested_referenced_types():
     output = _run_generator()
 
-    create_quiz_row = re.search(r"^\| .*`POST /api/\{session_id\}/host/quiz`.*\|$", output, re.MULTILINE)
-    assert create_quiz_row, "Missing table row for POST /api/{session_id}/host/quiz"
-    assert "`quiz: QuizResponse{`" in create_quiz_row.group(0)
-    assert "`options:list[string]`" in create_quiz_row.group(0)
+    # The host quiz-state response references QuizQueueStatus, which itself
+    # references QueuedQuestion — a nested (ref-in-ref) type that must be
+    # expanded inline all the way down.
+    quiz_state_row = re.search(r"^\| .*`GET /api/\{session_id\}/host/quiz`.*\|$", output, re.MULTILINE)
+    assert quiz_state_row, "Missing table row for GET /api/{session_id}/host/quiz"
+    assert "`queue: QuizQueueStatus{`" in quiz_state_row.group(0)
+    assert "`items:list[QueuedQuestion{`" in quiz_state_row.group(0)
+    assert "`options:list[string]`" in quiz_state_row.group(0)
 
 
 def test_rest_rows_have_no_any_in_request_or_response_cells():
