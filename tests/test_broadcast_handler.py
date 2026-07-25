@@ -101,7 +101,8 @@ class TestHandleSetSessionId:
             await _handle_set_session_id({})
 
         assert mock_state.session_id is None
-        participant_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/?session_id=old123"}))
+        # SECURITY: old-cohort participant → neutral landing, never the old/new id.
+        participant_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/?error=invalid"}))
         participant_ws.close.assert_called_once_with(1008)
         host_ws.send_text.assert_called_once_with(json.dumps({"type": "redirect", "url": "/host"}))
         host_ws.close.assert_called_once_with(1000)
