@@ -41,7 +41,7 @@ _CSP = "; ".join([
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net "
     "https://unpkg.com https://cdnjs.cloudflare.com https://cdn.tailwindcss.com",
     "worker-src 'self' blob: https://cdn.jsdelivr.net",
-    "connect-src 'self' https://cdn.jsdelivr.net",
+    "connect-src 'self' https://cdn.jsdelivr.net https://nominatim.openstreetmap.org",
 ])
 
 
