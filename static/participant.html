@@ -2967,6 +2967,11 @@ function resetRemindersForTest() {
 let _sessionId = null;
 var _firstConnect = true;
 var _myScore = 0;
+// Opaque, non-identifying token this participant is keyed by in the
+// scores_updated broadcast (delivered privately via GET /state as
+// my_score_token). We match our own score by token instead of by UUID so the
+// broadcast can stay UUID-free — no other participant's id ever reaches us.
+var _myScoreToken = null;
 function _updateScoreBadge(score, earned) {
   var badge = document.getElementById('activity-score-badge');
   if (!badge) return;
@@ -3950,7 +3955,8 @@ function _applyState(msg) {
   if (msg.my_avatar) {
     _applyAvatar(msg.my_avatar);
   }
-  // Sync score
+  // Sync score + the token we're keyed by in the scores_updated broadcast.
+  if (msg.my_score_token != null) _myScoreToken = msg.my_score_token;
   if (msg.my_score != null) { _myScore = msg.my_score; _updateScoreBadge(_myScore, false); }
   // Sync quiz state
   if (msg.quiz !== undefined || msg.quiz_active !== undefined) {
@@ -4493,7 +4499,10 @@ function _handleWsMessage(msg) {
       _renderActivityQuiz();
       break;
     case 'scores_updated': {
-      var newScore = msg.scores && msg.scores[_myUUID] != null ? msg.scores[_myUUID] : null;
+      // UUID-free frame: scores are keyed by our opaque per-session token, not our
+      // UUID. Look up only our own token — the frame carries no id we could use
+      // to find anyone else.
+      var newScore = (_myScoreToken && msg.scores && msg.scores[_myScoreToken] != null) ? msg.scores[_myScoreToken] : null;
       if (newScore != null) { var earned = newScore > _myScore; _myScore = newScore; _updateScoreBadge(_myScore, earned); }
       break;
     }

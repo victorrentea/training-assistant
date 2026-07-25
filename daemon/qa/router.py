@@ -43,8 +43,8 @@ def _build_questions_for_host():
 
 
 def _build_questions_for_broadcast():
-    """Helper: build raw question list for participant broadcast."""
-    return qa_state.build_question_list_raw()
+    """Helper: build UUID-free question list for participant broadcast."""
+    return qa_state.build_question_list_public()
 
 
 # ── Participant router (proxied via Railway) ──
@@ -66,13 +66,13 @@ async def submit_question(request: Request, body: SubmitQuestionBody):
     # No activity gate — Railway accepts Q&A submissions regardless of current activity
 
     qa_state.submit(pid, text)
-    raw_questions = _build_questions_for_broadcast()
+    pax_questions = _build_questions_for_broadcast()
     host_questions = _build_questions_for_host()
 
     scores.add_score(pid, 100)
     request.state.write_back_events = [
-        broadcast_event(QaUpdatedMsg(questions=raw_questions)),
-        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
+        broadcast_event(QaUpdatedMsg(questions=pax_questions)),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
 
     await notify_host(QaUpdatedMsg(questions=host_questions))
@@ -96,15 +96,15 @@ async def upvote_question(request: Request, body: UpvoteQuestionBody):
     if not success:
         return JSONResponse({"error": "Cannot upvote"}, status_code=409)
 
-    raw_questions = _build_questions_for_broadcast()
+    pax_questions = _build_questions_for_broadcast()
     host_questions = _build_questions_for_host()
 
     if author_pid:
         scores.add_score(author_pid, 50)
     scores.add_score(pid, 25)
     request.state.write_back_events = [
-        broadcast_event(QaUpdatedMsg(questions=raw_questions)),
-        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
+        broadcast_event(QaUpdatedMsg(questions=pax_questions)),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
 
     await notify_host(QaUpdatedMsg(questions=host_questions))
@@ -171,7 +171,7 @@ async def clear_qa():
 
 async def _send_qa_events():
     """Send broadcast to participants (via Railway) and to host (local WS)."""
-    raw_questions = _build_questions_for_broadcast()
+    pax_questions = _build_questions_for_broadcast()
     host_questions = _build_questions_for_host()
-    broadcast(QaUpdatedMsg(questions=raw_questions))
+    broadcast(QaUpdatedMsg(questions=pax_questions))
     await notify_host(QaUpdatedMsg(questions=host_questions))

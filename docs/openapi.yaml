@@ -1788,20 +1788,15 @@ components:
         id:
           type: string
           title: Id
-        author_uuid:
-          type: string
-          title: Author Uuid
         side:
           type: string
           title: Side
         text:
           type: string
           title: Text
-        upvoters:
-          items:
-            type: string
-          type: array
-          title: Upvoters
+        upvote_count:
+          type: integer
+          title: Upvote Count
         ai_generated:
           type: boolean
           title: Ai Generated
@@ -1819,14 +1814,14 @@ components:
       type: object
       required:
       - id
-      - author_uuid
       - side
       - text
-      - upvoters
+      - upvote_count
       - ai_generated
       - is_own
       - has_upvoted
       title: DebateArgumentParticipant
+      description: UUID-free debate argument for the participant /state snapshot.
     DebateData:
       properties:
         statement:
@@ -1847,6 +1842,10 @@ components:
         my_is_champion:
           type: boolean
           title: My Is Champion
+        my_auto_assigned:
+          type: boolean
+          title: My Auto Assigned
+          default: false
         side_counts:
           additionalProperties:
             type: integer
@@ -1859,14 +1858,9 @@ components:
           title: Arguments
         champions:
           additionalProperties:
-            type: string
+            type: boolean
           type: object
           title: Champions
-        auto_assigned:
-          items:
-            type: string
-          type: array
-          title: Auto Assigned
         first_side:
           anyOf:
           - type: string
@@ -1893,8 +1887,14 @@ components:
       - side_counts
       - arguments
       - champions
-      - auto_assigned
       title: DebateData
+      description: 'UUID-free personalised debate state for the participant /state
+        snapshot.
+
+
+        SECURITY: champions is side→bool (not side→uuid); the auto_assigned uuid list
+
+        is replaced by the per-viewer my_auto_assigned flag; arguments are UUID-free.'
     Deck:
       properties:
         status:
@@ -2657,6 +2657,9 @@ components:
         my_score:
           type: integer
           title: My Score
+        my_score_token:
+          type: string
+          title: My Score Token
         my_name:
           type: string
           title: My Name
@@ -2681,7 +2684,7 @@ components:
           $ref: '#/components/schemas/WordcloudData'
         qa_questions:
           items:
-            $ref: '#/components/schemas/QAQuestionRaw'
+            $ref: '#/components/schemas/QAQuestionParticipant'
           type: array
           title: Qa Questions
         quiz:
@@ -2781,6 +2784,7 @@ components:
       required:
       - mode
       - my_score
+      - my_score_token
       - my_name
       - my_avatar
       - current_activity
@@ -2879,7 +2883,7 @@ components:
       required:
       - slug
       title: PptxUpdateDetectedRequest
-    QAQuestionRaw:
+    QAQuestionParticipant:
       properties:
         id:
           type: string
@@ -2887,29 +2891,39 @@ components:
         text:
           type: string
           title: Text
-        author_uuid:
-          type: string
-          title: Author Uuid
-        upvoter_uuids:
-          items:
-            type: string
-          type: array
-          title: Upvoter Uuids
+        upvote_count:
+          type: integer
+          title: Upvote Count
         answered:
           type: boolean
           title: Answered
         timestamp:
           type: number
           title: Timestamp
+        is_own:
+          type: boolean
+          title: Is Own
+        has_upvoted:
+          type: boolean
+          title: Has Upvoted
       type: object
       required:
       - id
       - text
-      - author_uuid
-      - upvoter_uuids
+      - upvote_count
       - answered
       - timestamp
-      title: QAQuestionRaw
+      - is_own
+      - has_upvoted
+      title: QAQuestionParticipant
+      description: 'UUID-free Q&A item for the participant /state snapshot.
+
+
+        SECURITY: carries no author/upvoter UUIDs. The two personalised booleans are
+
+        resolved server-side from the requesting participant''s own pid, so the wire
+
+        never exposes anyone''s identity.'
     QueuedQuestion:
       properties:
         question:

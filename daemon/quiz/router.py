@@ -140,7 +140,8 @@ async def reveal_correct(body: RevealCorrectRequest):
 
     result = quiz_state.reveal_correct(body.correct_indices, scores)
     broadcast(QuizCorrectRevealedMsg(correct_indices=result["correct_indices"]))
-    broadcast(ScoresUpdatedMsg(scores=result["scores"]))
+    # Participants get the UUID-free token-keyed map; the trusted host keeps UUIDs.
+    broadcast(ScoresUpdatedMsg(scores=scores.snapshot_tokenized()))
     await notify_host(QuizCorrectRevealedMsg(correct_indices=result["correct_indices"]))
     await notify_host(ScoresUpdatedMsg(scores=result["scores"]))
     return Response(status_code=204)

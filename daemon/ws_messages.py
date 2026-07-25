@@ -137,8 +137,17 @@ class QuizEndCountdownStartedMsg(BaseModel):
 # ── Scores ────────────────────────────────────────────────────────────────────
 
 class ScoresUpdatedMsg(BaseModel):
+    """Score map broadcast.
+
+    SECURITY: the participant-facing frame MUST be keyed by opaque per-session
+    score tokens (daemon.scores.snapshot_tokenized()), never UUIDs — each
+    participant learns only its OWN token via GET /state (my_score_token) and
+    reads its score from scores[my_score_token]. The host frame (notify_host)
+    keeps UUID keys since the host is trusted. Both are dict[str, int]; the key
+    space differs by channel.
+    """
     type: Literal["scores_updated"] = "scores_updated"
-    scores: dict[str, int]  # uuid → score
+    scores: dict[str, int]  # participant: token → score | host: uuid → score
 
 
 # ── Word Cloud ────────────────────────────────────────────────────────────────
@@ -154,7 +163,14 @@ class WordcloudUpdatedMsg(BaseModel):
 # ── Q&A ───────────────────────────────────────────────────────────────────────
 
 class QaUpdatedMsg(BaseModel):
-    """Same structure for both participants and host."""
+    """Q&A list broadcast — same message TYPE, different payloads per channel.
+
+    SECURITY: the participant-facing `questions` items MUST be UUID-free
+    (qa_state.build_question_list_public(): id, text, upvote_count, answered,
+    timestamp). The host frame (notify_host) carries the richer host shape with
+    author names + UUIDs since the host is trusted. "Is this mine / have I
+    upvoted" is resolved server-side per connection via GET /state.
+    """
     type: Literal["qa_updated"] = "qa_updated"
     questions: list[dict[str, Any]]
 
@@ -189,14 +205,23 @@ class CodereviewSelectionsUpdatedMsg(BaseModel):
 # ── Debate ────────────────────────────────────────────────────────────────────
 
 class DebateUpdatedMsg(BaseModel):
-    """Full debate state snapshot broadcast to participants."""
+    """UUID-free debate state snapshot broadcast to participants.
+
+    SECURITY: delivered identically to every participant, so it carries NO UUIDs.
+    Built from DebateState.public_snapshot():
+      • side_counts replaces the uuid→side `sides` map (aggregate only);
+      • arguments carry upvote_count instead of author_uuid + upvoter lists;
+      • champions is side→bool (whether the side is claimed), not side→uuid;
+      • the auto_assigned uuid list is omitted.
+    Per-viewer facts (my_side, my_is_champion, is_own, has_upvoted) are delivered
+    privately via GET /state, never over this frame.
+    """
     type: Literal["debate_updated"] = "debate_updated"
     statement: str | None = None
     phase: str | None = None
-    sides: dict[str, str] = {}
+    side_counts: dict[str, int] = {}
     arguments: list[dict[str, Any]] = []
-    champions: dict[str, str] = {}
-    auto_assigned: list[str] = []
+    champions: dict[str, bool] = {}
     first_side: str | None = None
     round_index: int | None = None
     round_timer_seconds: int | None = None

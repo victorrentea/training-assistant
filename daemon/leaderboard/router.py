@@ -67,7 +67,8 @@ async def reset_scores():
     was_empty = not scores.snapshot()
     scores.reset()
     if not was_empty:
-        msg = ScoresUpdatedMsg(scores=scores.snapshot())
-        broadcast(msg)
-        await notify_host(msg)
+        # Participants get the UUID-free token-keyed map (empty after reset);
+        # the trusted host keeps the UUID-keyed map.
+        broadcast(ScoresUpdatedMsg(scores=scores.snapshot_tokenized()))
+        await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
     return Response(status_code=204)

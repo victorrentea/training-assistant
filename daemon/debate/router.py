@@ -16,7 +16,7 @@ from daemon.ws_messages import (
     DebateUpdatedMsg,
     ScoresUpdatedMsg,
 )
-from daemon.ws_publish import broadcast, broadcast_event
+from daemon.ws_publish import broadcast, broadcast_event, notify_host
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ async def pick_side(request: Request, body: PickSideRequest):
             debate_state.advance_phase("arguments")
 
     request.state.write_back_events = [
-        broadcast_event(DebateUpdatedMsg(**debate_state.snapshot())),
+        broadcast_event(DebateUpdatedMsg(**debate_state.public_snapshot())),
     ]
     return Response(status_code=204)
 
@@ -127,9 +127,13 @@ async def submit_argument(request: Request, body: ArgumentRequest):
     scores.add_score(pid, 100)
 
     request.state.write_back_events = [
-        broadcast_event(DebateUpdatedMsg(**debate_state.snapshot())),
-        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
+        broadcast_event(DebateUpdatedMsg(**debate_state.public_snapshot())),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
+    # Host is trusted → also push the UUID-keyed score map on its own channel so
+    # the host scoreboard updates live during debate. (The participant fan-out
+    # frame the host also receives is token-keyed and ignored by host.js.)
+    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
     return Response(status_code=204)
 
 
@@ -154,9 +158,13 @@ async def upvote_argument(request: Request, body: UpvoteRequest):
     scores.add_score(pid, 25)
 
     request.state.write_back_events = [
-        broadcast_event(DebateUpdatedMsg(**debate_state.snapshot())),
-        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
+        broadcast_event(DebateUpdatedMsg(**debate_state.public_snapshot())),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
+    # Host is trusted → also push the UUID-keyed score map on its own channel so
+    # the host scoreboard updates live during debate. (The participant fan-out
+    # frame the host also receives is token-keyed and ignored by host.js.)
+    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
     return Response(status_code=204)
 
 
@@ -178,9 +186,13 @@ async def volunteer_champion(request: Request):
     scores.add_score(pid, 2500)
 
     request.state.write_back_events = [
-        broadcast_event(DebateUpdatedMsg(**debate_state.snapshot())),
-        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
+        broadcast_event(DebateUpdatedMsg(**debate_state.public_snapshot())),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
+    # Host is trusted → also push the UUID-keyed score map on its own channel so
+    # the host scoreboard updates live during debate. (The participant fan-out
+    # frame the host also receives is token-keyed and ignored by host.js.)
+    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
     return Response(status_code=204)
 
 
@@ -202,7 +214,7 @@ async def launch_debate(body: LaunchDebateRequest):
     participant_state.current_activity = "debate"
     debate_state.launch(statement)
 
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     broadcast(ActivityUpdatedMsg(current_activity="debate"))
     return Response(status_code=204)
 
@@ -213,7 +225,7 @@ async def reset_debate():
     debate_state.reset()
     participant_state.current_activity = "none"
 
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     broadcast(ActivityUpdatedMsg(current_activity="none"))
     return Response(status_code=204)
 
@@ -224,7 +236,7 @@ async def close_selection():
     all_pids = list(participant_state.participant_names.keys())
     debate_state.close_selection(all_pids)
 
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     return Response(status_code=204)
 
 
@@ -234,7 +246,7 @@ async def force_assign():
     all_pids = list(participant_state.participant_names.keys())
     debate_state.force_assign(all_pids)
 
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     return Response(status_code=204)
 
 
@@ -245,7 +257,7 @@ async def advance_phase(body: AdvancePhaseRequest):
         return JSONResponse({"error": f"Invalid phase: {body.phase}"}, status_code=400)
 
     debate_state.advance_phase(body.phase)
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     return OkPhaseResponse(phase=body.phase)
 
 
@@ -256,7 +268,7 @@ async def set_first_side(body: SetFirstSideRequest):
         return JSONResponse({"error": "Side must be 'for' or 'against'"}, status_code=400)
 
     debate_state.set_first_side(body.side)
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     return Response(status_code=204)
 
 
@@ -267,7 +279,7 @@ async def start_round_timer(body: RoundTimerRequest):
 
     started_at = debate_state.round_timer_started_at.isoformat() if debate_state.round_timer_started_at else None
     broadcast(DebateTimerMsg(round_index=body.round_index, seconds=body.seconds, started_at=started_at))
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     return Response(status_code=204)
 
 
@@ -277,7 +289,7 @@ async def end_round():
     debate_state.end_round()
 
     broadcast(DebateRoundEndedMsg())
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     return Response(status_code=204)
 
 
@@ -292,7 +304,7 @@ async def end_arguments():
     # No arguments submitted — already advanced to prep
     if not ai_request.get("for_args") and not ai_request.get("against_args"):
         debate_state.advance_phase("prep")
-        broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+        broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
         return Response(status_code=204)
 
     # Run AI cleanup in background
@@ -310,12 +322,12 @@ async def end_arguments():
         except Exception:
             logger.exception("Debate AI cleanup failed — advancing to prep with empty result")
             debate_state.apply_ai_result([], [], [])
-        broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+        broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
 
     asyncio.create_task(_run_ai_cleanup(ai_request))
 
     # Return immediately — broadcast with ai_cleanup phase
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     return Response(status_code=204)
 
 
@@ -323,5 +335,5 @@ async def end_arguments():
 async def receive_ai_result(body: AiResultRequest):
     """Manual/skip AI result — host posts AI cleanup results directly."""
     debate_state.apply_ai_result(body.merges, body.cleaned, body.new_arguments)
-    broadcast(DebateUpdatedMsg(**debate_state.snapshot()))
+    broadcast(DebateUpdatedMsg(**debate_state.public_snapshot()))
     return Response(status_code=204)

@@ -216,7 +216,10 @@ async def confirm_line(body: ConfirmLineRequest):
         scores.add_score(pid, 200)
 
     broadcast(CodereviewLineConfirmedMsg(line=body.line))
-    broadcast(ScoresUpdatedMsg(scores=scores.snapshot()))
+    broadcast(ScoresUpdatedMsg(scores=scores.snapshot_tokenized()))
+    # Host (trusted) gets the UUID-keyed score map on its own channel so its
+    # scoreboard updates live; host.js ignores the token-keyed participant frame.
+    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
 
     return ConfirmLineResponse(confirmed_line=body.line)
 

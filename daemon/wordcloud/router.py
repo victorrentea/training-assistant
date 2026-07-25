@@ -9,7 +9,7 @@ from daemon.participant.state import participant_state
 from daemon.scores import scores
 from daemon.wordcloud.state import wordcloud_state
 from daemon.ws_messages import ScoresUpdatedMsg, WordcloudUpdatedMsg
-from daemon.ws_publish import broadcast, broadcast_event
+from daemon.ws_publish import broadcast, broadcast_event, notify_host
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +51,11 @@ async def submit_word(request: Request, body: SubmitWordBody):
     scores.add_score(pid, 200)
     request.state.write_back_events = [
         broadcast_event(WordcloudUpdatedMsg(**snapshot)),
-        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
+    # Host (trusted) gets the UUID-keyed score map on its own channel so its
+    # scoreboard updates live; host.js ignores the token-keyed participant frame.
+    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
 
     return Response(status_code=204)
 

@@ -69,22 +69,50 @@ class QAState:
     def clear(self):
         self.questions.clear()
 
-    def build_question_list_raw(self) -> list[dict]:
-        """Build sorted question list for participant broadcast — raw UUIDs, no personalisation."""
-        questions = []
-        for qid, q in sorted(
+    def _sorted_questions(self):
+        return sorted(
             self.questions.items(),
             key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"]),
-        ):
-            questions.append({
+        )
+
+    def build_question_list_public(self) -> list[dict]:
+        """UUID-free question list for the participant broadcast.
+
+        SECURITY: identical for every participant, so it carries NO author/upvoter
+        UUIDs — only the aggregate upvote count. "Is this mine / have I upvoted"
+        is resolved server-side per connection and delivered privately via
+        GET /state (build_question_list_for_participant), never over this frame.
+        """
+        return [
+            {
                 "id": qid,
                 "text": q["text"],
-                "author_uuid": q["author"],
-                "upvoter_uuids": list(q["upvoters"]),
+                "upvote_count": len(q["upvoters"]),
                 "answered": q["answered"],
                 "timestamp": q["timestamp"],
-            })
-        return questions
+            }
+            for qid, q in self._sorted_questions()
+        ]
+
+    def build_question_list_for_participant(self, pid: str) -> list[dict]:
+        """UUID-free, per-connection question list for GET /state.
+
+        Same public shape as the broadcast plus the two personalised booleans the
+        client needs — computed here from the viewer's own pid so the wire never
+        carries anyone's UUID.
+        """
+        return [
+            {
+                "id": qid,
+                "text": q["text"],
+                "upvote_count": len(q["upvoters"]),
+                "answered": q["answered"],
+                "timestamp": q["timestamp"],
+                "is_own": q["author"] == pid,
+                "has_upvoted": pid in q["upvoters"],
+            }
+            for qid, q in self._sorted_questions()
+        ]
 
     def build_question_list(self, names: dict[str, str], avatars: dict[str, str]) -> list[dict]:
         """Build sorted question list for host — resolves names and avatars."""
