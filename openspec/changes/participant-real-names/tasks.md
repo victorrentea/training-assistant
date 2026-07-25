@@ -74,7 +74,7 @@ Because the join gate is the participant's **first contact** with the app, tests
 
 ## 9. Host attendees download + PDF (deferred)
 
-- [ ] 9.1 Add a host-only daemon endpoint that serves the active session's `attendees.md` content (no server error when no session is active).
-- [ ] 9.2 Add a host UI download control mirroring `downloadKeyPoints()` (`static/host.js:1227`) to fetch the raw `attendees.md`.
-- [ ] 9.3 Add client-side Markdown-to-PDF rendering reusing the `marked` + `window.print()` pattern (`downloadSummaryPdf()` `participant.html:4631`) to produce a printable attendance sheet.
-- [ ] 9.4 Tests for the host endpoint + a smoke test of the PDF/print render path.
+- [x] 9.1 Add a host-only daemon endpoint that serves the active session's `attendees.md` content (no server error when no session is active). — `daemon/attendees_router.py` (`GET /api/{session_id}/host/attendees.md`), rendered fresh on read via new `daemon/attendees_md.py:build_attendees_md()`; mounted in `daemon/host_server.py`. No active session → 200 + "No attendees yet" placeholder.
+- [x] 9.2 Add a host UI download control mirroring `downloadKeyPoints()` (`static/host.js`) to fetch the raw `attendees.md`. — `downloadAttendeesMd()` in `static/host.js` + "attendees.md" button above the roster in `static/host.html`.
+- [x] 9.3 Add client-side Markdown-to-PDF rendering reusing the `marked` + `window.print()` pattern (`downloadSummaryPdf()` `participant.html`) to produce a printable attendance sheet. — `downloadAttendeesPdf()` in `static/host.js` + "PDF" button; `marked` added to `static/host.html` (jsdelivr, allowed by host CSP). CSP print-window path verified in-browser (marked loads, inline print styles apply, no violations).
+- [x] 9.4 Tests for the host endpoint + a smoke test of the PDF/print render path. — `tests/daemon/test_attendees_router.py` (returns current content, updates on register/rename/leave, graceful no-session, anonymous tagging, endpoint wired into app, marked CDN on the CSP whitelist).

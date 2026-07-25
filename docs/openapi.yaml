@@ -1302,6 +1302,21 @@ paths:
       x-feature: host_state
       x-doc-notes:
       - Returns host-facing full state snapshot.
+  /api/{session_id}/host/attendees.md:
+    get:
+      tags:
+      - attendees
+      summary: Get Attendees Md
+      description: Return the current `attendees.md` for the active session as Markdown
+        text.
+      operationId: get_attendees_md_api__session_id__host_attendees_md_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+      x-feature: attendees
   /api/session/create:
     post:
       tags:
