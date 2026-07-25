@@ -30,6 +30,8 @@ from railway.shared.metrics import (
     ws_connections_active,
     ws_messages_total,
 )
+from railway.shared.session_guard import is_active_session_id
+from railway.shared.session_registry import session_registry
 from railway.shared.state import state
 
 router = APIRouter()
@@ -132,9 +134,25 @@ async def _handle_set_session_id(data: dict):
     else:
         session_changed = old_id != state.session_id
 
+    # Populate the session registry so a link to a genuinely-recent PAST session
+    # resolves to the read-only "ended" view (within REGISTRY_TTL_DAYS) instead of
+    # a bare invalid-redirect. register() is the ONLY place a session enters the
+    # registry — an id we never made active can never be treated as valid, which
+    # keeps unknown/guessed ids on the /?error=invalid path.
+    if state.session_id:
+        session_registry.register(
+            state.session_id,
+            folder_name=data.get("folder_name") or state.session_id,
+            session_type=state.session_type,
+        )
+
     # If active session changed (including ending it), disconnect old session
     # clients and drop the previous cohort's cached state.
     if had_active_session and session_changed:
+        # The previous session is now a PAST session: stamp its end time so the
+        # read-only ended view can show when it wrapped up.
+        if old_id:
+            session_registry.mark_ended(old_id)
         _clear_session_caches()
         for pid, ws in list(state.participants.items()):
             if pid.startswith("__") and pid != "__host__":
@@ -235,9 +253,14 @@ async def _evict_all_clients_after_grace():
             pass
         state.participants.pop(pid, None)
     # Daemon is confirmed gone: invalidate the session so /api/status stops
-    # reporting active and require_valid_session no longer validates the now-stale
-    # id (closing the session-enumeration oracle), and drop the cohort's caches.
+    # reporting active and require_active_session no longer proxies for the
+    # now-stale id (closing the live-session oracle), and drop the cohort's
+    # caches. The id stays in the registry (marked ended) so its link now lands
+    # on the read-only ended view rather than a bare invalid-redirect.
+    ended_id = state.session_id
     state.session_id = None
+    if ended_id:
+        session_registry.mark_ended(ended_id)
     _clear_session_caches()
     await broadcast_slides_updated()
 
@@ -375,8 +398,10 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
 @session_router.websocket("/ws/{session_id}/{participant_id}")
 async def session_websocket_endpoint(websocket: WebSocket, session_id: str, participant_id: str):
     """WebSocket endpoint for participants and host (__host__), requiring a valid session_id."""
-    # Validate session_id — accept first so client gets a clean close code
-    if not state.session_id or session_id.lower() != state.session_id.lower():
+    # Validate session_id — accept first so client gets a clean close code.
+    # Active-only: a registry-valid recent-PAST id must NOT open a live socket
+    # either — its read-only ended page never tries to (it is script-free).
+    if not is_active_session_id(session_id):
         is_host_attempt = participant_id.strip() == "__host__"
         if is_host_attempt:
             await websocket.accept()

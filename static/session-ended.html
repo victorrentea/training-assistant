@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Session ended</title>
+  <link rel="icon" href="/static/favicon-participant.svg">
+  <!--
+    Read-only landing for a RECENT PAST session (registry-valid but not the live
+    session). Served at /{session_id}/ by railway/features/pages/router.py in
+    place of the participant SPA. Deliberately self-contained and script-free:
+    it must NOT boot the participant app (which would open a live participant
+    WebSocket and proxy to the daemon), so it can never leak the CURRENT cohort's
+    session into an old link. Distinct from the generic /?error=invalid page used
+    for UNKNOWN ids. {{SESSION_ID}} / {{SESSION_DATE_SUFFIX}} are filled in server
+    side from the in-memory registry entry (the only past-session data Railway
+    has — the daemon owns the archived content and is not connected for past
+    sessions).
+  -->
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f6f7f9; color: #1f2933; padding: 24px;
+    }
+    .card {
+      background: #fff; max-width: 460px; width: 100%; padding: 40px 36px; border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, .08); text-align: center;
+    }
+    .icon { font-size: 44px; line-height: 1; }
+    h1 { font-size: 22px; margin: 16px 0 8px; }
+    .muted { color: #66707a; font-size: 14px; margin: 8px 0; line-height: 1.5; }
+    .meta { font-size: 13px; margin-top: 16px; color: #66707a; }
+    code { background: rgba(127, 127, 127, .15); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+    a.btn {
+      display: inline-block; margin-top: 26px; padding: 11px 22px; border-radius: 10px;
+      background: #2563eb; color: #fff; text-decoration: none; font-weight: 600; font-size: 14px;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0f1720; color: #e6edf3; }
+      .card { background: #182029; box-shadow: none; }
+      .muted, .meta { color: #9aa7b4; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <div class="icon" aria-hidden="true">&#128075;</div>
+    <h1>This session has ended</h1>
+    <p class="muted">This link points to a past session and is now read-only.
+      Its live content is no longer available here.</p>
+    <p class="meta">Session <code>{{SESSION_ID}}</code>{{SESSION_DATE_SUFFIX}}</p>
+    <p class="muted">Ask the host for the current link to join the active session.</p>
+    <a class="btn" href="/">Join the current session</a>
+  </main>
+</body>
+</html>

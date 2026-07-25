@@ -1,11 +1,18 @@
 import os
+from datetime import datetime
+from html import escape as _html_escape
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 from railway.shared.auth import get_host_cookie_token, require_host_auth
-from railway.shared.rate_limit import rate_limit_probe
+from railway.shared.session_guard import is_active_session_id
+from railway.shared.session_registry import session_registry
 from railway.shared.state import state
+
+_STATIC_DIR = Path(__file__).resolve().parent.parent.parent.parent / "static"
+_ENDED_TEMPLATE = _STATIC_DIR / "session-ended.html"
 
 landing_router = APIRouter()
 host_router = APIRouter()
@@ -112,29 +119,71 @@ _PARTICIPANT_TAB_SLUGS = frozenset(
 )
 
 
-def _serve_participant_app() -> HTMLResponse | FileResponse:
-    """Serve the participant SPA (talk variant for talk sessions)."""
+def _serve_ended_session_page(session_id: str) -> HTMLResponse:
+    """Read-only "this session has ended" landing for a recent PAST session.
+
+    SECURITY (anti-hijack): a recent-past id is registry-valid, so
+    ``require_valid_session`` lets the page route through — but it is NOT the live
+    session. It must never receive the participant SPA: that shell opens a live
+    participant WebSocket and proxies to the daemon, which would leak the CURRENT
+    cohort's session into the old link. We serve a dedicated static page instead,
+    distinct from the generic ``/?error=invalid`` shown for UNKNOWN ids.
+
+    We surface only the session id + date, which Railway *does* hold (the
+    in-memory registry entry). Richer archived content (saved summary / attendees
+    / notes) is NOT served: the daemon owns the session folder and is connected
+    only for the CURRENTLY active session, so a past session's material is
+    unreachable from the gateway. Serving it would need daemon/archive plumbing
+    (out of scope).
+    """
+    entry = session_registry.get(session_id) or {}
+    when_iso = entry.get("ended_at") or entry.get("created_at") or ""
+    suffix = ""
+    if when_iso:
+        try:
+            suffix = " &middot; " + _html_escape(datetime.fromisoformat(when_iso).strftime("%Y-%m-%d"))
+        except ValueError:
+            suffix = ""
+    html = _ENDED_TEMPLATE.read_text(encoding="utf-8")
+    html = html.replace("{{SESSION_DATE_SUFFIX}}", suffix)
+    html = html.replace("{{SESSION_ID}}", _html_escape(session_id))
+    return _with_csp(HTMLResponse(html))
+
+
+def _serve_participant_app(session_id: str) -> HTMLResponse | FileResponse:
+    """Serve the participant SPA for the LIVE session, or the read-only ended view
+    for a registry-valid recent-PAST id (talk variant for talk sessions)."""
+    if not is_active_session_id(session_id):
+        return _serve_ended_session_page(session_id)
     if state.session_type == "talk":
         return _serve_html_with_otel("static/talk.html", service_name="Talk")
     return _serve_html_with_otel("static/participant.html", service_name="Participant")
 
 
-@participant_router.get("/", response_class=HTMLResponse, dependencies=[Depends(rate_limit_probe)])
-async def participant_page():
-    return _serve_participant_app()
+# NOTE: no per-route rate_limit_probe here — the probe throttle lives at router
+# level in railway/app.py (session_participant_pages), deliberately ordered
+# BEFORE require_valid_session so unknown-id enumeration probes are throttled
+# too. A route-level dependency would run after the guard and never see them.
+
+@participant_router.get("/", response_class=HTMLResponse)
+async def participant_page(session_id: str):
+    return _serve_participant_app(session_id)
 
 
 @participant_router.get("/notes-print", response_class=HTMLResponse)
-async def notes_print_page():
+async def notes_print_page(session_id: str):
     """Standalone read-only session notes page (formerly served at /<session>/notes)."""
+    # A past session has no live notes to fetch — steer it to the ended view too.
+    if not is_active_session_id(session_id):
+        return _serve_ended_session_page(session_id)
     return _with_csp(FileResponse("static/notes.html"))
 
 
-@participant_router.get("/{tab}", response_class=HTMLResponse, dependencies=[Depends(rate_limit_probe)])
-async def participant_tab_page(tab: str):
+@participant_router.get("/{tab}", response_class=HTMLResponse)
+async def participant_tab_page(session_id: str, tab: str):
     """Serve the participant SPA for a deep-linked tab (e.g. /<session>/notes)."""
     if tab not in _PARTICIPANT_TAB_SLUGS:
         raise HTTPException(status_code=404, detail="Unknown tab")
-    return _serve_participant_app()
+    return _serve_participant_app(session_id)
 
 

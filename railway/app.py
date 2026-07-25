@@ -25,7 +25,12 @@ from railway.features.ws.proxy_bridge import participant_proxy_router
 from railway.features.ws.router import session_router as ws_session_router
 from railway.shared.auth import require_host_auth
 from railway.shared.rate_limit import rate_limit_probe
-from railway.shared.session_guard import InvalidSessionRedirect, require_valid_session
+from railway.shared.session_guard import (
+    InvalidSessionRedirect,
+    is_active_session_id,
+    require_active_session,
+    require_valid_session,
+)
 from railway.shared.state import state  # re-exported for tests: from railway.app import app, state
 
 logging.basicConfig(level=logging.INFO)
@@ -98,11 +103,13 @@ if _otel_active:
 async def _redirect_invalid_session(request: Request, exc: InvalidSessionRedirect):
     from fastapi.responses import RedirectResponse
 
-    # SECURITY: a stale/unknown session link must NEVER be redirected onto the
+    # SECURITY: an UNKNOWN session link must NEVER be redirected onto the
     # currently-active session — that leaks one cohort into another (session
-    # hijack via redirect). Always land on the neutral page instead.
-    # TODO(security): follow-ups (out of scope here) — populate session_registry
-    # so genuinely-recent past sessions resolve, and use a non-guessable
+    # hijack via redirect). Always land on the neutral page instead. Genuinely
+    # recent-PAST ids no longer reach here: the session_registry is now populated
+    # (see _handle_set_session_id), so require_valid_session lets them through to
+    # the read-only "ended" view. Only truly unknown/expired ids raise this.
+    # TODO(security): follow-up (out of scope here) — use a non-guessable
     # session-id generator.
     return RedirectResponse("/?error=invalid")
 
@@ -149,7 +156,7 @@ app.include_router(internal_router)
 
 async def _require_active_session_host(session_id: str):
     """Validates that the session_id in the path matches the active session."""
-    if not state.session_id or session_id.lower() != state.session_id.lower():
+    if not is_active_session_id(session_id):
         raise HTTPException(status_code=404, detail="Session not found or not active")
 
 
@@ -170,15 +177,34 @@ app.include_router(session_host)
 # /{session_id}/{tab} route matches ANY two-segment path, so registering it before
 # the explicit root routes below (/api/status, /api/is-active-session) or the
 # /static mount would shadow them (e.g. /api/status → session "api"). See bottom.
+#
+# Two routers, two guards — this split is the anti-hijack boundary:
+#   • PAGE routes use require_valid_session → active OR recent-past ids reach the
+#     handler, which serves the LIVE SPA only for the active id and a read-only
+#     "ended" view for a recent-past id (never the live SPA, WS, or proxy).
+#   • LIVE data/proxy/upload routes use require_active_session → ONLY the active
+#     id may proxy to the daemon, upload into the session, or read its cached
+#     slides. A recent-past (or unknown) id gets 404 here and can never reach the
+#     current cohort's live content.
 
-session_participant = APIRouter(
+session_participant_pages = APIRouter(
     prefix="/{session_id}",
-    dependencies=[Depends(require_valid_session)],
+    # ORDER MATTERS: rate_limit_probe BEFORE require_valid_session (FastAPI runs
+    # router-level dependencies first, in list order) so UNKNOWN-id page probes
+    # (302) burn rate-limit budget too. With the throttle only at route level it
+    # ran AFTER the guard, so an id-enumeration flood was never throttled —
+    # mirrors the explicit ordering on /{session_id}/api/status below.
+    dependencies=[Depends(rate_limit_probe), Depends(require_valid_session)],
 )
-session_participant.include_router(participant_router)       # /
-session_participant.include_router(slides.public_router)     # /api/slides, /api/slides/file/{slug}, /api/slides/current
-session_participant.include_router(upload_public_router)     # /api/upload (participant file upload)
-session_participant.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
+session_participant_pages.include_router(participant_router)  # /, /notes-print, /{tab}
+
+session_participant_live = APIRouter(
+    prefix="/{session_id}",
+    dependencies=[Depends(require_active_session)],
+)
+session_participant_live.include_router(slides.public_router)     # /api/slides, /api/slides/check/{slug}, /api/slides/download/{slug}
+session_participant_live.include_router(upload_public_router)     # /api/upload (participant file upload)
+session_participant_live.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
 
 if os.environ.get("OTEL_TRACES_FILE"):
     from railway.features.telemetry.router import router as telemetry_router
@@ -225,14 +251,20 @@ async def get_status():
     dependencies=[Depends(rate_limit_probe), Depends(require_valid_session)],
 )
 async def get_session_status(session_id: str):
-    """Session-scoped public status endpoint — returns 200 for valid session, 404 for invalid."""
+    """Session-scoped public status endpoint — 200 for a valid (active or recent-past)
+    session, 404 for unknown. ``session_active`` is truthful: a recent-PAST id that
+    is registry-valid but not the live session reports ``False`` so it is never
+    mistaken for the active cohort."""
     from railway.shared.version import get_backend_version
+    # Same daemon-connected condition as the root /api/status: an id matching a
+    # lingering session_id after a daemon disconnect is not a usable session.
+    is_active = is_active_session_id(session_id) and state.daemon_ws is not None
     return {
         "backend_version": get_backend_version(),
         "git_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", ""),
         "daemon_code_timestamp": state.daemon_code_timestamp,
         "railway_started_at": _RAILWAY_STARTED_AT_ISO,
-        "session_active": True,
+        "session_active": is_active,
         "session_id": session_id,
     }
 
@@ -241,4 +273,7 @@ async def get_session_status(session_id: str):
 # /{session_id}/{tab} matches any two-segment path, so it must come after every
 # explicit root route and the /static mount above; otherwise it shadows them
 # (e.g. /api/status → session "api", /static/common.css → session "static").
-app.include_router(session_participant)
+# Live (active-only) data routes are all /{session_id}/api/* (3-segment) so they
+# never shadow the root routes; register them just before the page catch-all.
+app.include_router(session_participant_live)
+app.include_router(session_participant_pages)
