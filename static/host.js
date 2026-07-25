@@ -374,7 +374,15 @@
         return;
       }
       if (msg.type === 'scores_updated') {
-        const updated = msg.scores || {};
+        // This WS also receives the participant broadcast fan-out, whose
+        // scores_updated is keyed by opaque per-session tokens (UUID-free). The
+        // host maps scores by UUID, so keep only UUID-shaped keys (they contain
+        // dashes; tokens do not) — the host's own trusted frame arrives via
+        // notify_host with UUID keys and passes through unchanged.
+        const raw = msg.scores || {};
+        const updated = {};
+        for (const k in raw) { if (k.indexOf('-') !== -1) updated[k] = raw[k]; }
+        if (Object.keys(updated).length === 0 && Object.keys(raw).length > 0) return;
         const flashPids = new Set(Object.keys(updated).filter(pid => (updated[pid] || 0) > (scores[pid] || 0)));
         Object.assign(scores, updated);
         renderParticipantList(cachedParticipantIds, flashPids);
@@ -563,7 +571,14 @@
           renderParticipantList(cachedParticipantIds);
         }
       } else if (msg.type === 'qa_updated') {
-        renderQAList(normalizeHostQAQuestions(msg.questions || []));
+        // The host renders only its own trusted frame (host_questions, which
+        // carries author_uuid + author names, delivered via notify_host). The
+        // UUID-free participant frame also reaches this WS via the broadcast
+        // fan-out — ignore it so QA author names never collapse to "Unknown".
+        const qs = msg.questions || [];
+        if (!(qs.length && qs[0].author_uuid === undefined)) {
+          renderQAList(normalizeHostQAQuestions(qs));
+        }
       }
   }
 

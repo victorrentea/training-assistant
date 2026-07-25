@@ -210,13 +210,20 @@ async def _resolve_location_metadata(loc: str) -> tuple[str, str, str]:
     return tz, str(country or "").strip().upper(), ""
 
 
-class QAQuestionRaw(BaseModel):
+class QAQuestionParticipant(BaseModel):
+    """UUID-free Q&A item for the participant /state snapshot.
+
+    SECURITY: carries no author/upvoter UUIDs. The two personalised booleans are
+    resolved server-side from the requesting participant's own pid, so the wire
+    never exposes anyone's identity.
+    """
     id: str
     text: str
-    author_uuid: str
-    upvoter_uuids: list[str]
+    upvote_count: int
     answered: bool
     timestamp: float
+    is_own: bool
+    has_upvoted: bool
 
 
 class QuizData(BaseModel):
@@ -240,11 +247,11 @@ class CodeReviewParticipantState(BaseModel):
 
 
 class DebateArgumentParticipant(BaseModel):
+    """UUID-free debate argument for the participant /state snapshot."""
     id: str
-    author_uuid: str
     side: str
     text: str
-    upvoters: list[str]
+    upvote_count: int
     ai_generated: bool
     merged_into: str | None = None
     is_own: bool
@@ -258,14 +265,19 @@ class WordcloudData(BaseModel):
 
 
 class DebateData(BaseModel):
+    """UUID-free personalised debate state for the participant /state snapshot.
+
+    SECURITY: champions is side→bool (not side→uuid); the auto_assigned uuid list
+    is replaced by the per-viewer my_auto_assigned flag; arguments are UUID-free.
+    """
     statement: str | None = None
     phase: str | None = None
     my_side: str | None = None
     my_is_champion: bool
+    my_auto_assigned: bool = False
     side_counts: dict[str, int]
     arguments: list[DebateArgumentParticipant]
-    champions: dict[str, str]
-    auto_assigned: list[str]
+    champions: dict[str, bool]
     first_side: str | None = None
     round_index: int | None = None
     round_timer_seconds: int | None = None
@@ -275,6 +287,10 @@ class DebateData(BaseModel):
 class ParticipantStateResponse(BaseModel):
     mode: str
     my_score: int
+    # Opaque, non-identifying token this participant is keyed by in the
+    # scores_updated broadcast — lets the client pick out its own live score
+    # without any UUID on the wire. See daemon.scores.score_token.
+    my_score_token: str
     my_name: str
     my_avatar: str
     current_activity: str
@@ -284,7 +300,7 @@ class ParticipantStateResponse(BaseModel):
     # participant_names_updated broadcast arrives.
     participant_names: list[str] = []
     wordcloud: WordcloudData
-    qa_questions: list[QAQuestionRaw]
+    qa_questions: list[QAQuestionParticipant]
     quiz: QuizData | None = None
     quiz_active: bool
     my_voted_indices: list[int] | None = None
@@ -317,10 +333,10 @@ def _files_count() -> int:
 
 
 def _build_qa_for_participant(pid: str) -> list[dict]:
-    """Build QA question list (raw format) for participant — is_own/has_upvoted computed client-side."""
+    """Build the UUID-free Q&A list for participant pid (is_own/has_upvoted resolved here)."""
     from daemon.qa.state import qa_state
 
-    return qa_state.build_question_list_raw()
+    return qa_state.build_question_list_for_participant(pid)
 
 
 def _build_codereview_for_participant(pid: str) -> dict:
@@ -348,33 +364,30 @@ def _build_codereview_for_participant(pid: str) -> dict:
 
 
 def _build_debate_for_participant(pid: str) -> dict:
-    """Build debate state personalised for participant pid."""
+    """Build the UUID-free, personalised debate state for participant pid.
+
+    Shared fields come from the UUID-free public_snapshot(); the per-viewer facts
+    (my_side / my_is_champion / my_auto_assigned and each argument's is_own /
+    has_upvoted) are resolved here from the raw state using this participant's own
+    pid — the returned dict never contains anyone's UUID.
+    """
     from daemon.debate.state import debate_state
 
     ds = debate_state
-    snap = ds.snapshot()
-    # Add personalised fields
-    my_side = ds.sides.get(pid)
-    snap["debate_my_side"] = my_side
-    my_champion_side = None
-    for side, champ_pid in ds.champions.items():
-        if champ_pid == pid:
-            my_champion_side = side
-            break
-    snap["debate_my_is_champion"] = my_champion_side is not None
-    snap["debate_side_counts"] = {"for": 0, "against": 0}
-    for s in ds.sides.values():
-        if s in snap["debate_side_counts"]:
-            snap["debate_side_counts"][s] += 1
-    # Personalise arguments
+    snap = ds.public_snapshot()
+    # public_snapshot() built its arguments from ds.arguments in order — zip the
+    # raw entries back in to resolve the two per-viewer booleans.
     snap["arguments"] = [
         {
-            **a,
-            "is_own": a["author_uuid"] == pid,
-            "has_upvoted": pid in a["upvoters"],
+            **public,
+            "is_own": raw["author_uuid"] == pid,
+            "has_upvoted": pid in raw["upvoters"],
         }
-        for a in snap["arguments"]
+        for public, raw in zip(snap["arguments"], ds.arguments)
     ]
+    snap["my_side"] = ds.sides.get(pid)
+    snap["my_is_champion"] = pid in ds.champions.values()
+    snap["my_auto_assigned"] = pid in ds.auto_assigned
     return snap
 
 
@@ -383,6 +396,13 @@ def _get_score(pid: str) -> int:
     from daemon.scores import scores
 
     return scores.scores.get(pid, 0)
+
+
+def _score_token(pid: str) -> str:
+    """This participant's opaque, non-identifying score-broadcast token."""
+    from daemon.scores import score_token
+
+    return score_token(pid)
 
 
 def _build_quiz_for_participant(pid: str) -> dict:
@@ -830,6 +850,8 @@ async def get_participant_state(request: Request):
         # Core identity / session
         "mode": ps.mode,
         "my_score": 0 if ps.mode == "talk" else _get_score(pid),
+        # Opaque token that keys this participant in the scores_updated broadcast.
+        "my_score_token": _score_token(pid),
         "my_name": ps.participant_names.get(pid, ""),
         "my_avatar": ps.participant_avatars.get(pid, ""),
         "current_activity": ps.current_activity,
@@ -850,21 +872,8 @@ async def get_participant_state(request: Request):
         **poll_fields,
         # Codereview (personalised)
         "codereview": cr,
-        # Debate (personalised, grouped)
-        "debate": {
-            "statement": debate.get("statement"),
-            "phase": debate.get("phase"),
-            "my_side": debate.get("debate_my_side"),
-            "my_is_champion": debate.get("debate_my_is_champion"),
-            "side_counts": debate.get("debate_side_counts"),
-            "arguments": debate.get("arguments", []),
-            "champions": debate.get("champions", {}),
-            "auto_assigned": debate.get("auto_assigned", []),
-            "first_side": debate.get("first_side"),
-            "round_index": debate.get("round_index"),
-            "round_timer_seconds": debate.get("round_timer_seconds"),
-            "round_timer_started_at": debate.get("round_timer_started_at"),
-        },
+        # Debate (personalised, grouped, UUID-free)
+        "debate": debate,
         # Emoji counters (talk mode)
         "emoji_counters": dict(ps.emoji_counters),
         # Slides (from misc state — synced from Railway)

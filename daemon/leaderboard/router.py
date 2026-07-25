@@ -4,9 +4,9 @@ from pydantic import BaseModel
 
 from daemon.leaderboard.state import leaderboard_state
 from daemon.participant.state import participant_state
-from daemon.scores import scores
+from daemon.scores import notify_host_scores, scores
 from daemon.ws_messages import LeaderboardRevealedMsg, ScoresUpdatedMsg
-from daemon.ws_publish import broadcast, notify_host
+from daemon.ws_publish import broadcast
 
 _AVATAR_COLORS = ['#e74c3c','#e67e22','#f1c40f','#27ae60','#16a085','#2980b9','#8e44ad','#c0392b']
 
@@ -67,7 +67,8 @@ async def reset_scores():
     was_empty = not scores.snapshot()
     scores.reset()
     if not was_empty:
-        msg = ScoresUpdatedMsg(scores=scores.snapshot())
-        broadcast(msg)
-        await notify_host(msg)
+        # Participants get the UUID-free token-keyed map (empty after reset);
+        # the trusted host keeps the UUID-keyed map.
+        broadcast(ScoresUpdatedMsg(scores=scores.snapshot_tokenized()))
+        await notify_host_scores()
     return Response(status_code=204)

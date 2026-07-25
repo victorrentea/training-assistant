@@ -284,7 +284,11 @@ components:
             type: object
             additionalProperties:
               type: integer
-            description: uuid → score (all participants)
+            description: >-
+              opaque per-session score token → score. NOT keyed by UUID — each
+              participant learns only its own token via GET /state
+              (my_score_token) and reads scores[my_score_token]. The token cannot
+              be replayed as an X-Participant-ID identity.
 
     # ── Word Cloud ────────────────────────────────────────────────────────────
 
@@ -384,7 +388,7 @@ components:
     # ── Debate ────────────────────────────────────────────────────────────────
 
     debate_updated:
-      summary: Full debate state snapshot
+      summary: UUID-free debate state snapshot (participant-facing)
       x-feature: debate
       payload:
         type: object
@@ -400,11 +404,13 @@ components:
             type: string
             nullable: true
             enum: [null, side_selection, arguments, ai_cleanup, prep, live_debate, ended]
-          sides:
+          side_counts:
             type: object
             additionalProperties:
-              type: string
-            description: uuid → "for"|"against"
+              type: integer
+            description: >-
+              Aggregate members per side ("for"/"against" → count). Replaces the
+              old uuid→side map — this frame carries NO participant UUIDs.
           arguments:
             type: array
             items:
@@ -412,12 +418,8 @@ components:
           champions:
             type: object
             additionalProperties:
-              type: string
-            description: '"for"|"against" → uuid'
-          auto_assigned:
-            type: array
-            items:
-              type: string
+              type: boolean
+            description: '"for"|"against" → whether that side has claimed a champion (no uuid)'
           first_side:
             type: string
             nullable: true
@@ -701,19 +703,18 @@ components:
 
     QAQuestion:
       type: object
-      required: [id, text, author_uuid, upvoter_uuids, answered, timestamp]
+      required: [id, text, upvote_count, answered, timestamp]
+      description: >-
+        Participant-facing Q&A item — UUID-free. No author/upvoter UUIDs; only the
+        aggregate upvote_count. "Is this mine / have I upvoted" is resolved
+        server-side per connection and delivered via GET /state.
       properties:
         id:
           type: string
         text:
           type: string
-        author_uuid:
-          type: string
-        upvoter_uuids:
-          type: array
-          items:
-            type: string
-          description: Client computes is_own and has_upvoted locally from its own UUID
+        upvote_count:
+          type: integer
         answered:
           type: boolean
         timestamp:
@@ -721,21 +722,20 @@ components:
 
     DebateArgument:
       type: object
-      required: [id, author_uuid, side, text, upvoters, ai_generated]
+      required: [id, side, text, upvote_count, ai_generated]
+      description: >-
+        Participant-facing debate argument — UUID-free. No author_uuid / upvoter
+        list; only the aggregate upvote_count.
       properties:
         id:
-          type: string
-        author_uuid:
           type: string
         side:
           type: string
           enum: [for, against]
         text:
           type: string
-        upvoters:
-          type: array
-          items:
-            type: string
+        upvote_count:
+          type: integer
         ai_generated:
           type: boolean
         merged_into:

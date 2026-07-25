@@ -331,7 +331,12 @@ class DebateState:
         return (for_count, against_count)
 
     def snapshot(self) -> dict:
-        """Return full serializable state. Convert sets to sorted lists, datetime to isoformat."""
+        """Return full serializable state (HOST-facing — keeps UUIDs).
+
+        Convert sets to sorted lists, datetime to isoformat. Consumed only by the
+        trusted host state push (host_state_router). NEVER send this to
+        participants — use public_snapshot() for the participant broadcast.
+        """
         return {
             "statement": self.statement,
             "phase": self.phase,
@@ -345,6 +350,42 @@ class DebateState:
             ],
             "champions": dict(self.champions),
             "auto_assigned": sorted(self.auto_assigned),
+            "first_side": self.first_side,
+            "round_index": self.round_index,
+            "round_timer_seconds": self.round_timer_seconds,
+            "round_timer_started_at": self.round_timer_started_at.isoformat() if self.round_timer_started_at else None,
+        }
+
+    def public_argument(self, arg: dict) -> dict:
+        """UUID-free view of one argument (no author_uuid, no upvoter list)."""
+        return {
+            "id": arg["id"],
+            "side": arg["side"],
+            "text": arg["text"],
+            "upvote_count": len(arg["upvoters"]),
+            "ai_generated": arg["ai_generated"],
+            "merged_into": arg.get("merged_into"),
+        }
+
+    def public_snapshot(self) -> dict:
+        """UUID-free debate snapshot for the participant broadcast.
+
+        SECURITY: identical for every participant, so it carries NO UUIDs:
+          • sides (uuid→side) is replaced by aggregate side_counts;
+          • arguments drop author_uuid + the upvoter list, keeping only counts;
+          • champions (side→uuid) becomes side→bool (whether the side is claimed);
+          • auto_assigned (a list of UUIDs) is dropped entirely.
+        Per-viewer facts (my_side, my_is_champion, is_own, has_upvoted,
+        my_auto_assigned) are resolved server-side per connection and delivered
+        privately via GET /state, never over this frame.
+        """
+        for_count, against_count = self.side_counts()
+        return {
+            "statement": self.statement,
+            "phase": self.phase,
+            "side_counts": {"for": for_count, "against": against_count},
+            "arguments": [self.public_argument(a) for a in self.arguments],
+            "champions": {side: True for side in self.champions},
             "first_side": self.first_side,
             "round_index": self.round_index,
             "round_timer_seconds": self.round_timer_seconds,

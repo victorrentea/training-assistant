@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon.participant.state import participant_state
-from daemon.scores import scores
+from daemon.scores import notify_host_scores, scores
 from daemon.wordcloud.state import wordcloud_state
 from daemon.ws_messages import ScoresUpdatedMsg, WordcloudUpdatedMsg
 from daemon.ws_publish import broadcast, broadcast_event
@@ -51,8 +51,9 @@ async def submit_word(request: Request, body: SubmitWordBody):
     scores.add_score(pid, 200)
     request.state.write_back_events = [
         broadcast_event(WordcloudUpdatedMsg(**snapshot)),
-        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot())),
+        broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
+    await notify_host_scores()
 
     return Response(status_code=204)
 

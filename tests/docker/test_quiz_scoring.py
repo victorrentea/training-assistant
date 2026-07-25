@@ -82,18 +82,20 @@ def test_quiz_vote_results_and_scoring():
         # ── Step 2: Participants vote via API ──
         # Quiz options: A="3", B="4", C="5"
         # Alice votes B (correct), Bob votes A (wrong)
+        # Vote body is the current integer-index contract: {options: [idx]}.
+        # Options A/B/C map to indices 0/1/2 → Alice votes B (1), Bob votes A (0).
         pax1._page.evaluate("""async () => {
             await fetch('/' + _sessionId + '/api/participant/quiz/vote', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'x-participant-id': _myUUID},
-                body: JSON.stringify({option_ids: ['B']})
+                body: JSON.stringify({options: [1]})
             });
         }""")
         pax2._page.evaluate("""async () => {
             await fetch('/' + _sessionId + '/api/participant/quiz/vote', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'x-participant-id': _myUUID},
-                body: JSON.stringify({option_ids: ['A']})
+                body: JSON.stringify({options: [0]})
             });
         }""")
         pax1_raw.wait_for_timeout(500)

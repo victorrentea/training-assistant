@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from daemon.codereview.state import codereview_state
 from daemon.participant.state import participant_state
-from daemon.scores import scores
+from daemon.scores import notify_host_scores, scores
 from daemon.ws_messages import (
     ActivityUpdatedMsg,
     CodereviewClearedMsg,
@@ -216,7 +216,8 @@ async def confirm_line(body: ConfirmLineRequest):
         scores.add_score(pid, 200)
 
     broadcast(CodereviewLineConfirmedMsg(line=body.line))
-    broadcast(ScoresUpdatedMsg(scores=scores.snapshot()))
+    broadcast(ScoresUpdatedMsg(scores=scores.snapshot_tokenized()))
+    await notify_host_scores()
 
     return ConfirmLineResponse(confirmed_line=body.line)
 
