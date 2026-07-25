@@ -1348,6 +1348,58 @@ function _renderEngagementPopover() {
     URL.revokeObjectURL(a.href);
   }
 
+  // ── Attendance sheet (attendees.md) download + printable PDF ──
+  // The host endpoint renders attendees.md fresh from the live roster, so both
+  // controls always reflect the current attendance. Mirrors downloadKeyPoints()
+  // (raw file → Blob → a.download) and participant.html downloadSummaryPdf()
+  // (marked-render → window.open print window → window.print → "Save as PDF").
+  async function _fetchAttendeesMd() {
+    const res = await fetch(API('/attendees.md'), { cache: 'no-store' });
+    if (!res.ok) throw new Error('attendees.md fetch failed: ' + res.status);
+    return await res.text();
+  }
+
+  async function downloadAttendeesMd() {
+    let md;
+    try { md = await _fetchAttendeesMd(); }
+    catch (e) { console.warn(e); alert('Could not load the attendance sheet.'); return; }
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `attendees-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function downloadAttendeesPdf() {
+    let md;
+    try { md = await _fetchAttendeesMd(); }
+    catch (e) { console.warn(e); alert('Could not load the attendance sheet.'); return; }
+    // marked is loaded on the host page (jsdelivr, allowed by the host CSP).
+    // Fall back to an escaped <pre> if it somehow isn't, so print still works.
+    const body = (typeof marked !== 'undefined')
+      ? marked.parse(md)
+      : '<pre>' + md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+    // Open a blank print window and write a self-contained document with inline
+    // print styles, then trigger the browser print dialog ("Save as PDF"). The
+    // about:blank window inherits the host page CSP; only inline styles are used
+    // (allowed by style-src 'unsafe-inline') and no scripts are injected, so the
+    // CSP does not block the render.
+    const w = window.open('', '_blank');
+    if (!w) { alert('Please allow pop-ups to print the attendance sheet.'); return; }
+    w.document.write('<!DOCTYPE html><html><head><title>Attendance</title><style>'
+      + 'body{font-family:system-ui,-apple-system,sans-serif;padding:1.5rem 2.5rem;max-width:760px;margin:0 auto;color:#111;line-height:1.55}'
+      + 'h1{font-size:1.5rem;margin:0 0 .5rem;border-bottom:2px solid #333;padding-bottom:.3rem}'
+      + 'em{color:#555;font-style:italic}'
+      + 'ol{padding-left:1.6rem}li{margin:.28em 0}'
+      + 'p strong{font-size:1.05rem}'
+      + '@media print{body{padding:0}}'
+      + '</style></head><body>' + body + '</body></html>');
+    w.document.close();
+    w.focus();
+    setTimeout(function () { w.print(); }, 400);
+  }
+
   // Wire the reset-score control via a single delegated listener on the (stable)
   // #pax-list element, attached once. The list is re-rendered by replacing
   // innerHTML, so per-element handlers would be lost; delegation survives every

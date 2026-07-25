@@ -168,20 +168,25 @@ def _target_path(folder: Path) -> Path:
     return folder / ATTENDEES_FILENAME
 
 
-def regenerate_attendees(folder: Path | None = None, gdrive_url: str | None = None) -> Path | None:
-    """Fully regenerate `attendees.md` from the live roster. Returns the path written.
+def build_attendees_md(folder: Path | None = None, gdrive_url: str | None = None) -> str:
+    """Render the current `attendees.md` text from the live roster WITHOUT writing.
 
-    No-op (returns None) when there is no active session folder on disk.
+    This is the read-side counterpart of :func:`regenerate_attendees`, used by the
+    host endpoint: a GET must be side-effect-free, so it renders fresh in-memory
+    from ``_build_host_participants_list()`` and never touches the file on disk.
+
+    ``folder`` defaults to the active session folder. When no session is active
+    (folder resolves to ``None``) the roster is rendered as empty so the caller
+    receives the "no attendees yet" placeholder document rather than a server
+    error — this is the host endpoint's "no active session" contract.
     """
-    from daemon.files_md import atomic_write
     from daemon.host_state_router import _build_host_participants_list
+    from daemon.participant.state import participant_state
 
     if folder is None:
         from daemon.misc.content_files import get_active_session_folder
 
         folder = get_active_session_folder()
-    if folder is None:
-        return None
 
     if gdrive_url is None:
         try:
@@ -191,15 +196,32 @@ def regenerate_attendees(folder: Path | None = None, gdrive_url: str | None = No
         except Exception:
             gdrive_url = None
 
-    from daemon.participant.state import participant_state
-
-    participants = _build_host_participants_list()
-    text = render_attendees_md(
+    # No active session folder → render an empty roster so we never leak a stale
+    # in-memory roster and always emit the "no attendees yet" placeholder.
+    participants = [] if folder is None else _build_host_participants_list()
+    return render_attendees_md(
         folder,
         participants,
         gdrive_url,
         anonymous_pids=set(participant_state.anonymous_pids),
     )
+
+
+def regenerate_attendees(folder: Path | None = None, gdrive_url: str | None = None) -> Path | None:
+    """Fully regenerate `attendees.md` from the live roster. Returns the path written.
+
+    No-op (returns None) when there is no active session folder on disk.
+    """
+    from daemon.files_md import atomic_write
+
+    if folder is None:
+        from daemon.misc.content_files import get_active_session_folder
+
+        folder = get_active_session_folder()
+    if folder is None:
+        return None
+
+    text = build_attendees_md(folder, gdrive_url)
     target = _target_path(folder)
     atomic_write(target, text)
     return target

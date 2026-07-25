@@ -22,6 +22,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
 - [Infrastructure](#feature-infrastructure)
 - [Misc](#feature-misc)
+- [Attendees](#feature-attendees)
 - [Attention](#feature-attention)
 - [Files](#feature-files)
 - [Intellij](#feature-intellij)
@@ -444,6 +445,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Files Md, return the per-session files.md content with HTML comments stripped.<br>`GET /api/participant/files-md` | - | `raw_markdown: string`<br>`updated_at?: string` |
+
+## Feature: Attendees
+
+### Host REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Get Attendees Md, return the current `attendees.md` for the active session as Markdown text.<br>`GET /api/{session_id}/host/attendees.md` | - | `any` |
 
 ## Feature: Attention
 
