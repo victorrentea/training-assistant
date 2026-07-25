@@ -24,6 +24,7 @@ from railway.features.ws import router as ws
 from railway.features.ws.proxy_bridge import participant_proxy_router
 from railway.features.ws.router import session_router as ws_session_router
 from railway.shared.auth import require_host_auth
+from railway.shared.rate_limit import rate_limit_probe
 from railway.shared.session_guard import InvalidSessionRedirect, require_valid_session
 from railway.shared.state import state  # re-exported for tests: from railway.app import app, state
 
@@ -186,7 +187,7 @@ if os.environ.get("OTEL_TRACES_FILE"):
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.get("/api/is-active-session")
+@app.get("/api/is-active-session", dependencies=[Depends(rate_limit_probe)])
 async def is_active_session():
     """Public endpoint: returns whether daemon is connected and any session is active.
 
@@ -202,21 +203,28 @@ async def is_active_session():
 
 # ── Public status endpoint (version probe + session state) ──
 
-@app.get("/api/status")
+@app.get("/api/status", dependencies=[Depends(rate_limit_probe)])
 async def get_status():
     """Public endpoint: backend version, active session info, and current slides."""
     from railway.shared.version import get_backend_version
+    # session_active requires the daemon too: a lingering session_id after a
+    # daemon disconnect is not a usable session (mirrors /api/is-active-session).
     return {
         "backend_version": get_backend_version(),
         "git_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", ""),
         "daemon_code_timestamp": state.daemon_code_timestamp,
         "railway_started_at": _RAILWAY_STARTED_AT_ISO,
-        "session_active": state.session_id is not None,
+        "session_active": state.session_id is not None and state.daemon_ws is not None,
     }
 
 
-@app.get("/{session_id}/api/status")
-async def get_session_status(session_id: str, _=Depends(require_valid_session)):
+# rate_limit_probe is declared BEFORE require_valid_session so invalid-session
+# probes are throttled too — otherwise the 200/404 enumeration oracle stays open.
+@app.get(
+    "/{session_id}/api/status",
+    dependencies=[Depends(rate_limit_probe), Depends(require_valid_session)],
+)
+async def get_session_status(session_id: str):
     """Session-scoped public status endpoint — returns 200 for valid session, 404 for invalid."""
     from railway.shared.version import get_backend_version
     return {

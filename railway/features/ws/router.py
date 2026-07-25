@@ -8,7 +8,6 @@ import os
 import secrets
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import quote
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -42,6 +41,18 @@ logger = logging.getLogger(__name__)
 # daemon is still absent after this window.
 _DAEMON_DISCONNECT_GRACE_SECONDS = float(os.environ.get("DAEMON_DISCONNECT_GRACE_SECONDS", "5"))
 _pending_kick_task: asyncio.Task | None = None
+
+# Strong references to fire-and-forget tasks so the event loop doesn't garbage
+# collect them mid-flight (asyncio only holds weak refs to running tasks).
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _spawn_background(coro) -> asyncio.Task:
+    """Schedule a coroutine as a tracked background task."""
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
 
 
 async def _kick_old_connection(pid: str):
@@ -82,6 +93,30 @@ async def _handle_code_timestamp(data: dict):
         state.daemon_code_timestamp = ts
 
 
+# Neutral landing target for a participant socket whose session is no longer
+# valid. SECURITY: never steer an old-cohort participant onto the NEW session id
+# (that is a cross-cohort residual hijack) nor echo back the OLD id — always send
+# them to the generic landing, matching the stale-reconnect path in
+# session_websocket_endpoint. The SPA obeys this generic `redirect` frame.
+_INVALID_REDIRECT = {"type": "redirect", "url": "/?error=invalid"}
+
+
+def _clear_session_caches() -> None:
+    """Drop per-session backend caches on a session switch/end.
+
+    Without this, slides, uploaded files and participant identity/IP maps from a
+    previous cohort would leak into the next session that reuses this process.
+    """
+    state.slides = []
+    state.slides_updated = {}
+    state.uploaded_files = {}
+    state.upload_next_id = 0
+    state.participant_history = set()
+    state.participant_ips = {}
+    state.participant_names = {}
+    state.participant_avatars = {}
+
+
 async def _handle_set_session_id(data: dict):
     """Daemon sets/changes active session. Drop stale host/participant connections."""
     new_id = data.get("session_id")
@@ -97,22 +132,25 @@ async def _handle_set_session_id(data: dict):
     else:
         session_changed = old_id != state.session_id
 
-    # If active session changed (including ending it), disconnect old session clients.
+    # If active session changed (including ending it), disconnect old session
+    # clients and drop the previous cohort's cached state.
     if had_active_session and session_changed:
+        _clear_session_caches()
         for pid, ws in list(state.participants.items()):
             if pid.startswith("__") and pid != "__host__":
                 continue
             if pid == "__host__":
                 target_url = f"/host/{state.session_id}" if state.session_id else "/host"
                 close_code = 1000
+                frame = {"type": "redirect", "url": target_url}
             else:
-                if state.session_id:
-                    target_url = f"/{state.session_id}"
-                else:
-                    target_url = f"/?session_id={quote(str(old_id or ''))}"
+                # Old-cohort participant: always to the neutral landing (never the
+                # new session id, never the old id) — close 1008 like a stale
+                # reconnect. See _INVALID_REDIRECT above.
+                frame = _INVALID_REDIRECT
                 close_code = 1008
             try:
-                await ws.send_text(json.dumps({"type": "redirect", "url": target_url}))
+                await ws.send_text(json.dumps(frame))
                 await ws.close(close_code)
             except Exception:
                 pass
@@ -168,7 +206,7 @@ def _cancel_pending_kick():
         task.cancel()
 
 
-async def _evict_all_clients_after_grace(old_session_id: str | None):
+async def _evict_all_clients_after_grace():
     """Kick participants/host if the daemon stays disconnected past the grace window."""
     try:
         await asyncio.sleep(_DAEMON_DISCONNECT_GRACE_SECONDS)
@@ -184,15 +222,23 @@ async def _evict_all_clients_after_grace(old_session_id: str | None):
         if pid == "__host__":
             target_url = f"/host/{state.session_id}" if state.session_id else "/host"
             close_code = 1000
+            frame = {"type": "redirect", "url": target_url}
         else:
-            target_url = f"/?session_id={quote(str(old_session_id or ''))}"
+            # Old-cohort participant → neutral landing (never echo the old id). See
+            # _INVALID_REDIRECT / the stale-reconnect path.
+            frame = _INVALID_REDIRECT
             close_code = 1008
         try:
-            await ws.send_text(json.dumps({"type": "redirect", "url": target_url}))
+            await ws.send_text(json.dumps(frame))
             await ws.close(close_code)
         except Exception:
             pass
         state.participants.pop(pid, None)
+    # Daemon is confirmed gone: invalidate the session so /api/status stops
+    # reporting active and require_valid_session no longer validates the now-stale
+    # id (closing the session-enumeration oracle), and drop the cohort's caches.
+    state.session_id = None
+    _clear_session_caches()
     await broadcast_slides_updated()
 
 
@@ -227,14 +273,20 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
     except Exception:
         logger.warning("Failed to sync online participants to daemon on connect")
 
-    await broadcast_slides_updated()
-
     # Send static file inventory for daemon to diff and upload changes
     try:
         static_hashes = _build_static_hashes()
         await websocket.send_json({"type": "sync_files", "static_hashes": static_hashes, "pdf_slugs": {}})
     except Exception:
         logger.warning("Failed to send sync_files to daemon")
+
+    # Refresh slides in the BACKGROUND, not inline. broadcast_slides_updated()
+    # issues a /api/slides proxy_request whose proxy_response only arrives once
+    # the receive loop below is running; awaiting it here would deadlock until
+    # PROXY_TIMEOUT (~5s), stalling set_session_id and leaving the session
+    # unusable for that whole window. Firing it as a task lets the loop start
+    # immediately and answer the proxy_request.
+    _spawn_background(broadcast_slides_updated())
 
     try:
         while True:
@@ -260,7 +312,7 @@ async def daemon_websocket_endpoint(websocket: WebSocket):
         # gone past the grace window.
         _cancel_pending_kick()
         global _pending_kick_task
-        _pending_kick_task = asyncio.create_task(_evict_all_clients_after_grace(state.session_id))
+        _pending_kick_task = asyncio.create_task(_evict_all_clients_after_grace())
 
 
 async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host: bool):
