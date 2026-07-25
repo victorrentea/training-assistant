@@ -9,10 +9,21 @@ class SessionRegistry:
         self._entries: dict[str, dict] = {}  # session_id -> {folder_name, session_type, created_at, ended_at}
 
     def register(self, session_id: str, folder_name: str, session_type: str = "workshop"):
+        """Record a session as active.
+
+        Idempotent across daemon reconnects: when the same session is re-announced
+        we PRESERVE the original ``created_at`` (so the TTL window measures from
+        the first time we saw the session, not the latest reconnect) and simply
+        clear ``ended_at`` — the session is live again. Prunes expired entries so
+        the map stays bounded.
+        """
+        self.expire_old()
+        existing = self._entries.get(session_id)
+        created_at = (existing or {}).get("created_at") or datetime.now(timezone.utc).isoformat()
         self._entries[session_id] = {
             "folder_name": folder_name,
             "session_type": session_type,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": created_at,
             "ended_at": None,
         }
 
