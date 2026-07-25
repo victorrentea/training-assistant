@@ -77,3 +77,19 @@ class Scores:
 
 
 scores = Scores()
+
+
+async def notify_host_scores():
+    """Push the UUID-keyed score map to the trusted host WS after a score change.
+
+    Single home for the host half of every score update: participants get the
+    token-keyed map (snapshot_tokenized) over the broadcast channel, while the
+    host — which maps scores by UUID to resolve names — gets this frame via
+    notify_host. host.js ignores the token-keyed participant fan-out it also
+    receives, so a score source that forgets this call silently freezes the
+    host scoreboard.
+    """
+    from daemon.ws_messages import ScoresUpdatedMsg
+    from daemon.ws_publish import notify_host
+
+    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))

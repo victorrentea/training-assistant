@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from daemon.participant.state import participant_state
 from daemon.quiz.state import quiz_state
-from daemon.scores import scores
+from daemon.scores import notify_host_scores, scores
 from daemon.ws_messages import (
     ActivityUpdatedMsg,
     QuizClearedMsg,
@@ -143,7 +143,7 @@ async def reveal_correct(body: RevealCorrectRequest):
     # Participants get the UUID-free token-keyed map; the trusted host keeps UUIDs.
     broadcast(ScoresUpdatedMsg(scores=scores.snapshot_tokenized()))
     await notify_host(QuizCorrectRevealedMsg(correct_indices=result["correct_indices"]))
-    await notify_host(ScoresUpdatedMsg(scores=result["scores"]))
+    await notify_host_scores()
     return Response(status_code=204)
 
 

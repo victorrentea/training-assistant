@@ -32,7 +32,7 @@ def mock_broadcast():
 
 @pytest.fixture
 def mock_notify_host():
-    with patch("daemon.leaderboard.router.notify_host", new_callable=AsyncMock) as mock:
+    with patch("daemon.leaderboard.router.notify_host_scores", new_callable=AsyncMock) as mock:
         yield mock
 
 

@@ -75,6 +75,17 @@ class QAState:
             key=lambda item: (-len(item[1]["upvoters"]), item[1]["timestamp"]),
         )
 
+    @staticmethod
+    def _public_question(qid: str, q: dict) -> dict:
+        """The UUID-free wire fields shared by the broadcast and /state shapes."""
+        return {
+            "id": qid,
+            "text": q["text"],
+            "upvote_count": len(q["upvoters"]),
+            "answered": q["answered"],
+            "timestamp": q["timestamp"],
+        }
+
     def build_question_list_public(self) -> list[dict]:
         """UUID-free question list for the participant broadcast.
 
@@ -83,16 +94,7 @@ class QAState:
         is resolved server-side per connection and delivered privately via
         GET /state (build_question_list_for_participant), never over this frame.
         """
-        return [
-            {
-                "id": qid,
-                "text": q["text"],
-                "upvote_count": len(q["upvoters"]),
-                "answered": q["answered"],
-                "timestamp": q["timestamp"],
-            }
-            for qid, q in self._sorted_questions()
-        ]
+        return [self._public_question(qid, q) for qid, q in self._sorted_questions()]
 
     def build_question_list_for_participant(self, pid: str) -> list[dict]:
         """UUID-free, per-connection question list for GET /state.
@@ -103,11 +105,7 @@ class QAState:
         """
         return [
             {
-                "id": qid,
-                "text": q["text"],
-                "upvote_count": len(q["upvoters"]),
-                "answered": q["answered"],
-                "timestamp": q["timestamp"],
+                **self._public_question(qid, q),
                 "is_own": q["author"] == pid,
                 "has_upvoted": pid in q["upvoters"],
             }

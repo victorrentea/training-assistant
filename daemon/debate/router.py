@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from daemon.debate.state import debate_state
 from daemon.participant.state import participant_state
-from daemon.scores import scores
+from daemon.scores import notify_host_scores, scores
 from daemon.ws_messages import (
     ActivityUpdatedMsg,
     DebateRoundEndedMsg,
@@ -16,7 +16,7 @@ from daemon.ws_messages import (
     DebateUpdatedMsg,
     ScoresUpdatedMsg,
 )
-from daemon.ws_publish import broadcast, broadcast_event, notify_host
+from daemon.ws_publish import broadcast, broadcast_event
 
 logger = logging.getLogger(__name__)
 
@@ -130,10 +130,7 @@ async def submit_argument(request: Request, body: ArgumentRequest):
         broadcast_event(DebateUpdatedMsg(**debate_state.public_snapshot())),
         broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
-    # Host is trusted → also push the UUID-keyed score map on its own channel so
-    # the host scoreboard updates live during debate. (The participant fan-out
-    # frame the host also receives is token-keyed and ignored by host.js.)
-    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
+    await notify_host_scores()
     return Response(status_code=204)
 
 
@@ -161,10 +158,7 @@ async def upvote_argument(request: Request, body: UpvoteRequest):
         broadcast_event(DebateUpdatedMsg(**debate_state.public_snapshot())),
         broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
-    # Host is trusted → also push the UUID-keyed score map on its own channel so
-    # the host scoreboard updates live during debate. (The participant fan-out
-    # frame the host also receives is token-keyed and ignored by host.js.)
-    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
+    await notify_host_scores()
     return Response(status_code=204)
 
 
@@ -189,10 +183,7 @@ async def volunteer_champion(request: Request):
         broadcast_event(DebateUpdatedMsg(**debate_state.public_snapshot())),
         broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
-    # Host is trusted → also push the UUID-keyed score map on its own channel so
-    # the host scoreboard updates live during debate. (The participant fan-out
-    # frame the host also receives is token-keyed and ignored by host.js.)
-    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
+    await notify_host_scores()
     return Response(status_code=204)
 
 

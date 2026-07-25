@@ -6,10 +6,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from daemon.participant.state import participant_state
-from daemon.scores import scores
+from daemon.scores import notify_host_scores, scores
 from daemon.wordcloud.state import wordcloud_state
 from daemon.ws_messages import ScoresUpdatedMsg, WordcloudUpdatedMsg
-from daemon.ws_publish import broadcast, broadcast_event, notify_host
+from daemon.ws_publish import broadcast, broadcast_event
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +53,7 @@ async def submit_word(request: Request, body: SubmitWordBody):
         broadcast_event(WordcloudUpdatedMsg(**snapshot)),
         broadcast_event(ScoresUpdatedMsg(scores=scores.snapshot_tokenized())),
     ]
-    # Host (trusted) gets the UUID-keyed score map on its own channel so its
-    # scoreboard updates live; host.js ignores the token-keyed participant frame.
-    await notify_host(ScoresUpdatedMsg(scores=scores.snapshot()))
+    await notify_host_scores()
 
     return Response(status_code=204)
 

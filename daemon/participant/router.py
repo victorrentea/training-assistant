@@ -375,28 +375,20 @@ def _build_debate_for_participant(pid: str) -> dict:
 
     ds = debate_state
     snap = ds.public_snapshot()
-    arguments = [
+    # public_snapshot() built its arguments from ds.arguments in order — zip the
+    # raw entries back in to resolve the two per-viewer booleans.
+    snap["arguments"] = [
         {
-            **ds.public_argument(a),
-            "is_own": a["author_uuid"] == pid,
-            "has_upvoted": pid in a["upvoters"],
+            **public,
+            "is_own": raw["author_uuid"] == pid,
+            "has_upvoted": pid in raw["upvoters"],
         }
-        for a in ds.arguments
+        for public, raw in zip(snap["arguments"], ds.arguments)
     ]
-    return {
-        "statement": snap["statement"],
-        "phase": snap["phase"],
-        "my_side": ds.sides.get(pid),
-        "my_is_champion": pid in ds.champions.values(),
-        "my_auto_assigned": pid in ds.auto_assigned,
-        "side_counts": snap["side_counts"],
-        "arguments": arguments,
-        "champions": snap["champions"],
-        "first_side": snap["first_side"],
-        "round_index": snap["round_index"],
-        "round_timer_seconds": snap["round_timer_seconds"],
-        "round_timer_started_at": snap["round_timer_started_at"],
-    }
+    snap["my_side"] = ds.sides.get(pid)
+    snap["my_is_champion"] = pid in ds.champions.values()
+    snap["my_auto_assigned"] = pid in ds.auto_assigned
+    return snap
 
 
 def _get_score(pid: str) -> int:
