@@ -2144,6 +2144,7 @@ components:
       properties:
         text:
           type: string
+          maxLength: 500
           title: Text
       type: object
       required:

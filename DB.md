@@ -18,7 +18,7 @@ log_level?: string
 ### `PersistedSessionState`
 
 ```
-session_id?: string  # 6-char alphanumeric join code
+session_id?: string  # URL-safe alphanumeric join code (CSPRNG-generated)
 saved_at?: string  # ISO timestamp of last snapshot write
 mode?: string  # workshop | talk
 current_activity?: string  # none | quiz | wordcloud | qa | codereview | debate

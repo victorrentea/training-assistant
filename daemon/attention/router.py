@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from daemon import log as daemon_log
 from daemon.emoji.rate_limit import SlidingWindowRateLimiter
@@ -29,8 +29,14 @@ class AttentionGlobalStateResponse(BaseModel):
     attention_enabled: bool
 
 
+# Server-side cap on a broadcast host notification. Without it a multi-hundred-KB
+# body could be fanned out to every connected participant (amplification / DoS).
+HOST_NOTIFICATION_MAX_LEN = 500
+
+
 class HostNotificationRequest(BaseModel):
-    text: str
+    # max_length rejects (422) an over-length body before it is broadcast.
+    text: str = Field(max_length=HOST_NOTIFICATION_MAX_LEN)
 
 
 # ── Host router (called directly on daemon localhost, like the emoji host router) ──
@@ -103,12 +109,18 @@ async def ring_bell(request: Request):
     if not bell_rate_limiter.allow(pid):
         return JSONResponse({"error": "Too many rings"}, status_code=429)
 
-    caller = participant_state.participant_names.get(pid, pid)
+    # Resolve a human display name. NEVER fall back to the raw pid/UUID — that
+    # leaked a UUID onto the projector. An unknown or blank name → "Someone".
+    caller = (participant_state.participant_names.get(pid) or "").strip() or "Someone"
+    # Anonymous flag via the same explicit signal used for attendees.md: a
+    # participant who typed a real name is not anonymous, even if it matches a
+    # fictional pool entry.
+    anonymous = pid in participant_state.anonymous_pids
 
     # Forward to the desktop overlay via the addons bridge — best-effort. One
     # `addons` log line per ring, success or drop (mirrors the emoji router).
     from daemon import addon_bridge_client
-    sent = addon_bridge_client.send_bell(caller)
+    sent = addon_bridge_client.send_bell(caller, anonymous)
     if sent:
         daemon_log.info("addons   ", f"🔔 {caller!r} rang the bell")
     else:
@@ -116,6 +128,6 @@ async def ring_bell(request: Request):
         daemon_log.info("addons   ", f"✗ {caller!r} rang the bell (bridge unavailable)")
 
     # Dual-render: the host browser surfaces the bell too (mirrors emoji_reaction).
-    await notify_host(BellRungMsg(caller=caller))
+    await notify_host(BellRungMsg(caller=caller, anonymous=anonymous))
 
     return Response(status_code=204)

@@ -31,6 +31,13 @@ from daemon.participant.names import (
 from daemon.participant.names import (
     refresh_avatar as _refresh_avatar_logic,
 )
+from daemon.participant.sanitize import (
+    MAX_NAME_LEN as _MAX_NAME_LEN_SHARED,
+)
+from daemon.participant.sanitize import (
+    normalize_for_dedup,
+    sanitize_name,
+)
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
@@ -39,8 +46,9 @@ from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
 # Server-side cap on participant display names; mirrored by maxlength="64" on
-# the participant page's three name inputs.
-_MAX_NAME_LEN = 64
+# the participant page's three name inputs. Sourced from the shared sanitizer so
+# the cap and the sanitization pipeline can never drift.
+_MAX_NAME_LEN = _MAX_NAME_LEN_SHARED
 _COORDS_RE = re.compile(r"^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$")
 _TIMEZONE_RE = re.compile(r"^🕐\s+(.+)$")
 
@@ -455,9 +463,17 @@ def _participant_display_names() -> list[str]:
 
 
 def _is_name_taken(pid: str, name: str) -> bool:
-    """True iff another participant already holds `name` (soft-conflict check)."""
+    """True iff another participant already holds `name` (soft-conflict check).
+
+    Compares on the normalized dedup key (casefold + NFC + collapsed whitespace)
+    so `Alice`/`alice`, NFC-vs-NFD `José` and double-space variants all count as
+    collisions — matching the client's post-sanitization view of a name.
+    """
+    target = normalize_for_dedup(name)
+    if not target:
+        return False
     return any(
-        other_pid != pid and other_name == name
+        other_pid != pid and normalize_for_dedup(other_name) == target
         for other_pid, other_name in participant_state.participant_names.items()
     )
 
@@ -584,23 +600,33 @@ async def register_participant(request: Request, body: RegisterRequest):
 
     # New participant — assign identity
     raw_name: str
-    explicit_name = (body.name or "").strip()[:_MAX_NAME_LEN]
+    # Sanitize at ingest: strip control/bidi/ANSI, collapse whitespace, NFC,
+    # cap length. An all-noise name sanitizes to "" and falls through to the
+    # auto-assign (anonymous) path just like an empty body.
+    explicit_name = sanitize_name(body.name)
     name_conflict = False
 
     if explicit_name:
+        # Explicit typed name → NOT anonymous (even if it matches a fictional
+        # pool entry). The anonymous tag is driven by an explicit signal, not by
+        # guessing from pool membership.
+        ps.anonymous_pids.discard(pid)
         # Uniqueness is checked but NEVER blocks: a taken name is accepted and
         # a soft conflict flag is returned (no 409). The in-session duplicate
         # indicator (driven by the names broadcast) handles it on the client.
         name_conflict = _is_name_taken(pid, explicit_name)
         raw_name = explicit_name
     elif ps.mode == "talk":
-        # Conference mode: auto-assign character name
+        # Conference mode: auto-assign character name → anonymous (no typed name).
+        ps.anonymous_pids.add(pid)
         fake_state = _build_mini_state()
         char_name, universe = assign_conference_name(fake_state)
         raw_name = char_name
         ps.participant_universes[pid] = universe
     else:
-        # Workshop mode: random LOTR name while trying to keep name/avatar in sync
+        # Workshop mode: random LOTR name → anonymous (no typed name).
+        ps.anonymous_pids.add(pid)
+        # random LOTR name while trying to keep name/avatar in sync
         taken_names = set(ps.participant_names.values())
         taken_avatars = {
             a
@@ -681,9 +707,15 @@ async def rename_participant(request: Request, body: RenameRequest):
             {"error": "Participant not registered — call /register first"}, status_code=400
         )
 
-    raw_name = body.name.strip()[:_MAX_NAME_LEN]
+    # Sanitize at ingest (same choke point as register): strip control/bidi/ANSI,
+    # collapse whitespace, NFC, cap length. A name that is empty after
+    # sanitization (or all-noise) is rejected.
+    raw_name = sanitize_name(body.name)
     if not raw_name:
         return JSONResponse({"error": "Name required"}, status_code=400)
+
+    # A rename is always an explicitly typed name → NOT anonymous.
+    ps.anonymous_pids.discard(pid)
 
     # Uniqueness is checked but NEVER blocks — accept the rename, flag the collision.
     name_conflict = _is_name_taken(pid, raw_name)

@@ -66,8 +66,10 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     if not participant_state.emoji_global_enabled:
         return Response(status_code=204)
 
-    # Throttle bursts: cap each participant at 15 reactions/minute (host exempt).
-    if not pid.startswith("__") and not emoji_rate_limiter.allow(pid):
+    # Throttle bursts: cap each participant at 15 reactions/minute. Only the
+    # ONE legitimate host id is exempt — matching on the exact "__host__" id, not
+    # a "__" prefix, so a crafted "__x" X-Participant-ID can't bypass the limit.
+    if pid != "__host__" and not emoji_rate_limiter.allow(pid):
         return JSONResponse({"error": "Too many reactions"}, status_code=429)
 
     # Forward to desktop overlay via addons bridge WS — fire and forget. A stable

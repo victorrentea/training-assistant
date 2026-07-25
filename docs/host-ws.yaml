@@ -227,7 +227,10 @@ components:
             enum: [bell_rung]
           caller:
             type: string
-            description: Resolved display name of the participant who rang
+            description: Resolved display name of the participant who rang (never a UUID; "Someone" when unknown)
+          anonymous:
+            type: boolean
+            description: True when the ringer joined via the auto-assign path (no typed name); defaults to false
 
     # ── Paste & File Upload ───────────────────────────────────────────────────
 

@@ -68,14 +68,16 @@ class AddonBridgeClient:
             msg["glow"] = glow
         return self._send(msg)
 
-    def send_bell(self, caller_name: str) -> bool:
+    def send_bell(self, caller_name: str, anonymous: bool = False) -> bool:
         """Forward an attention bell to the overlay. Best-effort; never raises.
 
-        Emits exactly ``{"type":"bell_ring","caller":"<name>"}`` — the shared wire
-        contract the merged Swift receiver expects verbatim. Returns True if sent,
-        False when the bridge is disconnected (caller logs the drop).
+        Emits ``{"type":"bell_ring","caller":"<name>","anonymous":<bool>}`` — the
+        shared wire contract the merged Swift receiver reads (``type``+``caller``
+        unchanged; ``anonymous`` is the new optional field the Swift side treats
+        as defaulting to false). Returns True if sent, False when the bridge is
+        disconnected (caller logs the drop).
         """
-        msg = {"type": "bell_ring", "caller": caller_name}
+        msg = {"type": "bell_ring", "caller": caller_name, "anonymous": anonymous}
         return self._send(msg)
 
     def send_session_started(self, participant_url: str, session_folder: str | None = None) -> bool:
@@ -263,9 +265,9 @@ def send_emoji(emoji: str, glow: str | None = None) -> bool:
     return _client is not None and _client.send_emoji(emoji, glow)
 
 
-def send_bell(caller_name: str) -> bool:
+def send_bell(caller_name: str, anonymous: bool = False) -> bool:
     """Best-effort bell_ring send to addons overlay. Returns True if sent."""
-    return _client is not None and _client.send_bell(caller_name)
+    return _client is not None and _client.send_bell(caller_name, anonymous)
 
 
 def send_session_started(participant_url: str, session_folder: str | None = None) -> bool:

@@ -34,6 +34,13 @@ class ParticipantState:
         self.participant_names: dict[str, str] = {}
         self.participant_avatars: dict[str, str] = {}
         self.participant_universes: dict[str, str] = {}
+        # Explicit anonymity signal: pids that joined via the auto-assign path
+        # (empty/blank name → fictional-pool name) and have NOT since typed a
+        # real name. Drives the attendees.md "(anonymous)" tag and the bell's
+        # anonymous flag WITHOUT guessing from pool membership (so a participant
+        # who deliberately types "Frodo" is never mis-tagged). Persisted so the
+        # tag survives a daemon restart / reconnect.
+        self.anonymous_pids: set[str] = set()
         self.online_participants: set[str] = set()
         self.scores: dict[str, int] = {}
         self.locations: dict[str, str] = {}
@@ -72,6 +79,14 @@ class ParticipantState:
         with self._lock:
             # Roster may be replaced wholesale — force the next names broadcast.
             self.last_broadcast_names = None
+            # Restore the explicit anonymity signal. A snapshot that omits it
+            # (legacy file) leaves everyone untagged rather than guessing from
+            # pool membership — prefer under-tagging over mis-tagging a real name.
+            _anon = data.get("anonymous_pids")
+            if isinstance(_anon, (list, set, tuple)):
+                self.anonymous_pids = {str(p) for p in _anon}
+            elif isinstance(data.get("participants"), dict):
+                self.anonymous_pids.clear()
             participants = data.get("participants")
             if isinstance(participants, dict):
                 self.participant_names.clear()
@@ -162,6 +177,9 @@ class ParticipantState:
                 "emoji_global_enabled": self.emoji_global_enabled,
                 "attention_enabled": self.attention_enabled,
                 "engagement": {pid: dict(views) for pid, views in self.engagement.items()},
+                # Explicit anonymity signal — persisted so the "(anonymous)" tag
+                # and the bell's anonymous flag survive a daemon restart.
+                "anonymous_pids": sorted(self.anonymous_pids),
             }
 
     def persist(self) -> None:
@@ -184,6 +202,7 @@ class ParticipantState:
             self.participant_names.clear()
             self.participant_avatars.clear()
             self.participant_universes.clear()
+            self.anonymous_pids.clear()
             self.online_participants.clear()
             self.scores.clear()
             self.locations.clear()
@@ -199,6 +218,32 @@ class ParticipantState:
             self.last_active_at.clear()
             self.last_view.clear()
             self.last_broadcast_names = None
+        # Outside the lock (avoids holding it across imports): clear per-session
+        # rate limiters so a returning UUID doesn't eat a stale 429 in a fresh
+        # session. See _reset_session_limiters for the leak this closes.
+        self._reset_session_limiters()
+
+    @staticmethod
+    def _reset_session_limiters() -> None:
+        """Clear module-level per-participant rate limiters on session reset.
+
+        The bell + emoji limiters are keyed by participant UUID and live at
+        module scope, so without this a UUID that hit its cap in the previous
+        session would start the next one already throttled. Deferred imports
+        keep this state module free of router (FastAPI) import cost and avoid a
+        circular import at load time; failures are swallowed because a missing
+        limiter must never break a session reset.
+        """
+        try:
+            from daemon.attention.router import bell_rate_limiter
+            bell_rate_limiter.reset()
+        except Exception:
+            pass
+        try:
+            from daemon.emoji.router import emoji_rate_limiter
+            emoji_rate_limiter.reset()
+        except Exception:
+            pass
 
 
 # Module-level singleton
