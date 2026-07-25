@@ -5,6 +5,17 @@ REGISTRY_TTL_DAYS = 90  # 3 months
 
 
 class SessionRegistry:
+    """Keys are stored lowercased: session-id matching is case-insensitive
+    everywhere else (see ``session_guard.is_active_session_id``), so the registry
+    must agree — otherwise a case-variant re-announce of the same session would
+    create a duplicate entry, and a case-variant past link would miss its entry.
+
+    Concurrency: all WRITES happen on the event loop (daemon WS handlers); READS
+    also come from FastAPI's threadpool (the sync guard dependencies), so readers
+    must use single atomic dict lookups — never a membership test followed by a
+    separate access (``expire_old`` may delete the entry in between).
+    """
+
     def __init__(self):
         self._entries: dict[str, dict] = {}  # session_id -> {folder_name, session_type, created_at, ended_at}
 
@@ -18,9 +29,10 @@ class SessionRegistry:
         the map stays bounded.
         """
         self.expire_old()
-        existing = self._entries.get(session_id)
+        key = session_id.lower()
+        existing = self._entries.get(key)
         created_at = (existing or {}).get("created_at") or datetime.now(timezone.utc).isoformat()
-        self._entries[session_id] = {
+        self._entries[key] = {
             "folder_name": folder_name,
             "session_type": session_type,
             "created_at": created_at,
@@ -28,19 +40,20 @@ class SessionRegistry:
         }
 
     def mark_ended(self, session_id: str):
-        if session_id in self._entries:
-            self._entries[session_id]["ended_at"] = datetime.now(timezone.utc).isoformat()
+        entry = self._entries.get(session_id.lower())
+        if entry is not None:
+            entry["ended_at"] = datetime.now(timezone.utc).isoformat()
 
     def is_valid(self, session_id: str) -> bool:
         """True if this session_id is active or a recent past session."""
-        if session_id not in self._entries:
+        entry = self._entries.get(session_id.lower())  # single read — see class docstring
+        if entry is None:
             return False
-        entry = self._entries[session_id]
         created_at = datetime.fromisoformat(entry["created_at"])
         return datetime.now(timezone.utc) - created_at < timedelta(days=REGISTRY_TTL_DAYS)
 
     def get(self, session_id: str) -> dict | None:
-        return self._entries.get(session_id)
+        return self._entries.get(session_id.lower())
 
     def expire_old(self):
         cutoff = datetime.now(timezone.utc) - timedelta(days=REGISTRY_TTL_DAYS)

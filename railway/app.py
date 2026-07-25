@@ -27,6 +27,7 @@ from railway.shared.auth import require_host_auth
 from railway.shared.rate_limit import rate_limit_probe
 from railway.shared.session_guard import (
     InvalidSessionRedirect,
+    is_active_session_id,
     require_active_session,
     require_valid_session,
 )
@@ -155,7 +156,7 @@ app.include_router(internal_router)
 
 async def _require_active_session_host(session_id: str):
     """Validates that the session_id in the path matches the active session."""
-    if not state.session_id or session_id.lower() != state.session_id.lower():
+    if not is_active_session_id(session_id):
         raise HTTPException(status_code=404, detail="Session not found or not active")
 
 
@@ -188,7 +189,12 @@ app.include_router(session_host)
 
 session_participant_pages = APIRouter(
     prefix="/{session_id}",
-    dependencies=[Depends(require_valid_session)],
+    # ORDER MATTERS: rate_limit_probe BEFORE require_valid_session (FastAPI runs
+    # router-level dependencies first, in list order) so UNKNOWN-id page probes
+    # (302) burn rate-limit budget too. With the throttle only at route level it
+    # ran AFTER the guard, so an id-enumeration flood was never throttled —
+    # mirrors the explicit ordering on /{session_id}/api/status below.
+    dependencies=[Depends(rate_limit_probe), Depends(require_valid_session)],
 )
 session_participant_pages.include_router(participant_router)  # /, /notes-print, /{tab}
 
@@ -250,11 +256,9 @@ async def get_session_status(session_id: str):
     is registry-valid but not the live session reports ``False`` so it is never
     mistaken for the active cohort."""
     from railway.shared.version import get_backend_version
-    is_active = (
-        state.session_id is not None
-        and session_id.lower() == state.session_id.lower()
-        and state.daemon_ws is not None
-    )
+    # Same daemon-connected condition as the root /api/status: an id matching a
+    # lingering session_id after a daemon disconnect is not a usable session.
+    is_active = is_active_session_id(session_id) and state.daemon_ws is not None
     return {
         "backend_version": get_backend_version(),
         "git_sha": os.environ.get("RAILWAY_GIT_COMMIT_SHA", ""),

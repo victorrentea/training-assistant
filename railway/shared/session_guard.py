@@ -10,11 +10,20 @@ class InvalidSessionRedirect(Exception):
     pass
 
 
+def is_active_session_id(session_id: str) -> bool:
+    """True iff this id names the CURRENTLY-LIVE session (case-insensitive).
+
+    The single source of truth for "is this path id the active session" — used by
+    both guards below, the page handlers (live SPA vs read-only ended view) and
+    the session-scoped status endpoint, so the anti-hijack matching can never
+    drift between routes."""
+    return bool(state.session_id) and session_id.lower() == state.session_id.lower()
+
+
 def require_valid_session(session_id: str, request: Request) -> str:
     """FastAPI dependency: validates session_id matches the active session or a recent past session.
     Redirects browser page requests to landing; returns JSON 404 for API calls."""
-    # Active session check
-    if state.session_id and session_id.lower() == state.session_id.lower():
+    if is_active_session_id(session_id):
         return session_id
     # Past session in registry
     if session_registry.is_valid(session_id):
@@ -30,6 +39,6 @@ def require_valid_session(session_id: str, request: Request) -> str:
 
 def require_active_session(session_id: str) -> str:
     """FastAPI dependency: only allows access to the currently active session."""
-    if not state.session_id or session_id.lower() != state.session_id.lower():
+    if not is_active_session_id(session_id):
         raise HTTPException(status_code=404, detail="Session not active")
     return session_id

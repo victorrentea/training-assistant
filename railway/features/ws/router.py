@@ -30,6 +30,7 @@ from railway.shared.metrics import (
     ws_connections_active,
     ws_messages_total,
 )
+from railway.shared.session_guard import is_active_session_id
 from railway.shared.session_registry import session_registry
 from railway.shared.state import state
 
@@ -397,8 +398,10 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
 @session_router.websocket("/ws/{session_id}/{participant_id}")
 async def session_websocket_endpoint(websocket: WebSocket, session_id: str, participant_id: str):
     """WebSocket endpoint for participants and host (__host__), requiring a valid session_id."""
-    # Validate session_id — accept first so client gets a clean close code
-    if not state.session_id or session_id.lower() != state.session_id.lower():
+    # Validate session_id — accept first so client gets a clean close code.
+    # Active-only: a registry-valid recent-PAST id must NOT open a live socket
+    # either — its read-only ended page never tries to (it is script-free).
+    if not is_active_session_id(session_id):
         is_host_attempt = participant_id.strip() == "__host__"
         if is_host_attempt:
             await websocket.accept()

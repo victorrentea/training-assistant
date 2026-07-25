@@ -209,6 +209,31 @@ class TestReadOnlyRouting:
         assert unknown.status_code in (302, 307)
         assert unknown.headers["location"] == "/?error=invalid"
 
+    def test_case_variant_past_link_still_resolves(self):
+        """Session-id matching is case-insensitive everywhere (guards, active
+        check) — the registry must agree, so a case-variant past link lands on
+        the ended view, not on /?error=invalid."""
+        state.session_id = "livesess"
+        _register_past("PastSess")
+        client = TestClient(app)
+        r = client.get("/pastsess/")
+        assert r.status_code == 200
+        assert _ENDED_MARKER in r.content
+        assert _SPA_MARKER not in r.content
+
+    @pytest.mark.parametrize("path", ["/unknwn/", "/unknwn/notes", "/unknwn/notes-print"])
+    def test_page_probe_enumeration_is_rate_limited(self, path, monkeypatch):
+        """UNKNOWN-id page probes (302) must burn rate-limit budget: the throttle
+        runs at router level BEFORE require_valid_session. A route-level throttle
+        would run AFTER the guard and never see an enumeration flood."""
+        monkeypatch.delenv("GATEWAY_RATE_LIMIT_DISABLED", raising=False)
+        probe_limiter.reset()
+        state.session_id = "livesess"
+        client = TestClient(app, follow_redirects=False)
+        codes = {client.get(path).status_code for _ in range(300)}
+        assert codes & {302, 307}, "expected redirects for an unknown session id"
+        assert 429 in codes, f"page-probe enumeration via {path} was not throttled"
+
 
 # ---------------------------------------------------------------------------
 # 3 — anti-hijack: past id never reaches the live proxy / WS / content
@@ -236,6 +261,8 @@ class TestAntiHijack:
         client = TestClient(app)
         assert client.get("/pastsess/api/slides").status_code == 404
         assert client.get("/pastsess/api/slides/check/intro").status_code == 404
+        assert client.get("/pastsess/api/slides/download/intro").status_code == 404
+        assert client.post("/pastsess/api/upload").status_code == 404
         assert client.get("/pastsess/api/participant/register").status_code == 404
         assert client.post("/pastsess/api/participant/poll", json={}).status_code == 404
 
