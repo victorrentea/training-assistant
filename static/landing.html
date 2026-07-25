@@ -263,11 +263,11 @@
         id="code-input"
         class="landing-input"
         type="text"
-        maxlength="10"
+        maxlength="6"
         autocomplete="off"
         autocapitalize="none"
         spellcheck="false"
-        placeholder="e.g. k7m2xp4d9q"
+        placeholder="e.g. k7m2xp"
       />
       <button id="join-btn" class="landing-btn" disabled>Join</button>
       <div id="code-error-msg" class="landing-error"></div>
@@ -325,7 +325,7 @@
 
   <script>
     // ── Constants ──
-    const SESSION_CODE_RE = /^[a-z0-9]{10}$/;
+    const SESSION_CODE_RE = /^[a-z0-9]{6}$/;
     const LOCAL_DAEMON_POLL_MS = 1000;
     const RETRY_DELAYS = [1000, 2000, 3000, 5000, 5000];  // 5 attempts
     const LS_UUID_KEY = 'workshop_participant_uuid';
@@ -385,7 +385,7 @@
     }
 
     function normalizeCode(raw) {
-      return String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10);
+      return String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6);
     }
 
     function isCompleteCode(code) {
@@ -644,7 +644,7 @@
         input.addEventListener('paste', (event) => {
           const pasted = (event.clipboardData || window.clipboardData).getData('text').trim();
           // Smart paste: extract code from full URL
-          const urlMatch = pasted.match(/^https?:\/\/[^/]+\/([a-zA-Z0-9]{4,12})\/?$/);
+          const urlMatch = pasted.match(/^https?:\/\/[^/]+\/([a-zA-Z0-9]{4,8})\/?$/);
           if (urlMatch) {
             event.preventDefault();
             input.value = normalizeCode(urlMatch[1]);

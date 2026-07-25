@@ -79,9 +79,10 @@ def normalize_session_name(name: str) -> str:
 # URL-safe, unambiguous join-code alphabet. Excludes visually confusable chars:
 # l (looks like 1), o/O (looks like 0), 0 (looks like o/O).
 _SESSION_ID_ALPHABET = 'abcdefghijkmnpqrstuvwxyz123456789'
-# 10 chars from a 33-symbol alphabet ≈ 50 bits of entropy — not guessable/
-# brute-forceable, unlike the previous 6-char id (~30 bits).
-_SESSION_ID_LEN = 10
+# 6 chars from a 33-symbol alphabet ≈ 30 bits of entropy. Kept short for easy
+# human entry of the join code; the CSPRNG generator + inbound probe
+# rate-limiting mitigate the smaller keyspace.
+_SESSION_ID_LEN = 6
 
 
 def _generate_session_id() -> str:

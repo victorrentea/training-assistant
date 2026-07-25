@@ -9,7 +9,7 @@ from daemon.session.router import (
 
 
 def test_id_has_expected_length():
-    assert _SESSION_ID_LEN >= 10
+    assert _SESSION_ID_LEN == 6
     assert len(_generate_session_id()) == _SESSION_ID_LEN
 
 
@@ -25,8 +25,8 @@ def test_id_uses_unambiguous_url_safe_alphabet():
 
 def test_ids_are_distinct_across_many_draws():
     ids = {_generate_session_id() for _ in range(1000)}
-    # ~50 bits of entropy → collisions in 1000 draws are astronomically unlikely.
-    assert len(ids) == 1000
+    # ~30 bits of entropy (33**6); tolerate the rare birthday collision.
+    assert len(ids) >= 999
 
 
 def test_uses_secrets_csprng_not_random():
