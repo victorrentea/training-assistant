@@ -269,9 +269,12 @@ class HostNotificationMsg(BaseModel):
 
 class BellRungMsg(BaseModel):
     """Host-only: a participant rang the attention bell (dual-render, mirrors
-    the emoji_reaction host message). Carries the resolved display name."""
+    the emoji_reaction host message). Carries the resolved display name and an
+    ``anonymous`` flag so the host UI can mark auto-assigned (un-named) ringers.
+    """
     type: Literal["bell_rung"] = "bell_rung"
     caller: str
+    anonymous: bool = False
 
 
 # ── Host-only: Addon bridge status ────────────────────────────────────────────

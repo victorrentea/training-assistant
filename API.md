@@ -467,7 +467,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Participant rang the attention bell — optional host-screen render<br>`bell_rung` | `caller: string  # Resolved display name of the participant who rang` |
+| Participant rang the attention bell — optional host-screen render<br>`bell_rung` | `caller: string  # Resolved display name of the participant who rang (never a UUID; "Someone" when unknown)`<br>`anonymous?: bool  # True when the ringer joined via the auto-assign path (no typed name); defaults to false` |
 
 ### Addons WS
 | Message | Payload |

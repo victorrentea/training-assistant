@@ -24,6 +24,34 @@ logger = logging.getLogger(__name__)
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
+# Content-Security-Policy for the daemon-served host HTML pages (defense-in-depth
+# for the participant-name XSS surface). Audited against static/host.html +
+# host-landing.html, which legitimately need:
+#   - inline scripts + hundreds of on* handlers + inline styles → 'unsafe-inline'
+#   - CDN scripts: qrcode/d3/d3-cloud/opentelemetry (jsdelivr), leaflet (unpkg),
+#     highlight.js (cdnjs) → script-src whitelist
+#   - CDN styles: leaflet (unpkg) + highlight.js theme (cdnjs) → style-src whitelist
+#   - map tiles + country flags + avatars/QR → img-src https:/data:/blob:
+#   - same-origin fetch + WebSocket to the daemon, Railway, and nominatim geocode
+# It still blocks the important bits: external <script>/<link> hosts off the
+# whitelist, <object>/<embed>, <base> hijack, framing (clickjacking), and stray
+# form posts.
+_HOST_CSP = (
+    "default-src 'self'; "
+    "base-uri 'self'; "
+    "object-src 'none'; "
+    "frame-ancestors 'none'; "
+    "form-action 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com "
+    "https://cdnjs.cloudflare.com; "
+    "style-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; "
+    "img-src 'self' data: blob: https:; "
+    "font-src 'self' data:; "
+    "connect-src 'self' ws://127.0.0.1:* ws://localhost:* "
+    "https://interact.victorrentea.ro wss://interact.victorrentea.ro "
+    "https://nominatim.openstreetmap.org"
+)
+
 # Set by __main__ after startup so /api/status can expose it
 code_timestamp: str | None = None
 _persist_log_level = None
@@ -172,7 +200,11 @@ def create_app(backend_url: str) -> FastAPI:
         host_html = _STATIC_DIR / "host.html"
         if not host_html.exists():
             return {"error": "host.html not found"}
-        return FileResponse(host_html, media_type="text/html")
+        return FileResponse(
+            host_html,
+            media_type="text/html",
+            headers={"Content-Security-Policy": _HOST_CSP},
+        )
 
     @app.get("/host")
     async def serve_host_page_no_session():
@@ -180,7 +212,11 @@ def create_app(backend_url: str) -> FastAPI:
         landing_html = _STATIC_DIR / "host-landing.html"
         if not landing_html.exists():
             return {"error": "host-landing.html not found"}
-        return FileResponse(landing_html, media_type="text/html")
+        return FileResponse(
+            landing_html,
+            media_type="text/html",
+            headers={"Content-Security-Policy": _HOST_CSP},
+        )
 
     # --- Participant identity router (must come BEFORE catch-all to avoid infinite loop) ---
     app.include_router(participant_router)

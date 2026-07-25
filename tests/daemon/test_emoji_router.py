@@ -148,6 +148,23 @@ class TestEmojiReaction:
                                       headers={"X-Participant-ID": "__host__"})
             assert resp.status_code == 204
 
+    def test_no_rate_limit_exemption_for_crafted_host_prefix(self, emoji_client):
+        """SECURITY (fix #5): only the exact "__host__" id is exempt.
+
+        A crafted "__"-prefixed X-Participant-ID (e.g. "__x") used to bypass the
+        limit via the old startswith("__") check — it must now be throttled like
+        any other participant.
+        """
+        for _ in range(15):
+            r = emoji_client.post("/api/participant/emoji/reaction",
+                                  json={"emoji": "❤️"},
+                                  headers={"X-Participant-ID": "__x"})
+            assert r.status_code == 204
+        r = emoji_client.post("/api/participant/emoji/reaction",
+                              json={"emoji": "❤️"},
+                              headers={"X-Participant-ID": "__x"})
+        assert r.status_code == 429
+
 
 class TestEmojiMasterSwitch:
     def test_disabled_drops_silently_without_forwarding(self, emoji_client, mock_externals):

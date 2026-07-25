@@ -7,8 +7,8 @@ put requests directly into daemon/session/pending.py for the orchestrator loop.
 import asyncio
 import logging
 import os
-import random
 import re
+import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
@@ -76,12 +76,22 @@ def normalize_session_name(name: str) -> str:
     return name.replace('\xa0', ' ').strip()
 
 
-def _generate_session_id() -> str:
-    """Generate a new 6-char alphanumeric session ID.
+# URL-safe, unambiguous join-code alphabet. Excludes visually confusable chars:
+# l (looks like 1), o/O (looks like 0), 0 (looks like o/O).
+_SESSION_ID_ALPHABET = 'abcdefghijkmnpqrstuvwxyz123456789'
+# 10 chars from a 33-symbol alphabet ≈ 50 bits of entropy — not guessable/
+# brute-forceable, unlike the previous 6-char id (~30 bits).
+_SESSION_ID_LEN = 10
 
-    Excludes visually confusable chars: l (looks like 1), o/O (looks like 0), 0 (looks like o/O).
+
+def _generate_session_id() -> str:
+    """Generate a new random, URL-safe session ID using a CSPRNG.
+
+    Uses ``secrets.choice`` (cryptographically secure) rather than
+    ``random.choices`` (Mersenne Twister — predictable from observed output),
+    so a session join code cannot be predicted from earlier ones.
     """
-    return ''.join(random.choices('abcdefghijkmnpqrstuvwxyz123456789', k=6))
+    return ''.join(secrets.choice(_SESSION_ID_ALPHABET) for _ in range(_SESSION_ID_LEN))
 
 
 def _resolve_session_id_for_folder(folder_name: str) -> str:

@@ -113,7 +113,7 @@ class ViewedSlide(PersistedModel):
 class PersistedSessionState(PersistedModel):
     """Runtime session snapshot persisted in `session-state.json`."""
 
-    session_id: str | None = Field(default=None, description="6-char alphanumeric join code")
+    session_id: str | None = Field(default=None, description="URL-safe alphanumeric join code (CSPRNG-generated)")
     saved_at: str | None = Field(default=None, description="ISO timestamp of last snapshot write")
     mode: str | None = Field(default=None, description="workshop | talk")
     current_activity: str | None = Field(default=None, description="none | quiz | wordcloud | qa | codereview | debate")
