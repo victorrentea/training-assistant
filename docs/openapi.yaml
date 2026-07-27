@@ -1975,13 +1975,15 @@ components:
       description: 'One reaction the UI offers.
 
 
-        ``emoji`` is the value that is sent and validated. ``section`` drives
+        ``emoji`` is the value that is sent and validated. ``title`` is the hover
 
-        placement in the participant bar; ``badge`` is a presentation-only overlay
+        tooltip — an empty string means the glyph speaks for itself and the UI shows
 
-        glyph (the "can''t see your screen" button shows 🖥️ with a small ❌, but
+        no tooltip. ``section`` drives placement in the participant bar; ``badge``
 
-        sends plain 🖥️).'
+        is a presentation-only overlay glyph (the "can''t see your screen" button
+
+        shows 🖥️ with a small ❌, but sends plain 🖥️).'
     EmojiGlobalStateResponse:
       properties:
         emoji_global_enabled:

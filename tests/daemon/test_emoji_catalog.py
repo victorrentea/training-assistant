@@ -16,10 +16,15 @@ def test_allowed_emoji_derived_from_catalog():
     assert "🎉" not in ALLOWED_EMOJI
 
 
-def test_every_entry_has_emoji_and_title():
+def test_every_entry_has_emoji():
     for entry in EMOJI_CATALOG:
         assert entry.emoji.strip(), f"empty emoji in {entry!r}"
-        assert entry.title.strip(), f"empty title for {entry.emoji!r}"
+
+
+def test_titles_are_either_meaningful_or_deliberately_absent():
+    """An empty title is allowed — it means "self-explanatory, show no tooltip"."""
+    for entry in EMOJI_CATALOG:
+        assert entry.title == entry.title.strip(), f"padded title for {entry.emoji!r}"
 
 
 def test_sections_are_known():
