@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from html import escape as _html_escape
 from pathlib import Path
+from typing import TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
@@ -19,6 +20,8 @@ host_router = APIRouter()
 participant_router = APIRouter()
 
 _OTEL_ENABLED = bool(os.environ.get("OTEL_TRACES_FILE"))
+
+_ResponseT = TypeVar("_ResponseT", bound=Response)
 
 # ── Content-Security-Policy (defense-in-depth for the participant-name XSS) ──
 # Crafted from an audit of what the railway-served pages actually load:
@@ -52,8 +55,13 @@ _CSP = "; ".join([
 ])
 
 
-def _with_csp(response: Response) -> Response:
-    """Attach the Content-Security-Policy header to a page response."""
+def _with_csp(response: _ResponseT) -> _ResponseT:
+    """Attach the Content-Security-Policy header to a page response.
+
+    Generic in the response type so callers keep their concrete
+    ``HTMLResponse``/``FileResponse`` annotations instead of widening to
+    ``Response``.
+    """
     response.headers["Content-Security-Policy"] = _CSP
     return response
 

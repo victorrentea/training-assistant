@@ -455,100 +455,46 @@
         }
       }
     },
-    "/{session_id}/": {
+    "/api/is-active-session": {
       "get": {
-        "summary": "Participant Page",
-        "operationId": "participant_page__session_id___get",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
+        "summary": "Is Active Session",
+        "description": "Public endpoint: returns whether daemon is connected and any session is active.\n\nA session is only considered active when BOTH session_id exists AND daemon is connected.\nWhen daemon disconnects, session_id may linger in state but the session is not usable.",
+        "operationId": "is_active_session_api_is_active_session_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+                "schema": {}
               }
             }
           }
         }
       }
     },
-    "/{session_id}/notes-print": {
+    "/api/status": {
       "get": {
-        "summary": "Notes Print Page",
-        "description": "Standalone read-only session notes page (formerly served at /<session>/notes).",
-        "operationId": "notes_print_page__session_id__notes_print_get",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
+        "summary": "Get Status",
+        "description": "Public endpoint: backend version, active session info, and current slides.",
+        "operationId": "get_status_api_status_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+                "schema": {}
               }
             }
           }
         }
       }
     },
-    "/{session_id}/{tab}": {
+    "/{session_id}/api/status": {
       "get": {
-        "summary": "Participant Tab Page",
-        "description": "Serve the participant SPA for a deep-linked tab (e.g. /<session>/notes).",
-        "operationId": "participant_tab_page__session_id___tab__get",
+        "summary": "Get Session Status",
+        "description": "Session-scoped public status endpoint \u2014 200 for a valid (active or recent-past)\nsession, 404 for unknown. ``session_active`` is truthful: a recent-PAST id that\nis registry-valid but not the live session reports ``False`` so it is never\nmistaken for the active cohort.",
+        "operationId": "get_session_status__session_id__api_status_get",
         "parameters": [
-          {
-            "name": "tab",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Tab"
-            }
-          },
           {
             "name": "session_id",
             "in": "path",
@@ -563,10 +509,8 @@
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -759,45 +703,10 @@
         }
       }
     },
-    "/api/is-active-session": {
+    "/{session_id}/": {
       "get": {
-        "summary": "Is Active Session",
-        "description": "Public endpoint: returns whether daemon is connected and any session is active.\n\nA session is only considered active when BOTH session_id exists AND daemon is connected.\nWhen daemon disconnects, session_id may linger in state but the session is not usable.",
-        "operationId": "is_active_session_api_is_active_session_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/status": {
-      "get": {
-        "summary": "Get Status",
-        "description": "Public endpoint: backend version, active session info, and current slides.",
-        "operationId": "get_status_api_status_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/{session_id}/api/status": {
-      "get": {
-        "summary": "Get Session Status",
-        "description": "Session-scoped public status endpoint \u2014 returns 200 for valid session, 404 for invalid.",
-        "operationId": "get_session_status__session_id__api_status_get",
+        "summary": "Participant Page",
+        "operationId": "participant_page__session_id___get",
         "parameters": [
           {
             "name": "session_id",
@@ -813,8 +722,99 @@
           "200": {
             "description": "Successful Response",
             "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{session_id}/notes-print": {
+      "get": {
+        "summary": "Notes Print Page",
+        "description": "Standalone read-only session notes page (formerly served at /<session>/notes).",
+        "operationId": "notes_print_page__session_id__notes_print_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{session_id}/{tab}": {
+      "get": {
+        "summary": "Participant Tab Page",
+        "description": "Serve the participant SPA for a deep-linked tab (e.g. /<session>/notes).",
+        "operationId": "participant_tab_page__session_id___tab__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "tab",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tab"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
               }
             }
           },
