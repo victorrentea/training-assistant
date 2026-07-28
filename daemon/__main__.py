@@ -590,7 +590,7 @@ def _build_notes_summary_probe(session_folder: Path | None) -> dict:
         except OSError:
             summary_raw = None
     agenda_file = _find_agenda_docx(session_folder)
-    files_file = (session_folder / "files.md") if session_folder else None
+    files_file = (session_folder / files_md.session_filename()) if session_folder else None
     if files_file and not files_file.exists():
         files_file = None
     return {

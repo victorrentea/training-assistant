@@ -47,7 +47,7 @@ def test_files_md_endpoint_empty_session(session_folder):
 
 
 def test_files_md_endpoint_returns_sanitized_markdown(session_folder):
-    (session_folder / "files.md").write_text(
+    (session_folder / "opened-files.md").write_text(
         "# Files opened this session\n\n"
         "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->\n\n"
         "- [a.py](https://github.com/owner/repo/blob/main/src/a.py)"

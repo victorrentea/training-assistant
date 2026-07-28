@@ -163,7 +163,7 @@ class FilesMdResponse(BaseModel):
 
 @participant_router.get("/files-md", response_model=FilesMdResponse)
 async def get_files_md():
-    """Return the per-session files.md content with HTML comments stripped."""
+    """Return the per-session opened-files.md content with HTML comments stripped."""
     from datetime import datetime, timezone
 
     from daemon.misc.content_files import get_active_session_folder
@@ -174,7 +174,7 @@ async def get_files_md():
     _files_md.migrate_session_if_needed(folder)
     # Trigger a load so any historical noise entries get pruned + auto-saved.
     _files_md._load_doc(folder)
-    target = folder / "files.md"
+    target = folder / _files_md.session_filename()
     if not target.exists():
         return FilesMdResponse(raw_markdown=_files_md.EMPTY_STATE, updated_at=None)
     raw = target.read_text(encoding="utf-8")

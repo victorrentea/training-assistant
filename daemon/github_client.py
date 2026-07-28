@@ -22,7 +22,7 @@ _TIMEOUT_S = 3.0
 _USER_AGENT = "TrainingAssistant/1.0"
 
 # Override targets for hermetic tests. The user-facing blob URL written to
-# files.md (see build_blob_url) is always real github.com — only the internal
+# opened-files.md (see build_blob_url) is always real github.com — only the internal
 # verification calls follow these env vars.
 _API_BASE = os.environ.get("GITHUB_API_BASE", "https://api.github.com").rstrip("/")
 _VERIFY_BLOB_BASE = os.environ.get("GITHUB_BLOB_BASE", "https://github.com").rstrip("/")

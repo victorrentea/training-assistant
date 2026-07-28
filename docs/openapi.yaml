@@ -724,7 +724,7 @@ paths:
       tags:
       - misc
       summary: Get Files Md
-      description: Return the per-session files.md content with HTML comments stripped.
+      description: Return the per-session opened-files.md content with HTML comments stripped.
       operationId: get_files_md_api_participant_files_md_get
       responses:
         '200':

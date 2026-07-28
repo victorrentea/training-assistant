@@ -1,4 +1,4 @@
-"""files.md — the canonical store of files opened during a session.
+"""opened-files.md — the canonical store of files opened during a session.
 
 All feature state lives in the markdown file itself:
 - Repo default branch cached in `<!-- default_branch:... -->` on the `##` heading.
@@ -152,7 +152,17 @@ def sanitize_for_wire(text: str) -> str:
 
 
 _NAME = "files_md"
-_FILENAME = "files.md"
+_FILENAME = "opened-files.md"
+
+
+def session_filename() -> str:
+    """Name of the on-disk artifact inside a session folder.
+
+    Exposed so callers never hardcode the literal — two of them had drifted
+    into their own copies of "files.md", which is exactly what makes a rename
+    like this risky.
+    """
+    return _FILENAME
 # Sentinel the macOS IDE addon sends when a project is open but no file is selected.
 _ADDON_NO_FILE_SENTINEL = "(none)"
 # Basenames the IDE addon occasionally reports that are not real files.
@@ -217,7 +227,7 @@ def _load_doc(folder: Path) -> Doc:
 
 
 def count_open_files(folder: Path | None) -> int:
-    """Number of files recorded in the session's files.md (0 if none/absent).
+    """Number of files recorded in the session's opened-files.md (0 if none/absent).
 
     Pure read — parses the markdown without the prune/upgrade side effects of
     `_load_doc`, so it is cheap enough for the main-loop probe and `GET /state`.
@@ -329,7 +339,7 @@ def _record_into_folder(folder: Path, url: str, file_path: str) -> None:
     repo_obj = doc.find_repo(canonical)
 
     if rate_limited:
-        # Privacy rule: only emit if the repo is ALREADY in files.md
+        # Privacy rule: only emit if the repo is ALREADY in opened-files.md
         # (= previously verified public). Otherwise drop the event.
         if repo_obj is None:
             return
@@ -401,10 +411,10 @@ def _record_into_folder(folder: Path, url: str, file_path: str) -> None:
 
 
 def migrate_session_if_needed(folder: Path) -> None:
-    """One-shot migration: convert session-state.json `git_repos` to files.md
+    """One-shot migration: convert session-state.json `git_repos` to opened-files.md
     and remove the key.
 
-    No-op if files.md already exists (so we never re-migrate or overwrite live state).
+    No-op if opened-files.md already exists (so we never re-migrate or overwrite live state).
     No-op if session-state.json has no git_repos.
     """
     target = folder / _FILENAME

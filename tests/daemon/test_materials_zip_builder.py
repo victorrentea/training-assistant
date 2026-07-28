@@ -23,7 +23,7 @@ def _make_session(tmp_path):
     (folder / "wiki" / "Dependency Injection.md").write_text("di", encoding="utf-8")
     (folder / "ai-summary.md").write_text("summary", encoding="utf-8")
     (folder / "Agenda.docx").write_bytes(b"docx")
-    (folder / "files.md").write_text("files", encoding="utf-8")
+    (folder / "opened-files.md").write_text("files", encoding="utf-8")
     (folder / "session-state.json").write_text("{}", encoding="utf-8")
     (folder / "attendees.md").write_text("names", encoding="utf-8")
     (folder / "Icon").write_bytes(b"")
@@ -40,7 +40,7 @@ def test_includes_content_with_relative_arcnames(tmp_path):
         "wiki/Dependency Injection.md",
         "ai-summary.md",
         "Agenda.docx",
-        "files.md",
+        "opened-files.md",
     }
 
 

@@ -1,4 +1,4 @@
-"""Hermetic E2E: files.md feature — two participants + 3 addon events.
+"""Hermetic E2E: opened-opened-files.md feature — two participants + 3 addon events.
 
 Verifies:
   - public repo + valid blob   → linked bullet (href to real github.com URL)
@@ -71,7 +71,7 @@ def _run_mock_addon_bridge(events: list, stop_event: threading.Event) -> None:
 
 
 def test_files_md_two_participants_three_events():
-    """Two participants both see correct files.md after three addon events."""
+    """Two participants both see correct opened-files.md after three addon events."""
     session_id = fresh_session("FilesMd")
 
     # Seed the GitHub stub:

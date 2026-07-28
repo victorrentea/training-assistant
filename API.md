@@ -445,7 +445,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Get Files Md, return the per-session files.md content with HTML comments stripped.<br>`GET /api/participant/files-md` | - | `raw_markdown: string`<br>`updated_at?: string` |
+| Get Files Md, return the per-session opened-files.md content with HTML comments stripped.<br>`GET /api/participant/files-md` | - | `raw_markdown: string`<br>`updated_at?: string` |
 
 ## Feature: Attendees
 

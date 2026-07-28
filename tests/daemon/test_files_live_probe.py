@@ -1,4 +1,4 @@
-"""Unit tests: files.md count is probed live in the main loop, like notes/summary/agenda.
+"""Unit tests: opened-files.md count is probed live in the main loop, like notes/summary/agenda.
 
 Pins the probe/change-detection/broadcast behaviour that powers the participant
 "Files" count badge — a file opened mid-session is detected by the main-loop probe
@@ -33,7 +33,7 @@ def _write_files(folder: Path, n: int) -> None:
         ])
     else:
         doc = files_md.Doc()
-    (folder / "files.md").write_text(doc.render(), encoding="utf-8")
+    (folder / "opened-files.md").write_text(doc.render(), encoding="utf-8")
 
 
 class TestFilesProbe:
@@ -46,7 +46,7 @@ class TestFilesProbe:
     def test_probe_detects_files(self, tmp_path):
         _write_files(tmp_path, 2)
         probe = _build_notes_summary_probe(tmp_path)
-        assert probe["files_file"] == str(tmp_path / "files.md")
+        assert probe["files_file"] == str(tmp_path / "opened-files.md")
         assert probe["files_mtime_ns"] is not None
         assert probe["files_count"] == 2
 
