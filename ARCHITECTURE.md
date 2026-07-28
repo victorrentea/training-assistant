@@ -351,7 +351,15 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
    - [`daemon/static_sync.py`](daemon/static_sync.py) diffs local `static/` content and calls `/internal/upload-static` or `/internal/delete-static` as needed.
    - If files changed, the daemon broadcasts a `reload` event so open browsers refresh against the new synced assets.
 
-7. Participant engagement tracking
+7. Session materials zip (Google Drive firewall fallback)
+   - Some clients block `drive.google.com`, which makes the participant sidebar's Google Drive entry useless for them. The download glyph next to it serves the same content through the Railway relay instead.
+   - The participant calls `GET /{session_id}/api/materials/zip`. If [`railway/features/materials/router.py`](railway/features/materials/router.py) holds an archive younger than 60s it serves it straight from `.server-data/materials`.
+   - Otherwise Railway pushes `build_materials_zip` over the daemon WebSocket and awaits a Future. Concurrent clicks share that one Future — the same dedup shape as `_pending_refresh` in the slides router — so a cohort of 25 costs one build, not 25.
+   - [`daemon/materials/zip_builder.py`](daemon/materials/zip_builder.py) zips the local session folder (already on disk via the DriveFS mirror, so Google is never in the path), excluding `session-state.json`, `attendees.md`, and junk, and guarding at 25 MB. [`daemon/materials/upload.py`](daemon/materials/upload.py) POSTs it to `/api/materials/zip/upload` with host Basic auth — or posts an `error` field so waiting participants fail fast instead of sitting out the 20s timeout.
+   - Every failure path prefers a stale archive over an error, because a participant clicking this button usually has no working alternative; `503` only when nothing was ever built.
+   - This is deliberately **not** the `MaterialsMirrorRunner` removed in `dc1228ea`: no background tick, no per-file endpoints, and `materials/` is never mirrored.
+
+8. Participant engagement tracking
    - The participant page's `Engagement` module accumulates per-view active time / visits / clicks (active = tab visible plus an interaction within 60s) and flushes deltas to `POST /{session_id}/api/participant/activity` (≤ every 30s while active, plus on tab hide/unload) with the `X-Participant-ID` header; Railway proxies these through [`daemon/proxy_handler.py`](daemon/proxy_handler.py) like other `/api/participant/*` calls.
    - [`daemon/participant/router.py`](daemon/participant/router.py) merges the deltas into `ParticipantState.engagement` (uuid -> view -> time/visits/clicks) and stamps ephemeral `last_active_at` / `last_view`, then notifies the host via the existing `_notify_host_participant_list()` (no new WS message type).
    - The 3-second snapshot loop in [`daemon/__main__.py`](daemon/__main__.py) persists cumulative engagement into `PersistedParticipant.engagement` in `session-state.json`; `ParticipantState.sync_from_restore` restores it on session reopen.
