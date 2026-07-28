@@ -609,7 +609,7 @@
           btn.disabled = !isCompleteCode(code);
         }
 
-        async function submit() {
+        async function submit({ auto = false } = {}) {
           const code = normalizeCode(input.value);
           if (!isCompleteCode(code)) return;
           btn.disabled = true;
@@ -620,6 +620,14 @@
             // Redirect to session participant page
             window.location.href = '/' + code + '/';
             // resolve won't fire because we're navigating away
+          } else if (auto) {
+            // The remembered code is no longer live (e.g. the host opens the
+            // root URL the morning after). Fall back silently to the normal
+            // pre-filled state — shaking and toasting at something the user
+            // never typed would be alarming and unhelpful.
+            btn.disabled = false;
+            input.focus();
+            input.select();
           } else {
             input.classList.add('input-error');
             shakeElement(input);
@@ -656,19 +664,26 @@
           if (e.key === 'Enter' && !btn.disabled) submit();
         });
 
-        btn.addEventListener('click', submit);
+        btn.addEventListener('click', () => submit());
 
         // Pre-fill with the code this browser last joined (stored by the
         // participant page). A returning participant who opens the bare root
         // URL sees yesterday's code already filled in and just presses Enter to
-        // rejoin. We deliberately do NOT auto-submit: if a different session is
-        // active now, the remembered code stays visible and selected for
-        // one-keystroke editing, and the user keeps control of when to join.
+        // rejoin. For participants we deliberately do NOT auto-submit: if a
+        // different session is active now, the remembered code stays visible
+        // and selected for one-keystroke editing, and the user keeps control of
+        // when to join.
+        //
+        // On the host's own machine that trade-off flips: there is only ever
+        // one session worth joining — their own — so the extra keystroke is
+        // pure friction. Auto-submit there, falling back silently to the
+        // pre-filled state if the remembered code is stale.
         const remembered = normalizeCode(getStorage().getItem(LS_LAST_SESSION_KEY));
         if (isCompleteCode(remembered)) {
           input.value = remembered;
           input.focus();
           input.select();
+          if (hasOnHostMachineCookie()) submit({ auto: true });
         } else {
           input.focus();
         }
