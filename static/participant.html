@@ -790,11 +790,16 @@ body{visibility:hidden}
 <span class="text-base">Summary</span>
 <span id="summary-badge" class="badge-new" style="display:none"></span>
 </a>
-<a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
+<div id="gdrive-row" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all" style="display:none">
+<a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="flex items-center gap-3 flex-1 cursor-pointer">
 <span class="material-symbols-outlined flex-shrink-0">cloud</span>
 <span class="text-base flex-1">Google Drive</span>
 <span class="material-symbols-outlined flex-shrink-0" style="font-size:1rem;opacity:0.5">open_in_new</span>
 </a>
+<button id="gdrive-zip-btn" onclick="downloadMaterialsZip()" title="Download everything as .zip" class="flex-shrink-0 cursor-pointer" style="background:none;border:none;padding:0;color:inherit">
+<span id="gdrive-zip-icon" class="material-symbols-outlined" style="font-size:1.1rem;opacity:0.6">download</span>
+</button>
+</div>
 <a data-nav="files" onclick="showView('files')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-size:22px;line-height:1;flex-shrink-0">commit</span>
 <span class="text-base">Files</span>
@@ -3315,6 +3320,58 @@ function _applyGdriveToast(url) {
   else { wrap.style.display = 'none'; }
 }
 
+var _zipDownloading = false;
+
+// Downloads the whole session folder as a zip, relayed through Railway.
+// This is the only route to the materials for participants whose corporate
+// firewall blocks drive.google.com.
+function downloadMaterialsZip() {
+  if (_zipDownloading || !_sessionId) return;
+  _zipDownloading = true;
+  var icon = document.getElementById('gdrive-zip-icon');
+  icon.textContent = 'progress_activity';
+  icon.style.animation = 'spin 1s linear infinite';
+
+  fetch('/' + _sessionId + '/api/materials/zip')
+    .then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      var disposition = response.headers.get('content-disposition') || '';
+      // Session folder names contain spaces and '@', so FastAPI emits the
+      // RFC 5987 form (filename*=utf-8''pct-encoded) rather than filename="...".
+      // Read the extended form first, then fall back to the plain one.
+      var name = 'session-materials.zip';
+      var extended = /filename\*=utf-8''([^;]+)/i.exec(disposition);
+      var plain = /filename="([^"]+)"/.exec(disposition);
+      if (extended) {
+        try { name = decodeURIComponent(extended[1]); } catch (e) { /* keep fallback */ }
+      } else if (plain) {
+        name = plain[1];
+      }
+      return response.blob().then(function (blob) {
+        return { blob: blob, name: name };
+      });
+    })
+    .then(function (result) {
+      var url = URL.createObjectURL(result.blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.download = result.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    })
+    .catch(function (err) {
+      console.error('[participant] materials zip download failed:', err);
+      showToast('Materials are not available right now — try again in a moment');
+    })
+    .finally(function () {
+      _zipDownloading = false;
+      icon.style.animation = '';
+      icon.textContent = 'download';
+    });
+}
+
 function _avatarColorFromUuid(uuid) {
   var hash = parseInt((uuid || '').replace(/-/g, '').slice(0, 8), 16);
   return 'hsl(' + (hash % 360) + ', 60%, 40%)';
@@ -3834,8 +3891,9 @@ function _setDuplicateIndicator(isDup) {
     }
     summaryBadge.classList.toggle('badge-alert', LS.isSummaryUnread());
     var gdriveNav = document.getElementById('gdrive-nav');
-    if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveNav.style.display = ''; }
-    else { gdriveNav.style.display = 'none'; }
+    var gdriveRow = document.getElementById('gdrive-row');
+    if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveRow.style.display = ''; }
+    else { gdriveRow.style.display = 'none'; }
     _applyGdriveToast(state.gdrive_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
     _setFilesBadge(state.files_count || 0);
@@ -3921,8 +3979,9 @@ function _applyState(msg) {
   }
   if (msg.gdrive_url !== undefined) {
     var gdriveNav = document.getElementById('gdrive-nav');
-    if (msg.gdrive_url) { gdriveNav.href = msg.gdrive_url; gdriveNav.style.display = ''; }
-    else { gdriveNav.style.display = 'none'; }
+    var gdriveRow = document.getElementById('gdrive-row');
+    if (msg.gdrive_url) { gdriveNav.href = msg.gdrive_url; gdriveRow.style.display = ''; }
+    else { gdriveRow.style.display = 'none'; }
     _applyGdriveToast(msg.gdrive_url);
   }
   if (msg.has_agenda !== undefined) {
@@ -5109,7 +5168,7 @@ function downloadSummaryPdf() {
     <p>You can get anytime:</p>
     <ul>
       <li>- Slides: <a href="https://victorrentea.ro/slides/" target="_blank" rel="noopener">victorrentea.ro/slides</a></li>
-      <li id="access-duration-toast-gdrive" style="display:none">- Notes, agenda &amp; summary: <a id="access-duration-toast-gdrive-link" href="#" target="_blank" rel="noopener">Google Drive</a></li>
+      <li id="access-duration-toast-gdrive" style="display:none">- Notes, agenda &amp; summary: <a id="access-duration-toast-gdrive-link" href="#" target="_blank" rel="noopener">Google Drive</a> or <a id="access-duration-toast-zip-link" href="#" onclick="downloadMaterialsZip(); return false;">download as .zip</a></li>
     </ul>
     <p>🧘🏻‍♀️ Relax &mdash; you'll get everything by email after the training.</p>
   </div>
