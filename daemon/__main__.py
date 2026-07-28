@@ -28,6 +28,7 @@ from daemon.lock import (
     install_signal_handlers,
     write_lock,
 )
+from daemon.materials.upload import handle_build_materials_zip as _handle_materials_zip
 from daemon.session import pending as session_pending
 from daemon.session import state as session_shared_state
 from daemon.session_state import (
@@ -807,6 +808,14 @@ def run() -> None:
     ws_client.register_handler(
         "file_ready_for_download",
         lambda data: _handle_file_download(data, config),
+    )
+
+    # Participant asked Railway for the session materials archive; build it from
+    # the local session folder and upload it back. No background sync — this
+    # only fires on demand.
+    ws_client.register_handler(
+        "build_materials_zip",
+        lambda data: _handle_materials_zip(data, config),
     )
 
     def _push_host_participant_list() -> None:

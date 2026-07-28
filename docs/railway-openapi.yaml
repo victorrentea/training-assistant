@@ -7,6 +7,41 @@ info:
     backend. All endpoints require HTTP Basic Auth (HOST_USERNAME / HOST_PASSWORD).
     This spec is separate from the host/participant-facing API (docs/openapi.yaml).
 paths:
+  /api/materials/zip/upload:
+    post:
+      tags:
+      - materials
+      summary: Upload the session materials archive (or report a build failure)
+      description: >
+        Sent by the daemon in response to a build_materials_zip WS push. Carries
+        either the zipped session folder (file + filename) or an error field
+        describing why the build failed. Railway caches the archive and serves it
+        at GET /{session_id}/api/materials/zip for participants whose firewall
+        blocks Google Drive. Streamed to disk with a 25 MB ceiling; an error
+        payload leaves any previously cached archive untouched.
+      operationId: upload_materials_zip
+      security:
+      - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MaterialsZipUploadRequest'
+      responses:
+        '200':
+          description: Archive stored, or build failure recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialsZipUploadResponse'
+        '400':
+          description: Empty zip body
+        '413':
+          description: Archive exceeds the 25 MB ceiling
+        '422':
+          description: Neither a file nor an error field was provided
+      x-feature: materials_zip
   /api/slides/upload:
     post:
       tags:
@@ -250,6 +285,40 @@ components:
           description: Absolute local path where the daemon saved the file.
       required:
       - disk_path
+    MaterialsZipUploadRequest:
+      type: object
+      properties:
+        session_id:
+          type: string
+          description: Session the archive belongs to; used as the cache filename.
+        file:
+          type: string
+          format: binary
+          description: Zipped session folder. Omitted when reporting an error.
+        filename:
+          type: string
+          description: Participant-facing filename, e.g. "2026-07-27..29 Course@Client.zip".
+        error:
+          type: string
+          description: >
+            Build failure message (missing session folder, size guard tripped).
+            Mutually exclusive with file; lets waiting participants fail fast
+            instead of sitting out the 20s build timeout.
+      required:
+      - session_id
+    MaterialsZipUploadResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          description: True when an archive was stored, false when an error was recorded.
+        size:
+          type: integer
+          description: Stored archive size in bytes.
+        filename:
+          type: string
+      required:
+      - ok
     UploadSlidePdfRequest:
       type: object
       properties:

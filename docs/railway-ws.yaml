@@ -26,6 +26,7 @@ channels:
           - $ref: '#/components/messages/daemon_state_push'
           - $ref: '#/components/messages/sync_files'
           - $ref: '#/components/messages/file_ready_for_download'
+          - $ref: '#/components/messages/build_materials_zip'
           - $ref: '#/components/messages/summary_force'
           - $ref: '#/components/messages/summary_full_reset'
           - $ref: '#/components/messages/proxy_request'
@@ -126,6 +127,26 @@ components:
             description: File size in bytes
           session_id:
             type: string
+
+    build_materials_zip:
+      summary: Railway asks the daemon to build and upload the session materials archive
+      description: >
+        Sent when a participant requests GET /{session_id}/api/materials/zip and
+        Railway has no fresh cached archive. The daemon zips its local session
+        folder and POSTs the result to /api/materials/zip/upload. Concurrent
+        participant requests are deduplicated by Railway, so this is sent once
+        per build, not once per click.
+      x-feature: materials_zip
+      payload:
+        type: object
+        required: [type, session_id]
+        properties:
+          type:
+            type: string
+            enum: [build_materials_zip]
+          session_id:
+            type: string
+            description: Active session id the archive is built for
 
     # ── Notes & Summary ──────────────────────────────────────────────────────
 

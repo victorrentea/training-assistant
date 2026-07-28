@@ -26,6 +26,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Attention](#feature-attention)
 - [Files](#feature-files)
 - [Intellij](#feature-intellij)
+- [Materials Zip](#feature-materials-zip)
 - [Quiz](#feature-quiz)
 
 ## Feature: Session
@@ -495,6 +496,18 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Currently open file in IntelliJ changed<br>`git_file_opened` | `url: string  # Git remote URL of the project`<br>`branch: string  # Current git branch`<br>`file: string  # Filename of the open file`<br>`file_url?: string  # Full GitHub/GitLab URL to the file (omitted when filename is ambiguous)` |
+
+## Feature: Materials Zip
+
+### Railway REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Upload the session materials archive (or report a build failure), sent by the daemon in response to a build_materials_zip WS push; carries either the zipped session folder (file + filename) or an error field describing why the build failed; railway caches the archive and serves it at GET /{session_id}/api/materials/zip for participants whose firewall blocks Google Drive; streamed to disk with a 25 MB ceiling; an error payload leaves any previously cached archive untouched.<br>`POST /api/materials/zip/upload` | `session_id: string  # Session the archive belongs to; used as the cache filename.`<br>`file?: string  # Zipped session folder. Omitted when reporting an error.`<br>`filename?: string  # Participant-facing filename, e.g. "2026-07-27..29 Course@Client.zip".`<br>`error?: string  # Build failure message (missing session folder, size guard tripped). Mutually exclusive with file; lets waiting participants fail fast instead of sitting out the 20s build timeout.` | `ok: bool  # True when an archive was stored, false when an error was recorded.`<br>`size?: int  # Stored archive size in bytes.`<br>`filename?: string` |
+
+### Railway WS
+| Message | Payload |
+| --- | --- |
+| Railway asks the daemon to build and upload the session materials archive<br>Sent when a participant requests GET /{session_id}/api/materials/zip and Railway has no fresh cached archive. The daemon zips its local session folder and POSTs the result to /api/materials/zip/upload. Concurrent participant requests are deduplicated by Railway, so this is sent once per build, not once per click.<br>`build_materials_zip` | `session_id: string  # Active session id the archive is built for` |
 
 ## Feature: Quiz
 
