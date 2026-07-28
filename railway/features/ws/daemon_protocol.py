@@ -28,6 +28,9 @@ MSG_SYNC_FILES = "sync_files"
 # --- File upload (backend → daemon) ---
 MSG_FILE_READY_FOR_DOWNLOAD = "file_ready_for_download"
 
+# --- Session materials zip build request (backend → daemon) ---
+MSG_BUILD_MATERIALS_ZIP = "build_materials_zip"
+
 # --- Participant presence (backend → daemon) ---
 MSG_PARTICIPANT_PRESENCE = "participant_presence"
 

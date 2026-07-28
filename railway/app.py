@@ -15,6 +15,7 @@ import railway.shared.metrics as metrics  # noqa: F401 - import for Prometheus m
 from railway.features.bridge.router import router as bridge_router
 from railway.features.inbox.router import router as inbox_router
 from railway.features.internal.router import router as internal_router
+from railway.features.materials import router as materials
 from railway.features.pages.router import host_router, landing_router, participant_router
 from railway.features.slides import router as slides
 from railway.features.slides.upload import router as slides_upload_router
@@ -148,6 +149,9 @@ app.include_router(host_router)
 app.include_router(slides_upload_router, dependencies=[Depends(require_host_auth)])
 app.include_router(slides.daemon_router, dependencies=[Depends(require_host_auth)])
 
+# Daemon-facing materials zip upload (global — host auth is declared on the endpoint)
+app.include_router(materials.router)
+
 # Internal daemon → backend file management endpoints
 app.include_router(internal_router)
 
@@ -204,6 +208,7 @@ session_participant_live = APIRouter(
 )
 session_participant_live.include_router(slides.public_router)     # /api/slides, /api/slides/check/{slug}, /api/slides/download/{slug}
 session_participant_live.include_router(upload_public_router)     # /api/upload (participant file upload)
+session_participant_live.include_router(materials.public_router)  # /api/materials/zip (session content archive)
 session_participant_live.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
 
 if os.environ.get("OTEL_TRACES_FILE"):
