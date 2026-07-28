@@ -109,5 +109,47 @@ assert('nested opens are dropped (never emit invalid nesting)',
   restoreMarkTagsInCode('&lt;mark&gt;a&lt;mark&gt;b&lt;/mark&gt;c&lt;/mark&gt;') === 'abc'
 );
 
+// Regression: the profile-card name editor snapped shut on its own. The initial
+// state load is async, so a participant could open the crayon editor before the
+// deferred activity-view preselect fired; that focus() blurred the editor and
+// the blur handler committed and closed it. The preselect now yields to any
+// edit already in progress.
+console.log('\n_ensureNameInputPreselected()');
+
+function runPreselect(activeElement) {
+  const focused = [];
+  const input = {tagName: 'INPUT', value: 'Auto Name',
+                 focus: () => focused.push('focus'), select: () => focused.push('select')};
+  const scheduled = [];
+  const sandbox = {
+    document: {
+      getElementById: (id) => (id === 'activity-name-input' ? input : null),
+      get activeElement() { return activeElement; },
+    },
+    setTimeout: (fn) => scheduled.push(fn),
+  };
+  const fn = new Function('document', 'setTimeout',
+    'var _namePreselected = false;' +
+    extractFunction(PARTICIPANT_HTML, '_ensureNameInputPreselected') +
+    '; return _ensureNameInputPreselected;'
+  )(sandbox.document, sandbox.setTimeout);
+  fn();
+  scheduled.forEach((cb) => cb());
+  return focused;
+}
+
+assert('preselects the name field when nothing else is focused',
+  runPreselect({tagName: 'BODY'}).join() === 'focus,select'
+);
+assert('the reported bug: does NOT steal focus from the open name editor',
+  runPreselect({tagName: 'INPUT', id: 'name-edit-input'}).length === 0
+);
+assert('does not steal focus from a textarea the participant is typing in',
+  runPreselect({tagName: 'TEXTAREA'}).length === 0
+);
+assert('does not steal focus from a contenteditable',
+  runPreselect({tagName: 'DIV', isContentEditable: true}).length === 0
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

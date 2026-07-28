@@ -305,15 +305,16 @@ class TestIdentityEdgeCases:
         displayed = pax._page.locator("#display-name .display-name-text").inner_text().strip()
         assert len(displayed) <= 32, f"Name should be max 32 chars, got {len(displayed)}: '{displayed}'"
 
-    def test_duplicate_name_rejected_only_one_in_host_list(self, server_url, playwright):
-        """Duplicate names are now rejected by the daemon (409).
+    def test_duplicate_name_admitted_and_flagged_on_own_card(self, server_url, playwright):
+        """Duplicate names are permitted and flagged, never blocked.
 
-        When a second participant tries to take an already-used name, the rename
-        is rejected server-side and they keep their distinct (auto-assigned) name,
-        so the host list ends up with exactly one entry carrying the duplicated
-        name. A unique, non-auto-assignable name is used so the assertion is
-        robust against participants left over from earlier tests in the
-        session-scoped server (the host list also shows offline participants).
+        Per the participant-real-names spec, a taken name is a reported-but-allowed
+        condition: both participants enter the session and both appear in the host
+        list, and each client marks its OWN card with the duplicate indicator
+        (computed from the UUID-free name broadcast: own name count >= 2). A
+        unique, non-auto-assignable name is used so the assertion is robust
+        against participants left over from earlier tests in the session-scoped
+        server (the host list also shows offline participants).
         """
         dup_name = "DuplicateProbe"
         b_host, ctx_host = host_browser_ctx(server_url, playwright)
@@ -330,14 +331,21 @@ class TestIdentityEdgeCases:
 
         try:
             p1.join(dup_name)
-            # p2's rename is optimistic client-side; the daemon rejects the
-            # duplicate with 409 and keeps p2's distinct auto-assigned name.
+            # The daemon accepts the collision (soft name_conflict flag, no 409),
+            # so p2 keeps the name it asked for.
             p2.join(dup_name)
 
-            # The duplicate name is de-duplicated to a single host-list entry.
+            # Both participants are admitted under the same name.
             expect(
                 host._page.locator(f"#pax-list li .pax-name:has-text('{dup_name}')")
-            ).to_have_count(1, timeout=5000)
+            ).to_have_count(2, timeout=5000)
+
+            # Each client flags its own card from the name broadcast.
+            for pax in (p1, p2):
+                expect(pax._page.locator("#dup-indicator")).to_be_visible(timeout=5000)
+                expect(pax._page.locator("#display-name")).to_have_class(
+                    re.compile(r"\bis-duplicate\b"), timeout=5000
+                )
         finally:
             for ctx in (ctx_host, ctx1, ctx2):
                 ctx.close()

@@ -2853,6 +2853,13 @@ function _ensureNameInputPreselected() {
   // Defer one tick so the name editor is shown (and lifted above the blackout)
   // before we focus; setTimeout (not rAF) so it still fires in a background tab.
   setTimeout(function() {
+    // Never steal focus from an edit already in progress. The initial state load
+    // runs async, so a participant can open the profile-card name editor before
+    // this fires; focusing here would blur it, and that editor's blur handler
+    // commits and closes it — the rename silently snaps shut mid-typing.
+    var active = document.activeElement;
+    if (active && active !== input &&
+        (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
     try { input.focus({ preventScroll: true }); if (input.value) input.select(); } catch (e) {}
   }, 0);
 }

@@ -113,20 +113,32 @@ class TestMultiSelect:
 
 class TestRegressions:
 
-    def test_autojoin_with_saved_name_no_js_error(self, server_url, playwright):
+    def test_returning_participant_skips_gate_no_js_error(self, server_url, playwright):
+        """A second visit re-enters the session silently, with no JS errors.
+
+        Since the real-name join gate landed, identity is server-side: the client
+        only re-enters without the gate when the UUID it saved on the first visit
+        is still registered (a seeded localStorage name is not enough). So the
+        auto-join path is exercised the way participants actually reach it —
+        join once, then reload.
+        """
         browser = playwright.chromium.launch()
         ctx = browser.new_context(base_url=server_url)
         page = ctx.new_page()
 
+        page.goto(_pax_url())
+        pax = ParticipantPage(page)
+        pax.join("AutoJoiner")
+
         js_errors = []
         page.on("pageerror", lambda e: js_errors.append(str(e)))
-
-        page.goto(_pax_url())
-        page.evaluate("localStorage.setItem('workshop_participant_name', 'AutoJoiner')")
-        page.evaluate("localStorage.setItem('workshop_participant_uuid', crypto.randomUUID())")
         page.reload()
 
+        expect(page.locator("#name-gate")).to_be_hidden(timeout=10000)
         expect(page.locator("#display-name")).to_be_visible(timeout=10000)
+        expect(page.locator("#display-name .display-name-text")).to_have_text(
+            "AutoJoiner", timeout=5000
+        )
         assert js_errors == [], f"JS errors on auto-join: {js_errors}"
 
         ctx.close()
