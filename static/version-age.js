@@ -97,7 +97,7 @@
         : '';
       html += commits.map(c =>
         `<div style="display:flex;justify-content:space-between;gap:1.2rem;align-items:baseline">` +
-        `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px" title="${c.msg.replace(/"/g,'&quot;')}">${c.msg}</span>` +
+        `<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px" data-tip="${c.msg.replace(/"/g,'&quot;')}">${c.msg}</span>` +
         `<span style="color:var(--muted,#7b80a0);flex-shrink:0;font-size:.7rem;font-family:monospace">${fmtAge(c.ts)}</span>` +
         `</div>`
       ).join('');

@@ -37,7 +37,7 @@ function renderPage(folders) {
                autocomplete="off"
                oninput="onNameInput()"
                onkeydown="if(event.key==='Enter' && !document.getElementById('create-btn-workshop').disabled) doCreate('workshop');" />
-        <button id="create-btn-workshop" class="create-btn create-btn-workshop" onclick="doCreate('workshop')" disabled title="New workshop">▶</button>
+        <button id="create-btn-workshop" class="create-btn create-btn-workshop" onclick="doCreate('workshop')" disabled data-tip="New workshop">▶</button>
       </div>
       <div id="create-error" class="error-msg" style="display:none;"></div>
     </div>
@@ -70,7 +70,7 @@ function buildFolderList(folders, today) {
       <span class="folder-date">${_esc(dateStr)}</span>
       <span class="folder-topic">${_esc(topic)}${todayTag}</span>
       <span class="folder-type-icon">${typeIcon}</span>
-      <button class="folder-play-btn" onclick='event.stopPropagation(); doResumeFolder(${JSON.stringify(folderName)})' title="Resume session">▶</button>
+      <button class="folder-play-btn" onclick='event.stopPropagation(); doResumeFolder(${JSON.stringify(folderName)})' data-tip="Resume session">▶</button>
     </li>`;
   }).join('');
 

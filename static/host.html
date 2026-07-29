@@ -37,11 +37,11 @@
     <button class="tab-btn" id="tab-qa" onclick="switchTab('qa')"><span class="tab-icon">❓</span>Q&A</button>
     <button class="tab-btn" id="tab-codereview" onclick="switchTab('codereview')"><span class="tab-icon">🕵️</span>Code</button>
     <button class="tab-btn" id="tab-debate" onclick="switchTab('debate')"><span class="tab-icon">⚔️</span>Debate</button>
-    <button class="tab-btn leaderboard-btn" id="btn-leaderboard" onclick="toggleLeaderboard()" title="Show Leaderboard">
+    <button class="tab-btn leaderboard-btn" id="btn-leaderboard" onclick="toggleLeaderboard()" data-tip="Show Leaderboard">
       <span class="tab-icon">🏆</span>Board
     </button>
     <!-- Talk mode: PPTX file picker (shown only in conference layout) -->
-    <label id="talk-pptx-drop" class="talk-pptx-tab" title="Click to pick PPTX file">
+    <label id="talk-pptx-drop" class="talk-pptx-tab" data-tip="Click to pick PPTX file">
       <input type="file" accept=".pptx,.ppt" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="onTalkPptxSelected(this)">
       <span id="talk-pptx-label">Drop pptx here</span>
       <span id="talk-pptx-check" style="display:none;color:#4caf50;margin-left:4px;font-weight:bold;">✓</span>
@@ -50,7 +50,7 @@
   <div class="host-top-spacer"></div>
   <div class="host-top-title-wrap">
     <div class="host-top-title" id="host-top-title"></div>
-    <span id="top-qr-icon" title="Show join QR code" aria-label="Show join QR code" role="button" tabindex="0">
+    <span id="top-qr-icon" data-tip="Show join QR code" aria-label="Show join QR code" role="button" tabindex="0">
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="20" height="20">
         <rect x="5" y="5" width="35" height="35" rx="4"/>
         <rect x="13" y="13" width="19" height="19" rx="2" fill="var(--bg,#1a1a2e)"/>
@@ -70,7 +70,7 @@
         <rect x="73" y="86" width="9" height="9" rx="1"/>
       </svg>
     </span>
-    <span id="map-icon" title="Show participant locations map" aria-label="Show participant locations map" role="button" tabindex="0">
+    <span id="map-icon" data-tip="Show participant locations map" aria-label="Show participant locations map" role="button" tabindex="0">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
         <path d="M3 6.5L9 4l6 2.5L21 4v13.5l-6 2.5-6-2.5-6 2.5z"/>
         <path d="M9 4v13.5"/>
@@ -128,7 +128,7 @@
             <input type="checkbox" id="poll-public" checked />
             Public
           </label>
-          <label class="poll-multi-label" title="Sort options by vote count (off = preserve original order)">
+          <label class="poll-multi-label" data-tip="Sort options by vote count (off = preserve original order)">
             <input type="checkbox" id="poll-sort-toggle" checked />
             <span id="poll-sort-toggle-emoji">↕️</span>
           </label>
@@ -259,13 +259,13 @@
     <!-- QR idle state -->
     <div id="center-qr" class="center-panel">
       <div style="display:flex; align-items:center; justify-content:center; gap:.75rem; padding:1rem 0 .5rem; width:100%;">
-        <div id="center-qr-url" class="center-join-link" title="Click to copy" onclick="copyCenterUrl(this)"></div>
-        <svg id="copy-link-icon" style="display:none; cursor:pointer; flex-shrink:0; width:22px; height:22px; opacity:.45; transition:opacity .15s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" title="Copy join link" onclick="copySessionLink()">
+        <div id="center-qr-url" class="center-join-link" data-tip="Click to copy" onclick="copyCenterUrl(this)"></div>
+        <svg id="copy-link-icon" style="display:none; cursor:pointer; flex-shrink:0; width:22px; height:22px; opacity:.45; transition:opacity .15s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-tip="Copy join link" onclick="copySessionLink()">
           <rect x="9" y="9" width="13" height="13" rx="2"/>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
         </svg>
       </div>
-      <div id="qr-code" class="qr-code" title="Click to brighten"></div>
+      <div id="qr-code" class="qr-code" data-tip="Click to brighten"></div>
     </div>
     <!-- Quiz results panel -->
     <div id="center-quiz" class="center-panel" style="display:none;">
@@ -322,8 +322,8 @@
     <!-- Attendance-sheet download affordances (mirror the Key Points .txt download):
          raw attendees.md, or a printable "Save as PDF" render via marked. -->
     <div class="pax-attendees-actions" style="display:flex; gap:.4rem; justify-content:flex-end; padding:.35rem .5rem .1rem;">
-      <button class="notes-download-btn" onclick="downloadAttendeesMd()" title="Download the attendance sheet (attendees.md)"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false" style="width:1em;height:1em;fill:currentColor;vertical-align:-.15em;margin-right:.3em;"><path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path><path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path></svg> attendees.md</button>
-      <button class="notes-download-btn" onclick="downloadAttendeesPdf()" title="Open a printable attendance sheet (use the browser dialog to Save as PDF)"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false" style="width:1em;height:1em;fill:currentColor;vertical-align:-.15em;margin-right:.3em;"><path d="M6 2.75A1.75 1.75 0 0 0 4.25 4.5v2.75h11.5V4.5A1.75 1.75 0 0 0 14 2.75H6Zm8.25 4.5H5.75V4.5a.25.25 0 0 1 .25-.25h8a.25.25 0 0 1 .25.25v2.75Z"></path><path d="M3 8.5A1.75 1.75 0 0 0 1.25 10.25v3.5c0 .966.784 1.75 1.75 1.75h1.25V17.5c0 .414.336.75.75.75h9.5a.75.75 0 0 0 .75-.75v-2h1.25a1.75 1.75 0 0 0 1.75-1.75v-3.5A1.75 1.75 0 0 0 17 8.5H3Zm2.75 6.5h8.5v1.75h-8.5V15Z"></path></svg> PDF</button>
+      <button class="notes-download-btn" onclick="downloadAttendeesMd()" data-tip="Download the attendance sheet (attendees.md)"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false" style="width:1em;height:1em;fill:currentColor;vertical-align:-.15em;margin-right:.3em;"><path d="M10 3.25a.75.75 0 0 1 .75.75v6.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V4a.75.75 0 0 1 .75-.75Z"></path><path d="M4.5 13.75a.75.75 0 0 1 .75.75v1h9.5v-1a.75.75 0 0 1 1.5 0V16A1.5 1.5 0 0 1 14.75 17.5h-9.5A1.5 1.5 0 0 1 3.75 16v-1.5a.75.75 0 0 1 .75-.75Z"></path></svg> attendees.md</button>
+      <button class="notes-download-btn" onclick="downloadAttendeesPdf()" data-tip="Open a printable attendance sheet (use the browser dialog to Save as PDF)"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false" style="width:1em;height:1em;fill:currentColor;vertical-align:-.15em;margin-right:.3em;"><path d="M6 2.75A1.75 1.75 0 0 0 4.25 4.5v2.75h11.5V4.5A1.75 1.75 0 0 0 14 2.75H6Zm8.25 4.5H5.75V4.5a.25.25 0 0 1 .25-.25h8a.25.25 0 0 1 .25.25v2.75Z"></path><path d="M3 8.5A1.75 1.75 0 0 0 1.25 10.25v3.5c0 .966.784 1.75 1.75 1.75h1.25V17.5c0 .414.336.75.75.75h9.5a.75.75 0 0 0 .75-.75v-2h1.25a1.75 1.75 0 0 0 1.75-1.75v-3.5A1.75 1.75 0 0 0 17 8.5H3Zm2.75 6.5h8.5v1.75h-8.5V15Z"></path></svg> PDF</button>
     </div>
     <ul id="pax-list" class="pax-list"></ul>
   </div>
@@ -423,7 +423,7 @@
   <div id="map-dialog" class="modal-dialog" onclick="event.stopPropagation()">
     <div id="map-header">
       <span id="map-title">Participant Locations</span>
-      <button id="map-close" onclick="closeMap()" title="Close">✕</button>
+      <button id="map-close" onclick="closeMap()" data-tip="Close">✕</button>
     </div>
     <div id="map-container"></div>
   </div>
@@ -472,5 +472,6 @@
     <div style="color:#475569; font-size:.78rem;">Move your mouse to stay here</div>
   </div>
 </div>
+<script src="/static/tooltip.js"></script>
 </body>
 </html>

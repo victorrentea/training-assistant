@@ -17,6 +17,10 @@ python3 -m pytest tests/daemon/test_api_contract.py tests/daemon/test_ws_contrac
   tests/daemon/test_railway_ws_contract.py tests/daemon/test_railway_rest_contract.py -v \
   --confcutdir=tests/daemon
 echo ""
+echo "=== Frontend conventions ==="
+# Static-only checks (no browser): keeps the single-tooltip rule enforced.
+python3 -m pytest tests/frontend/ -q --confcutdir=tests/frontend
+echo ""
 echo "=== Architecture contracts (Structurizr -> Import Linter) ==="
 python3 -m pytest tests/docs/test_structurizr_import_linter.py -q
 echo ""

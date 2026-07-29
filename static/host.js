@@ -164,7 +164,7 @@
     const tz = String(participant?.location_tz || _extractTimezone(rawLoc) || '').trim();
     const cc = String(participant?.location_country || '').trim().toUpperCase();
     if (!rawLoc && !tz && !cc) return '';
-    const flagHtml = cc ? `<span title="${escHtml(_countryCodeToName(cc))}" style="cursor:default">${_countryCodeToFlag(cc)}</span>` : '';
+    const flagHtml = cc ? `<span data-tip="${escHtml(_countryCodeToName(cc))}" style="cursor:default">${_countryCodeToFlag(cc)}</span>` : '';
     if (tz) {
       const hhmm = _formatClockForTimezone(tz);
       if (hhmm && flagHtml) return `${flagHtml} ⏱️${hhmm}`;
@@ -253,7 +253,7 @@
   if (pLink) {
     pLink.innerHTML = _currentSessionId ? _buildUrlHtml({ stripProtocol: true }) : '';
     if (_currentSessionId) {
-      pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
+      pLink.dataset.tip = 'Click to copy • Ctrl/Cmd+Click to open';
     } else {
       pLink.removeAttribute('title');
     }
@@ -656,7 +656,7 @@
     if (!el) return;
     el.textContent = '';
     el.style.display = 'none';
-    el.title = '';
+    el.dataset.tip = '';
   }
 
   let _transcriptLineCount = 0;
@@ -1333,7 +1333,7 @@ function _renderEngagementPopover() {
     if (!el) return;
     el.textContent = `👥 ${count}`;
     el.className = count > 0 ? 'badge connected' : 'badge disconnected';
-    el.title = `${count} participant${count !== 1 ? 's' : ''} connected`;
+    el.dataset.tip = `${count} participant${count !== 1 ? 's' : ''} connected`;
     if (count > _prevPaxCount && _prevPaxCount >= 0) {
       el.classList.add('flash');
       requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('flash')));
@@ -1453,7 +1453,7 @@ function _renderEngagementPopover() {
       // (quote-safe via escAttr) and wire the click via delegation (see
       // _ensurePaxScoreDelegation). NEVER interpolate the name into an inline
       // onclick JS string — a name with ' or " would break out and inject.
-      const scoreTag = pts > 0 ? `<span class="pax-score" title="Click to reset score" data-uuid="${escAttr(pid)}" data-name="${escAttr(name)}" data-pts="${pts}">⭐ ${pts} pts</span>` : '';
+      const scoreTag = pts > 0 ? `<span class="pax-score" data-tip="Click to reset score" data-uuid="${escAttr(pid)}" data-name="${escAttr(name)}" data-pts="${pts}">⭐ ${pts} pts</span>` : '';
       const locLabel = _formatParticipantLocation(participant) || null;
       const tzForColor = String(participant?.location_tz || _extractTimezone(loc) || '').trim();
       const hhmmForColor = tzForColor ? _rawHhmmForTimezone(tzForColor) : '';
@@ -1471,21 +1471,21 @@ function _renderEngagementPopover() {
       }
       const debateSide = participantDebateSides[pid];
       const debateIcon = _debateActive
-          ? (debateSide === 'for' ? '<span title="FOR">👍</span> ' : debateSide === 'against' ? '<span title="AGAINST">👎</span> ' : '<span title="Undecided">⏳</span> ')
+          ? (debateSide === 'for' ? '<span data-tip="FOR">👍</span> ' : debateSide === 'against' ? '<span data-tip="AGAINST">👎</span> ' : '<span data-tip="Undecided">⏳</span> ')
           : '';
       const ip = participant.ip || '';
       const online = participant.online === true;
       const pasteTexts = participant.paste_texts || [];
       const pasteIcons = pasteTexts.map((entry, i) => {
         const preview = (entry.text.length > 100 ? entry.text.substring(0, 100) + '…' : entry.text).replace(/\n/g, ' ');
-        return `<span class="paste-icon" title="${escAttr(preview)}" data-uuid="${escAttr(pid)}" data-paste-id="${entry.id}" onclick="copyAndDismissPaste(this)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="2"/><path d="M3 10.5H2.5a1.5 1.5 0 0 1-1.5-1.5V2.5A1.5 1.5 0 0 1 2.5 1h6.5A1.5 1.5 0 0 1 11 2.5V3"/></svg></span>`;
+        return `<span class="paste-icon" data-tip="${escAttr(preview)}" data-uuid="${escAttr(pid)}" data-paste-id="${entry.id}" onclick="copyAndDismissPaste(this)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="2"/><path d="M3 10.5H2.5a1.5 1.5 0 0 1-1.5-1.5V2.5A1.5 1.5 0 0 1 2.5 1h6.5A1.5 1.5 0 0 1 11 2.5V3"/></svg></span>`;
       }).join('');
       const receivedFiles = participant.received_files || [];
       const uploadIcons = receivedFiles.map(entry => {
         const copiedClass = (entry.copied || entry.seen_by_host) ? ' downloaded' : '';
-        return `<span class="upload-icon${copiedClass}" title="${escAttr(entry.disk_path)}" data-uuid="${escAttr(pid)}" data-file-id="${escAttr(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
+        return `<span class="upload-icon${copiedClass}" data-tip="${escAttr(entry.disk_path)}" data-uuid="${escAttr(pid)}" data-file-id="${escAttr(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
-      return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" title="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}</li>`;
+      return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" data-tip="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}</li>`;
     }).join('');
 
     if (flashPids && flashPids.size > 0) {
@@ -2446,11 +2446,11 @@ function _renderEngagementPopover() {
       const correct = isCorrect ? 'correct' : '';
       const llmHint = llmHints && llmHints.includes(idx) && !isCorrect;
       const queueHint = queueHints && queueHints.includes(idx) && !isCorrect;
-      const clickable = canMark ? `onclick="toggleCorrect(${idx})" title="Click to mark as correct"` : '';
+      const clickable = canMark ? `onclick="toggleCorrect(${idx})" data-tip="Click to mark as correct"` : '';
       return `
         <div class="result-row ${correct} ${canMark ? 'markable' : ''}" data-id="${idx}" ${clickable}>
           <div class="result-label">
-            <span>${escHtmlWithCode(text)}${isCorrect ? ' ✅' : ''}${queueHint ? ' <span class="queue-hint-check">✅</span>' : ''}${llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : ''}</span>
+            <span>${escHtmlWithCode(text)}${isCorrect ? ' ✅' : ''}${queueHint ? ' <span class="queue-hint-check">✅</span>' : ''}${llmHint ? ' <span class="llm-hint" data-tip="AI suggestion">✅ 🤔</span>' : ''}</span>
             <span class="pct">${count}</span>
           </div>
           <div class="bar-track">
@@ -2539,7 +2539,7 @@ function _renderEngagementPopover() {
         const queueHint = qHints && qHints.includes(idx) && !isCorrect;
         labelSpan.innerHTML = escHtmlWithCode(text) + (isCorrect ? ' ✅' : '') +
           (queueHint ? ' <span class="queue-hint-check">✅</span>' : '') +
-          (llmHint ? ' <span class="llm-hint" title="AI suggestion">✅ 🤔</span>' : '');
+          (llmHint ? ' <span class="llm-hint" data-tip="AI suggestion">✅ 🤔</span>' : '');
       }
       if (fill) {
         fill.style.width = `${pct}%`;
@@ -2650,7 +2650,7 @@ function _renderEngagementPopover() {
     const items = queue?.items || [];
     list.innerHTML = items.map((item, i) => {
       const multi = item.correct_indices.length > 1 ? ' <span style="color:#e55; font-size:.7rem;">#multi</span>' : '';
-      return `<li data-idx="${i}" class="${i === selectedQueueIndex ? 'selected' : ''}">${escHtml(item.question)}${multi}<button class="queue-remove-btn" data-idx="${i}" aria-label="Remove from queue" title="Remove from queue">✕</button></li>`;
+      return `<li data-idx="${i}" class="${i === selectedQueueIndex ? 'selected' : ''}">${escHtml(item.question)}${multi}<button class="queue-remove-btn" data-idx="${i}" aria-label="Remove from queue" data-tip="Remove from queue">✕</button></li>`;
     }).join('');
     list.querySelectorAll('li').forEach(li => {
       li.addEventListener('click', (e) => {
@@ -2998,7 +2998,7 @@ function _renderEngagementPopover() {
         </div>
         <div class="qa-actions">
           <button class="btn btn-sm"
-                  onclick="copyQuestionText(this, '${escHtml(q.id)}')" title="Copy text"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="1.5"/><path d="M10.5 5.5V3a1.5 1.5 0 0 0-1.5-1.5H3A1.5 1.5 0 0 0 1.5 3v6A1.5 1.5 0 0 0 3 10.5h2.5"/></svg></button>
+                  onclick="copyQuestionText(this, '${escHtml(q.id)}')" data-tip="Copy text"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="9" height="9" rx="1.5"/><path d="M10.5 5.5V3a1.5 1.5 0 0 0-1.5-1.5H3A1.5 1.5 0 0 0 1.5 3v6A1.5 1.5 0 0 0 3 10.5h2.5"/></svg></button>
           <button class="btn btn-sm ${q.answered ? 'btn-success' : ''}"
                   onclick="toggleAnswered('${escHtml(q.id)}', ${q.answered})">
             ✓ Answer
@@ -3553,7 +3553,7 @@ function _renderEngagementPopover() {
             } else if (spActive) {
               statusHtml = `<button class="btn btn-warn btn-sm" id="debate-round-end-btn-${si}" onclick="endDebateRound()">End</button>`;
             } else if (spNext) {
-              statusHtml = `<input type="text" class="debate-round-duration" id="debate-round-dur-${si}" value="${durVal}" title="Duration (m:ss)" /><button class="btn btn-primary btn-sm" onclick="startDebateRound(${si})">▶ Start</button>`;
+              statusHtml = `<input type="text" class="debate-round-duration" id="debate-round-dur-${si}" value="${durVal}" data-tip="Duration (m:ss)" /><button class="btn btn-primary btn-sm" onclick="startDebateRound(${si})">▶ Start</button>`;
             }
 
             return `<div class="${spCls}">
@@ -3886,7 +3886,7 @@ function updateSessionCodeBar(sessionId) {
   if (pLink && changed) {
     if (sessionId) {
       pLink.innerHTML = _buildUrlHtml({ stripProtocol: true });
-      pLink.title = 'Click to copy • Ctrl/Cmd+Click to open';
+      pLink.dataset.tip = 'Click to copy • Ctrl/Cmd+Click to open';
     } else {
       pLink.innerHTML = '';
       pLink.removeAttribute('title');

@@ -114,13 +114,13 @@
       const code = btn.nextElementSibling.textContent;
       navigator.clipboard.writeText(code).then(() => {
         btn.classList.add('copied');
-        btn.title = 'Copied!';
-        setTimeout(() => { btn.classList.remove('copied'); btn.title = 'Copy'; }, 1500);
+        btn.dataset.tip = 'Copied!';
+        setTimeout(() => { btn.classList.remove('copied'); btn.dataset.tip = 'Copy'; }, 1500);
       });
     }
 
     function makeCodeBlock(code) {
-      return `<div class="code-block"><button class="copy-btn" onclick="copyCode(this)" title="Copy">${COPY_ICON} copy</button><pre>${escHtml(code)}</pre></div>`;
+      return `<div class="code-block"><button class="copy-btn" onclick="copyCode(this)" data-tip="Copy">${COPY_ICON} copy</button><pre>${escHtml(code)}</pre></div>`;
     }
 
     function renderNotes(text) {
@@ -214,5 +214,6 @@
       sessionStorage.setItem('notes_scrollY', String(window.scrollY));
     });
   </script>
+<script src="/static/tooltip.js"></script>
 </body>
 </html>

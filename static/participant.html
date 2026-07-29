@@ -210,28 +210,26 @@ body{visibility:hidden}
         }
         .break-reminder-gotit:hover { opacity: 1; }
 
-        /* Custom reaction-emoji tooltip. The native `title` tooltip can't be made
-           bigger or faster, so we render our own: ~2x larger text, shown ~150ms
-           after hover (roughly 3x faster than the browser's ~500ms title delay). */
-        #emoji-tooltip {
-          position: fixed;
-          left: 0; top: 0;
-          z-index: 60;
-          pointer-events: none;
-          background: rgba(20, 20, 22, 0.96);
-          color: #fff;
-          font-size: 1.25rem;         /* ~2x a native ~11-13px tooltip */
-          font-weight: 600;
-          line-height: 1.25;
-          padding: 0.6rem 0.9rem;
-          border-radius: 0.6rem;
-          max-width: 22rem;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-          opacity: 0;
-          transform: translateY(4px);
-          transition: opacity 120ms ease, transform 120ms ease;
+        /* Download-zip button in the Google Drive row. It sits next to the purely
+           decorative open_in_new glyph, so without a permanent background it reads
+           as ornament and nobody discovers it. The resting background says "this
+           is a control"; the hover confirms it. */
+        .gdrive-zip-btn {
+          background: var(--color-surface-container-highest, #e2e8ee);
+          border: none;
+          border-radius: 999px;
+          width: 1.75rem;
+          height: 1.75rem;
+          padding: 0;
+          color: inherit;
+          opacity: 0.75;
+          transition: opacity 120ms ease, background-color 120ms ease, transform 120ms ease;
         }
-        #emoji-tooltip.visible { opacity: 1; transform: translateY(0); }
+        .gdrive-zip-btn:hover {
+          opacity: 1;
+          background: var(--color-primary-container, #d6e3ff);
+          transform: scale(1.08);
+        }
 
         /* Access duration toast */
         #access-duration-toast {
@@ -706,7 +704,7 @@ body{visibility:hidden}
     <div class="name-gate-buttons">
       <button id="name-gate-enter" type="button" disabled>Enter</button>
       <button id="name-gate-anon" type="button"
-              title="You might not appear correctly in the attendance sheet.">Enter as anonymous</button>
+              data-tip="You might not appear correctly in the attendance sheet.">Enter as anonymous</button>
       <div id="name-gate-anon-warning">You might not appear correctly in the attendance sheet.</div>
     </div>
     <div id="name-gate-error" style="display:none">
@@ -745,7 +743,7 @@ body{visibility:hidden}
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 </span>
 <span class="ml-auto mr-1 inline-flex items-center gap-1.5">
-<button onclick="event.stopPropagation(); _jumpToHostSlide()" title="Jump to host slide" class="inline-flex items-center rounded-md px-2 py-1 cursor-pointer transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);font-size:0.95rem;line-height:1;">🎯</button>
+<button onclick="event.stopPropagation(); _jumpToHostSlide()" data-tip="Jump to host slide" class="inline-flex items-center rounded-md px-2 py-1 cursor-pointer transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);font-size:0.95rem;line-height:1;">🎯</button>
 <label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer rounded-md px-2 py-1 transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);">
 <input id="slides-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onFollowChange(this.checked)" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
 <span>Follow</span>
@@ -796,13 +794,13 @@ body{visibility:hidden}
 <span class="text-base flex-1">Google Drive</span>
 <span class="material-symbols-outlined flex-shrink-0" style="font-size:1rem;opacity:0.5">open_in_new</span>
 </a>
-<button id="gdrive-zip-btn" onclick="downloadMaterialsZip()" title="Download everything as .zip" class="flex-shrink-0 cursor-pointer" style="background:none;border:none;padding:0;color:inherit">
-<span id="gdrive-zip-icon" class="material-symbols-outlined" style="font-size:1.1rem;opacity:0.6">download</span>
+<button id="gdrive-zip-btn" onclick="downloadMaterialsZip()" data-tip="Download everything as .zip" class="gdrive-zip-btn flex-shrink-0 cursor-pointer flex items-center justify-center">
+<span id="gdrive-zip-icon" class="material-symbols-outlined" style="font-size:1.1rem">download</span>
 </button>
 </div>
 <a data-nav="files" onclick="showView('files')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-size:22px;line-height:1;flex-shrink-0">commit</span>
-<span class="text-base">Files</span>
+<span class="text-base">Opened Files</span>
 <span id="files-badge" class="badge-new" style="display:none"></span>
 </a>
 <a data-nav="upload-paste" onclick="showView('upload-paste')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
@@ -820,11 +818,11 @@ body{visibility:hidden}
     <img id="my-avatar" alt="Avatar" class="w-full h-full rounded-full object-cover" style="display:none" src=""/>
     <span id="my-avatar-letter" class="w-full h-full rounded-full flex items-center justify-center text-white font-extrabold text-xs" style="display:none"></span>
   </div>
-  <span id="display-name" class="text-base flex-1 cursor-pointer" title="Click to edit name" style="display:none"><span id="dup-name-prefix" title="Duplicate name">⚠️</span><span class="display-name-text"></span><span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-60 transition-opacity ml-1" style="font-size:14px;vertical-align:middle">edit</span></span>
+  <span id="display-name" class="text-base flex-1 cursor-pointer" data-tip="Click to edit name" style="display:none"><span id="dup-name-prefix" data-tip="Duplicate name">⚠️</span><span class="display-name-text"></span><span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-60 transition-opacity ml-1" style="font-size:14px;vertical-align:middle">edit</span></span>
   <span id="name-edit-wrap" style="display:none" class="flex-1">
     <input id="name-edit-input" type="text" maxlength="64" class="text-base font-medium text-on-surface bg-surface-container-high rounded px-1 py-0 w-full outline-none border border-primary" />
   </span>
-  <button id="share-location-btn" onclick="requestParticipantLocation(); event.stopPropagation();" title="Share your location with host" style="display:none" class="flex-shrink-0 opacity-60 transition-all">
+  <button id="share-location-btn" onclick="requestParticipantLocation(); event.stopPropagation();" data-tip="Share your location with host" style="display:none" class="flex-shrink-0 opacity-60 transition-all">
     <span class="material-symbols-outlined" style="font-size:1.25rem">location_on</span>
   </button>
 </div>
@@ -832,7 +830,7 @@ body{visibility:hidden}
      name occurs >=2 times in the participant_names_updated broadcast. -->
 <div id="dup-indicator">⚠️ <b>duplicate</b> name — <span class="dup-change-link" onclick="_startNameEdit()">click here to change</span></div>
 </aside>
-<div id="deploy-age-line" onclick="resetRemindersForTest()" title="Click to reset break reminders (for testing)"
+<div id="deploy-age-line" onclick="resetRemindersForTest()" data-tip="Click to reset break reminders (for testing)"
   class="fixed bottom-0 right-0 px-2 py-1 cursor-pointer select-none"
   style="font-size:0.625rem;line-height:1.3;color:var(--color-outline);opacity:0.5;transition:opacity 0.15s;z-index:100"
   onmouseenter="this.style.opacity='0.9'" onmouseleave="this.style.opacity='0.5'">
@@ -881,7 +879,7 @@ body{visibility:hidden}
 <!-- AI Summary View -->
 <div id="notes-view" style="display:none" class="relative h-full flex flex-col">
   <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
-    <button onclick="downloadNotes()" class="p-2 rounded-full text-on-surface-variant transition-all flex hover-green" title="Download as text file">
+    <button onclick="downloadNotes()" class="p-2 rounded-full text-on-surface-variant transition-all flex hover-green" data-tip="Download as text file">
       <span class="material-symbols-outlined">download</span>
     </button>
   </div>
@@ -891,11 +889,11 @@ body{visibility:hidden}
 </div>
 <div id="summary-view" style="display:none" class="relative h-full flex flex-col">
   <div id="summary-dl" class="absolute top-6 right-6 z-20 flex items-center p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
-    <button onclick="downloadSummaryMd()" class="summary-dl-md py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" title="Download as Markdown">
+    <button onclick="downloadSummaryMd()" class="summary-dl-md py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" data-tip="Download as Markdown">
       <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
       <span>.md</span>
     </button>
-    <button onclick="downloadSummaryPdf()" class="summary-dl-pdf py-2 rounded-full text-on-surface-variant transition-all flex items-center hover-green text-sm font-semibold" title="Download as PDF">
+    <button onclick="downloadSummaryPdf()" class="summary-dl-pdf py-2 rounded-full text-on-surface-variant transition-all flex items-center hover-green text-sm font-semibold" data-tip="Download as PDF">
       <span class="summary-dl-pdf-label">.pdf</span>
       <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
     </button>
@@ -2311,7 +2309,7 @@ function _formatSlideAge(updatedAt) {
 function _buildTopicItem(slide) {
   var el = document.createElement('div');
   el.className = 'topic-item pl-4 pr-1 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-1 min-w-0';
-  el.title = slide.name;
+  el.dataset.tip = slide.name;
   el.dataset.slideId = slide._id;
   el.addEventListener('click', function(e) { selectTopic(el, e, slide); });
   var nameSpan = document.createElement('span');
@@ -2337,7 +2335,7 @@ function _buildTopicItem(slide) {
   var status = slide.status || 'not_cached';
   var cfg = _dotCfg[status] || _dotCfg['not_cached'];
   var dotEl = document.createElement('span');
-  dotEl.title = cfg.tip;
+  dotEl.dataset.tip = cfg.tip;
   if (cfg.spinner) {
     dotEl.style.cssText = 'display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;flex-shrink:0;animation:spin .7s linear infinite;opacity:0.6';
   } else {
@@ -2348,7 +2346,7 @@ function _buildTopicItem(slide) {
   dlBtn.className = 'material-symbols-outlined flex-shrink-0 rounded p-0.5 bg-surface-container-highest text-on-surface-variant hover-green transition-colors cursor-pointer';
   dlBtn.style.cssText = 'font-size:14px;font-family:"Material Symbols Outlined"';
   dlBtn.textContent = 'download';
-  dlBtn.title = 'Download ' + slide.name;
+  dlBtn.dataset.tip = 'Download ' + slide.name;
   dlBtn.addEventListener('click', async function(e) {
     e.stopPropagation();
     if (dlBtn.dataset.checking) return;
@@ -2458,59 +2456,12 @@ function downloadTopic(url, name) {
 // Shared reaction-button styling — defined once so the catalog-driven bar and
 // the promote-to-bar path stay visually identical.
 var EMOJI_BTN_CLASS = 'w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110';
-// --- Custom reaction tooltip (bigger + faster than the native `title`) ---------
-var _emojiTip = null;
-var _emojiTipTimer = null;
-function _emojiTipEl() {
-  if (!_emojiTip) {
-    _emojiTip = document.createElement('div');
-    _emojiTip.id = 'emoji-tooltip';
-    document.body.appendChild(_emojiTip);
-  }
-  return _emojiTip;
-}
-function _showEmojiTip(btn) {
-  var text = btn.dataset.tip;
-  if (!text) return;
-  var el = _emojiTipEl();
-  el.textContent = text;
-  var r = btn.getBoundingClientRect();
-  var m = 8;                                   // viewport edge margin
-  var left = r.left + r.width / 2 - el.offsetWidth / 2;
-  left = Math.max(m, Math.min(left, window.innerWidth - el.offsetWidth - m));
-  var top = r.top - el.offsetHeight - 10;      // above the button…
-  if (top < m) top = r.bottom + 10;            // …or below if there's no room
-  el.style.left = left + 'px';
-  el.style.top = top + 'px';
-  el.classList.add('visible');
-}
-function _hideEmojiTip() {
-  clearTimeout(_emojiTipTimer);
-  if (_emojiTip) _emojiTip.classList.remove('visible');
-}
-// Set the (custom) tooltip on a reaction button and drop the native `title` so
-// only our bigger/faster bubble shows; keep the text as aria-label for a11y.
+// Reaction buttons use the shared tooltip component (static/tooltip.js);
+// this only sets the attribute it reads, plus an aria-label for a11y.
 function applyEmojiTip(btn, text) {
   btn.dataset.tip = text || '';
   if (text) btn.setAttribute('aria-label', text);
-  btn.removeAttribute('title');
 }
-(function _wireEmojiTips() {
-  var host = document.getElementById('floating-reactions');
-  if (!host) return;
-  host.addEventListener('mouseover', function(e) {
-    var btn = e.target.closest('[data-tip]');
-    if (!btn || !host.contains(btn)) return;
-    clearTimeout(_emojiTipTimer);
-    _emojiTipTimer = setTimeout(function() { _showEmojiTip(btn); }, 150);
-  });
-  host.addEventListener('mouseout', function(e) {
-    var btn = e.target.closest('[data-tip]');
-    if (!btn) return;
-    if (e.relatedTarget && btn.contains(e.relatedTarget)) return;  // still inside
-    _hideEmojiTip();
-  });
-})();
 // Build the reaction bar from the daemon's emoji catalog (the single source of
 // truth — there is deliberately no hardcoded emoji list here). Runs once; the
 // catalog is static for the life of the page.
@@ -4941,7 +4892,7 @@ function restoreMarkTagsInCode(escapedHtml) {
 function makeSummaryRenderer() {
   var r = new marked.Renderer();
   r.link = function(href, title, text) {
-    var t = title ? ' title="' + title + '"' : '';
+    var t = title ? ' data-tip="' + title + '"' : '';
     return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>'
       + text
       + '<span class="material-symbols-outlined" style="font-size:0.85em;vertical-align:middle;margin-left:2px;opacity:0.7">open_in_new</span>'
@@ -5076,7 +5027,7 @@ async function loadFilesMd() {
     if (md.trim()) {
       var _renderer = new marked.Renderer();
       _renderer.link = function(href, title, text) {
-        var t = title ? ' title="' + title + '"' : '';
+        var t = title ? ' data-tip="' + title + '"' : '';
         return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>' + text + '</a>';
       };
       el.innerHTML = marked.parse(md, { renderer: _renderer });
@@ -5230,7 +5181,7 @@ function downloadSummaryPdf() {
     function mkBtn(emoji, title) {
       var b = document.createElement('button');
       b.textContent = emoji;
-      b.title = title;
+      b.dataset.tip = title;
       Object.assign(b.style, {
         width: '32px', height: '32px', borderRadius: '50%',
         border: '1px solid #d0a000', background: '#fffbe6', cursor: 'pointer',
@@ -5415,4 +5366,5 @@ function downloadSummaryPdf() {
   });
 })();
 </script>
+<script src="/static/tooltip.js"></script>
 </body></html>
