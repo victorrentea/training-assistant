@@ -5125,32 +5125,22 @@ function downloadSummaryPdf() {
   </div>
 </div>
 <script>
-/* Host-only summary-refinement toolbar. Visible ONLY on the host machine
+/* Host-only summary-highlight toolbar. Visible ONLY on the host machine
    (ON_HOST_MACHINE=true cookie); participants never see it. On a text selection in the summary, a
-   floating toolbar appears ABOVE the selection with two actions:
-     🖍️ highlight — one click; asks the agent to wrap the passage in <mark> (rendered as an amber band)
-     💬 comment   — opens a note box to send a free-form refinement request
-   Both POST the selected text (+ note) to the local relay listener (127.0.0.1:8766;
-   NOT 8765, which the victor-macos-addons WebSocket server owns),
-   which Claude Code watches to refine ai-summary.md. Everything is on localhost. */
+   floating toolbar appears ABOVE the selection with one action:
+     🖍️ highlight — one click; POSTs a source anchor to the local daemon
+                    (127.0.0.1:1234), which splices <mark> into ai-summary.md.
+   A 💬 comment button used to sit beside it, typing refinement notes to an
+   agent; those are dictated through Wispr Relay now, so it is gone. */
 (function () {
   // Host machine only: gate on the JS-readable ON_HOST_MACHINE=true cookie (set by
   // the landing-page toggle). The is_host cookie is httponly, so JS cannot read it.
   if (!document.cookie.split(';').some(function (p) { return p.trim() === 'ON_HOST_MACHINE=true'; })) return;
-  var RELAY = 'http://127.0.0.1:8766/note';      // comments → Claude-watched relay
   var DAEMON = 'http://127.0.0.1:1234';          // highlights → local daemon (deterministic)
   // Session id from the URL path (this IIFE is a separate <script> block, so the
   // page-level `let _sessionId` is out of scope here).
   var SID = (location.pathname.split('/')[1] || '').toLowerCase();
-  var toolbar = null, popup = null, lastSel = '';
-
-  // Compact reminder of what's being commented on: for long selections, show
-  // the first few words, an ellipsis, and the last word; short ones in full.
-  function snippet(text) {
-    var words = text.split(/\s+/).filter(Boolean);
-    if (words.length <= 8) return text;
-    return words.slice(0, 6).join(' ') + ' … ' + words[words.length - 1];
-  }
+  var toolbar = null;
 
   function selectionInSummary() {
     var sel = window.getSelection();
@@ -5164,18 +5154,15 @@ function downloadSummaryPdf() {
     return { text: text, rect: range.getBoundingClientRect(), range: range.cloneRange() };
   }
   function removeToolbar() { if (toolbar) { toolbar.remove(); toolbar = null; } }
-  function removePopup() { if (popup) { popup.remove(); popup = null; } }
 
   function showToolbar(info) {
     removeToolbar();
-    lastSel = info.text;
     // Sit ABOVE the selection (near its right edge) so the bar never covers the
-    // text that follows the selection on the same line. Two buttons: highlight
-    // and comment.
+    // text that follows the selection on the same line. One button: highlight.
     toolbar = document.createElement('div');
     Object.assign(toolbar.style, {
       position: 'fixed', zIndex: 2147483647, display: 'flex', gap: '4px',
-      left: Math.min(window.innerWidth - 78, Math.max(6, info.rect.right - 62)) + 'px',
+      left: Math.min(window.innerWidth - 42, Math.max(6, info.rect.right - 32)) + 'px',
       top: Math.max(6, info.rect.top - 40) + 'px'
     });
     function mkBtn(emoji, title) {
@@ -5193,52 +5180,8 @@ function downloadSummaryPdf() {
     }
     var hi = mkBtn('🖍️', 'Mark as highlight');
     hi.addEventListener('click', function (e) { e.stopPropagation(); submitHighlight(); });
-    var note = mkBtn('💬', 'Send a refinement note to Claude');
-    note.addEventListener('click', function (e) { e.stopPropagation(); openPopup(info); });
-    toolbar.appendChild(hi); toolbar.appendChild(note);
+    toolbar.appendChild(hi);
     document.body.appendChild(toolbar);
-  }
-
-  function openPopup(info) {
-    removePopup();
-    popup = document.createElement('div');
-    Object.assign(popup.style, {
-      position: 'fixed', zIndex: 2147483647,
-      left: Math.min(window.innerWidth - 620, info.rect.right + 6) + 'px',
-      top: Math.min(window.innerHeight - 420, info.rect.bottom + 8) + 'px',
-      width: '600px', background: '#fff', border: '1px solid #ccc',
-      borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,.25)',
-      padding: '20px', font: '26px system-ui, sans-serif', color: '#111'
-    });
-    // Echo a compact reminder of the selection (first words … last word) above
-    // the note box so the host sees exactly what they're commenting on. The full
-    // selection stays highlighted on the page and is what actually gets sent.
-    var ctx = document.createElement('div');
-    ctx.textContent = '“' + snippet(info.text) + '”';
-    Object.assign(ctx.style, {
-      marginBottom: '16px', paddingLeft: '16px', color: '#555', fontStyle: 'italic',
-      fontSize: '24px', lineHeight: '1.35', borderLeft: '6px solid #d0a000',
-      maxHeight: '108px', overflow: 'hidden'
-    });
-    var ta = document.createElement('textarea');
-    ta.placeholder = 'What should Claude refine here?';
-    Object.assign(ta.style, { width: '100%', boxSizing: 'border-box', height: '128px', resize: 'vertical', border: '1px solid #ccc', borderRadius: '12px', padding: '12px', font: '26px system-ui' });
-    var row = document.createElement('div');
-    Object.assign(row.style, { display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' });
-    var cancel = document.createElement('button'); cancel.textContent = 'Cancel';
-    var send = document.createElement('button'); send.textContent = 'Send';
-    [cancel, send].forEach(function (b) { Object.assign(b.style, { padding: '8px 24px', borderRadius: '12px', border: '1px solid #bbb', cursor: 'pointer', font: '26px system-ui' }); });
-    Object.assign(send.style, { background: '#2563eb', color: '#fff', borderColor: '#2563eb' });
-    cancel.addEventListener('click', function () { removePopup(); removeToolbar(); });
-    send.addEventListener('click', function () { submitNote(lastSel, ta.value); });
-    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitNote(lastSel, ta.value); } });
-    row.appendChild(cancel); row.appendChild(send);
-    popup.appendChild(ctx); popup.appendChild(ta); popup.appendChild(row);
-    document.body.appendChild(popup);
-    // Keep the page selection visible while the dialog is open — focusing the
-    // textarea would otherwise collapse it; re-apply the saved range (shown greyed).
-    if (info.range) { var s = window.getSelection(); s.removeAllRanges(); s.addRange(info.range); }
-    setTimeout(function () { ta.focus(); }, 0);
   }
 
   function toast(msg, ok) {
@@ -5251,23 +5194,6 @@ function downloadSummaryPdf() {
     });
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, 2400);
-  }
-
-  function postRelay(payload, okMsg) {
-    return fetch(RELAY, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).then(function (r) {
-      toast(r.status === 204 ? okMsg : ('Error ' + r.status), r.status === 204);
-    }).catch(function () {
-      toast('Relay not running — start the listener', false);
-    }).finally(function () { removePopup(); removeToolbar(); });
-  }
-
-  function submitNote(selected, comment) {
-    comment = (comment || '').trim();
-    if (!comment) { toast('Write a note first', false); return; }
-    postRelay({ selected: selected, comment: comment, view: 'summary', ts: new Date().toISOString() }, 'Sent to Claude ✓');
   }
 
   // One-click highlight: DETERMINISTIC, no AI. Build a SOURCE text-quote anchor
@@ -5343,26 +5269,18 @@ function downloadSummaryPdf() {
       toast(r.ok ? 'Highlighted ✓' : ('Error ' + r.status), r.ok);
     }).catch(function () {
       toast('Highlight failed — is the daemon running?', false);
-    }).finally(function () { removePopup(); removeToolbar(); });
+    }).finally(function () { removeToolbar(); });
   }
 
   document.addEventListener('mouseup', function () {
     setTimeout(function () {
-      if (popup) return;                       // don't reshow while editing a note
       var info = selectionInSummary();
       if (info) showToolbar(info); else removeToolbar();
     }, 10);
   });
   document.addEventListener('mousedown', function (e) {
     if (toolbar && toolbar.contains(e.target)) return; // click on a toolbar button: ignore
-    if (popup) {
-      if (popup.contains(e.target)) return;            // click inside the dialog: ignore
-      var ta = popup.querySelector('textarea');
-      if (ta && ta.value.trim()) return;               // has text: keep the dialog open
-      removePopup(); removeToolbar();                  // empty: dismiss on outside click
-      return;
-    }
-    removeToolbar();                                   // no dialog: clicking away hides the toolbar
+    removeToolbar();                                   // clicking away hides the toolbar
   });
 })();
 </script>
