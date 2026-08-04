@@ -39,7 +39,7 @@ New self-contained component: `railway/features/drive_relay/`
 | File | Responsibility |
 |---|---|
 | `link_parser.py` | Extract `(id, kind)` from a pasted URL. Pure function, no I/O. |
-| `drive_client.py` | Thin wrapper over Drive API v3 with an API key: `get_metadata`, `list_children`, `open_download`. The only module that knows Google exists. |
+| `drive_client.py` | Thin wrapper over Drive API v3 with an API key, on stdlib `urllib.request`: `get_metadata`, `list_children`, `open_download`. The only module that knows Google exists. |
 | `ownership.py` | The anti-abuse gate. Pure decision function over metadata. |
 | `zip_stream.py` | Generator yielding zip bytes as files stream in. Knows nothing about Drive or HTTP. |
 | `router.py` | `GET /api/drive/preview`, `GET /api/drive/zip`, page route `/drive`. |
@@ -99,15 +99,26 @@ This spike must run before the rest of the implementation.
 
 ## Zip streaming
 
-`stream-zip` (one new dependency — battle-tested on zip64, unicode names, timestamps)
-fed by a synchronous `httpx.Client` that downloads one file at a time.
-`StreamingResponse` receives a sync generator, so Starlette runs it in a threadpool.
-Memory stays constant; nothing touches disk.
+**No new dependency.** `railway/` has five runtime dependencies and already downloads
+from Drive with stdlib `urllib.request` (`railway/features/slides/cache.py:184`); this
+feature stays inside that budget.
 
-Rejected alternative: hand-rolled async zip writer. It removes the dependency and the
-threadpool, but zip-format edge cases (data descriptors, zip64 thresholds, unicode
-flags) are exactly where hand-rolled writers produce archives that some tools refuse
-to open.
+Stdlib `zipfile` can write into an unseekable stream: give `ZipFile` a small
+`io.RawIOBase` sink that accumulates writes, use `zf.open(name, "w",
+force_zip64=True)` to feed each file in chunks, and drain the sink after every chunk,
+yielding what it collected. `ZipFile` detects the unseekable output and emits data
+descriptors on its own, so zip-format correctness stays in the stdlib rather than in
+our code. Downloads use `urllib.request` in the same sync style as `slides/cache.py`.
+`StreamingResponse` receives the sync generator and Starlette runs it in a threadpool.
+
+Verified before adopting: memory stays flat (largest single yield 64 KB regardless of
+file size), the archive round-trips through Python's `zipfile`, and both `unzip` and
+macOS `ditto` open it with unicode filenames intact.
+
+Rejected alternatives: `stream-zip` (a dependency, for something the stdlib already
+does here) and a hand-rolled zip writer (zip64 thresholds, data descriptors and
+unicode flags are exactly where hand-rolled writers produce archives some tools
+refuse to open).
 
 Details:
 
