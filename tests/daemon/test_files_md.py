@@ -57,6 +57,40 @@ def test_render_entry_on_divergent_branch_shows_visible_chip(tz_bucharest):
     assert "· branch" in files_md.sanitize_for_wire(doc.render())
 
 
+def test_render_linked_entry_with_no_ref_falls_back_to_default(tz_bucharest):
+    """A migrated legacy entry can be linked (blob_url set) while carrying no
+    `ref:` at all. Must not literally emit `ref:None` — that string parses
+    back as the value "None", not as an absence."""
+    doc = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(path="src/a.py", branch="master", ts="2026-08-04T06:41:07Z",
+                       blob_url="https://github.com/owner/repo/blob/master/src/a.py",
+                       ref=None),
+    ])])
+    rendered = doc.render()
+    assert "ref:None" not in rendered
+    assert "ref:default" in rendered
+
+
+def test_render_skips_repo_with_no_entries_renders_empty_state():
+    doc = files_md.Doc(repos=[files_md.Repo(
+        url="https://github.com/owner/repo", name="repo",
+        default_branch="main", branch="main", entries=[])])
+    assert doc.render() == files_md.EMPTY_STATE
+
+
+def test_render_skips_empty_repo_but_keeps_others(tz_bucharest):
+    doc = files_md.Doc(repos=[
+        files_md.Repo(url="https://github.com/owner/empty", name="empty",
+                      default_branch="main", branch="main", entries=[]),
+        _repo_with([files_md.Entry(
+            path="src/a.py", branch="master", ts="2026-08-04T06:41:07Z",
+            blob_url="https://github.com/owner/repo/blob/master/src/a.py", ref="branch")]),
+    ])
+    rendered = doc.render()
+    assert "empty" not in rendered
+    assert "[repo]" in rendered
+
+
 def test_render_unlinked_entry_has_no_link(tz_bucharest):
     doc = files_md.Doc(repos=[_repo_with([
         files_md.Entry(path="src/c.py", branch="master", ts="2026-08-04T08:20:31Z",
@@ -98,13 +132,34 @@ def test_parse_roundtrip(tz_bucharest):
 
 
 def test_parse_path_with_spaces_roundtrips(tz_bucharest):
+    from daemon import github_client
+    # `build_blob_url` percent-encodes the path, so this is the URL a space
+    # actually produces — not an arbitrary hand-written shape.
+    blob_url = github_client.build_blob_url("owner", "repo", "master", "src/my folder/a.py")
+    assert blob_url == "https://github.com/owner/repo/blob/master/src/my%20folder/a.py"
     original = files_md.Doc(repos=[_repo_with([
         files_md.Entry(path="src/my folder/a.py", branch="master", ts="2026-08-04T06:41:07Z",
-                       blob_url="https://github.com/owner/repo/blob/master/src/my%20folder/a.py",
-                       ref="branch"),
+                       blob_url=blob_url, ref="branch"),
     ])])
     parsed = files_md.Doc.parse(original.render())
     assert parsed.repos[0].entries[0].path == "src/my folder/a.py"
+    assert parsed.repos[0].entries[0].blob_url == blob_url
+
+
+def test_parse_path_with_parens_roundtrips(tz_bucharest):
+    """Before build_blob_url percent-encoded the path, `(`/`)` in it would
+    truncate the URL at the first `)` (the linked-entry href group stops
+    there) — degrading the link on the very next save cycle."""
+    from daemon import github_client
+    blob_url = github_client.build_blob_url("owner", "repo", "master", "src/a(1).java")
+    assert blob_url == "https://github.com/owner/repo/blob/master/src/a%281%29.java"
+    original = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(path="src/a(1).java", branch="master", ts="2026-08-04T06:41:07Z",
+                       blob_url=blob_url, ref="branch"),
+    ])])
+    parsed = files_md.Doc.parse(original.render())
+    assert parsed.repos[0].entries[0].path == "src/a(1).java"
+    assert parsed.repos[0].entries[0].blob_url == blob_url
 
 
 def test_parse_old_format_linked_entry_uses_path_comment(tz_bucharest):
@@ -216,8 +271,10 @@ def _freeze_now(monkeypatch, iso: str):
 
 def test_record_unknown_repo_public_with_valid_blob(session_folder, monkeypatch):
     _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    # The tree probe itself is inconclusive (UNKNOWN, not a confirmed-absent
+    # None) but the direct blob HEAD succeeds — that alone proves the ref usable.
     with patch.object(github_client, "get_repo_info", return_value=github_client.RepoInfo(default_branch="main")), \
-         patch.object(github_client, "get_repo_tree", return_value=None), \
+         patch.object(github_client, "get_repo_tree", return_value=github_client.UNKNOWN), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.record_file_opened(
             "https://github.com/owner/repo.git",
@@ -275,7 +332,7 @@ def test_record_rate_limited_on_known_public_repo_writes_unlinked(session_folder
     _freeze_now(monkeypatch, "2026-05-27T09:00:00Z")
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
-         patch.object(github_client, "get_repo_tree", return_value=None), \
+         patch.object(github_client, "get_repo_tree", return_value=github_client.UNKNOWN), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.record_file_opened("https://github.com/owner/repo", "main", "src/first.py")
 
@@ -286,6 +343,31 @@ def test_record_rate_limited_on_known_public_repo_writes_unlinked(session_folder
     assert "- [src/first.py](https://github.com/owner/repo/blob/main/src/first.py)" in text
     assert "- src/second.py" in text
     assert "ts:2026-05-27T10:02:00Z branch:main reason:rate-limited" in text
+
+
+def test_record_rate_limited_reopen_preserves_an_existing_link(session_folder, monkeypatch):
+    """A rate-limited re-open of an already-linked file must not clobber the
+    working link — participants could click it a moment ago, and a
+    mid-workshop rate limit must not take it away."""
+    _freeze_now(monkeypatch, "2026-05-27T09:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=_tree("src/A.java")), \
+         patch.object(github_client, "head_blob", return_value=True):
+        files_md.record_file_opened("https://github.com/owner/repo", "master", "src/A.java")
+    text_before = (session_folder / "opened-files.md").read_text()
+    assert "- [src/A.java](https://github.com/owner/repo/blob/master/src/A.java)" in text_before
+    assert "ref:branch" in text_before
+
+    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    with patch.object(github_client, "get_repo_info", return_value=github_client.RATE_LIMITED):
+        files_md.record_file_opened("https://github.com/owner/repo", "master", "src/A.java")
+
+    text_after = (session_folder / "opened-files.md").read_text()
+    assert "- [src/A.java](https://github.com/owner/repo/blob/master/src/A.java)" in text_after
+    assert "ref:branch" in text_after
+    assert "reason:rate-limited" not in text_after
+    assert "ts:2026-05-27T10:00:00Z" in text_after  # recency still moves
 
 
 def test_record_empty_path_drops_event(session_folder, monkeypatch):
@@ -337,6 +419,9 @@ def _write_session_json(folder, payload):
 
 
 def test_migration_converts_git_repos_and_strips_key(session_folder, monkeypatch):
+    """The legacy `git_repos[]` record carries its own `branch`; migration
+    must read it through rather than pass "" and silently fall back to the
+    default branch — that was the exact bug this whole feature exists to fix."""
     _write_session_json(session_folder, {
         "mode": "workshop",
         "git_repos": [
@@ -350,16 +435,38 @@ def test_migration_converts_git_repos_and_strips_key(session_folder, monkeypatch
     })
     info = github_client.RepoInfo(default_branch="main")
     with patch.object(github_client, "get_repo_info", return_value=info), \
-         patch.object(github_client, "get_repo_tree", return_value=None), \
+         patch.object(github_client, "get_repo_tree",
+                       lambda o, r, b: _tree("src/a.py", "src/b.py") if b == "feature/x" else _tree()), \
          patch.object(github_client, "head_blob", return_value=True):
         files_md.migrate_session_if_needed(session_folder)
 
     md = (session_folder / "opened-files.md").read_text()
-    assert "## [repo](https://github.com/owner/repo) — branch `main` <!-- branch:main default_branch:main -->" in md
+    assert "## [repo](https://github.com/owner/repo) — branch `feature/x` <!-- branch:feature/x default_branch:main -->" in md
     assert "[src/a.py]" in md and "[src/b.py]" in md
+    assert "blob/feature/x/src/a.py" in md
 
     js = json.loads((session_folder / "session-state.json").read_text())
     assert "git_repos" not in js
+
+
+def test_migration_defaults_branch_when_record_has_none(session_folder, monkeypatch):
+    """A legacy record with no `branch` key at all (older than even the
+    old feature) must still migrate — falling back to the default branch,
+    not crash on a missing key."""
+    _write_session_json(session_folder, {
+        "git_repos": [
+            {"url": "https://github.com/owner/repo", "files": ["src/a.py"], "file_urls": {}},
+        ],
+    })
+    info = github_client.RepoInfo(default_branch="main")
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", lambda o, r, b: _tree("src/a.py")), \
+         patch.object(github_client, "head_blob", return_value=True):
+        files_md.migrate_session_if_needed(session_folder)
+
+    md = (session_folder / "opened-files.md").read_text()
+    assert "branch `main`" in md
+    assert "blob/main/src/a.py" in md
 
 
 def test_migration_idempotent_when_files_md_exists(session_folder, monkeypatch):
@@ -447,6 +554,72 @@ def test_record_missing_branch_reports_no_branch(session_folder, monkeypatch, tz
     files_md.record_file_opened("https://github.com/owner/repo", "never-pushed", "src/new.py")
 
     assert "reason:no-branch" in (session_folder / "opened-files.md").read_text()
+
+
+# ---------------------------------------------------------------------------
+# Transient-failure ("unknown") handling — a network blip or a GitHub 5xx must
+# never be reported, or acted on, as a definitive "not there".
+# ---------------------------------------------------------------------------
+
+def test_resolve_entry_reason_is_unknown_on_transient_failure(monkeypatch):
+    """Both probes fail transiently (network blip / 5xx) — must resolve to
+    "unknown", not silently degrade to "no-branch" or "not-pushed"."""
+    monkeypatch.setattr(github_client, "get_repo_tree",
+                        lambda o, r, b: github_client.UNKNOWN)
+    monkeypatch.setattr(github_client, "head_blob",
+                        lambda o, r, b, p: github_client.UNKNOWN)
+    result = files_md.resolve_entry("owner", "repo", "solved", "master", "src/a.py")
+    assert result == (None, None, "unknown")
+
+
+def test_resolve_entry_links_normally_when_probes_are_definitive(monkeypatch):
+    """Sanity check: a definitive tree hit still links exactly as before —
+    the tri-state change must not regress the happy path."""
+    monkeypatch.setattr(github_client, "get_repo_tree", lambda o, r, b: _tree("src/a.py"))
+    result = files_md.resolve_entry("owner", "repo", "solved", "master", "src/a.py")
+    assert result == (
+        "https://github.com/owner/repo/blob/solved/src/a.py", "branch", None)
+
+
+def test_record_new_entry_with_transient_failure_is_recorded_unlinked_unknown(
+        session_folder, monkeypatch):
+    """A brand-new entry has nothing to preserve, so an inconclusive probe
+    still gets recorded — unlinked, tagged "unknown" rather than a guess."""
+    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=github_client.UNKNOWN), \
+         patch.object(github_client, "head_blob", return_value=github_client.UNKNOWN):
+        files_md.record_file_opened("https://github.com/owner/repo", "main", "src/a.py")
+    text = (session_folder / "opened-files.md").read_text()
+    assert "- src/a.py" in text
+    assert "reason:unknown" in text
+    assert "](" not in text.split("\n")[-2]
+
+
+def test_record_transient_failure_after_working_link_preserves_it(session_folder, monkeypatch):
+    """Reproduces the core bug: a network blip / GitHub 5xx arriving on a
+    re-open of an already-linked file must not wipe the link — the summarizer
+    runs a full relink as its first step, so this exact path is how one bad
+    moment could strip every link in a repo."""
+    _freeze_now(monkeypatch, "2026-05-27T09:00:00Z")
+    info = github_client.RepoInfo(default_branch="main")
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=_tree("src/A.java")), \
+         patch.object(github_client, "head_blob", return_value=True):
+        files_md.record_file_opened("https://github.com/owner/repo", "master", "src/A.java")
+
+    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    with patch.object(github_client, "get_repo_info", return_value=info), \
+         patch.object(github_client, "get_repo_tree", return_value=github_client.UNKNOWN), \
+         patch.object(github_client, "head_blob", return_value=github_client.UNKNOWN):
+        files_md.record_file_opened("https://github.com/owner/repo", "master", "src/A.java")
+
+    text = (session_folder / "opened-files.md").read_text()
+    assert "- [src/A.java](https://github.com/owner/repo/blob/master/src/A.java)" in text
+    assert "ref:branch" in text
+    assert "ts:2026-05-27T10:00:00Z" in text  # recency still moves
+    assert "reason:unknown" not in text
 
 
 def test_record_same_path_twice_updates_time_and_branch(session_folder, monkeypatch, tz_bucharest):

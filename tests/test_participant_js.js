@@ -245,6 +245,32 @@ const dated = parseFilesMd([
 ].join('\n'));
 assert('dated times parse', dated[0].entries[0].time === 'Aug 4 09:41');
 
+// A path containing a space must not vanish from the tree. build_blob_url
+// now percent-encodes it (%20), but the regex itself is widened from `\S+`
+// to `[^)]+` so it survives even a literal, unencoded space defensively.
+const percentEncoded = parseFilesMd([
+  '## [r](https://github.com/o/r) — branch `main` ',
+  '- [src/my folder/a.py](https://github.com/o/r/blob/main/src/my%20folder/a.py) — 09:41 ',
+].join('\n'));
+assert('href with a percent-encoded space is captured whole',
+  percentEncoded[0].entries[0].href === 'https://github.com/o/r/blob/main/src/my%20folder/a.py');
+
+const literalSpace = parseFilesMd([
+  '## [r](https://github.com/o/r) — branch `main` ',
+  '- [src/my folder/a.py](https://github.com/o/r/blob/main/src/my folder/a.py) — 09:41 ',
+].join('\n'));
+assert('href with a literal, unencoded space is still captured whole',
+  literalSpace[0].entries[0].href === 'https://github.com/o/r/blob/main/src/my folder/a.py');
+
+// A path containing parentheses degrades once build_blob_url percent-encodes
+// them to %28/%29 — confirm the href group survives that shape too.
+const withParens = parseFilesMd([
+  '## [r](https://github.com/o/r) — branch `main` ',
+  '- [src/a(1).java](https://github.com/o/r/blob/main/src/a%281%29.java) — 09:41 ',
+].join('\n'));
+assert('href with percent-encoded parens is captured whole',
+  withParens[0].entries[0].href === 'https://github.com/o/r/blob/main/src/a%281%29.java');
+
 // ── Files-unread decision ───────────────────────────────────────────────────
 // Timestamps in opened-files.md move on every re-open, which rewrites the
 // document and fires files_count_updated with an UNCHANGED count. Only a

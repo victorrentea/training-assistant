@@ -12,6 +12,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from typing import Final
+from urllib.parse import quote
 
 import certifi
 
@@ -39,11 +40,24 @@ class RepoTree:
     truncated: bool
 
 
-class _Sentinel:
+# Two distinct singleton classes (rather than one shared `_Sentinel`) so type
+# checkers can narrow `x is RATE_LIMITED` / `x is UNKNOWN` down to `bool`/
+# `RepoTree` in the `else` branch instead of leaving a residual sentinel type.
+class _RateLimitedType:
     pass
 
 
-RATE_LIMITED: Final = _Sentinel()
+class _UnknownType:
+    pass
+
+
+RATE_LIMITED: Final = _RateLimitedType()
+
+# A probe that could not reach a definitive answer: network error, timeout,
+# rate limit, or an HTTP status that is neither success nor a clean 404/403.
+# Distinct from a definitive negative (None / False) — callers must never
+# treat "unknown" as "confirmed absent", or a transient blip reads as real data.
+UNKNOWN: Final = _UnknownType()
 
 # Cache: key=(owner, repo). Values:
 #   RepoInfo  → public, default_branch known.
@@ -54,9 +68,9 @@ _REPO_CACHE: dict[tuple[str, str], RepoInfo | None] = {}
 
 # Cache: key=(owner, repo, branch). Values:
 #   RepoTree  → successfully fetched tree.
-#   None      → 404/403 or persistent failure (negative cache).
+#   None      → 404/403 (definitively no such ref; negative cache).
 #   missing key → not yet fetched.
-# Rate-limited responses are NOT cached (retry on next call).
+# UNKNOWN (rate limit / 5xx / network error) is NEVER cached (retry on next call).
 _TREE_CACHE: dict[tuple[str, str, str], RepoTree | None] = {}
 
 
@@ -75,7 +89,7 @@ def _is_rate_limited(err: urllib.error.HTTPError) -> bool:
     return remaining == "0"
 
 
-def get_repo_info(owner: str, repo: str) -> RepoInfo | None | _Sentinel:
+def get_repo_info(owner: str, repo: str) -> RepoInfo | None | _RateLimitedType:
     """Look up the repo. Returns:
        - RepoInfo on success (public, cached)
        - None for private/missing (cached deterministically)
@@ -117,11 +131,13 @@ def get_repo_info(owner: str, repo: str) -> RepoInfo | None | _Sentinel:
         return None
 
 
-def get_repo_tree(owner: str, repo: str, branch: str) -> RepoTree | None:
-    """Fetch and cache the repo tree. Returns None on network/HTTP error.
-
-    Negative results (404, 403, persistent failures) are cached as None.
-    Rate-limited responses are NOT cached (retry on next call).
+def get_repo_tree(owner: str, repo: str, branch: str) -> RepoTree | None | _UnknownType:
+    """Fetch and cache the repo tree. Returns:
+       - RepoTree on success (cached)
+       - None for a definitive 404/403 — this ref does not exist (cached)
+       - UNKNOWN for a rate limit, other HTTP error, or network failure — the
+         call said nothing about whether the ref exists (NOT cached, retried
+         next time)
     """
     key = (owner, repo, branch)
     if key in _TREE_CACHE:
@@ -152,20 +168,25 @@ def get_repo_tree(owner: str, repo: str, branch: str) -> RepoTree | None:
     except urllib.error.HTTPError as err:
         if _is_rate_limited(err):
             _log.error(_NAME, f"rate-limited on /trees/{owner}/{repo}/{branch}")
-            return None  # do NOT cache
+            return UNKNOWN  # do NOT cache
         if err.code in (404, 403):
             _TREE_CACHE[key] = None
             return None
         _log.error(_NAME, f"tree fetch {owner}/{repo}/{branch} HTTP {err.code}")
-        return None
+        return UNKNOWN
     except Exception as exc:  # noqa: BLE001
         _log.error(_NAME, f"tree fetch {owner}/{repo}/{branch} crashed: {exc}")
-        return None
+        return UNKNOWN
 
 
-def head_blob(owner: str, repo: str, branch: str, path: str) -> bool:
-    """HEAD the GitHub blob page. Returns True iff 200."""
-    url = f"{_VERIFY_BLOB_BASE}/{owner}/{repo}/blob/{branch}/{path}"
+def head_blob(owner: str, repo: str, branch: str, path: str) -> bool | _UnknownType:
+    """HEAD the GitHub blob page. Returns:
+       - True on 2xx
+       - False on a definitive 404/403 (not rate-limited) — the blob is not there
+       - UNKNOWN for a rate limit, other HTTP error, or network failure — the
+         call said nothing about whether the blob exists
+    """
+    url = f"{_VERIFY_BLOB_BASE}/{owner}/{repo}/blob/{branch}/{quote(path, safe='/')}"
     req = urllib.request.Request(
         url, method="HEAD",
         headers={"User-Agent": _USER_AGENT},
@@ -174,10 +195,16 @@ def head_blob(owner: str, repo: str, branch: str, path: str) -> bool:
         with urllib.request.urlopen(req, timeout=_TIMEOUT_S, context=_SSL_CTX) as resp:
             return 200 <= resp.status < 300
     except urllib.error.HTTPError as err:
-        return 200 <= err.code < 300
+        if 200 <= err.code < 300:
+            return True
+        if _is_rate_limited(err):
+            return UNKNOWN
+        if err.code in (404, 403):
+            return False
+        return UNKNOWN
     except Exception:  # noqa: BLE001
-        return False
+        return UNKNOWN
 
 
 def build_blob_url(owner: str, repo: str, branch: str, path: str) -> str:
-    return f"https://github.com/{owner}/{repo}/blob/{branch}/{path}"
+    return f"https://github.com/{owner}/{repo}/blob/{branch}/{quote(path, safe='/')}"

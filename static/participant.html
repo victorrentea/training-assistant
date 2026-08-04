@@ -5112,7 +5112,7 @@ function parseFilesMd(md) {
       return;
     }
     if (!current) return;
-    m = line.match(/^- \[(.+?)\]\((\S+)\)(?: — ([0-9A-Za-z: ]+?))?(?: · branch `([^`]+)`)?$/);
+    m = line.match(/^- \[(.+?)\]\(([^)]+)\)(?: — ([0-9A-Za-z: ]+?))?(?: · branch `([^`]+)`)?$/);
     if (m) {
       current.entries.push({ path: m[1], href: m[2], time: m[3] || '', branch: m[4] || '' });
       return;

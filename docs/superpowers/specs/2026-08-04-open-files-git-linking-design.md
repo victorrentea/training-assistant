@@ -67,7 +67,8 @@ Rules:
 - `reason:` on unlinked entries, mutually exclusive and checked in this order:
   - `no-branch` — the captured branch does not exist on GitHub, **and** the path is absent from the default branch.
   - `not-pushed` — the captured branch exists but does not contain the path, **and** the default branch does not either.
-  - `rate-limited` — the GitHub API was rate-limited, so neither ref could be checked.
+  - `rate-limited` — the GitHub API was rate-limited on a brand-new entry, so neither ref could be checked. (On a re-open of an *existing* entry, a rate limit instead leaves the entry's prior `blob_url`/`ref`/`reason` untouched — see below.)
+  - `unknown` — neither ref could be checked to a definitive answer for a reason other than a rate limit (network error, GitHub 5xx). Distinct from `rate-limited` only in cause; handled identically: a brand-new entry records unlinked with this reason, but an *existing* entry is left exactly as it was rather than overwritten with a guess.
 
 Everything that existed to support basename guessing is deleted: `paths_by_basename` lookups in `files_md`, the `ambiguous` reason, the collision-downgrade branch, `_upgrade_unlinked_entries`, and `_NOISE_BASENAMES` (the `✻` spinner character leaked in through window-title scraping, which no longer exists).
 
@@ -104,7 +105,7 @@ The privacy rule is unchanged: a repo that the GitHub API reports as private or 
 - New module `daemon/relink_open_files.py`, runnable as `python3 -m daemon.relink_open_files`:
   - `--session-folder <path>` targets a specific session; without it, the active session.
   - Re-resolves **every** entry from scratch, including currently-linked ones, so a link made on a since-deleted branch degrades correctly.
-  - Prints a JSON summary to stdout: `{"repos": n, "entries": n, "linked_branch": n, "linked_default": n, "unlinked": n}` so the summarizer skill can report what it did.
+  - Prints a JSON summary to stdout: `{"repos": n, "entries": n, "linked_branch": n, "linked_default": n, "unlinked": n, "skipped": n}` — `skipped` counts entries the pass could not act on: those under a repo it could not reach (private/404/rate-limited/non-canonical URL) and those whose re-resolution came back inconclusive (`reason:unknown`) — so the summarizer skill can report what it did.
   - Exit code 0 even when some entries stay unlinked — that is a normal outcome, not a failure.
 
 ### Resolution algorithm
@@ -112,10 +113,11 @@ The privacy rule is unchanged: a repo that the GitHub API reports as private or 
 Used identically at open time and by the relink pass:
 
 1. Canonicalize the remote to `https://github.com/OWNER/REPO`; drop non-github.com hosts.
-2. `get_repo_info(owner, repo)` → `None` means private or 404 → drop the event entirely. Rate-limited → proceed only if the repo block already exists (it was verified public earlier); use its cached `default_branch`, record the entry unlinked with `reason:rate-limited`, and stop here.
-3. If a captured branch exists, check whether `path` is present on it (repo tree when available and untruncated, else a blob `HEAD`). Hit → link with `ref:branch`.
+2. `get_repo_info(owner, repo)` → `None` means private or 404 → drop the event entirely. Rate-limited → proceed only if the repo block already exists (it was verified public earlier); use its cached `default_branch`. If this is a brand-new entry, record it unlinked with `reason:rate-limited` and stop; if the entry already exists, only refresh its timestamp and branch and stop — never touch its `blob_url`/`ref`/`reason`.
+3. If a captured branch exists, check whether `path` is present on it (repo tree when available and untruncated, else a blob `HEAD`). Each of those two GitHub calls returns present / definitely-absent / **unknown** (a network error, a 5xx, or a rate limit encountered mid-probe) — unknown must never be read as absent. Hit → link with `ref:branch`.
 4. Otherwise check the same `path` on the default branch. Hit → link with `ref:default`.
-5. Otherwise record unlinked with `reason:no-branch` if the captured branch itself is missing from GitHub, else `reason:not-pushed`.
+5. Otherwise, if either check above came back unknown rather than a definitive miss, resolve to `reason:unknown` and go no further — for a brand-new entry this records it unlinked (nothing to preserve); for an existing entry, only its timestamp and branch are refreshed, exactly as the rate-limited case above.
+6. Otherwise both checks were definitive misses: record unlinked with `reason:no-branch` if the captured branch itself is missing from GitHub, else `reason:not-pushed`.
 
 ### `static/participant.html`
 

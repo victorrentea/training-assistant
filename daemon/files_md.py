@@ -55,7 +55,7 @@ class Entry:
     ts: str
     blob_url: str | None = None
     ref: str | None = None      # "branch" | "default" — which ref resolved the link
-    reason: str | None = None   # "not-pushed" | "no-branch" | "rate-limited"
+    reason: str | None = None   # "not-pushed" | "no-branch" | "rate-limited" | "unknown"
 
 
 @dataclass
@@ -78,11 +78,15 @@ class Doc:
         return None
 
     def render(self) -> str:
-        if not self.repos:
+        # A repo whose every entry was dropped (e.g. legacy path-less entries
+        # lost on migration) must not survive as a bare heading with nothing
+        # under it — that reads as a real, empty repo to a participant.
+        repos = [r for r in self.repos if r.entries]
+        if not repos:
             return EMPTY_STATE
-        with_date = _needs_date([e.ts for r in self.repos for e in r.entries])
+        with_date = _needs_date([e.ts for r in repos for e in r.entries])
         parts = [_TITLE, ""]
-        for repo in self.repos:
+        for repo in repos:
             parts.append(
                 f"## [{repo.name}]({repo.url}) — branch `{repo.branch}` "
                 f"<!-- branch:{repo.branch} default_branch:{repo.default_branch} -->"
@@ -131,7 +135,10 @@ def _render_entry(e: Entry, repo_branch: str, with_date: bool) -> str:
     # it in the VISIBLE text, because sanitize_for_wire strips every comment
     # before the document reaches a participant.
     chip = f" · branch `{e.branch}`" if e.branch != repo_branch else ""
-    tail = f"ref:{e.ref}" if e.blob_url else f"reason:{e.reason or 'not-pushed'}"
+    # `e.ref` is None for entries migrated from a pre-`ref:` format that were
+    # still linked (a `path:`-comment entry, e.g.) — fall back rather than
+    # emit the literal string "ref:None", which parses back as text.
+    tail = f"ref:{e.ref or 'default'}" if e.blob_url else f"reason:{e.reason or 'not-pushed'}"
     meta = f"ts:{e.ts} branch:{e.branch} {tail}"
     name = f"[{e.path}]({e.blob_url})" if e.blob_url else e.path
     return f"- {name} — {time_text}{chip} <!-- {meta} -->"
@@ -230,7 +237,15 @@ def _needs_date(timestamps: list[str]) -> bool:
 
 
 def format_local_time(ts: str, with_date: bool) -> str:
-    """Render a canonical UTC timestamp for humans, in the machine's timezone."""
+    """Render a canonical UTC timestamp for humans, in the machine's timezone.
+
+    Output must stay within `[0-9A-Za-z: ]` — that is exactly the character
+    class both participant.html parsing regexes expect after ` — `. Nothing
+    here calls `locale.setlocale`, so `%b` is safely ASCII today, but if that
+    ever changes, a locale whose month abbreviation contains e.g. `.` or a
+    non-ASCII letter would silently break the regex match and drop the row
+    from the rendered tree.
+    """
     dt = _to_local(ts)
     if not with_date:
         return f"{dt:%H:%M}"
@@ -305,19 +320,46 @@ def _save_doc(folder: Path, doc: Doc) -> None:
     atomic_write(folder / _FILENAME, doc.render())
 
 
-def _check_ref(owner: str, repo: str, ref: str, path: str) -> tuple[bool, bool]:
-    """Probe one git ref. Returns (ref_is_usable, path_is_present_on_it).
+def _check_ref(owner: str, repo: str, ref: str, path: str) -> bool | None:
+    """Probe whether `path` is present on `ref`.
 
-    A missing branch and a failed tree call are indistinguishable from the
-    GitHub API, so a successful blob HEAD is what proves the ref usable.
+    Returns True (present), False (definitely absent — either the ref exists
+    but lacks the path, or the ref itself does not exist), or None when no
+    probe reached a definitive answer: a network blip, a GitHub 5xx, or a
+    rate limit on every call tried. A caller must never treat None as False —
+    that is exactly the bug this tri-state return exists to prevent: a
+    transient failure must not read as "the file/branch is not there".
     """
     tree = github_client.get_repo_tree(owner, repo, ref)
     if tree is None:
+        # Confirmed 404/403 on the tree endpoint: this ref does not exist on
+        # GitHub, so the path cannot be on it either — no need to also probe
+        # the blob HEAD.
+        return False
+    if not isinstance(tree, github_client.RepoTree):
+        # tree is UNKNOWN: the tree call itself was inconclusive. A direct
+        # blob HEAD is a second, independent chance at a definitive answer.
         present = github_client.head_blob(owner, repo, ref, path)
-        return present, present
+        return present if isinstance(present, bool) else None
     if tree.truncated:
-        return True, github_client.head_blob(owner, repo, ref, path)
-    return True, path in tree.paths
+        present = github_client.head_blob(owner, repo, ref, path)
+        return present if isinstance(present, bool) else None
+    return path in tree.paths
+
+
+def _ref_exists(owner: str, repo: str, ref: str) -> bool | None:
+    """Whether `ref` itself exists on GitHub — used only to choose between the
+    `no-branch` and `not-pushed` reasons once both refs are confirmed to lack
+    the path. `get_repo_tree` is cached, so this piggybacks on the call
+    `_check_ref` already made for the same (owner, repo, ref) and costs no
+    extra request.
+    """
+    tree = github_client.get_repo_tree(owner, repo, ref)
+    if tree is None:
+        return False
+    if isinstance(tree, github_client.RepoTree):
+        return True
+    return None
 
 
 def resolve_entry(
@@ -327,17 +369,31 @@ def resolve_entry(
 
     Captured branch first, default branch second, no link third — see
     docs/superpowers/specs/2026-08-04-open-files-git-linking-design.md.
+
+    `reason` is "unknown" whenever neither ref could be checked to a
+    definitive answer — a transient GitHub failure must never be reported as
+    "not-pushed" or "no-branch", both of which participants would read as
+    settled facts about the code.
     """
-    branch_usable = True
+    definitive = True
     if branch:
-        branch_usable, present = _check_ref(owner, repo, branch, path)
+        present = _check_ref(owner, repo, branch, path)
         if present:
             return github_client.build_blob_url(owner, repo, branch, path), "branch", None
+        if present is None:
+            definitive = False
     if branch != default_branch:
-        _, present = _check_ref(owner, repo, default_branch, path)
+        present = _check_ref(owner, repo, default_branch, path)
         if present:
             return github_client.build_blob_url(owner, repo, default_branch, path), "default", None
-    return None, None, ("not-pushed" if branch_usable else "no-branch")
+        if present is None:
+            definitive = False
+
+    if not definitive:
+        return None, None, "unknown"
+
+    branch_exists = _ref_exists(owner, repo, branch) if branch else True
+    return None, None, ("not-pushed" if branch_exists else "no-branch")
 
 
 def record_file_opened(url: str, branch: str, file_path: str) -> None:
@@ -396,14 +452,27 @@ def _record_into_folder(folder: Path, url: str, branch: str, file_path: str) -> 
         if not rate_limited:
             repo_obj.default_branch = default_branch
 
+    ts = _utcnow_iso()
+    existing = next((e for e in repo_obj.entries if e.path == path), None)
+
     if rate_limited:
+        if existing is not None:
+            # A rate-limited retry cannot check anything, so it must not
+            # clobber a link we already resolved — only recency moves.
+            existing.branch, existing.ts = effective_branch, ts
+            _save_doc(folder, doc)
+            return
         blob_url, ref, reason = None, None, "rate-limited"
     else:
         blob_url, ref, reason = resolve_entry(owner, repo, effective_branch,
                                               default_branch, path)
+        if reason == "unknown" and existing is not None:
+            # Same principle as the rate-limited case: a transient GitHub
+            # failure must not overwrite an entry we already resolved.
+            existing.branch, existing.ts = effective_branch, ts
+            _save_doc(folder, doc)
+            return
 
-    ts = _utcnow_iso()
-    existing = next((e for e in repo_obj.entries if e.path == path), None)
     if existing is None:
         repo_obj.entries.append(Entry(path=path, branch=effective_branch, ts=ts,
                                       blob_url=blob_url, ref=ref, reason=reason))
@@ -443,11 +512,14 @@ def migrate_session_if_needed(folder: Path) -> None:
         if not isinstance(repo_entry, dict):
             continue
         url = repo_entry.get("url", "")
+        branch = repo_entry.get("branch", "")
+        if not isinstance(branch, str):
+            branch = ""
         files = repo_entry.get("files", []) or []
         for f in files:
             if not isinstance(f, str):
                 continue
-            _record_into_folder(folder, url, "", f)
+            _record_into_folder(folder, url, branch, f)
 
     # Strip the key and re-save
     payload.pop("git_repos", None)

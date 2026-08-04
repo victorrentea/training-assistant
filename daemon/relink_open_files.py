@@ -34,26 +34,41 @@ def relink_folder(folder: Path) -> dict[str, int]:
     """
     target = folder / files_md.session_filename()
     summary = {"repos": 0, "entries": 0, "linked_branch": 0,
-               "linked_default": 0, "unlinked": 0}
+               "linked_default": 0, "unlinked": 0, "skipped": 0}
     if not target.exists():
         return summary
     before = target.read_text(encoding="utf-8")
 
     doc = files_md._load_doc(folder)
     for repo_obj in doc.repos:
-        owner, repo = files_md._owner_repo(repo_obj.url)
+        # _owner_repo's invariant is that its input already went through
+        # _canonical_repo_url — true for a URL just written by this module,
+        # but repo_obj.url here was parsed back out of markdown, so it must
+        # be re-canonicalized rather than assumed clean.
+        canonical = files_md._canonical_repo_url(repo_obj.url)
+        if canonical is None:
+            _log.info(_NAME, f"skipping {repo_obj.url} (not a canonical github.com URL)")
+            summary["skipped"] += len(repo_obj.entries)
+            continue
+        owner, repo = files_md._owner_repo(canonical)
         info = github_client.get_repo_info(owner, repo)
         if not isinstance(info, github_client.RepoInfo):
             # None (private/404) or RATE_LIMITED. Leave the block untouched: a
             # 404 or a rate limit here says more about the network than about
             # the repo.
             _log.info(_NAME, f"skipping {repo_obj.url} (unavailable)")
+            summary["skipped"] += len(repo_obj.entries)
             continue
         summary["repos"] += 1
         repo_obj.default_branch = info.default_branch
         for entry in repo_obj.entries:
             blob_url, ref, reason = files_md.resolve_entry(
                 owner, repo, entry.branch, info.default_branch, entry.path)
+            if reason == "unknown":
+                # A transient GitHub failure on this one entry must not
+                # overwrite whatever it already had — leave it exactly as is.
+                summary["skipped"] += 1
+                continue
             entry.blob_url, entry.ref, entry.reason = blob_url, ref, reason
             summary["entries"] += 1
             if ref == "branch":

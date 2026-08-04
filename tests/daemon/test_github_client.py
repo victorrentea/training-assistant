@@ -201,7 +201,7 @@ def test_get_repo_tree_404_returns_none_and_is_cached():
     assert mock.call_count == 1  # cached after first call
 
 
-def test_get_repo_tree_rate_limited_returns_none_and_not_cached():
+def test_get_repo_tree_rate_limited_returns_unknown_and_not_cached():
     import urllib.error
     err = urllib.error.HTTPError(
         "u", 403, "rate limited", {"X-RateLimit-Remaining": "0"}, None,
@@ -209,9 +209,33 @@ def test_get_repo_tree_rate_limited_returns_none_and_not_cached():
     with patch("urllib.request.urlopen", side_effect=err) as mock:
         result1 = github_client.get_repo_tree("owner", "repo", "main")
         result2 = github_client.get_repo_tree("owner", "repo", "main")
-    assert result1 is None
-    assert result2 is None
+    # UNKNOWN, not None: a rate limit says nothing about whether the ref
+    # exists, so it must never be conflated with a definitive 404/403.
+    assert result1 is github_client.UNKNOWN
+    assert result2 is github_client.UNKNOWN
     assert mock.call_count == 2  # NOT cached — retried both times
+
+
+def test_get_repo_tree_500_returns_unknown_and_not_cached():
+    import urllib.error
+    err = urllib.error.HTTPError("u", 500, "Internal", {}, None)
+    with patch("urllib.request.urlopen", side_effect=err) as mock:
+        result1 = github_client.get_repo_tree("owner", "repo", "main")
+        result2 = github_client.get_repo_tree("owner", "repo", "main")
+    assert result1 is github_client.UNKNOWN
+    assert result2 is github_client.UNKNOWN
+    assert mock.call_count == 2  # NOT cached — a 5xx is transient
+
+
+def test_get_repo_tree_network_error_returns_unknown_and_not_cached():
+    import urllib.error
+    err = urllib.error.URLError("network down")
+    with patch("urllib.request.urlopen", side_effect=err) as mock:
+        result1 = github_client.get_repo_tree("owner", "repo", "main")
+        result2 = github_client.get_repo_tree("owner", "repo", "main")
+    assert result1 is github_client.UNKNOWN
+    assert result2 is github_client.UNKNOWN
+    assert mock.call_count == 2  # NOT cached — transient
 
 
 def test_get_repo_tree_is_cached_after_success():
@@ -221,6 +245,63 @@ def test_get_repo_tree_is_cached_after_success():
         github_client.get_repo_tree("owner", "repo", "main")
         github_client.get_repo_tree("owner", "repo", "main")
     assert mock.call_count == 1
+
+
+def test_head_blob_500_returns_unknown():
+    import urllib.error
+    err = urllib.error.HTTPError("u", 500, "Internal", {}, None)
+    with patch("urllib.request.urlopen", side_effect=err):
+        assert github_client.head_blob("owner", "repo", "main", "src/a.py") is github_client.UNKNOWN
+
+
+def test_head_blob_network_error_returns_unknown():
+    import urllib.error
+    err = urllib.error.URLError("network down")
+    with patch("urllib.request.urlopen", side_effect=err):
+        assert github_client.head_blob("owner", "repo", "main", "src/a.py") is github_client.UNKNOWN
+
+
+def test_head_blob_rate_limited_returns_unknown():
+    import urllib.error
+    err = urllib.error.HTTPError(
+        "u", 403, "rate limited", {"X-RateLimit-Remaining": "0"}, None,
+    )
+    with patch("urllib.request.urlopen", side_effect=err):
+        assert github_client.head_blob("owner", "repo", "main", "src/a.py") is github_client.UNKNOWN
+
+
+def test_head_blob_percent_encodes_the_path():
+    captured = {}
+
+    def fake_urlopen(req, **kw):
+        captured["url"] = req.full_url
+        return _fake_resp(200)
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        github_client.head_blob("owner", "repo", "main", "src/my folder/a.py")
+    assert captured["url"] == "https://github.com/owner/repo/blob/main/src/my%20folder/a.py"
+
+
+# ---------------------------------------------------------------------------
+# build_blob_url tests
+# ---------------------------------------------------------------------------
+
+def test_build_blob_url_percent_encodes_spaces():
+    assert github_client.build_blob_url("owner", "repo", "main", "src/my folder/a.py") == (
+        "https://github.com/owner/repo/blob/main/src/my%20folder/a.py"
+    )
+
+
+def test_build_blob_url_percent_encodes_parens():
+    assert github_client.build_blob_url("owner", "repo", "main", "src/a(1).java") == (
+        "https://github.com/owner/repo/blob/main/src/a%281%29.java"
+    )
+
+
+def test_build_blob_url_keeps_slashes_unescaped():
+    assert github_client.build_blob_url("owner", "repo", "main", "src/a/b.java") == (
+        "https://github.com/owner/repo/blob/main/src/a/b.java"
+    )
 
 
 def test_get_repo_tree_skips_directory_entries():
