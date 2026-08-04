@@ -76,15 +76,47 @@ def sanitize_name(raw: str | None) -> str:
 RESERVED_TRAINER_NAME = "Victor (trainer)"
 
 
-def is_reserved_trainer_name(name: str | None) -> bool:
-    """True if `name` collides with the reserved trainer name after normalization.
+def _spoof_key(name: str) -> str:
+    """Collapse a name to what it LOOKS like, for impersonation checks.
 
-    Uses the same normalizer as the duplicate check, so case, spacing and
-    Unicode variants ("victor  (TRAINER)") cannot slip past the gate.
+    Deliberately stricter than normalize_for_dedup, which must keep matching the
+    client's own duplicate calculation and therefore cannot change. Two extra
+    steps close real bypasses found by adversarial testing:
+
+    - drop format (Cf) characters — zero-width space/joiner and BOM survive
+      sanitize_name (it strips only Cc controls) and render as nothing, so
+      "Victor​ (trainer)" is visually identical to the reserved name;
+    - NFKC rather than NFC — folds fullwidth "Ｖ" and Roman-numeral "Ⅴ" onto
+      plain ASCII letters.
+
+    Cyrillic homoglyphs (о, е) are NOT folded by NFKC; the confusable map below
+    handles the handful that matter for this specific name.
+    """
+    stripped = "".join(ch for ch in str(name) if unicodedata.category(ch) != "Cf")
+    collapsed = " ".join(stripped.split())
+    folded = unicodedata.normalize("NFKC", collapsed).casefold()
+    return folded.translate(_CONFUSABLES)
+
+
+# Cyrillic / Greek letters that render identically to the Latin ones appearing
+# in the reserved trainer name. NFKC leaves them alone, so map them explicitly.
+_CONFUSABLES = str.maketrans({
+    "а": "a", "с": "c", "е": "e", "і": "i", "ј": "j", "о": "o",
+    "р": "p", "ѕ": "s", "ν": "v", "т": "t", "х": "x", "у": "y",
+    "ᴠ": "v", "ⅰ": "i", "ⅴ": "v",
+})
+
+
+def is_reserved_trainer_name(name: str | None) -> bool:
+    """True if `name` is, or merely LOOKS like, the reserved trainer name.
+
+    Impersonation is a visual attack, so the comparison is on appearance, not
+    on bytes: case, spacing, zero-width characters, fullwidth forms and Cyrillic
+    homoglyphs all collapse onto the same key.
     """
     if not name:
         return False
-    return normalize_for_dedup(name) == normalize_for_dedup(RESERVED_TRAINER_NAME)
+    return _spoof_key(name) == _spoof_key(RESERVED_TRAINER_NAME)
 
 
 def normalize_for_dedup(name: str | None) -> str:

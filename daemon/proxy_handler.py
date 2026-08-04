@@ -5,11 +5,44 @@ from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 
+from daemon import log as daemon_log
 from daemon.config import DAEMON_HOST_PORT
 
 logger = logging.getLogger(__name__)
 
 _executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="proxy")
+
+# Marker stamped on every request that arrived through Railway. Endpoints that
+# are only safe because they are loopback-only (daemon/host_machine/router.py)
+# refuse anything carrying it: the local uvicorn socket is reachable both by the
+# trainer's browser AND by this proxy, so "came in over 127.0.0.1" alone does
+# not prove the caller is on this machine.
+RAILWAY_PROXY_MARKER = "x-railway-proxied"
+
+
+def is_safe_proxy_path(path: str) -> bool:
+    """Reject anything that is not an already-clean absolute path.
+
+    This is the fix for a real privilege escalation. Railway matches the raw
+    request path, so `/api/participant/../host-machine/claim-trainer` is
+    captured by its `/api/participant/{path:path}` catch-all and forwarded
+    verbatim. httpx then RESOLVES the dot-segments when building the URL, so the
+    request lands on `/api/host-machine/claim-trainer` — an unauthenticated
+    endpoint that is only safe while it stays unreachable from the internet.
+
+    "Outside the forwarded prefix" is therefore NOT a security boundary on its
+    own. This function is where that boundary is actually enforced, because this
+    is the one hop the daemon fully controls.
+    """
+    if not path.startswith("/"):
+        return False
+    segments = path.split("?", 1)[0].split("#", 1)[0].split("/")
+    if any(seg in ("..", ".") for seg in segments):
+        return False
+    # Backslashes and encoded separators are normalized inconsistently across
+    # the stack; refuse them rather than reason about every combination.
+    lowered = path.lower()
+    return not any(bad in lowered for bad in ("\\", "%2e", "%2f", "%5c"))
 
 
 def handle_proxy_request(data: dict, ws_client):
@@ -34,6 +67,24 @@ def _process_proxy_request(data: dict, ws_client):
     except (TypeError, ValueError):
         railway_timeout = 0.0
     local_timeout = max(railway_timeout + 5.0, 10.0)
+
+    if not is_safe_proxy_path(path):
+        daemon_log.error(
+            "proxy", f"↓ REJECTED traversal attempt from Railway: {method} {path}"
+        )
+        ws_client.send({
+            "type": "proxy_response",
+            "id": req_id,
+            "status": 400,
+            "body": json.dumps({"error": "Invalid path"}),
+            "content_type": "application/json",
+        })
+        return
+
+    # Stamp the request so loopback-only endpoints can tell it came from the
+    # internet rather than from a browser on this machine.
+    headers = {k: v for k, v in headers.items() if k.lower() != RAILWAY_PROXY_MARKER}
+    headers[RAILWAY_PROXY_MARKER] = "1"
 
     url = f"http://127.0.0.1:{DAEMON_HOST_PORT}{path}"
 
