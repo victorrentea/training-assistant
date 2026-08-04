@@ -89,6 +89,30 @@ def test_relink_skips_a_repo_that_went_private(tmp_path, monkeypatch, tz_buchare
     assert summary["entries"] == 0
 
 
+def test_relink_steady_state_does_not_touch_the_file(tmp_path, monkeypatch, tz_bucharest):
+    # Nothing about this entry will change on relink: it already resolves to
+    # exactly the same blob_url/ref it already had. The write must be skipped
+    # entirely — an mtime bump here would make the daemon's file-watcher
+    # broadcast a Files-tab update to every participant for no reason, since
+    # the summarizer runs this pass on every summary generation.
+    _seed(tmp_path, [files_md.Entry(
+        path="src/a.py", branch="solved", ts="2026-08-04T06:41:07Z",
+        blob_url="https://github.com/owner/repo/blob/solved/src/a.py", ref="branch")])
+    monkeypatch.setattr(github_client, "get_repo_info",
+                        lambda o, r: github_client.RepoInfo(default_branch="master"))
+    monkeypatch.setattr(github_client, "get_repo_tree",
+                        lambda o, r, b: _tree("src/a.py") if b == "solved" else _tree())
+
+    target = tmp_path / files_md.session_filename()
+    mtime_before = target.stat().st_mtime_ns
+
+    summary = relink_open_files.relink_folder(tmp_path)
+
+    assert target.stat().st_mtime_ns == mtime_before
+    assert summary == {"repos": 1, "entries": 1, "linked_branch": 1,
+                       "linked_default": 0, "unlinked": 0}
+
+
 def test_relink_missing_file_returns_zero_summary(tmp_path):
     assert relink_open_files.relink_folder(tmp_path) == {
         "repos": 0, "entries": 0, "linked_branch": 0, "linked_default": 0, "unlinked": 0}

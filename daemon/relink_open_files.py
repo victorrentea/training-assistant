@@ -20,11 +20,24 @@ _NAME = "relink"
 
 
 def relink_folder(folder: Path) -> dict[str, int]:
-    """Re-resolve one session folder. Returns a counts summary."""
+    """Re-resolve one session folder. Returns a counts summary.
+
+    Only writes the file back when the rendered text actually changed —
+    `_save_doc` goes through `os.replace`, which bumps the file's mtime even
+    when the bytes are identical, and the daemon's file-watcher treats any
+    mtime change as "files changed" and broadcasts a Files-tab update to every
+    connected participant. In the steady state (nothing moved, nothing
+    degraded) that broadcast would fire on every single summary generation
+    for no reason. The raw text is read before `_load_doc` runs so that a
+    load-time normalisation of a legacy document — which SHOULD be persisted
+    — still counts as a change.
+    """
+    target = folder / files_md.session_filename()
     summary = {"repos": 0, "entries": 0, "linked_branch": 0,
                "linked_default": 0, "unlinked": 0}
-    if not (folder / files_md.session_filename()).exists():
+    if not target.exists():
         return summary
+    before = target.read_text(encoding="utf-8")
 
     doc = files_md._load_doc(folder)
     for repo_obj in doc.repos:
@@ -49,7 +62,9 @@ def relink_folder(folder: Path) -> dict[str, int]:
             else:
                 summary["unlinked"] += 1
 
-    files_md._save_doc(folder, doc)
+    rendered = doc.render()
+    if rendered != before:
+        files_md._save_doc(folder, doc)
     _log.info(_NAME, f"relinked {folder.name}: {summary}")
     return summary
 
