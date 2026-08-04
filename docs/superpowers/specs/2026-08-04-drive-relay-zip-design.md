@@ -82,20 +82,28 @@ Accept iff some owner matches the configured identity: `DRIVE_OWNER_EMAILS` or
 Files *inside* an approved folder are not re-checked. If it sits in Victor's folder,
 Victor vouched for it — and this correctly covers files other people placed there.
 
-### Open risk and its resolution
+### Resolved: Google returns the owner email
 
-Google may redact `owners[].emailAddress` for unauthenticated (API-key) requests.
-The gate therefore matches on **any populated identity field**, and the **first
-implementation step is a spike**: with a real API key, call `files.get` on one of
-Victor's public folders and record which fields come back.
+The open question was whether Google redacts `owners[].emailAddress` for
+unauthenticated (API-key) requests. It does not. A `files.get` against a real
+"anyone with the link" course folder, with an API key and no OAuth, returned:
 
-- `emailAddress` present → configure `DRIVE_OWNER_EMAILS`, done.
-- only `permissionId` → configure `DRIVE_OWNER_PERMISSION_IDS` (stable per account).
-- nothing identifying → **fallback plan**: configure `DRIVE_ALLOWED_ROOT_IDS` and
-  walk the `parents` chain upward, accepting only descendants of those roots.
+```json
+"owners": [{
+  "displayName": "victorrentea",
+  "permissionId": "04953412998680405404",
+  "emailAddress": "victorrentea@gmail.com"
+}]
+```
 
-The architecture is unchanged in all three cases; only the source of identity moves.
-This spike must run before the rest of the implementation.
+So the gate runs on `DRIVE_OWNER_EMAILS=victorrentea@gmail.com`, and the
+`DRIVE_ALLOWED_ROOT_IDS` fallback is not needed.
+
+The gate still matches on **any populated identity field**, with
+`DRIVE_OWNER_PERMISSION_IDS` available as a second configured identity. That is
+not dead generality: `permissionId` is stable per account and costs nothing to
+support, so if Google tightens redaction later the fix is a config change rather
+than a code change. `displayName` is never accepted — it is user-settable.
 
 ## Zip streaming
 
