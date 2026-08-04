@@ -82,20 +82,28 @@ def test_preview_rejects_a_folder_owned_by_someone_else(drive, monkeypatch):
 
     response = client.get("/api/drive/preview", params={"url": FOLDER_URL})
 
-    assert response.status_code == 403
+    assert response.status_code == 404
     assert response.json()["detail"] == relay.NOT_AVAILABLE
 
 
-def test_403_and_404_are_indistinguishable_to_the_caller(drive, monkeypatch):
-    """The message must not reveal which folders belong to the trainer."""
+def test_missing_and_not_owned_are_indistinguishable(drive, monkeypatch):
+    """Neither the status code nor the body may reveal which folders belong to the
+    trainer: a real folder owned by someone else must look exactly like one that
+    doesn't exist at all, or the status code alone becomes an oracle."""
+    stranger = DriveFile(id=FOLDER_ID, name="Someone Else", mime_type=FOLDER_MIME, size=None,
+                         owners=(DriveOwner(email="x@y.com", permission_id="9", display_name=""),),
+                         shortcut_target_id=None)
+    monkeypatch.setattr(relay.drive_client, "get_metadata", lambda fid: stranger)
+    not_owned = client.get("/api/drive/preview", params={"url": FOLDER_URL})
+
     def missing(fid):
         raise DriveError(404, "gone")
 
     monkeypatch.setattr(relay.drive_client, "get_metadata", missing)
     not_found = client.get("/api/drive/preview", params={"url": FOLDER_URL})
 
-    assert not_found.status_code == 404
-    assert not_found.json()["detail"] == relay.NOT_AVAILABLE
+    assert not_owned.status_code == not_found.status_code == 404
+    assert not_owned.json() == not_found.json()
 
 
 def test_preview_maps_drive_outage_to_502(drive, monkeypatch):

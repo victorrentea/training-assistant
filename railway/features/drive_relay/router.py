@@ -57,8 +57,13 @@ def _load_root(url: str) -> DriveFile:
 
     emails, permission_ids = ownership.configured_identity()
     if not ownership.is_owned_by_host(root, emails=emails, permission_ids=permission_ids):
+        # Answers 404, not 403: matching only the message would still leave the status
+        # code as an oracle, since 403 would fire solely for folders that are real,
+        # public and owned by someone else. The log keeps the true reason; the trainer
+        # himself pasting a folder he does not own gets this same misleading message —
+        # an accepted cost of closing the oracle.
         logger.warning("[drive-relay] refused %s: not owned by the configured trainer", file_id)
-        raise HTTPException(status_code=403, detail=NOT_AVAILABLE)
+        raise HTTPException(status_code=404, detail=NOT_AVAILABLE)
 
     return root
 
