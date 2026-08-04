@@ -158,6 +158,29 @@ response flags `has_unsized_files` so the page can say the estimate is a lower b
 
 Bandwidth is bounded by this cap together with rate limiting (see below).
 
+## Exclusions
+
+Session folders are mirrored to Drive as-is, so they carry files that exist for the
+tooling, not for participants. The relay drops:
+
+| Excluded | Why |
+|---|---|
+| `session-state.json` | Internal daemon state. |
+| `attendees.md` | Participant names — nobody's download should contain the roster. |
+| `Icon` and `Icon\r` | macOS custom-folder-icon file; `Icon\r` is its real name. |
+| `~$*` | Office lock files. |
+| `.obsidian/` (whole directory) | Editor configuration. |
+
+Deliberately **not** excluded: `*.zip`. `daemon/materials/zip_builder.py` skips zips so
+its own archive does not swallow a previous one; the relay has no such problem, and
+`wiki.zip` is content a participant actually wants.
+
+The list intentionally duplicates most of `daemon/materials/zip_builder.py` rather than
+importing it: the two answer different questions ("what goes in the archive I build
+from the local folder" vs "what goes in the archive I relay from Drive"), and they have
+already diverged on `*.zip`. A shared constant would make the next divergence a
+refactor instead of a one-line edit.
+
 ## Preview before download
 
 `GET /api/drive/preview?url=...` validates the link, the ownership gate, the folder's

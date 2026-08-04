@@ -790,6 +790,131 @@ git commit -m "feat(drive-relay): owner gate so the relay only serves the traine
 
 ---
 
+### Task 4b: Exclusion policy
+
+Discovered during Task 1's spike: the session folders this relay serves carry
+`session-state.json`, `attendees.md` and `.obsidian/` alongside the course materials.
+`attendees.md` is the participant roster — it must not land in anyone's download.
+
+**Files:**
+- Create: `railway/features/drive_relay/exclusions.py`
+- Test: `tests/features/drive_relay/test_exclusions.py`
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces:
+  - `is_excluded_file(name: str) -> bool`
+  - `is_excluded_dir(name: str) -> bool`
+
+`*.zip` is deliberately NOT excluded — see the spec's Exclusions section.
+
+- [ ] **Step 1: Write the failing tests**
+
+```python
+# tests/features/drive_relay/test_exclusions.py
+import pytest
+
+from railway.features.drive_relay.exclusions import is_excluded_dir, is_excluded_file
+
+
+@pytest.mark.parametrize("name", [
+    "session-state.json",
+    "attendees.md",
+    "Icon",
+    "Icon\r",
+    "~$Slides.pptx",
+    "~$notes.docx",
+])
+def test_internal_files_are_excluded(name):
+    assert is_excluded_file(name) is True
+
+
+@pytest.mark.parametrize("name", [
+    "Intro.pdf",
+    "ai-summary.md",
+    "opened-files.md",
+    "Workshop - notes.txt",
+    "session-state.json.bak",
+    "my-attendees.md",
+])
+def test_course_materials_are_kept(name):
+    assert is_excluded_file(name) is False
+
+
+def test_zip_files_are_kept():
+    """The daemon skips zips so its archive won't nest; the relay has no such problem."""
+    assert is_excluded_file("wiki.zip") is False
+    assert is_excluded_file("wiki-day1.zip") is False
+
+
+def test_obsidian_directory_is_excluded():
+    assert is_excluded_dir(".obsidian") is True
+
+
+@pytest.mark.parametrize("name", ["uploads", "wiki", "Day 2", "obsidian"])
+def test_content_directories_are_kept(name):
+    assert is_excluded_dir(name) is False
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `uv run --extra dev pytest tests/features/drive_relay/test_exclusions.py -v`
+Expected: FAIL — `ModuleNotFoundError: ... exclusions`
+
+- [ ] **Step 3: Write the implementation**
+
+```python
+# railway/features/drive_relay/exclusions.py
+"""What never reaches a participant's download.
+
+Session folders are mirrored to Drive as they are on disk, so they carry files
+that exist for the tooling rather than for the audience — most importantly
+attendees.md, which is the participant roster.
+
+This deliberately duplicates most of daemon/materials/zip_builder.py instead of
+importing it. The two answer different questions ("what goes into the archive I
+build from the local folder" vs "what goes into the archive I relay from
+Drive"), and they have already diverged: zip_builder skips *.zip so its own
+archive will not swallow a previous one, while here wiki.zip is content the
+participant actually wants.
+"""
+from __future__ import annotations
+
+import fnmatch
+
+# "Icon\r" is the real name of the macOS custom-folder-icon file; Finder and ls
+# both render it as "Icon".
+_EXCLUDED_NAMES = frozenset({"session-state.json", "attendees.md", "Icon", "Icon\r"})
+_EXCLUDED_GLOBS = ("~$*",)
+_EXCLUDED_DIRS = frozenset({".obsidian"})
+
+
+def is_excluded_file(name: str) -> bool:
+    """True when a file with this name must be kept out of the archive."""
+    if name in _EXCLUDED_NAMES:
+        return True
+    return any(fnmatch.fnmatch(name, pattern) for pattern in _EXCLUDED_GLOBS)
+
+
+def is_excluded_dir(name: str) -> bool:
+    """True when a directory with this name must not be descended into."""
+    return name in _EXCLUDED_DIRS
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `uv run --extra dev pytest tests/features/drive_relay/test_exclusions.py -v`
+Expected: PASS (16 tests)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add railway/features/drive_relay/exclusions.py tests/features/drive_relay/test_exclusions.py
+git commit -m "feat(drive-relay): keep internal session files out of participant downloads"
+```
+
+---
+
 ### Task 5: Transfer plan (folder traversal)
 
 **Files:**
@@ -798,7 +923,8 @@ git commit -m "feat(drive-relay): owner gate so the relay only serves the traine
 
 **Interfaces:**
 - Consumes: `drive_client.list_children`, `drive_client.get_metadata`,
-  `drive_client.archive_name`, `is_folder`, `is_shortcut`, `DriveFile`.
+  `drive_client.archive_name`, `is_folder`, `is_shortcut`, `DriveFile`;
+  `exclusions.is_excluded_file`, `exclusions.is_excluded_dir` (Task 4b).
 - Produces:
   - `@dataclass(frozen=True) class PlannedEntry: archive_path: str; file: DriveFile`
   - `@dataclass(frozen=True) class TransferPlan: root_name: str; entries: Tuple[PlannedEntry, ...]; known_bytes: int; has_unsized_files: bool`
@@ -930,6 +1056,32 @@ def test_path_separators_in_drive_names_cannot_escape_the_archive(drive):
     assert not any(p.startswith("/") or ".." in p for p in paths)
 
 
+def test_internal_session_files_are_dropped(drive):
+    """A real session folder on Drive carries these; participants must not get them."""
+    tree_map, _ = drive
+    tree_map["root"] = [
+        pdf("a", "ai-summary.md", 10),
+        pdf("b", "attendees.md", 20),
+        pdf("c", "session-state.json", 30),
+        pdf("d", "wiki.zip", 40),
+    ]
+
+    plan = tree.build_plan(folder("root", "Workshop"))
+
+    assert [e.archive_path for e in plan.entries] == ["ai-summary.md", "wiki.zip"]
+    assert plan.known_bytes == 50  # excluded files must not count toward the cap
+
+
+def test_excluded_directories_are_not_descended_into(drive):
+    tree_map, _ = drive
+    tree_map["root"] = [folder("obs", ".obsidian"), pdf("a", "Intro.pdf", 10)]
+    tree_map["obs"] = [pdf("x", "workspace.json", 5)]
+
+    plan = tree.build_plan(folder("root", "Workshop"))
+
+    assert [e.archive_path for e in plan.entries] == ["Intro.pdf"]
+
+
 def test_a_folder_cycle_terminates(drive):
     tree_map, _ = drive
     tree_map["root"] = [folder("loop", "Loop")]
@@ -972,7 +1124,7 @@ import re
 from dataclasses import dataclass
 from typing import Dict, List, Set, Tuple
 
-from railway.features.drive_relay import drive_client
+from railway.features.drive_relay import drive_client, exclusions
 from railway.features.drive_relay.drive_client import DriveFile
 
 MAX_DEPTH = 20
@@ -1056,11 +1208,14 @@ def build_plan(root: DriveFile) -> TransferPlan:
         for child in drive_client.list_children(folder.id):
             resolved = _resolve(child)
             if drive_client.is_folder(resolved):
-                if resolved.id in visited:
+                if resolved.id in visited or exclusions.is_excluded_dir(resolved.name):
                     continue
                 visited.add(resolved.id)
                 name = _unique(_safe_name(resolved.name), taken)
                 pending_folders.append((resolved, f"{prefix}{name}/", depth + 1))
+                continue
+
+            if exclusions.is_excluded_file(resolved.name):
                 continue
 
             name = _unique(_safe_name(drive_client.archive_name(resolved)), taken)
@@ -1087,7 +1242,7 @@ subfolders (breadth-first by folder, depth-ordered by prefix), which is what the
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run --extra dev pytest tests/features/drive_relay/test_tree.py -v`
-Expected: PASS (10 tests)
+Expected: PASS (12 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -2493,6 +2648,7 @@ The task is not done until production is confirmed live.
 | Link parsing (all URL shapes) | 2 |
 | Drive client, API key, pagination, native export, shortcuts | 3, 5 |
 | Ownership gate, redaction fallback | 1, 4 |
+| Exclusions (`attendees.md`, `session-state.json`, `.obsidian/`; `*.zip` kept) | 4b, 5 |
 | Recursion, structure, trashed, shortcuts, dedup | 5 |
 | Streaming zip, STORED, constant memory, no disk | 6 |
 | 500 MB cap, checked twice, `has_unsized_files` | 5 (plan), 7 (pre-check), 6+8 (mid-stream) |
