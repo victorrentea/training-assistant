@@ -2,7 +2,7 @@ from railway.features.drive_relay.drive_client import DriveFile, DriveOwner
 from railway.features.drive_relay.ownership import configured_identity, is_owned_by_host
 
 EMAILS = frozenset({"victorrentea@gmail.com"})
-PERMISSION_IDS = frozenset({"1234567890"})
+PERMISSION_IDS = frozenset({"1234567890", "abc1234567890"})
 
 
 def make_file(owners):
@@ -24,6 +24,12 @@ def test_accepts_matching_email():
 
 def test_email_match_is_case_insensitive():
     assert check(make_file([owner(email="VictorRentea@Gmail.com")])) is True
+
+
+def test_permission_id_match_is_case_sensitive():
+    """Unlike email, permission ids are compared exactly — see PERMISSION_IDS."""
+    assert check(make_file([owner(permission_id="abc1234567890")])) is True
+    assert check(make_file([owner(permission_id="ABC1234567890")])) is False
 
 
 def test_accepts_matching_permission_id_when_email_is_redacted():
