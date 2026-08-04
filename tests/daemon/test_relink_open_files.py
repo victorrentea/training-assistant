@@ -121,6 +121,23 @@ def test_relink_missing_file_returns_zero_summary(tmp_path):
         "unlinked": 0, "skipped": 0}
 
 
+def test_relink_unreadable_file_returns_zero_summary_instead_of_raising(tmp_path, monkeypatch):
+    """Reproduces the file becoming unreadable between the exists() check and
+    the read: the exception must not escape relink_folder and kill the CLI."""
+    _seed(tmp_path, [files_md.Entry(path="src/a.py", branch="solved",
+                                    ts="2026-08-04T06:41:07Z", reason="not-pushed")])
+
+    def _raise(self, *args, **kwargs):
+        raise OSError("permission denied")
+
+    monkeypatch.setattr(Path, "read_text", _raise)
+
+    summary = relink_open_files.relink_folder(tmp_path)
+
+    assert summary == {"repos": 0, "entries": 0, "linked_branch": 0,
+                       "linked_default": 0, "unlinked": 0, "skipped": 0}
+
+
 def test_relink_leaves_unknown_entries_untouched_and_counts_skipped(tmp_path, monkeypatch, tz_bucharest):
     """The core Important-3 reproduction: get_repo_info succeeds (so the repo
     is reachable) but the tree/blob probes for one entry fail transiently.

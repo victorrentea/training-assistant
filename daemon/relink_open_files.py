@@ -37,7 +37,13 @@ def relink_folder(folder: Path) -> dict[str, int]:
                "linked_default": 0, "unlinked": 0, "skipped": 0}
     if not target.exists():
         return summary
-    before = target.read_text(encoding="utf-8")
+    try:
+        before = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        # Unreadable is indistinguishable from absent for this pass: the
+        # summarizer that invokes this CLI can simply re-run it later.
+        _log.error(_NAME, f"read {target} failed: {exc}")
+        return summary
 
     doc = files_md._load_doc(folder)
     for repo_obj in doc.repos:

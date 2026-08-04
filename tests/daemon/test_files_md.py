@@ -666,16 +666,29 @@ def test_record_empty_branch_resolves_on_default(session_folder, monkeypatch, tz
     assert "blob/master/src/a.py" in text
 
 
+import os
 import time as _time
 
 
 @pytest.fixture
-def tz_bucharest(monkeypatch):
-    """Pin the process timezone so local-time rendering is deterministic."""
-    monkeypatch.setenv("TZ", "Europe/Bucharest")
+def tz_bucharest():
+    """Pin the process timezone so local-time rendering is deterministic.
+
+    Restores TZ (and calls tzset()) itself rather than going through
+    monkeypatch: monkeypatch's implicit undo runs after this fixture's own
+    teardown, so if it were the one restoring TZ, the final tzset() call
+    here would run before that later, silent restore — leaving the C
+    library's local-time state one step stale for whatever test runs next
+    on a machine that had TZ set in the ambient environment.
+    """
+    original_tz = os.environ.get("TZ")
+    os.environ["TZ"] = "Europe/Bucharest"
     _time.tzset()
     yield
-    monkeypatch.delenv("TZ", raising=False)
+    if original_tz is None:
+        os.environ.pop("TZ", None)
+    else:
+        os.environ["TZ"] = original_tz
     _time.tzset()
 
 

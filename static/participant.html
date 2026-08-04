@@ -3917,7 +3917,6 @@ function _setDuplicateIndicator(isDup) {
     else { gdriveRow.style.display = 'none'; }
     _applyGdriveToast(state.gdrive_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
-    _setFilesBadge(state.files_count || 0);
     document.getElementById('files-badge').classList.toggle('badge-alert', (state.files_count || 0) > 0 && LS.isFilesUnread());
     var saved = LS.getView();
     // A tab slug in the URL (e.g. /<session>/notes) overrides the last-used tab,
