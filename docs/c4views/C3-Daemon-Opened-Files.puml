@@ -1,0 +1,39 @@
+@startuml
+title <size:24>Component View: Workshop Live Interaction Tool - Training Daemon</size>\n<size:24>Daemon slice for opened-files tracking and GitHub link resolution.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+System(GitHubAPI, "GitHub API", $descr="Repo metadata (default branch), repo trees, and blob existence checks used to link opened files to the branch captured at open time. Unauthenticated.", $tags="", $link="")
+System(victormacosaddons, "victor-macos-addons", $descr="Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications.", $tags="", $link="")
+System(Hostsessionfiles, "Host session files", $descr="Session folders, normalized transcripts, ai-summary.md, uploaded files, and slide manifests on the trainer's Mac.", $tags="", $link="")
+
+System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
+  Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, "Participant APIs", $techn="daemon/participant/router.py + daemon/quiz/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py", $descr="Authoritative participant REST handlers for identity, quizzes, Q&A, debate, code review, misc actions, slides, emoji, and word cloud.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Addons bridge", $techn="daemon/addon_bridge_client.py + daemon/adapters/*", $descr="Receives slide events, slides_viewed deltas, and IDE file-open events from victor-macos-addons, and forwards emoji/session notifications back.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Opened files linking", $techn="daemon/files_md.py + daemon/github_client.py + daemon/relink_open_files.py", $descr="Resolves IDE file-open events to GitHub blob links against the branch captured at open time (falling back to the repo default branch), and maintains the opened-files.md artifact; a standalone CLI re-resolves every link before summarization.", $tags="", $link="")
+  }
+
+}
+
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Reads and serves opened-files.md through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, victormacosaddons, "Connects over local WebSocket", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Forwards IDE file-open events to", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, GitHubAPI, "Resolves branch and default-branch blob links via", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, Hostsessionfiles, "Reads and writes opened-files.md in", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml
