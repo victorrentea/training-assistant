@@ -3918,7 +3918,6 @@ function _setDuplicateIndicator(isDup) {
     _applyGdriveToast(state.gdrive_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
     _setFilesBadge(state.files_count || 0);
-    _lastFilesCount = state.files_count || 0;
     document.getElementById('files-badge').classList.toggle('badge-alert', (state.files_count || 0) > 0 && LS.isFilesUnread());
     var saved = LS.getView();
     // A tab slug in the URL (e.g. /<session>/notes) overrides the last-used tab,
@@ -3955,6 +3954,12 @@ function _applySummaryBadgeUnread(unread) {
 function _applyFilesBadgeUnread(unread) {
   LS.setFilesUnread(unread);
   document.getElementById('files-badge').classList.toggle('badge-alert', unread);
+}
+
+// Only a genuinely new file earns the unread flag; a re-opened file rewrites
+// opened-files.md (moving its timestamp) without changing the count.
+function shouldFlagFilesUnread(newCount, previousCount) {
+  return newCount > previousCount;
 }
 
 function _applyState(msg) {
@@ -4015,6 +4020,7 @@ function _applyState(msg) {
   }
   if (msg.files_count != null) {
     _setFilesBadge(msg.files_count);
+    _lastFilesCount = msg.files_count;
   }
   // Sync name from server — but ignore a snapshot that predates our last local
   // rename (its my_name differs from what we just committed). Once the server
@@ -4552,9 +4558,7 @@ function _handleWsMessage(msg) {
       if (onFiles) { loadFilesMd(); _applyFilesBadgeUnread(false); }
       else {
         _filesDirty = true;
-        // Only a genuinely new file earns the unread flag; a re-opened file
-        // rewrites the document without changing the count.
-        if (msg.count > previousFilesCount) _applyFilesBadgeUnread(true);
+        if (shouldFlagFilesUnread(msg.count, previousFilesCount)) _applyFilesBadgeUnread(true);
       }
       break;
     }

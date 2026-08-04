@@ -245,6 +245,21 @@ const dated = parseFilesMd([
 ].join('\n'));
 assert('dated times parse', dated[0].entries[0].time === 'Aug 4 09:41');
 
+// ── Files-unread decision ───────────────────────────────────────────────────
+// Timestamps in opened-files.md move on every re-open, which rewrites the
+// document and fires files_count_updated with an UNCHANGED count. Only a
+// genuine increase in the count may flag the tab unread.
+
+const shouldFlagFilesUnread = new Function(
+  extractFunction(PARTICIPANT_HTML, 'shouldFlagFilesUnread') + '; return shouldFlagFilesUnread;'
+)();
+
+console.log('shouldFlagFilesUnread()');
+
+assert('equal counts do not flag (a re-opened file)', shouldFlagFilesUnread(3, 3) === false);
+assert('a higher count flags (a genuinely new file)', shouldFlagFilesUnread(4, 3) === true);
+assert('a lower count does not flag', shouldFlagFilesUnread(2, 3) === false);
+
 // ── Host-machine auto session switch ────────────────────────────────────────
 // The security boundary is "can this browser reach the trainer's 127.0.0.1:1234".
 // These tests pin the client half: no traffic at all without the cookie, no
