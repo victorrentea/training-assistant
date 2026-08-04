@@ -309,49 +309,72 @@ def _save_doc(folder: Path, doc: Doc) -> None:
     atomic_write(folder / _FILENAME, doc.render())
 
 
-def record_file_opened(url: str, file_path: str) -> None:
-    """Process one addon git_file_opened event for the active session.
+def _check_ref(owner: str, repo: str, ref: str, path: str) -> tuple[bool, bool]:
+    """Probe one git ref. Returns (ref_is_usable, path_is_present_on_it).
 
-    The addon's reported `branch` is intentionally ignored — we always resolve
-    against the repo's GitHub default branch so links never go stale.
+    A missing branch and a failed tree call are indistinguishable from the
+    GitHub API, so a successful blob HEAD is what proves the ref usable.
     """
+    tree = github_client.get_repo_tree(owner, repo, ref)
+    if tree is None:
+        present = github_client.head_blob(owner, repo, ref, path)
+        return present, present
+    if tree.truncated:
+        return True, github_client.head_blob(owner, repo, ref, path)
+    return True, path in tree.paths
+
+
+def resolve_entry(
+    owner: str, repo: str, branch: str, default_branch: str, path: str
+) -> tuple[str | None, str | None, str | None]:
+    """Resolve one path to a blob URL. Returns (blob_url, ref, reason).
+
+    Captured branch first, default branch second, no link third — see
+    docs/superpowers/specs/2026-08-04-open-files-git-linking-design.md.
+    """
+    branch_usable = True
+    if branch:
+        branch_usable, present = _check_ref(owner, repo, branch, path)
+        if present:
+            return github_client.build_blob_url(owner, repo, branch, path), "branch", None
+    if branch != default_branch:
+        _, present = _check_ref(owner, repo, default_branch, path)
+        if present:
+            return github_client.build_blob_url(owner, repo, default_branch, path), "default", None
+    return None, None, ("not-pushed" if branch_usable else "no-branch")
+
+
+def record_file_opened(url: str, branch: str, file_path: str) -> None:
+    """Process one addon git_file_opened event for the active session."""
     folder = _get_active_session_folder()
     if folder is None:
         return
     migrate_session_if_needed(folder)
-    _record_into_folder(folder, url, file_path)
+    _record_into_folder(folder, url, branch, file_path)
 
 
-def _record_into_folder(folder: Path, url: str, file_path: str) -> None:
+def _record_into_folder(folder: Path, url: str, branch: str, file_path: str) -> None:
     """Record one file event into an explicit session folder.
 
     Pipeline:
-      1. Drop non-github.com hosts.
-      2. Drop empty file paths.
-      3. Resolve repo: cache hit, GitHub API, or rate-limited.
-         - Private/missing repo → drop event entirely.
-         - Rate-limited on unknown repo → drop event (privacy rule).
-      4. Compute basename. Dedup by (repo, basename).
-      5. If new entry: verify blob against default branch; write linked or unlinked.
-      6. If existing linked entry with different path → downgrade to unlinked (ambiguous).
+      1. Drop non-github.com hosts and empty paths.
+      2. Resolve the repo: cache hit, GitHub API, or rate-limited.
+         Private/missing → drop. Rate-limited on an unknown repo → drop (privacy).
+      3. Resolve the blob against the captured branch, then the default branch.
+      4. Upsert by (repo, path); the repo heading follows the most recent open.
     """
     canonical = _canonical_repo_url(url)
     if canonical is None:
         return
 
-    if not file_path or not file_path.strip() or file_path == _ADDON_NO_FILE_SENTINEL:
-        return
-
-    basename = file_path.rsplit("/", 1)[-1].strip()
-    if not basename:
+    path = (file_path or "").strip()
+    if not path or path == _ADDON_NO_FILE_SENTINEL:
         return
 
     owner, repo = _owner_repo(canonical)
     info = github_client.get_repo_info(owner, repo)
-
     if info is None:
-        # Private or 404 — never list.
-        return
+        return  # private or 404 — never list
 
     rate_limited = info is github_client.RATE_LIMITED
 
@@ -359,74 +382,39 @@ def _record_into_folder(folder: Path, url: str, file_path: str) -> None:
     repo_obj = doc.find_repo(canonical)
 
     if rate_limited:
-        # Privacy rule: only emit if the repo is ALREADY in opened-files.md
-        # (= previously verified public). Otherwise drop the event.
+        # Privacy rule: only emit if the repo was already verified public.
         if repo_obj is None:
             return
         default_branch = repo_obj.default_branch
     else:
         default_branch = info.default_branch  # type: ignore[union-attr]
-        if repo_obj is None:
-            repo_obj = Repo(url=canonical, name=repo, default_branch=default_branch)
-            doc.repos.append(repo_obj)
 
-    # Try tree-based resolution first
-    tree = github_client.get_repo_tree(owner, repo, default_branch) if not rate_limited else None
-    resolved_path: str | None = None
-    reason: str | None = None
+    effective_branch = (branch or "").strip() or default_branch
 
-    if tree is not None and not tree.truncated:
-        # Tree is authoritative
-        if file_path in tree.paths:
-            resolved_path = file_path
-        else:
-            basename_matches = tree.paths_by_basename.get(basename, [])
-            if len(basename_matches) == 1:
-                resolved_path = basename_matches[0]
-            elif len(basename_matches) >= 2:
-                reason = "ambiguous"
-            else:
-                reason = "not-in-repo"
+    if repo_obj is None:
+        repo_obj = Repo(url=canonical, name=repo, default_branch=default_branch,
+                        branch=effective_branch)
+        doc.repos.append(repo_obj)
     else:
-        # Tree unavailable (rate-limited, truncated, network) — fall back to HEAD
-        if not rate_limited and github_client.head_blob(owner, repo, default_branch, file_path):
-            resolved_path = file_path
-        elif rate_limited:
-            reason = "rate-limited"
-        else:
-            reason = "blob-404"
+        repo_obj.branch = effective_branch
+        if not rate_limited:
+            repo_obj.default_branch = default_branch
 
-    # Dedup / collision handling
-    existing = next((e for e in repo_obj.entries if e.basename == basename), None)
-    if existing is not None:
-        if existing.blob_url is None:
-            return  # already unlinked, no upgrades
-        # If the resolution gives us a path and it matches existing → no-op
-        if resolved_path is not None and existing.path == resolved_path:
-            return
-        # Collision downgrade: different path under same basename
-        _log.info(
-            _NAME,
-            f"basename collision in {canonical}: '{basename}' "
-            f"(was: {existing.path}, now: {resolved_path or file_path}) → downgrade to unlinked",
-        )
-        existing.blob_url = None
-        existing.path = None
-        existing.reason = "ambiguous"
-        _save_doc(folder, doc)
-        return
+    if rate_limited:
+        blob_url, ref, reason = None, None, "rate-limited"
+    else:
+        blob_url, ref, reason = resolve_entry(owner, repo, effective_branch,
+                                              default_branch, path)
 
-    # New entry
     ts = _utcnow_iso()
-    if resolved_path is not None:
-        blob_url = github_client.build_blob_url(owner, repo, default_branch, resolved_path)
-        repo_obj.entries.append(
-            Entry(basename=basename, blob_url=blob_url, path=resolved_path, ts=ts, reason=None)
-        )
+    existing = next((e for e in repo_obj.entries if e.path == path), None)
+    if existing is None:
+        repo_obj.entries.append(Entry(path=path, branch=effective_branch, ts=ts,
+                                      blob_url=blob_url, ref=ref, reason=reason))
     else:
-        repo_obj.entries.append(
-            Entry(basename=basename, blob_url=None, path=None, ts=ts, reason=reason or "not-in-repo")
-        )
+        existing.branch, existing.ts = effective_branch, ts
+        existing.blob_url, existing.ref, existing.reason = blob_url, ref, reason
+
     _save_doc(folder, doc)
 
 
@@ -463,7 +451,7 @@ def migrate_session_if_needed(folder: Path) -> None:
         for f in files:
             if not isinstance(f, str):
                 continue
-            _record_into_folder(folder, url, f)
+            _record_into_folder(folder, url, "", f)
 
     # Strip the key and re-save
     payload.pop("git_repos", None)

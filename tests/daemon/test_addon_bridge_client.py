@@ -8,7 +8,7 @@ def test_addon_git_file_opened_calls_files_md(monkeypatch):
     calls: list[tuple] = []
     monkeypatch.setattr(
         files_md, "record_file_opened",
-        lambda url, file_path: calls.append((url, file_path)),
+        lambda url, branch, file_path: calls.append((url, branch, file_path)),
     )
 
     _handle_git_file_opened({
@@ -18,7 +18,7 @@ def test_addon_git_file_opened_calls_files_md(monkeypatch):
         "file": "src/a.py",
     })
 
-    assert calls == [("https://github.com/owner/repo", "src/a.py")]
+    assert calls == [("https://github.com/owner/repo", "main", "src/a.py")]
 
 
 def test_addon_git_file_opened_drops_empty_url_or_file(monkeypatch):
@@ -28,7 +28,7 @@ def test_addon_git_file_opened_drops_empty_url_or_file(monkeypatch):
     calls: list[tuple] = []
     monkeypatch.setattr(
         files_md, "record_file_opened",
-        lambda url, file_path: calls.append((url, file_path)),
+        lambda url, branch, file_path: calls.append((url, branch, file_path)),
     )
 
     _handle_git_file_opened({"type": "git_file_opened", "url": "", "file": "src/a.py"})

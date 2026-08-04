@@ -29,10 +29,11 @@ _NAME = "addons   "
 def _handle_git_file_opened(data: dict) -> None:
     from daemon import files_md
     url = data.get("url", "")
+    branch = data.get("branch", "")
     file_path = data.get("file", "")
     if not url or not file_path:
         return
-    files_md.record_file_opened(url, file_path)
+    files_md.record_file_opened(url, branch, file_path)
     log.debug(_NAME, f"← git {url.split('/')[-1]} {file_path}")
 
 
