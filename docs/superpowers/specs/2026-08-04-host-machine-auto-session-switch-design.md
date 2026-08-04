@@ -41,15 +41,41 @@ enforced by three independent mechanisms in `daemon/host_server.py`:
 | Cross-origin fetch from another site | CORS `allow_origins=["https://interact.victorrentea.ro"]` (`daemon/host_server.py:151`) |
 | Anyone reaching the endpoint through the public backend | Railway forwards only `/api/participant/{path:path}` plus two fixed slides routes (`railway/features/ws/proxy_bridge.py:94`) |
 
-The last row is the load-bearing one for this design: **any endpoint outside
-`/api/participant/*` is unreachable from the internet.** A participant on their
-own machine who calls `127.0.0.1:1234` reaches their own computer, learns
-nothing about the trainer's session, and at most fools themselves.
+The last row was the load-bearing one for this design, and **it was wrong as
+originally stated.** The claim "any endpoint outside `/api/participant/*` is
+unreachable from the internet" survived until adversarial testing, which broke
+it:
+
+```
+POST /{session}/api/participant/../host-machine/claim-trainer
+```
+
+Railway matches the **raw** request path, so its catch-all captured the
+traversal and forwarded it verbatim. The daemon built the target URL by string
+concatenation, and `httpx` then **resolved** the dot-segments, landing the call
+on the unauthenticated claim endpoint — with the `Host` header stripped by
+Railway, so the anti-rebinding guard saw loopback and allowed it.
+
+The lesson generalizes beyond this feature: **a route prefix is not a security
+boundary when something downstream re-parses the path.** Reachability must be
+enforced at the hop that builds the request, not inferred from what the router
+upstream is *expected* to match. `daemon/proxy_handler.py::is_safe_proxy_path`
+is where it is now enforced, and every proxied request is stamped
+`X-Railway-Proxied` so privileged endpoints can refuse anything that arrived
+from the internet.
+
+With those in place the original property holds: a participant on their own
+machine who calls `127.0.0.1:1234` reaches their own computer, learns nothing
+about the trainer's session, and at most fools themselves.
 
 Because of this, **no secret needs to travel through Railway.** An earlier
 draft proposed a daemon-issued single-use nonce carried on the participant
 registration call; it is dropped. The privilege is granted locally instead, so
 there is no token to intercept, replay, or guess.
+
+Note this decision survived the escalation above: the nonce would not have
+helped, because the traversal reached the endpoint that *issues* trust, not a
+channel carrying it. What was missing was path validation, not a secret.
 
 ## Design
 
