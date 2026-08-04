@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download course materials</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .relay { max-width: 640px; margin: 4rem auto; padding: 0 1rem; }
+    .relay__row { display: flex; gap: .5rem; margin: 1.5rem 0; }
+    .relay__row input {
+      flex: 1;
+      padding: .6rem;
+      font-size: 1rem;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .relay__row button {
+      padding: .6rem 1rem;
+      font-size: 1rem;
+      background: var(--action);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .relay__row button:disabled { opacity: .5; cursor: not-allowed; }
+    .relay__panel { padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+    .relay__panel button {
+      padding: .6rem 1rem;
+      font-size: 1rem;
+      background: var(--accent2);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: .5rem;
+    }
+    .relay__error { color: var(--danger); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main class="relay">
+    <h1>Download course materials</h1>
+    <p>
+      Paste the Google Drive link you received by email. The download is served
+      from this server, so it works on networks that block Google Drive.
+    </p>
+
+    <div class="relay__row">
+      <input id="drive-url" type="url" placeholder="Paste your Google Drive link"
+             autocomplete="off" spellcheck="false">
+      <button id="check-btn" type="button" disabled>Check link</button>
+    </div>
+
+    <p id="status" hidden></p>
+
+    <div id="preview" class="relay__panel" hidden>
+      <p><strong id="preview-name"></strong></p>
+      <p id="preview-detail"></p>
+      <button id="download-btn" type="button">Download zip</button>
+    </div>
+
+    <p id="error" class="relay__error" hidden></p>
+  </main>
+
+  <script>
+    const urlInput = document.getElementById('drive-url');
+    const checkBtn = document.getElementById('check-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const statusEl = document.getElementById('status');
+    const previewEl = document.getElementById('preview');
+    const previewName = document.getElementById('preview-name');
+    const previewDetail = document.getElementById('preview-detail');
+    const errorEl = document.getElementById('error');
+
+    let currentUrl = '';
+
+    // Project convention: a button whose input is empty stays disabled.
+    urlInput.addEventListener('input', () => {
+      checkBtn.disabled = urlInput.value.trim() === '';
+    });
+
+    function show(el, text) {
+      if (text !== undefined) el.textContent = text;
+      el.hidden = false;
+    }
+
+    function hideAll() {
+      previewEl.hidden = true;
+      errorEl.hidden = true;
+      statusEl.hidden = true;
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+
+    async function check() {
+      const value = urlInput.value.trim();
+      if (!value) return;
+      hideAll();
+      checkBtn.disabled = true;
+      show(statusEl, 'Checking the link…');
+
+      try {
+        const response = await fetch('/api/drive/preview?url=' + encodeURIComponent(value));
+        const body = await response.json();
+        statusEl.hidden = true;
+
+        if (!response.ok) {
+          show(errorEl, body.detail || 'Something went wrong — please try again');
+          return;
+        }
+
+        currentUrl = value;
+        previewName.textContent = body.name;
+        const size = body.has_unsized_files
+          ? 'at least ' + formatSize(body.total_bytes)
+          : formatSize(body.total_bytes);
+        previewDetail.textContent = body.file_count + ' file'
+          + (body.file_count === 1 ? '' : 's') + ' · ' + size;
+        show(previewEl);
+      } catch (err) {
+        statusEl.hidden = true;
+        show(errorEl, 'Could not reach the server — please try again');
+      } finally {
+        checkBtn.disabled = urlInput.value.trim() === '';
+      }
+    }
+
+    checkBtn.addEventListener('click', check);
+    urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') check(); });
+
+    downloadBtn.addEventListener('click', () => {
+      // Plain navigation: the browser's own download UI reports progress.
+      window.location.href = '/api/drive/zip?url=' + encodeURIComponent(currentUrl);
+    });
+  </script>
+</body>
+</html>

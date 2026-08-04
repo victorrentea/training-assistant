@@ -12,7 +12,7 @@ import urllib.parse
 from collections.abc import Iterator
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
@@ -21,12 +21,19 @@ from railway.features.drive_relay.drive_client import DriveError, DriveFile
 from railway.features.drive_relay.link_parser import InvalidDriveLink, parse_drive_url
 from railway.features.drive_relay.tree import PlannedEntry, TransferPlan
 from railway.features.drive_relay.zip_stream import TransferCapExceeded, stream_zip
+from railway.features.pages.router import _serve_html_with_otel
 from railway.shared.rate_limit import rate_limit_drive_zip, rate_limit_probe
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 page_router = APIRouter()
+
+
+@page_router.get("/drive", response_class=HTMLResponse, include_in_schema=False)
+async def drive_relay_page():
+    """The paste-a-link page. Public and session-free, like the relay itself."""
+    return _serve_html_with_otel("static/drive.html")
 
 MAX_TRANSFER_BYTES = 500 * 1024 * 1024
 
