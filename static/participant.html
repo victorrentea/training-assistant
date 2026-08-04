@@ -2955,6 +2955,65 @@ var _myUUID = (function() {
 })();
 var _isFirstVisit = !_uuidStore.getItem('workshop_participant_uuid_seen');
 var _myName = '';
+
+// ── Host-machine auto session switch ────────────────────────────────────────
+// Only a browser running on the trainer's own machine can reach the trainer's
+// 127.0.0.1:1234 — that, and nothing else, is the security boundary here. The
+// ON_HOST_MACHINE cookie is NOT a gate: it is JS-readable and anyone can set
+// it. It only spares every other participant's browser from firing pointless
+// requests at their own localhost.
+var HOST_MACHINE_DAEMON = 'http://127.0.0.1:1234';
+var HOST_MACHINE_POLL_MS = 1000;
+var HOST_MACHINE_TIMEOUT_MS = 800;
+
+function _onHostMachine() {
+  return document.cookie.split(';').some(function (p) {
+    return p.trim() === 'ON_HOST_MACHINE=true';
+  });
+}
+
+// Claim the trainer identity over loopback. This is the ONLY thing that may
+// grant the reserved display name, and it never travels through Railway, so
+// there is no token to intercept or replay. Resolves false off the host machine.
+async function _claimTrainerIfOnHostMachine() {
+  if (!_onHostMachine()) return false;
+  try {
+    var r = await fetch(HOST_MACHINE_DAEMON + '/api/host-machine/claim-trainer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ participant_id: _myUUID }),
+      signal: AbortSignal.timeout(HOST_MACHINE_TIMEOUT_MS)
+    });
+    if (!r.ok) return false;
+    return (await r.json()).granted === true;
+  } catch (e) {
+    return false;  // not on the host machine, or the daemon is down
+  }
+}
+
+// Jump to a freshly started session. The daemon reports it locally; the code
+// itself is never discovered from any public endpoint.
+async function _pollForNewSession() {
+  if (!_onHostMachine()) return;
+  try {
+    var r = await fetch(HOST_MACHINE_DAEMON + '/api/session/active',
+                        { signal: AbortSignal.timeout(HOST_MACHINE_TIMEOUT_MS) });
+    if (!r.ok) return;
+    var active = ((await r.json()).session_id || '').toLowerCase();
+    if (!active || active === _sessionId) return;
+    // A new session means a new identity: drop the UUID so the next page load
+    // mints a fresh one and the trainer starts on a clean leaderboard.
+    _uuidStore.removeItem('workshop_participant_uuid');
+    window.location.href = '/' + active + '/';
+  } catch (e) {
+    // Daemon absent or unreachable — the normal case for every participant.
+  }
+}
+
+function _startHostMachinePolling() {
+  if (!_onHostMachine()) return;
+  setInterval(_pollForNewSession, HOST_MACHINE_POLL_MS);
+}
 var _rejectedAvatars = [];
 var LS_NAME_KEY = 'workshop_participant_name';
 var LS_CUSTOM_NAME_KEY = 'workshop_custom_name';
@@ -3749,9 +3808,16 @@ function _setDuplicateIndicator(isDup) {
     // ?as= bypasses the gate, so it must get the same guarantees the single-line
     // gate input gives typed names: capped to 64 chars and stripped of control /
     // newline / bidi chars (collapse whitespace). Never register it raw.
+    _startHostMachinePolling();
+
     var _asName = _sanitizeName((new URLSearchParams(location.search)).get('as') || '');
     var identity = null;
-    if (_asName) {
+    // On the trainer's machine, claim first and register straight away: the
+    // daemon assigns the reserved name, so the gate would have nothing to ask.
+    if (await _claimTrainerIfOnHostMachine()) {
+      var trainerResp = await _registerRailway({});
+      if (trainerResp.ok) identity = await trainerResp.json();
+    } else if (_asName) {
       var regResp = await _registerRailway({ name: _asName });
       if (regResp.ok) identity = await regResp.json();
     } else if (!_isFirstVisit) {

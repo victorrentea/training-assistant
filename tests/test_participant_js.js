@@ -8,8 +8,14 @@ const path = require('path');
 // so the test exercises the SHIPPED code instead of a copy that can drift.
 function extractFunction(file, name) {
   const src = fs.readFileSync(file, 'utf8');
-  const start = src.indexOf('function ' + name + '(');
+  let start = src.indexOf('function ' + name + '(');
   if (start < 0) throw new Error('function not found: ' + name + ' in ' + file);
+  // Keep the `async` keyword: slicing from `function` alone yields a body with
+  // a bare `await` in it, which is a SyntaxError once re-parsed.
+  const asyncPrefix = 'async ';
+  if (src.slice(start - asyncPrefix.length, start) === asyncPrefix) {
+    start -= asyncPrefix.length;
+  }
   let depth = 0, end = -1;
   for (let i = src.indexOf('{', start); i < src.length; i++) {
     if (src[i] === '{') depth++;
@@ -151,5 +157,56 @@ assert('does not steal focus from a contenteditable',
   runPreselect({tagName: 'DIV', isContentEditable: true}).length === 0
 );
 
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0) process.exit(1);
+
+// ── Host-machine auto session switch ────────────────────────────────────────
+// The security boundary is "can this browser reach the trainer's 127.0.0.1:1234".
+// These tests pin the client half: no traffic at all without the cookie, no
+// navigation when the session is unchanged, and a fresh UUID when it changes.
+
+function runHostMachinePoll({ cookie, activeSessionId, currentSessionId }) {
+  const calls = [];
+  const removed = [];
+  let navigatedTo = null;
+
+  const sandbox = {
+    document: { cookie },
+    fetch: (url) => {
+      calls.push(url);
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ session_id: activeSessionId }),
+      });
+    },
+    AbortSignal: { timeout: () => null },
+    uuidStore: { removeItem: (k) => removed.push(k) },
+    window: { get location() { return { set href(v) { navigatedTo = v; } }; } },
+  };
+
+  const src =
+    'var _sessionId = ' + JSON.stringify(currentSessionId) + ';' +
+    'var HOST_MACHINE_DAEMON = "http://127.0.0.1:1234";' +
+    'var HOST_MACHINE_TIMEOUT_MS = 800;' +
+    'var _uuidStore = uuidStore;' +
+    extractFunction(PARTICIPANT_HTML, '_onHostMachine') + ';' +
+    extractFunction(PARTICIPANT_HTML, '_pollForNewSession') + ';' +
+    'return _pollForNewSession;';
+
+  const fn = new Function('document', 'fetch', 'AbortSignal', 'uuidStore', 'window', src)(
+    sandbox.document, sandbox.fetch, sandbox.AbortSignal, sandbox.uuidStore, sandbox.window
+  );
+  return fn().then(() => ({ calls, removed, navigatedTo }));
+}
+
+const hostMachineResults = [];
+Promise.all([
+  runHostMachinePoll({ cookie: '', activeSessionId: 'newone', currentSessionId: 'oldone' })
+    .then((r) => hostMachineResults.push(['no cookie => never touches localhost', r.calls.length === 0 && r.navigatedTo === null])),
+  runHostMachinePoll({ cookie: 'ON_HOST_MACHINE=true', activeSessionId: 'samest', currentSessionId: 'samest' })
+    .then((r) => hostMachineResults.push(['unchanged session => no navigation', r.calls.length === 1 && r.navigatedTo === null && r.removed.length === 0])),
+  runHostMachinePoll({ cookie: 'ON_HOST_MACHINE=true', activeSessionId: 'newone', currentSessionId: 'oldone' })
+    .then((r) => hostMachineResults.push(['new session => fresh UUID, then navigate', r.navigatedTo === '/newone/' && r.removed.join() === 'workshop_participant_uuid'])),
+]).then(() => {
+  hostMachineResults.forEach(([desc, ok]) => assert(desc, ok));
+  console.log(`\n${passed} passed, ${failed} failed`);
+  if (failed > 0) process.exit(1);
+});

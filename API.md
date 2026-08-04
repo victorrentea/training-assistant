@@ -25,6 +25,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Attendees](#feature-attendees)
 - [Attention](#feature-attention)
 - [Files](#feature-files)
+- [Host-Machine](#feature-host-machine)
 - [Intellij](#feature-intellij)
 - [Materials Zip](#feature-materials-zip)
 - [Quiz](#feature-quiz)
@@ -308,7 +309,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | - | `entries: list[LeaderboardPosition{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`rank:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`score:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`avatar?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`letter?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`color?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`universe?:string`<br>`}]` |
+| Show Leaderboard<br>`POST /api/{session_id}/host/leaderboard/show` | - | `entries: list[LeaderboardPosition{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`rank:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`score:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`avatar?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`letter?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`color?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`universe?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`is_trainer?:bool`<br>`}]` |
 | Reset Scores<br>`DELETE /api/{session_id}/host/scores` | - | - |
 
 ## Feature: Emoji Reactions
@@ -489,6 +490,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Number of files opened this session changed<br>`files_count_updated` | `count: int` |
+
+## Feature: Host-Machine
+
+### Host REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Claim Trainer, grant the trainer identity to a UUID running on this machine; registration arrives over a different path (browser -> Railway -> WS -> daemon) than this loopback call, so the two race; both orders must work: this handler renames an already-registered UUID, and register consults trainer_pids for a UUID that claimed first.<br>`POST /api/host-machine/claim-trainer` | `participant_id: string` | `granted: bool`<br>`display_name: string` |
 
 ## Feature: Intellij
 

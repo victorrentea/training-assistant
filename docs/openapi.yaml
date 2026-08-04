@@ -724,7 +724,8 @@ paths:
       tags:
       - misc
       summary: Get Files Md
-      description: Return the per-session opened-files.md content with HTML comments stripped.
+      description: Return the per-session opened-files.md content with HTML comments
+        stripped.
       operationId: get_files_md_api_participant_files_md_get
       responses:
         '200':
@@ -1446,6 +1447,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/SessionActiveResponse'
       x-feature: session_management
+  /api/host-machine/claim-trainer:
+    post:
+      tags:
+      - host-machine
+      summary: Claim Trainer
+      description: 'Grant the trainer identity to a UUID running on this machine.
+
+
+        Registration arrives over a different path (browser -> Railway -> WS ->
+
+        daemon) than this loopback call, so the two race. Both orders must work:
+
+        this handler renames an already-registered UUID, and register consults
+
+        trainer_pids for a UUID that claimed first.'
+      operationId: claim_trainer_api_host_machine_claim_trainer_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimTrainerRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimTrainerResponse'
+      x-feature: host-machine
   /api/daemon-status:
     get:
       summary: Daemon Status
@@ -1580,6 +1611,28 @@ components:
       required:
       - avatar
       title: AvatarResponse
+    ClaimTrainerRequest:
+      properties:
+        participant_id:
+          type: string
+          title: Participant Id
+      type: object
+      required:
+      - participant_id
+      title: ClaimTrainerRequest
+    ClaimTrainerResponse:
+      properties:
+        granted:
+          type: boolean
+          title: Granted
+        display_name:
+          type: string
+          title: Display Name
+      type: object
+      required:
+      - granted
+      - display_name
+      title: ClaimTrainerResponse
     CodeReviewParticipantState:
       properties:
         snippet:
@@ -2589,6 +2642,10 @@ components:
           - type: string
           - type: 'null'
           title: Universe
+        is_trainer:
+          type: boolean
+          title: Is Trainer
+          default: false
       type: object
       required:
       - rank
