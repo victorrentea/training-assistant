@@ -94,17 +94,31 @@ def _spoof_key(name: str) -> str:
     """
     stripped = "".join(ch for ch in str(name) if unicodedata.category(ch) != "Cf")
     collapsed = " ".join(stripped.split())
-    folded = unicodedata.normalize("NFKC", collapsed).casefold()
-    return folded.translate(_CONFUSABLES)
+    return unicodedata.normalize("NFKC", collapsed).casefold()
 
 
-# Cyrillic / Greek letters that render identically to the Latin ones appearing
-# in the reserved trainer name. NFKC leaves them alone, so map them explicitly.
-_CONFUSABLES = str.maketrans({
-    "а": "a", "с": "c", "е": "e", "і": "i", "ј": "j", "о": "o",
-    "р": "p", "ѕ": "s", "ν": "v", "т": "t", "х": "x", "у": "y",
-    "ᴠ": "v", "ⅰ": "i", "ⅴ": "v",
-})
+def _wildcard_key(name: str) -> str:
+    """Same as _spoof_key, but every non-ASCII character becomes a wildcard.
+
+    A hand-curated confusables map is inherently incomplete — adversarial
+    testing walked straight past a Cyrillic-only list using Greek omicron and
+    Armenian oh, and the long tail (Cherokee, Coptic, …) never ends. So instead
+    of enumerating lookalikes, treat ANY non-ASCII character as "could be
+    passing for some ASCII letter" and compare shape.
+
+    This blocks homoglyphs from every script at once, while genuinely different
+    names survive: "Виктор (тренер)" folds to a different length than
+    "Victor (trainer)" and is allowed through.
+    """
+    return "".join(ch if ch.isascii() else "�" for ch in _spoof_key(name))
+
+
+def _looks_like(candidate: str, target: str) -> bool:
+    """True if candidate matches target once wildcards stand in for any letter."""
+    c, t = _wildcard_key(candidate), _spoof_key(target)
+    if len(c) != len(t):
+        return False
+    return all(a == b or (a == "�" and b.isalpha()) for a, b in zip(c, t))
 
 
 def is_reserved_trainer_name(name: str | None) -> bool:
@@ -116,7 +130,7 @@ def is_reserved_trainer_name(name: str | None) -> bool:
     """
     if not name:
         return False
-    return _spoof_key(name) == _spoof_key(RESERVED_TRAINER_NAME)
+    return _looks_like(name, RESERVED_TRAINER_NAME)
 
 
 def normalize_for_dedup(name: str | None) -> str:
