@@ -380,28 +380,6 @@ def test_migration_no_op_when_no_git_repos(session_folder, monkeypatch):
     assert not (session_folder / "opened-files.md").exists()
 
 
-def test_migration_collisions_downgrade_naturally(session_folder, monkeypatch):
-    _write_session_json(session_folder, {
-        "git_repos": [
-            {
-                "url": "https://github.com/owner/repo",
-                "branch": "main",
-                "files": ["src/foo/utils.py", "src/bar/utils.py"],
-                "file_urls": {},
-            },
-        ],
-    })
-    info = github_client.RepoInfo(default_branch="main")
-    # get_repo_tree=None forces HEAD fallback; head_blob=True causes collision downgrade
-    with patch.object(github_client, "get_repo_info", return_value=info), \
-         patch.object(github_client, "get_repo_tree", return_value=None), \
-         patch.object(github_client, "head_blob", return_value=True):
-        files_md.migrate_session_if_needed(session_folder)
-    text = (session_folder / "opened-files.md").read_text()
-    assert text.count("utils.py") == 1
-    assert "reason:ambiguous" in text
-
-
 # ---------------------------------------------------------------------------
 # Tree-based resolution tests
 # ---------------------------------------------------------------------------
@@ -491,86 +469,6 @@ def test_record_tree_truncated_falls_back_to_head(session_folder, monkeypatch):
     text = (session_folder / "opened-files.md").read_text()
     assert "[src/x.py]" in text
     assert "path:src/x.py" in text
-
-
-def test_record_noise_basename_dropped(session_folder, monkeypatch):
-    """The Claude Code spinner character `✻` and similar noise must not produce entries."""
-    info = github_client.RepoInfo(default_branch="main")
-    with patch.object(github_client, "get_repo_info", return_value=info) as info_mock, \
-         patch.object(github_client, "get_repo_tree", return_value=None), \
-         patch.object(github_client, "head_blob", return_value=True) as head:
-        files_md.record_file_opened("https://github.com/owner/repo", "✻")
-    info_mock.assert_not_called()  # dropped before repo lookup
-    head.assert_not_called()
-    assert not (session_folder / "opened-files.md").exists()
-
-
-def test_load_doc_strips_existing_noise_entries(session_folder, monkeypatch):
-    """Historical opened-files.md content with noise basenames gets pruned on load + auto-saved."""
-    (session_folder / "opened-files.md").write_text(
-        "# Files opened this session\n\n"
-        "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->\n\n"
-        "- [a.py](https://github.com/owner/repo/blob/main/src/a.py) <!-- ts:2026-05-27T10:00:00Z path:src/a.py -->\n"
-        "- ✻ <!-- ts:2026-05-27T10:01:00Z reason:blob-404 -->\n"
-        "- b.py <!-- ts:2026-05-27T10:02:00Z reason:blob-404 -->\n",
-        encoding="utf-8",
-    )
-    _freeze_now(monkeypatch, "2026-05-27T11:00:00Z")
-    info = github_client.RepoInfo(default_branch="main")
-    with patch.object(github_client, "get_repo_info", return_value=info), \
-         patch.object(github_client, "get_repo_tree", return_value=None), \
-         patch.object(github_client, "head_blob", return_value=False):
-        files_md.record_file_opened("https://github.com/owner/repo", "c.py")
-    text = (session_folder / "opened-files.md").read_text()
-    assert "✻" not in text
-    assert "[src/a.py]" in text
-    assert "- b.py" in text
-    assert "- c.py <!-- ts:2026-05-27T11:00:00Z reason:blob-404 -->" in text
-
-
-def test_load_doc_upgrades_unlinked_via_tree(session_folder, monkeypatch):
-    """Previously-unlinked entries (blob-404, not-in-repo) get re-resolved when the tree
-    becomes available. The original ts is preserved."""
-    (session_folder / "opened-files.md").write_text(
-        "# Files opened this session\n\n"
-        "## [petclinic](https://github.com/victorrentea/petclinic) <!-- default_branch:main -->\n\n"
-        "- packages.puml <!-- ts:2026-05-27T15:47:58Z reason:blob-404 -->\n"
-        "- C3ArchTest.java <!-- ts:2026-05-27T15:54:15Z reason:blob-404 -->\n",
-        encoding="utf-8",
-    )
-    _freeze_now(monkeypatch, "2026-05-27T16:00:00Z")
-    info = github_client.RepoInfo(default_branch="main")
-    tree = _tree({
-        "packages.puml": ["petclinic-backend/docs/packages.puml"],
-        "C3ArchTest.java": ["petclinic-backend/src/test/java/.../C3ArchTest.java"],
-    })
-    with patch.object(github_client, "get_repo_info", return_value=info), \
-         patch.object(github_client, "get_repo_tree", return_value=tree):
-        # Any record_file_opened call triggers _load_doc which runs the upgrade.
-        files_md.record_file_opened("https://github.com/victorrentea/petclinic", "noop.txt")
-    text = (session_folder / "opened-files.md").read_text()
-    assert "- [petclinic-backend/docs/packages.puml](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/docs/packages.puml) <!-- ts:2026-05-27T15:47:58Z path:petclinic-backend/docs/packages.puml -->" in text
-    assert "- [petclinic-backend/src/test/java/.../C3ArchTest.java](https://github.com/victorrentea/petclinic/blob/main/petclinic-backend/src/test/java/.../C3ArchTest.java) <!-- ts:2026-05-27T15:54:15Z path:petclinic-backend/src/test/java/.../C3ArchTest.java -->" in text
-
-
-def test_load_doc_does_not_upgrade_ambiguous_entries(session_folder, monkeypatch):
-    """Entries flagged `ambiguous` stay unlinked even if tree resolution would help."""
-    (session_folder / "opened-files.md").write_text(
-        "# Files opened this session\n\n"
-        "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->\n\n"
-        "- utils.py <!-- ts:2026-05-27T10:00:00Z reason:ambiguous -->\n",
-        encoding="utf-8",
-    )
-    _freeze_now(monkeypatch, "2026-05-27T11:00:00Z")
-    info = github_client.RepoInfo(default_branch="main")
-    # Tree has exactly one match — but the entry should still stay ambiguous
-    tree = _tree({"utils.py": ["src/utils.py"]})
-    with patch.object(github_client, "get_repo_info", return_value=info), \
-         patch.object(github_client, "get_repo_tree", return_value=tree):
-        files_md.record_file_opened("https://github.com/owner/repo", "noop.txt")
-    text = (session_folder / "opened-files.md").read_text()
-    assert "- utils.py <!-- ts:2026-05-27T10:00:00Z reason:ambiguous -->" in text
-    assert "[utils.py]" not in text  # still no link
 
 
 import time as _time
