@@ -40,3 +40,19 @@ def test_rejects_anything_else(url):
 def test_rejects_id_with_quote_so_it_cannot_escape_the_drive_query():
     with pytest.raises(InvalidDriveLink):
         parse_drive_url("https://drive.google.com/drive/folders/abc'def'ghij")
+
+
+def test_open_id_branch_enforces_the_charset_guard():
+    """The one branch where the charset check is a removable runtime guard.
+
+    Every other branch enforces the charset by construction of the ``_ID``
+    regex capture group, so a test there cannot meaningfully regress. The
+    ``/open?id=`` branch instead checks the charset with a separate
+    ``re.fullmatch(_ID, ...)`` call after extracting the query parameter, so
+    it could be "simplified" away in a future refactor without any other
+    test catching it — and this is the load-bearing security control for the
+    feature, since the returned id is later interpolated into a Drive API
+    ``q=`` query string.
+    """
+    with pytest.raises(InvalidDriveLink):
+        parse_drive_url("https://drive.google.com/open?id=abc'def'ghij")
