@@ -33,7 +33,7 @@ For product goals, workflow rules, and operational conventions, see [CLAUDE.md](
 - Participant traffic is served from Railway. The participant journey is `landing.html` -> `/{session_id}` -> session-scoped REST and WebSocket calls.
 - The host control plane is daemon-first. `python3 -m daemon` starts a local host panel at `http://127.0.0.1:1234/host`, serves the same static host assets there, mounts most live feature routers locally, and proxies the rest to Railway.
 - Railway is now a thin session-aware bridge: page serving, session validation, browser WebSockets, daemon WebSocket, slide cache/downloads, temporary file uploads, and daemon-driven static sync.
-- Most live workshop behavior lives in the daemon: session lifecycle, participant and host snapshots, quiz/word cloud/Q&A/code review/debate state, quiz generation, slide orchestration, upload handoff, and local persistence.
+- Most live workshop behavior lives in the daemon: session lifecycle, participant and host snapshots, quiz/word cloud/Q&A/code review/debate state, quiz generation, slide orchestration, upload handoff, opened-file GitHub link resolution, and local persistence.
 - There is no standalone database in the current runtime. Railway keeps in-memory state plus temp files; the daemon persists session files on disk.
 - Summary publication is currently file-driven, with `ai-summary.md` as the primary current path while legacy/fallback summary content can still exist in the session folder. Claude is currently used for quiz generation/refinement and debate cleanup.
 
@@ -279,6 +279,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 - The daemon also performs two infrastructure jobs that are easy to miss:
   - static asset sync via [`daemon/static_sync.py`](daemon/static_sync.py), driven by Railway's `sync_files` message on daemon WS connect
   - participant upload handoff via [`daemon/upload.py`](daemon/upload.py), which downloads temp files from Railway into the current session folder and then acks Railway to delete them
+- Files the trainer opens in IntelliJ are turned into GitHub links, not just logged. [`daemon/addon_bridge_client.py`](daemon/addon_bridge_client.py) hands each `git_file_opened` event `(url, branch, path)` to [`daemon/files_md.py`](daemon/files_md.py), which resolves a blob URL against the branch captured at open time (falling back to the repo's default branch) via [`daemon/github_client.py`](daemon/github_client.py), and upserts the entry by `(repo, path)` into `opened-files.md` in the session folder — the same file is both the persisted state and the markdown participants receive (HTML comments stripped) from [`daemon/misc/router.py`](daemon/misc/router.py). Because files opened during live coding are frequently not pushed yet, `python3 -m daemon.relink_open_files [--session-folder PATH]` re-resolves every link from scratch; the training summarizer runs it before writing a summary so it can cite files by URL.
 
 ---
 
@@ -311,6 +312,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 | Daemon persisted session state | [`daemon/session_state.py`](daemon/session_state.py) | Session folders under `SESSIONS_FOLDER` | `global-state.json`, `session-state.json`, session metadata, uploads, key points, slide manifests. |
 | Transcript inputs | Host filesystem | Normalized `YYYY-MM-DD transcription.txt` files under `TRANSCRIPTION_FOLDER` | Current consumers read normalized files only; raw transcript normalization is not implemented in this repo anymore. |
 | Summary inputs | Host filesystem | `ai-summary.md` in the session folder | Summary publication reads `ai-summary.md`. |
+| Opened files | [`daemon/files_md.py`](daemon/files_md.py) | `opened-files.md` in the session folder | GitHub blob links per `(repo, path)`, keyed to the branch captured at open time (falling back to the repo default branch). Same file is the persisted state and the sanitized wire format served to participants; re-resolved wholesale by `python3 -m daemon.relink_open_files`. |
 | Local materials index | [`daemon/rag/indexer.py`](daemon/rag/indexer.py), [`daemon/rag/retriever.py`](daemon/rag/retriever.py) | `~/.workshop-rag/chroma` | Local ChromaDB index used to enrich quiz generation. |
 
 ---

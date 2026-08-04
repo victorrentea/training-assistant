@@ -5,7 +5,8 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         participant = person "Participant" "Joins from a browser, votes, reacts, uploads, and follows the session."
 
         claudeApi = softwareSystem "Anthropic Claude API" "LLM used by the daemon for debate AI cleanup and code-review smart paste extraction."
-        macosAddons = softwareSystem "victor-macos-addons" "Local Mac bridge that emits slide events and receives emoji/session notifications."
+        githubApi = softwareSystem "GitHub API" "Repo metadata (default branch), repo trees, and blob existence checks used to link opened files to the branch captured at open time. Unauthenticated."
+        macosAddons = softwareSystem "victor-macos-addons" "Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications."
         nominatim = softwareSystem "Nominatim" "Reverse geocodes GPS coordinates into city and country."
         googleDrive = softwareSystem "Google Drive" "Hosts exported slide PDFs consumed by the Railway cache."
         agentMail = softwareSystem "AgentMail" "Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks."
@@ -39,7 +40,8 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
                 codereviewSmartPaste = component "Code-review smart paste" "Claude Haiku call that extracts a code snippet and language from pasted LLM output." "daemon/codereview/router.py + daemon/llm/adapter.py"
                 summaryHelpers = component "Summary helpers" "File-driven helpers that read ai-summary.md and surface its mtime; consumed by misc routes and host snapshots." "daemon/summary/loop.py"
                 slidesPipeline = component "Slides and upload pipeline" "Loads catalogs, tracks current slide, converts decks, invalidates Railway cache, scans PPTX mtimes, and pushes slide metadata/files." "daemon/slides/*"
-                addonsBridge = component "Addons bridge" "Receives slide events and slides_viewed deltas from victor-macos-addons and forwards emoji/session notifications back." "daemon/addon_bridge_client.py + daemon/adapters/*"
+                addonsBridge = component "Addons bridge" "Receives slide events, slides_viewed deltas, and IDE file-open events from victor-macos-addons, and forwards emoji/session notifications back." "daemon/addon_bridge_client.py + daemon/adapters/*"
+                openedFilesLinking = component "Opened files linking" "Resolves IDE file-open events to GitHub blob links against the branch captured at open time (falling back to the repo default branch), and maintains the opened-files.md artifact; a standalone CLI re-resolves every link before summarization." "daemon/files_md.py + daemon/github_client.py + daemon/relink_open_files.py"
                 transcriptIngest = component "Transcript ingest" "Loads normalized transcript files, tracks deltas, and exposes range queries used by quizzes and host inspection." "daemon/transcript/*"
                 ragIndexer = component "Materials RAG indexer" "Background ChromaDB indexer over local workshop materials; retriever helpers available for future consumers." "daemon/rag/*"
                 emailNotify = component "Email notifications" "Best-effort AgentMail-backed notifications for participant paste/feedback events." "daemon/email_notify.py"
@@ -58,6 +60,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
 
         trainingDaemon -> railwayBackend "Synchronizes active session, participant events, uploads, and generated static assets"
         trainingDaemon -> claudeApi "Requests debate cleanup and code-review smart-paste extraction"
+        trainingDaemon -> githubApi "Resolves opened-file blob links against repo trees and blobs"
         trainingDaemon -> macosAddons "Receives slide events and sends emoji/session notifications"
         trainingDaemon -> agentMail "Sends best-effort email notifications via AgentMail SDK"
         trainingDaemon -> hostFiles "Reads and writes session folders, transcripts, and summary files"
@@ -114,6 +117,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         participantApis -> railwayBridge "Publishes participant updates through"
         participantApis -> sessionPersistence "Reads current session metadata from"
         participantApis -> codereviewSmartPaste "Triggers Claude smart-paste extraction (host create path)"
+        participantApis -> openedFilesLinking "Reads and serves opened-files.md through"
 
         hostApis -> runtimeState "Mutates"
         hostApis -> railwayBridge "Publishes host-driven updates through"
@@ -142,6 +146,10 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         addonsBridge -> macosAddons "Connects over local WebSocket"
         addonsBridge -> slidesPipeline "Forwards slide events to"
         addonsBridge -> railwayBridge "Forwards emoji/session notifications through"
+        addonsBridge -> openedFilesLinking "Forwards IDE file-open events to"
+
+        openedFilesLinking -> githubApi "Resolves branch and default-branch blob links via"
+        openedFilesLinking -> hostFiles "Reads and writes opened-files.md in"
 
         transcriptIngest -> hostFiles "Reads normalized transcript files from"
 
@@ -164,7 +172,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         }
 
         container workshop "C2DaemonFlow" "Focused container view around the daemon-first host control plane." {
-            include host hostSpa trainingDaemon railwayBackend macosAddons claudeApi agentMail hostFiles localRag googleDrive
+            include host hostSpa trainingDaemon railwayBackend macosAddons claudeApi githubApi agentMail hostFiles localRag googleDrive
             autoLayout lr
         }
 
@@ -174,7 +182,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         }
 
         container workshop "C2TrainingDaemonOnly" "Container view with only the local daemon and its immediate dependencies." {
-            include trainingDaemon railwayBackend macosAddons claudeApi agentMail hostFiles localRag
+            include trainingDaemon railwayBackend macosAddons claudeApi githubApi agentMail hostFiles localRag
             autoLayout lr
         }
 
@@ -205,7 +213,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         }
 
         component trainingDaemon "C3DaemonOnly" "Only the internal daemon subsystems, without Railway or external systems." {
-            include orchestrator hostServer participantApis hostApis runtimeState quizQueue railwayBridge sessionPersistence debateCleanup codereviewSmartPaste summaryHelpers slidesPipeline addonsBridge transcriptIngest ragIndexer emailNotify daemonTelemetry lockHeartbeat
+            include orchestrator hostServer participantApis hostApis runtimeState quizQueue railwayBridge sessionPersistence debateCleanup codereviewSmartPaste summaryHelpers slidesPipeline addonsBridge openedFilesLinking transcriptIngest ragIndexer emailNotify daemonTelemetry lockHeartbeat
             autoLayout lr
         }
 
@@ -221,6 +229,11 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
 
         component trainingDaemon "C3DaemonSummaryAndQuiz" "Daemon slice for file-driven summary helpers and the host quiz queue." {
             include hostApis summaryHelpers quizQueue railwayBridge sessionPersistence hostFiles
+            autoLayout lr
+        }
+
+        component trainingDaemon "C3DaemonOpenedFiles" "Daemon slice for opened-files tracking and GitHub link resolution." {
+            include addonsBridge openedFilesLinking participantApis hostFiles githubApi macosAddons
             autoLayout lr
         }
 

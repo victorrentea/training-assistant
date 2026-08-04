@@ -29,7 +29,8 @@ System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interacti
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, "Code-review smart paste", $techn="daemon/codereview/router.py + daemon/llm/adapter.py", $descr="Claude Haiku call that extracts a code snippet and language from pasted LLM output.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Summaryhelpers, "Summary helpers", $techn="daemon/summary/loop.py", $descr="File-driven helpers that read ai-summary.md and surface its mtime; consumed by misc routes and host snapshots.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Slides and upload pipeline", $techn="daemon/slides/*", $descr="Loads catalogs, tracks current slide, converts decks, invalidates Railway cache, scans PPTX mtimes, and pushes slide metadata/files.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Addons bridge", $techn="daemon/addon_bridge_client.py + daemon/adapters/*", $descr="Receives slide events and slides_viewed deltas from victor-macos-addons and forwards emoji/session notifications back.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Addons bridge", $techn="daemon/addon_bridge_client.py + daemon/adapters/*", $descr="Receives slide events, slides_viewed deltas, and IDE file-open events from victor-macos-addons, and forwards emoji/session notifications back.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Opened files linking", $techn="daemon/files_md.py + daemon/github_client.py + daemon/relink_open_files.py", $descr="Resolves IDE file-open events to GitHub blob links against the branch captured at open time (falling back to the repo default branch), and maintains the opened-files.md artifact; a standalone CLI re-resolves every link before summarization.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Transcriptingest, "Transcript ingest", $techn="daemon/transcript/*", $descr="Loads normalized transcript files, tracks deltas, and exposes range queries used by quizzes and host inspection.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, "Materials RAG indexer", $techn="daemon/rag/*", $descr="Background ChromaDB indexer over local workshop materials; retriever helpers available for future consumers.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Emailnotifications, "Email notifications", $techn="daemon/email_notify.py", $descr="Best-effort AgentMail-backed notifications for participant paste/feedback events.", $tags="", $link="")
@@ -39,6 +40,10 @@ System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interacti
 
 }
 
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Starts", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Transcriptingest, "Polls for stats and time-window queries", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, "Starts background materials indexer", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Lockandheartbeat, "Maintains", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Embeddedhostserver, WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, "Mounts", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Embeddedhostserver, WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, "Mounts", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Embeddedhostserver, WorkshopLiveInteractionTool.TrainingDaemon.Quizqueue, "Mounts host quiz-queue routes", $techn="", $tags="", $link="")
@@ -46,6 +51,7 @@ Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInte
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes participant updates through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Reads current session metadata from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, "Triggers Claude smart-paste extraction (host create path)", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Reads and serves opened-files.md through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Runtimestatemodules, "Mutates", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes host-driven updates through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Persists and restores session files through", $techn="", $tags="", $link="")
@@ -59,16 +65,13 @@ Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, WorkshopLiveInte
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes slide metadata/files through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Forwards slide events to", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Forwards emoji/session notifications through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Forwards IDE file-open events to", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Emailnotifications, "Triggers paste/feedback notifications through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Daemontelemetry, "Configures OTel tracing on startup", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Embeddedhostserver, "Starts", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Maintains", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Loads and flushes state through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Triggers", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Starts", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Transcriptingest, "Polls for stats and time-window queries", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, "Starts background materials indexer", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Lockandheartbeat, "Maintains", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

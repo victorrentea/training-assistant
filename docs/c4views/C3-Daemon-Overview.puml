@@ -16,11 +16,12 @@ left to right direction
 !include <C4/C4_Container>
 !include <C4/C4_Component>
 
+System(LocalChromaDBstore, "Local ChromaDB store", $descr="~/.workshop-rag/chroma — background-indexed local materials.", $tags="", $link="")
 System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used by the daemon for debate AI cleanup and code-review smart paste extraction.", $tags="", $link="")
-System(victormacosaddons, "victor-macos-addons", $descr="Local Mac bridge that emits slide events and receives emoji/session notifications.", $tags="", $link="")
+System(GitHubAPI, "GitHub API", $descr="Repo metadata (default branch), repo trees, and blob existence checks used to link opened files to the branch captured at open time. Unauthenticated.", $tags="", $link="")
+System(victormacosaddons, "victor-macos-addons", $descr="Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications.", $tags="", $link="")
 System(AgentMail, "AgentMail", $descr="Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks.", $tags="", $link="")
 System(Hostsessionfiles, "Host session files", $descr="Session folders, normalized transcripts, ai-summary.md, uploaded files, and slide manifests on the trainer's Mac.", $tags="", $link="")
-System(LocalChromaDBstore, "Local ChromaDB store", $descr="~/.workshop-rag/chroma — background-indexed local materials.", $tags="", $link="")
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
   Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
@@ -35,7 +36,8 @@ System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interacti
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, "Code-review smart paste", $techn="daemon/codereview/router.py + daemon/llm/adapter.py", $descr="Claude Haiku call that extracts a code snippet and language from pasted LLM output.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Summaryhelpers, "Summary helpers", $techn="daemon/summary/loop.py", $descr="File-driven helpers that read ai-summary.md and surface its mtime; consumed by misc routes and host snapshots.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Slides and upload pipeline", $techn="daemon/slides/*", $descr="Loads catalogs, tracks current slide, converts decks, invalidates Railway cache, scans PPTX mtimes, and pushes slide metadata/files.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Addons bridge", $techn="daemon/addon_bridge_client.py + daemon/adapters/*", $descr="Receives slide events and slides_viewed deltas from victor-macos-addons and forwards emoji/session notifications back.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Addons bridge", $techn="daemon/addon_bridge_client.py + daemon/adapters/*", $descr="Receives slide events, slides_viewed deltas, and IDE file-open events from victor-macos-addons, and forwards emoji/session notifications back.", $tags="", $link="")
+    Component(WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Opened files linking", $techn="daemon/files_md.py + daemon/github_client.py + daemon/relink_open_files.py", $descr="Resolves IDE file-open events to GitHub blob links against the branch captured at open time (falling back to the repo default branch), and maintains the opened-files.md artifact; a standalone CLI re-resolves every link before summarization.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Transcriptingest, "Transcript ingest", $techn="daemon/transcript/*", $descr="Loads normalized transcript files, tracks deltas, and exposes range queries used by quizzes and host inspection.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, "Materials RAG indexer", $techn="daemon/rag/*", $descr="Background ChromaDB indexer over local workshop materials; retriever helpers available for future consumers.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.TrainingDaemon.Emailnotifications, "Email notifications", $techn="daemon/email_notify.py", $descr="Best-effort AgentMail-backed notifications for participant paste/feedback events.", $tags="", $link="")
@@ -55,6 +57,7 @@ Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInte
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes participant updates through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Reads current session metadata from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, "Triggers Claude smart-paste extraction (host create path)", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Reads and serves opened-files.md through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Runtimestatemodules, "Mutates", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes host-driven updates through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Persists and restores session files through", $techn="", $tags="", $link="")
@@ -75,6 +78,9 @@ Rel(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, Workshop
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, victormacosaddons, "Connects over local WebSocket", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Forwards slide events to", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Forwards emoji/session notifications through", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Forwards IDE file-open events to", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, GitHubAPI, "Resolves branch and default-branch blob links via", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, Hostsessionfiles, "Reads and writes opened-files.md in", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Transcriptingest, Hostsessionfiles, "Reads normalized transcript files from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, Hostsessionfiles, "Reads local materials from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, LocalChromaDBstore, "Writes embeddings into", $techn="", $tags="", $link="")

@@ -4,81 +4,85 @@ graph LR
   subgraph diagram ["Component View: Workshop Live Interaction Tool - Training Daemon"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    subgraph 10 ["Workshop Live Interaction Tool"]
-      style 10 fill:#ffffff,stroke:#144d2e,color:#144d2e
+    subgraph 11 ["Workshop Live Interaction Tool"]
+      style 11 fill:#ffffff,stroke:#144d2e,color:#144d2e
 
-      subgraph 23 ["Training Daemon"]
-        style 23 fill:#ffffff,stroke:#3e703e,color:#3e703e
+      subgraph 24 ["Training Daemon"]
+        style 24 fill:#ffffff,stroke:#3e703e,color:#3e703e
 
-        24["<div style='font-weight: bold'>Orchestrator</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/__main__.py]</div><div style='font-size: 80%; margin-top:10px'>Starts OTel tracing, the<br />lock/heartbeat, host server,<br />daemon WS client, addons<br />bridge, slide runner,<br />transcript probes, and the<br />1-second main loop.</div>"]
-        style 24 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        25["<div style='font-weight: bold'>Embedded host server</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/host_server.py + daemon/host_proxy.py + daemon/host_ws.py]</div><div style='font-size: 80%; margin-top:10px'>Serves /host on<br />localhost:1234, mounts local<br />feature routers, holds the<br />host-browser WS, and<br />reverse-proxies remaining<br />HTTP/WS traffic to Railway.</div>"]
+        25["<div style='font-weight: bold'>Orchestrator</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/__main__.py]</div><div style='font-size: 80%; margin-top:10px'>Starts OTel tracing, the<br />lock/heartbeat, host server,<br />daemon WS client, addons<br />bridge, slide runner,<br />transcript probes, and the<br />1-second main loop.</div>"]
         style 25 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        26["<div style='font-weight: bold'>Participant APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/participant/router.py + daemon/quiz/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py]</div><div style='font-size: 80%; margin-top:10px'>Authoritative participant<br />REST handlers for identity,<br />quizzes, Q&A, debate, code<br />review, misc actions, slides,<br />emoji, and word cloud.</div>"]
+        26["<div style='font-weight: bold'>Embedded host server</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/host_server.py + daemon/host_proxy.py + daemon/host_ws.py]</div><div style='font-size: 80%; margin-top:10px'>Serves /host on<br />localhost:1234, mounts local<br />feature routers, holds the<br />host-browser WS, and<br />reverse-proxies remaining<br />HTTP/WS traffic to Railway.</div>"]
         style 26 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        27["<div style='font-weight: bold'>Host APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session/router.py + daemon/activity/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/quiz_queue/router.py + daemon/{quiz,qa,debate,codereview,wordcloud,misc}/router.py (host sub-routers)]</div><div style='font-size: 80%; margin-top:10px'>Local host-side routers for<br />session lifecycle, activity<br />switching, leaderboard, host<br />state snapshot, quiz queue,<br />and per-feature host actions.</div>"]
+        27["<div style='font-weight: bold'>Participant APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/participant/router.py + daemon/quiz/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py]</div><div style='font-size: 80%; margin-top:10px'>Authoritative participant<br />REST handlers for identity,<br />quizzes, Q&A, debate, code<br />review, misc actions, slides,<br />emoji, and word cloud.</div>"]
         style 27 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        28["<div style='font-weight: bold'>Runtime state modules</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/*/state.py + daemon/scores.py + daemon/session/state.py]</div><div style='font-size: 80%; margin-top:10px'>In-memory feature state for<br />participants, quizzes, Q&A,<br />debate, code review, misc<br />data, leaderboard, scores,<br />session stack, and word<br />cloud.</div>"]
+        28["<div style='font-weight: bold'>Host APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session/router.py + daemon/activity/router.py + daemon/leaderboard/router.py + daemon/host_state_router.py + daemon/quiz_queue/router.py + daemon/{quiz,qa,debate,codereview,wordcloud,misc}/router.py (host sub-routers)]</div><div style='font-size: 80%; margin-top:10px'>Local host-side routers for<br />session lifecycle, activity<br />switching, leaderboard, host<br />state snapshot, quiz queue,<br />and per-feature host actions.</div>"]
         style 28 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        29["<div style='font-weight: bold'>Quiz queue</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/quiz_queue/queue.py + daemon/quiz_queue/router.py]</div><div style='font-size: 80%; margin-top:10px'>In-memory queue of<br />pre-submitted quiz questions<br />for one-at-a-time firing by<br />the host.</div>"]
+        29["<div style='font-weight: bold'>Runtime state modules</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/*/state.py + daemon/scores.py + daemon/session/state.py]</div><div style='font-size: 80%; margin-top:10px'>In-memory feature state for<br />participants, quizzes, Q&A,<br />debate, code review, misc<br />data, leaderboard, scores,<br />session stack, and word<br />cloud.</div>"]
         style 29 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        30["<div style='font-weight: bold'>Railway bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py + daemon/ws_messages.py]</div><div style='font-size: 80%; margin-top:10px'>Persistent /ws/daemon client,<br />proxy response handling,<br />typed broadcasts/notify_host,<br />upload handoff, and static<br />sync trigger.</div>"]
+        30["<div style='font-weight: bold'>Quiz queue</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/quiz_queue/queue.py + daemon/quiz_queue/router.py]</div><div style='font-size: 80%; margin-top:10px'>In-memory queue of<br />pre-submitted quiz questions<br />for one-at-a-time firing by<br />the host.</div>"]
         style 30 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        31["<div style='font-weight: bold'>Session persistence</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session_state.py + daemon/persisted_models.py]</div><div style='font-size: 80%; margin-top:10px'>Persists global-state.json,<br />session-state.json, session<br />metadata, key points, and<br />slide manifests.</div>"]
+        31["<div style='font-weight: bold'>Railway bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py + daemon/upload.py + daemon/static_sync.py + daemon/ws_messages.py]</div><div style='font-size: 80%; margin-top:10px'>Persistent /ws/daemon client,<br />proxy response handling,<br />typed broadcasts/notify_host,<br />upload handoff, and static<br />sync trigger.</div>"]
         style 31 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        32["<div style='font-weight: bold'>Debate AI cleanup</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/debate/ai_cleanup.py + daemon/llm/adapter.py]</div><div style='font-size: 80%; margin-top:10px'>Claude-backed argument<br />dedupe, cleanup, and<br />new-suggestion generation.</div>"]
+        32["<div style='font-weight: bold'>Session persistence</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/session_state.py + daemon/persisted_models.py]</div><div style='font-size: 80%; margin-top:10px'>Persists global-state.json,<br />session-state.json, session<br />metadata, key points, and<br />slide manifests.</div>"]
         style 32 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        33["<div style='font-weight: bold'>Code-review smart paste</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/codereview/router.py + daemon/llm/adapter.py]</div><div style='font-size: 80%; margin-top:10px'>Claude Haiku call that<br />extracts a code snippet and<br />language from pasted LLM<br />output.</div>"]
+        33["<div style='font-weight: bold'>Debate AI cleanup</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/debate/ai_cleanup.py + daemon/llm/adapter.py]</div><div style='font-size: 80%; margin-top:10px'>Claude-backed argument<br />dedupe, cleanup, and<br />new-suggestion generation.</div>"]
         style 33 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        34["<div style='font-weight: bold'>Summary helpers</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/loop.py]</div><div style='font-size: 80%; margin-top:10px'>File-driven helpers that read<br />ai-summary.md and surface its<br />mtime; consumed by misc<br />routes and host snapshots.</div>"]
+        34["<div style='font-weight: bold'>Code-review smart paste</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/codereview/router.py + daemon/llm/adapter.py]</div><div style='font-size: 80%; margin-top:10px'>Claude Haiku call that<br />extracts a code snippet and<br />language from pasted LLM<br />output.</div>"]
         style 34 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        35["<div style='font-weight: bold'>Slides and upload pipeline</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/*]</div><div style='font-size: 80%; margin-top:10px'>Loads catalogs, tracks<br />current slide, converts<br />decks, invalidates Railway<br />cache, scans PPTX mtimes, and<br />pushes slide metadata/files.</div>"]
+        35["<div style='font-weight: bold'>Summary helpers</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/summary/loop.py]</div><div style='font-size: 80%; margin-top:10px'>File-driven helpers that read<br />ai-summary.md and surface its<br />mtime; consumed by misc<br />routes and host snapshots.</div>"]
         style 35 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        36["<div style='font-weight: bold'>Addons bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/addon_bridge_client.py + daemon/adapters/*]</div><div style='font-size: 80%; margin-top:10px'>Receives slide events and<br />slides_viewed deltas from<br />victor-macos-addons and<br />forwards emoji/session<br />notifications back.</div>"]
+        36["<div style='font-weight: bold'>Slides and upload pipeline</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/*]</div><div style='font-size: 80%; margin-top:10px'>Loads catalogs, tracks<br />current slide, converts<br />decks, invalidates Railway<br />cache, scans PPTX mtimes, and<br />pushes slide metadata/files.</div>"]
         style 36 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        37["<div style='font-weight: bold'>Transcript ingest</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/*]</div><div style='font-size: 80%; margin-top:10px'>Loads normalized transcript<br />files, tracks deltas, and<br />exposes range queries used by<br />quizzes and host inspection.</div>"]
+        37["<div style='font-weight: bold'>Addons bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/addon_bridge_client.py + daemon/adapters/*]</div><div style='font-size: 80%; margin-top:10px'>Receives slide events,<br />slides_viewed deltas, and IDE<br />file-open events from<br />victor-macos-addons, and<br />forwards emoji/session<br />notifications back.</div>"]
         style 37 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        38["<div style='font-weight: bold'>Materials RAG indexer</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/rag/*]</div><div style='font-size: 80%; margin-top:10px'>Background ChromaDB indexer<br />over local workshop<br />materials; retriever helpers<br />available for future<br />consumers.</div>"]
+        38["<div style='font-weight: bold'>Opened files linking</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/files_md.py + daemon/github_client.py + daemon/relink_open_files.py]</div><div style='font-size: 80%; margin-top:10px'>Resolves IDE file-open events<br />to GitHub blob links against<br />the branch captured at open<br />time (falling back to the<br />repo default branch), and<br />maintains the opened-files.md<br />artifact; a standalone CLI<br />re-resolves every link before<br />summarization.</div>"]
         style 38 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        39["<div style='font-weight: bold'>Email notifications</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/email_notify.py]</div><div style='font-size: 80%; margin-top:10px'>Best-effort AgentMail-backed<br />notifications for participant<br />paste/feedback events.</div>"]
+        39["<div style='font-weight: bold'>Transcript ingest</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/transcript/*]</div><div style='font-size: 80%; margin-top:10px'>Loads normalized transcript<br />files, tracks deltas, and<br />exposes range queries used by<br />quizzes and host inspection.</div>"]
         style 39 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        40["<div style='font-weight: bold'>Daemon telemetry</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/telemetry/*]</div><div style='font-size: 80%; margin-top:10px'>OpenTelemetry tracer<br />provider, file span exporter,<br />and FastAPI/urllib<br />instrumentation; also reused<br />by the Railway process.</div>"]
+        40["<div style='font-weight: bold'>Materials RAG indexer</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/rag/*]</div><div style='font-size: 80%; margin-top:10px'>Background ChromaDB indexer<br />over local workshop<br />materials; retriever helpers<br />available for future<br />consumers.</div>"]
         style 40 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        41["<div style='font-weight: bold'>Lock and heartbeat</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/lock.py]</div><div style='font-size: 80%; margin-top:10px'>Single-instance PID lock and<br />heartbeat maintenance.</div>"]
+        41["<div style='font-weight: bold'>Email notifications</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/email_notify.py]</div><div style='font-size: 80%; margin-top:10px'>Best-effort AgentMail-backed<br />notifications for participant<br />paste/feedback events.</div>"]
         style 41 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        42["<div style='font-weight: bold'>Daemon telemetry</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/telemetry/*]</div><div style='font-size: 80%; margin-top:10px'>OpenTelemetry tracer<br />provider, file span exporter,<br />and FastAPI/urllib<br />instrumentation; also reused<br />by the Railway process.</div>"]
+        style 42 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        43["<div style='font-weight: bold'>Lock and heartbeat</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/lock.py]</div><div style='font-size: 80%; margin-top:10px'>Single-instance PID lock and<br />heartbeat maintenance.</div>"]
+        style 43 fill:#d6e8c8,stroke:#95a28c,color:#10210f
       end
 
     end
 
-    25-. "<div>Mounts</div><div style='font-size: 70%'></div>" .->26
-    25-. "<div>Mounts</div><div style='font-size: 70%'></div>" .->27
-    25-. "<div>Mounts host quiz-queue routes</div><div style='font-size: 70%'></div>" .->29
-    26-. "<div>Mutates</div><div style='font-size: 70%'></div>" .->28
-    26-. "<div>Publishes participant updates<br />through</div><div style='font-size: 70%'></div>" .->30
-    26-. "<div>Reads current session<br />metadata from</div><div style='font-size: 70%'></div>" .->31
-    26-. "<div>Triggers Claude smart-paste<br />extraction (host create path)</div><div style='font-size: 70%'></div>" .->33
-    27-. "<div>Mutates</div><div style='font-size: 70%'></div>" .->28
-    27-. "<div>Publishes host-driven updates<br />through</div><div style='font-size: 70%'></div>" .->30
-    27-. "<div>Persists and restores session<br />files through</div><div style='font-size: 70%'></div>" .->31
-    27-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->35
-    27-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->32
-    27-. "<div>Reads ai-summary.md state<br />through</div><div style='font-size: 70%'></div>" .->34
-    27-. "<div>Manages queued quiz questions<br />through</div><div style='font-size: 70%'></div>" .->29
-    28-. "<div>Is snapshotted by</div><div style='font-size: 70%'></div>" .->31
-    30-. "<div>Reads session metadata for<br />sync payloads from</div><div style='font-size: 70%'></div>" .->31
-    32-. "<div>Publishes cleanup results<br />through</div><div style='font-size: 70%'></div>" .->30
-    35-. "<div>Publishes slide<br />metadata/files through</div><div style='font-size: 70%'></div>" .->30
-    36-. "<div>Forwards slide events to</div><div style='font-size: 70%'></div>" .->35
-    36-. "<div>Forwards emoji/session<br />notifications through</div><div style='font-size: 70%'></div>" .->30
-    26-. "<div>Triggers paste/feedback<br />notifications through</div><div style='font-size: 70%'></div>" .->39
-    24-. "<div>Configures OTel tracing on<br />startup</div><div style='font-size: 70%'></div>" .->40
-    24-. "<div>Starts</div><div style='font-size: 70%'></div>" .->25
-    24-. "<div>Maintains</div><div style='font-size: 70%'></div>" .->30
-    24-. "<div>Loads and flushes state<br />through</div><div style='font-size: 70%'></div>" .->31
-    24-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->35
-    24-. "<div>Starts</div><div style='font-size: 70%'></div>" .->36
-    24-. "<div>Polls for stats and<br />time-window queries</div><div style='font-size: 70%'></div>" .->37
-    24-. "<div>Starts background materials<br />indexer</div><div style='font-size: 70%'></div>" .->38
-    24-. "<div>Maintains</div><div style='font-size: 70%'></div>" .->41
+    25-. "<div>Starts</div><div style='font-size: 70%'></div>" .->37
+    25-. "<div>Polls for stats and<br />time-window queries</div><div style='font-size: 70%'></div>" .->39
+    25-. "<div>Starts background materials<br />indexer</div><div style='font-size: 70%'></div>" .->40
+    25-. "<div>Maintains</div><div style='font-size: 70%'></div>" .->43
+    26-. "<div>Mounts</div><div style='font-size: 70%'></div>" .->27
+    26-. "<div>Mounts</div><div style='font-size: 70%'></div>" .->28
+    26-. "<div>Mounts host quiz-queue routes</div><div style='font-size: 70%'></div>" .->30
+    27-. "<div>Mutates</div><div style='font-size: 70%'></div>" .->29
+    27-. "<div>Publishes participant updates<br />through</div><div style='font-size: 70%'></div>" .->31
+    27-. "<div>Reads current session<br />metadata from</div><div style='font-size: 70%'></div>" .->32
+    27-. "<div>Triggers Claude smart-paste<br />extraction (host create path)</div><div style='font-size: 70%'></div>" .->34
+    27-. "<div>Reads and serves<br />opened-files.md through</div><div style='font-size: 70%'></div>" .->38
+    28-. "<div>Mutates</div><div style='font-size: 70%'></div>" .->29
+    28-. "<div>Publishes host-driven updates<br />through</div><div style='font-size: 70%'></div>" .->31
+    28-. "<div>Persists and restores session<br />files through</div><div style='font-size: 70%'></div>" .->32
+    28-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->36
+    28-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->33
+    28-. "<div>Reads ai-summary.md state<br />through</div><div style='font-size: 70%'></div>" .->35
+    28-. "<div>Manages queued quiz questions<br />through</div><div style='font-size: 70%'></div>" .->30
+    29-. "<div>Is snapshotted by</div><div style='font-size: 70%'></div>" .->32
+    31-. "<div>Reads session metadata for<br />sync payloads from</div><div style='font-size: 70%'></div>" .->32
+    33-. "<div>Publishes cleanup results<br />through</div><div style='font-size: 70%'></div>" .->31
+    36-. "<div>Publishes slide<br />metadata/files through</div><div style='font-size: 70%'></div>" .->31
+    37-. "<div>Forwards slide events to</div><div style='font-size: 70%'></div>" .->36
+    37-. "<div>Forwards emoji/session<br />notifications through</div><div style='font-size: 70%'></div>" .->31
+    37-. "<div>Forwards IDE file-open events<br />to</div><div style='font-size: 70%'></div>" .->38
+    27-. "<div>Triggers paste/feedback<br />notifications through</div><div style='font-size: 70%'></div>" .->41
+    25-. "<div>Configures OTel tracing on<br />startup</div><div style='font-size: 70%'></div>" .->42
+    25-. "<div>Starts</div><div style='font-size: 70%'></div>" .->26
+    25-. "<div>Maintains</div><div style='font-size: 70%'></div>" .->31
+    25-. "<div>Loads and flushes state<br />through</div><div style='font-size: 70%'></div>" .->32
+    25-. "<div>Triggers</div><div style='font-size: 70%'></div>" .->36
 
   end
