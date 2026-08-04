@@ -119,12 +119,31 @@ Details:
 - Shortcuts resolved through `shortcutDetails.targetId`; trashed items skipped.
 - A link to a **single file** streams that file directly, not a one-entry zip.
 - Archive filename: `<folder name>.zip`.
-- No size cap. Bandwidth is bounded by rate limiting instead (see below).
+
+### Size cap: 500 MB
+
+`MAX_TRANSFER_BYTES = 500 * 1024 * 1024`, enforced twice, because one check cannot
+be trusted:
+
+1. **Before the transfer starts.** Sum the `size` field of every listed file; if it
+   exceeds the cap, refuse with 413 and a clear message. This is the check that
+   produces a good experience — the participant learns immediately instead of
+   watching a download die.
+2. **While streaming.** A running byte counter aborts the response if the cap is
+   exceeded anyway. This is not redundant: Google-native files (Docs, Sheets, Slides)
+   report **no `size`** in metadata, so their exported PDFs are invisible to check 1.
+   A folder of a hundred Google Docs passes the pre-check at an estimated 0 bytes.
+
+Check 1 counts an unknown-size file as 0 rather than guessing, and the preview
+response flags `has_unsized_files` so the page can say the estimate is a lower bound.
+
+Bandwidth is bounded by this cap together with rate limiting (see below).
 
 ## Preview before download
 
-`GET /api/drive/preview?url=...` validates the link, the ownership gate and the
-folder's reachability, then returns JSON: folder name, file count, total bytes.
+`GET /api/drive/preview?url=...` validates the link, the ownership gate, the folder's
+reachability and the size cap, then returns JSON: folder name, file count, total
+bytes, and `has_unsized_files`.
 
 This exists so failures surface as a readable message on the page rather than as a
 download that dies halfway through. `GET /api/drive/zip?url=...` re-runs the same
@@ -153,6 +172,8 @@ Visual polish is deliberately deferred to a follow-up pass.
 | Drive returns 404/403 | 404 | "This folder is not shared publicly, or the link is wrong" |
 | Owner is not the configured account | 403 | "This folder is not shared publicly, or the link is wrong" |
 | Drive quota / 5xx | 502 | "Google Drive is not responding right now — please try again" |
+| Folder over 500 MB (pre-check) | 413 | "This folder is larger than 500 MB — ask Victor to split it or send it another way" |
+| Cap exceeded mid-stream | — | Archive is cut off at the cap; logged server-side as a pre-check miss. |
 | Failure mid-stream | — | Truncated archive; unavoidable. Logged server-side, browser reports an incomplete download. |
 
 The 403 message is deliberately identical to the 404 message so the endpoint cannot
@@ -195,6 +216,9 @@ philosophy.
 - Folder with subfolders → archive with the expected tree.
 - Folder owned by someone else → 403.
 - Google Doc → `.pdf` entry in the archive.
+- Folder whose listed sizes exceed 500 MB → 413 before any transfer.
+- Folder of unsized native files whose exports exceed 500 MB → stream aborts at the
+  cap (the pre-check cannot catch this one).
 - **Daemon stopped → download still works** (the central requirement).
 - No browser request to a Google host, and no 3xx response pointing at Google.
 
