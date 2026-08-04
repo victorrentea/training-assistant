@@ -18,7 +18,11 @@ body{visibility:hidden}
 #notes-content .notes-para:not(:last-child){margin-bottom:0.6em}
 #summary-content{font-size:calc(1rem * var(--participant-zoom))}
 #files-content{font-size:calc(1rem * var(--participant-zoom))}
-#files-content .file-path-dir{color:var(--color-on-surface-variant,#888);text-decoration:none;font-weight:400;opacity:.7}
+#files-content .file-tree-repo{font-weight:700;margin:.75rem 0 .35rem}
+#files-content .file-tree-folder{opacity:.8;white-space:nowrap;overflow-x:auto;line-height:1.8}
+#files-content .file-tree-file{white-space:nowrap;overflow-x:auto;line-height:1.8}
+#files-content .file-tree-time{color:var(--color-on-surface-variant,#888);font-size:.78em;margin-left:.5rem}
+#files-content .file-tree-branch{font-size:.72em;padding:1px 6px;border-radius:999px;border:1px solid currentColor;opacity:.7;margin-left:.4rem}
 /* Host highlighter: the host marks a passage and the agent wraps it in <mark>
    in ai-summary.md. Warm amber band, legible in light + dark; box-decoration
    keeps the band continuous across line wraps. Applies to every markdown view. */
@@ -3914,6 +3918,7 @@ function _setDuplicateIndicator(isDup) {
     _applyGdriveToast(state.gdrive_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
     _setFilesBadge(state.files_count || 0);
+    _lastFilesCount = state.files_count || 0;
     document.getElementById('files-badge').classList.toggle('badge-alert', (state.files_count || 0) > 0 && LS.isFilesUnread());
     var saved = LS.getView();
     // A tab slug in the URL (e.g. /<session>/notes) overrides the last-used tab,
@@ -4540,10 +4545,17 @@ function _handleWsMessage(msg) {
     case 'current_slide_updated': _onIncomingHostSlidesCurrent(msg.current_slide || null); break;
     case 'slides_history_updated': _setPastSlidesBadge(msg.count); break;
     case 'files_count_updated': {
+      var previousFilesCount = _lastFilesCount;
+      _lastFilesCount = msg.count;
       _setFilesBadge(msg.count);
       var onFiles = document.getElementById('files-view').style.display !== 'none';
       if (onFiles) { loadFilesMd(); _applyFilesBadgeUnread(false); }
-      else { _filesDirty = true; _applyFilesBadgeUnread(msg.count > 0); }
+      else {
+        _filesDirty = true;
+        // Only a genuinely new file earns the unread flag; a re-opened file
+        // rewrites the document without changing the count.
+        if (msg.count > previousFilesCount) _applyFilesBadgeUnread(true);
+      }
       break;
     }
     case 'active_participants_count_updated': {
@@ -5079,7 +5091,111 @@ async function loadSummary() {
 }
 
 var _filesDirty = true;
-var _filesRawMarkdown = '';
+var _lastFilesCount = 0;
+
+// Parse the sanitized opened-files.md. Every HTML comment is stripped server-side,
+// so everything below must come out of the VISIBLE text.
+function parseFilesMd(md) {
+  var repos = [];
+  var current = null;
+  (md || '').split('\n').forEach(function (raw) {
+    var line = raw.trim();
+    if (!line) return;
+    var m = line.match(/^## \[([^\]]+)\]\(([^)]+)\)(?: — branch `([^`]+)`)?/);
+    if (m) {
+      current = { name: m[1], url: m[2], branch: m[3] || '', entries: [] };
+      repos.push(current);
+      return;
+    }
+    if (!current) return;
+    m = line.match(/^- \[(.+?)\]\((\S+)\)(?: — ([0-9A-Za-z: ]+?))?(?: · branch `([^`]+)`)?$/);
+    if (m) {
+      current.entries.push({ path: m[1], href: m[2], time: m[3] || '', branch: m[4] || '' });
+      return;
+    }
+    m = line.match(/^- (?!\[)(.+?)(?: — ([0-9A-Za-z: ]+?))?(?: · branch `([^`]+)`)?$/);
+    if (m) {
+      current.entries.push({ path: m[1], href: null, time: m[2] || '', branch: m[3] || '' });
+    }
+  });
+  return repos;
+}
+
+// Collapse single-child folder chains and sort. `allowCollapse` is false for the
+// root only — the repo root itself is never merged into its first folder.
+function finalizeFileNode(node, allowCollapse) {
+  var names = Object.keys(node.folders);
+  while (allowCollapse && node.files.length === 0 && names.length === 1) {
+    var only = node.folders[names[0]];
+    node = {
+      name: node.name ? node.name + '/' + only.name : only.name,
+      folders: only.folders,
+      files: only.files
+    };
+    names = Object.keys(node.folders);
+  }
+  function byName(a, b) {
+    return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+  }
+  var folders = names.map(function (n) { return finalizeFileNode(node.folders[n], true); });
+  folders.sort(byName);
+  return { name: node.name, folders: folders, files: node.files.slice().sort(byName) };
+}
+
+function buildFileTree(paths) {
+  var root = { name: '', folders: {}, files: [] };
+  (paths || []).forEach(function (p) {
+    var parts = p.split('/');
+    var node = root;
+    for (var i = 0; i < parts.length - 1; i++) {
+      var seg = parts[i];
+      if (!node.folders[seg]) node.folders[seg] = { name: seg, folders: {}, files: [] };
+      node = node.folders[seg];
+    }
+    node.files.push({ name: parts[parts.length - 1], path: p });
+  });
+  return finalizeFileNode(root, false);
+}
+
+function _renderFileNode(node, byPath, depth, out) {
+  node.folders.forEach(function (folder) {
+    var row = document.createElement('div');
+    row.className = 'file-tree-folder';
+    row.style.paddingLeft = (depth * 1.1) + 'rem';
+    row.textContent = '▾ ' + folder.name;
+    out.appendChild(row);
+    _renderFileNode(folder, byPath, depth + 1, out);
+  });
+  node.files.forEach(function (file) {
+    var entry = byPath[file.path] || {};
+    var row = document.createElement('div');
+    row.className = 'file-tree-file';
+    row.style.paddingLeft = (depth * 1.1) + 'rem';
+    if (entry.href) {
+      var a = document.createElement('a');
+      a.href = entry.href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = file.name;
+      row.appendChild(a);
+    } else {
+      row.appendChild(document.createTextNode(file.name));
+    }
+    if (entry.time) {
+      var t = document.createElement('span');
+      t.className = 'file-tree-time';
+      t.textContent = entry.time;
+      row.appendChild(t);
+    }
+    if (entry.branch) {
+      var chip = document.createElement('span');
+      chip.className = 'file-tree-branch';
+      chip.textContent = entry.branch;
+      row.appendChild(chip);
+    }
+    out.appendChild(row);
+  });
+}
 
 async function loadFilesMd() {
   if (!_filesDirty) return;
@@ -5088,33 +5204,30 @@ async function loadFilesMd() {
   el.textContent = 'Loading…';
   try {
     const data = await fetch(`/${_sessionId}/api/participant/files-md`).then(r => r.ok ? r.json() : Promise.reject('not found'));
-    const md = (data && data.raw_markdown) || '';
-    _filesRawMarkdown = md;
-    if (md.trim()) {
-      var _renderer = new marked.Renderer();
-      _renderer.link = function(href, title, text) {
-        var t = title ? ' data-tip="' + title + '"' : '';
-        return '<a href="' + href + '" target="_blank" rel="noopener"' + t + '>' + text + '</a>';
-      };
-      el.innerHTML = marked.parse(md, { renderer: _renderer });
-      el.querySelectorAll('h2 a').forEach(function(a) {
-        if (!/\.git$/.test(a.textContent)) a.textContent = a.textContent + '.git';
-      });
-      el.querySelectorAll('li a').forEach(function(a) {
-        var text = a.textContent;
-        var slash = text.lastIndexOf('/');
-        if (slash < 0) return;
-        var dir = text.slice(0, slash + 1);
-        var base = text.slice(slash + 1);
-        var span = document.createElement('span');
-        span.className = 'file-path-dir';
-        span.textContent = dir;
-        a.textContent = base;
-        a.parentNode.insertBefore(span, a);
-      });
-    } else {
-      el.textContent = 'No files opened yet.';
-    }
+    const repos = parseFilesMd((data && data.raw_markdown) || '');
+    if (!repos.length) { el.textContent = 'No files opened yet.'; return; }
+    el.textContent = '';
+    repos.forEach(function (repo) {
+      var head = document.createElement('div');
+      head.className = 'file-tree-repo';
+      var link = document.createElement('a');
+      link.href = repo.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = repo.name;
+      head.appendChild(link);
+      if (repo.branch) {
+        var chip = document.createElement('span');
+        chip.className = 'file-tree-branch';
+        chip.textContent = repo.branch;
+        head.appendChild(chip);
+      }
+      el.appendChild(head);
+      var byPath = {};
+      repo.entries.forEach(function (e) { byPath[e.path] = e; });
+      _renderFileNode(buildFileTree(repo.entries.map(function (e) { return e.path; })),
+                      byPath, 0, el);
+    });
   } catch (e) {
     el.textContent = 'Failed to load files.';
     _filesDirty = true;

@@ -158,6 +158,93 @@ assert('does not steal focus from a contenteditable',
 );
 
 
+// ── Files tab folder tree ───────────────────────────────────────────────────
+
+const buildFileTree = new Function(
+  extractFunction(PARTICIPANT_HTML, 'finalizeFileNode') + ';' +
+  extractFunction(PARTICIPANT_HTML, 'buildFileTree') + '; return buildFileTree;'
+)();
+const parseFilesMd = new Function(
+  extractFunction(PARTICIPANT_HTML, 'parseFilesMd') + '; return parseFilesMd;'
+)();
+
+console.log('buildFileTree()');
+
+const SAMPLE = [
+  'README.md',
+  'src/main/java/victor/training/cleancode/ComplexIfs.java',
+  'src/main/java/victor/training/cleancode/Immutability.java',
+  'src/main/java/victor/training/cleancode/fp/Optionals.java',
+  'src/main/java/victor/training/cleancode/fp/Streams.java',
+  'src/test/java/victor/training/cleancode/ComplexIfsTest.java',
+];
+const tree = buildFileTree(SAMPLE);
+
+assert('root keeps its own file', tree.files.map(f => f.name).join() === 'README.md');
+assert('root is not collapsed into src', tree.folders.length === 1 && tree.folders[0].name === 'src');
+
+const src = tree.folders[0];
+assert('src stays a node because it branches',
+  src.folders.map(f => f.name).join() === 'main/java/victor/training/cleancode,test/java/victor/training/cleancode');
+
+const main = src.folders[0];
+assert('single-child chain is collapsed into one node',
+  main.name === 'main/java/victor/training/cleancode');
+assert('folders come before files', main.folders.length === 1 && main.folders[0].name === 'fp');
+assert('files of the collapsed node are kept',
+  main.files.map(f => f.name).join() === 'ComplexIfs.java,Immutability.java');
+assert('leaf folder holds its files sorted',
+  main.folders[0].files.map(f => f.name).join() === 'Optionals.java,Streams.java');
+assert('file entries keep their full path',
+  main.files[0].path === 'src/main/java/victor/training/cleancode/ComplexIfs.java');
+
+// A folder with a file of its own must NOT be collapsed into its single child,
+// or that file would be orphaned.
+const guard = buildFileTree(['a/b/c.java', 'a/d.java']);
+assert('no collapse when the folder has files of its own',
+  guard.folders[0].name === 'a' && guard.folders[0].files.map(f => f.name).join() === 'd.java');
+assert('the single child still renders below it',
+  guard.folders[0].folders[0].name === 'b');
+
+const mixed = buildFileTree(['Zebra.java', 'alpha.java']);
+assert('sorting is case-insensitive',
+  mixed.files.map(f => f.name).join() === 'alpha.java,Zebra.java');
+
+assert('empty input yields an empty root',
+  buildFileTree([]).folders.length === 0 && buildFileTree([]).files.length === 0);
+
+console.log('parseFilesMd()');
+
+const MD = [
+  '# Files opened this session',
+  '',
+  '## [clean-code-java](https://github.com/victorrentea/clean-code-java) — branch `master` ',
+  '',
+  '- [src/a/B.java](https://github.com/victorrentea/clean-code-java/blob/master/src/a/B.java) — 09:41 ',
+  '- [src/a/C.java](https://github.com/victorrentea/clean-code-java/blob/solved/src/a/C.java) — 10:05 · branch `solved` ',
+  '- src/a/Draft.java — 11:20 ',
+].join('\n');
+const repos = parseFilesMd(MD);
+
+assert('one repo parsed', repos.length === 1);
+assert('repo name and branch parsed',
+  repos[0].name === 'clean-code-java' && repos[0].branch === 'master');
+assert('three entries parsed', repos[0].entries.length === 3);
+assert('linked entry keeps path and href',
+  repos[0].entries[0].path === 'src/a/B.java' &&
+  repos[0].entries[0].href.endsWith('/blob/master/src/a/B.java'));
+assert('time parsed', repos[0].entries[0].time === '09:41');
+assert('divergent branch chip parsed', repos[0].entries[1].branch === 'solved');
+assert('same-branch entry has no chip', repos[0].entries[0].branch === '');
+assert('unlinked entry has no href and keeps its path',
+  repos[0].entries[2].href === null && repos[0].entries[2].path === 'src/a/Draft.java');
+
+const dated = parseFilesMd([
+  '## [r](https://github.com/o/r) — branch `main` ',
+  '- [a.java](https://github.com/o/r/blob/main/a.java) — Aug 4 09:41 ',
+].join('\n'));
+assert('dated times parse', dated[0].entries[0].time === 'Aug 4 09:41');
+
 // ── Host-machine auto session switch ────────────────────────────────────────
 // The security boundary is "can this browser reach the trainer's 127.0.0.1:1234".
 // These tests pin the client half: no traffic at all without the cookie, no
