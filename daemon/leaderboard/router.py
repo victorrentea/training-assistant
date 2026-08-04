@@ -23,6 +23,9 @@ class LeaderboardPosition(BaseModel):
     letter: str | None = None
     color: str | None = None
     universe: str | None = None
+    # Server-side truth: derived from who claimed trainer over loopback, never
+    # inferred from the display string (which anyone could otherwise fake).
+    is_trainer: bool = False
 
 
 class ShowLeaderboardResponse(BaseModel):
@@ -55,6 +58,7 @@ async def show_leaderboard():
             letter=(e["name"][0].upper() if e["name"] else "?"),
             color=_entry_color(e["uuid"]),
             universe=participant_state.participant_universes.get(e["uuid"]) or None,
+            is_trainer=e["uuid"] in participant_state.trainer_pids,
         )
         for i, e in enumerate(raw_entries)
     ]

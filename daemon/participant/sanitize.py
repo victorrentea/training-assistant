@@ -69,6 +69,24 @@ def sanitize_name(raw: str | None) -> str:
     return text[:MAX_NAME_LEN]
 
 
+# The trainer's display name is a privilege, not a string anyone may type.
+# Only a UUID that claimed trainer over loopback (daemon/host_machine/router.py)
+# may hold it — otherwise any participant could impersonate the trainer by
+# typing it into the name field.
+RESERVED_TRAINER_NAME = "Victor (trainer)"
+
+
+def is_reserved_trainer_name(name: str | None) -> bool:
+    """True if `name` collides with the reserved trainer name after normalization.
+
+    Uses the same normalizer as the duplicate check, so case, spacing and
+    Unicode variants ("victor  (TRAINER)") cannot slip past the gate.
+    """
+    if not name:
+        return False
+    return normalize_for_dedup(name) == normalize_for_dedup(RESERVED_TRAINER_NAME)
+
+
 def normalize_for_dedup(name: str | None) -> str:
     """Comparison key for the soft duplicate check: casefold + NFC + collapsed.
 

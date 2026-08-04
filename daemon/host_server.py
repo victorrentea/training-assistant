@@ -288,6 +288,9 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(session_global_router)      # /api/session/* (host-only: start/end/pause/resume/create/rename/resume-folder/folders)
     app.include_router(session_public_router)      # /api/session/active (public)
 
+    from daemon.host_machine.router import router as host_machine_router
+    app.include_router(host_machine_router)        # /api/host-machine/* (loopback only — never forwarded by Railway)
+
     # --- Daemon status endpoint (exposes code_timestamp directly, not proxied) ---
     @app.get("/api/daemon-status", response_model=DaemonStatusResponse)
     async def daemon_status():

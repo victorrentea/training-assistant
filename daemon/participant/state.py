@@ -41,6 +41,11 @@ class ParticipantState:
         # who deliberately types "Frodo" is never mis-tagged). Persisted so the
         # tag survives a daemon restart / reconnect.
         self.anonymous_pids: set[str] = set()
+        # UUIDs that proved they run on the trainer's machine by calling the
+        # loopback-only claim endpoint (daemon/host_machine/router.py). Holding
+        # the reserved trainer name is gated on membership here. Persisted so
+        # the trainer keeps it across a daemon restart within the same session.
+        self.trainer_pids: set[str] = set()
         self.online_participants: set[str] = set()
         self.scores: dict[str, int] = {}
         self.locations: dict[str, str] = {}
@@ -87,6 +92,9 @@ class ParticipantState:
                 self.anonymous_pids = {str(p) for p in _anon}
             elif isinstance(data.get("participants"), dict):
                 self.anonymous_pids.clear()
+            _trainers = data.get("trainer_pids")
+            if isinstance(_trainers, (list, set, tuple)):
+                self.trainer_pids = {str(p) for p in _trainers}
             participants = data.get("participants")
             if isinstance(participants, dict):
                 self.participant_names.clear()
@@ -180,6 +188,9 @@ class ParticipantState:
                 # Explicit anonymity signal — persisted so the "(anonymous)" tag
                 # and the bell's anonymous flag survive a daemon restart.
                 "anonymous_pids": sorted(self.anonymous_pids),
+                # Who may hold the reserved trainer name — persisted so a daemon
+                # restart mid-session doesn't silently demote the trainer.
+                "trainer_pids": sorted(self.trainer_pids),
             }
 
     def persist(self) -> None:
@@ -203,6 +214,7 @@ class ParticipantState:
             self.participant_avatars.clear()
             self.participant_universes.clear()
             self.anonymous_pids.clear()
+            self.trainer_pids.clear()
             self.online_participants.clear()
             self.scores.clear()
             self.locations.clear()

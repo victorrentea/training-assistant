@@ -35,6 +35,8 @@ from daemon.participant.sanitize import (
     MAX_NAME_LEN as _MAX_NAME_LEN_SHARED,
 )
 from daemon.participant.sanitize import (
+    RESERVED_TRAINER_NAME,
+    is_reserved_trainer_name,
     normalize_for_dedup,
     sanitize_name,
 )
@@ -613,6 +615,12 @@ async def register_participant(request: Request, body: RegisterRequest):
 
     # Returning participant — return stored identity unchanged
     if pid in ps.participant_names:
+        # …unless they claimed trainer over loopback after registering. The claim
+        # and this call race (different transports), so honour a late claim here
+        # instead of echoing the pre-claim name back forever.
+        if pid in ps.trainer_pids and ps.participant_names[pid] != RESERVED_TRAINER_NAME:
+            ps.participant_names[pid] = RESERVED_TRAINER_NAME
+            ps.anonymous_pids.discard(pid)
         return RegisterResponse(
             name=ps.participant_names[pid],
             avatar=ps.participant_avatars.get(pid, ""),
@@ -625,6 +633,14 @@ async def register_participant(request: Request, body: RegisterRequest):
     # auto-assign (anonymous) path just like an empty body.
     explicit_name = sanitize_name(body.name)
     name_conflict = False
+
+    if pid in ps.trainer_pids:
+        # Claimed trainer: the identity is fixed, never typed and never
+        # auto-assigned. Overrides whatever name was sent.
+        ps.anonymous_pids.discard(pid)
+        explicit_name = RESERVED_TRAINER_NAME
+    elif is_reserved_trainer_name(explicit_name):
+        return JSONResponse({"error": "Name is reserved"}, status_code=403)
 
     if explicit_name:
         # Explicit typed name → NOT anonymous (even if it matches a fictional
@@ -733,6 +749,10 @@ async def rename_participant(request: Request, body: RenameRequest):
     raw_name = sanitize_name(body.name)
     if not raw_name:
         return JSONResponse({"error": "Name required"}, status_code=400)
+
+    # Same gate as /register: the trainer name is a privilege, not a string.
+    if is_reserved_trainer_name(raw_name) and pid not in ps.trainer_pids:
+        return JSONResponse({"error": "Name is reserved"}, status_code=403)
 
     # A rename is always an explicitly typed name → NOT anonymous.
     ps.anonymous_pids.discard(pid)
