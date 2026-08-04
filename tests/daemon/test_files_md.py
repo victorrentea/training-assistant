@@ -554,3 +554,46 @@ def test_load_doc_does_not_upgrade_ambiguous_entries(session_folder, monkeypatch
     text = (session_folder / "opened-files.md").read_text()
     assert "- utils.py <!-- ts:2026-05-27T10:00:00Z reason:ambiguous -->" in text
     assert "[utils.py]" not in text  # still no link
+
+
+import time as _time
+
+
+@pytest.fixture
+def tz_bucharest(monkeypatch):
+    """Pin the process timezone so local-time rendering is deterministic."""
+    monkeypatch.setenv("TZ", "Europe/Bucharest")
+    _time.tzset()
+    yield
+    monkeypatch.delenv("TZ", raising=False)
+    _time.tzset()
+
+
+def test_to_local_converts_utc_to_configured_zone(tz_bucharest):
+    # 06:41 UTC is 09:41 in Bucharest (UTC+3 in August).
+    assert files_md._to_local("2026-08-04T06:41:07Z").hour == 9
+
+
+def test_needs_date_false_for_single_local_day(tz_bucharest):
+    assert files_md._needs_date(["2026-08-04T06:41:07Z", "2026-08-04T08:20:31Z"]) is False
+
+
+def test_needs_date_true_across_local_days(tz_bucharest):
+    assert files_md._needs_date(["2026-08-04T06:41:07Z", "2026-08-05T06:41:07Z"]) is True
+
+
+def test_needs_date_uses_local_not_utc_calendar(tz_bucharest):
+    # 22:30 UTC on the 4th is 01:30 local on the 5th — two local days, one UTC day.
+    assert files_md._needs_date(["2026-08-04T07:00:00Z", "2026-08-04T22:30:00Z"]) is True
+
+
+def test_needs_date_empty_list_is_false():
+    assert files_md._needs_date([]) is False
+
+
+def test_format_local_time_without_date(tz_bucharest):
+    assert files_md.format_local_time("2026-08-04T06:41:07Z", False) == "09:41"
+
+
+def test_format_local_time_with_date(tz_bucharest):
+    assert files_md.format_local_time("2026-08-04T06:41:07Z", True) == "Aug 4 09:41"

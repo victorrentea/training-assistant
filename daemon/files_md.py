@@ -182,6 +182,30 @@ def _utcnow_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _to_local(ts: str) -> datetime:
+    """Parse a canonical UTC timestamp into an aware datetime in the machine's zone."""
+    return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone()
+
+
+def _needs_date(timestamps: list[str]) -> bool:
+    """True when the timestamps do not all fall on the same LOCAL calendar date.
+
+    Decided per document so every entry in a file renders the same way — a
+    session that spans midnight or two days must not mix bare times with dated
+    ones.
+    """
+    return len({_to_local(ts).date() for ts in timestamps}) > 1
+
+
+def format_local_time(ts: str, with_date: bool) -> str:
+    """Render a canonical UTC timestamp for humans, in the machine's timezone."""
+    dt = _to_local(ts)
+    if not with_date:
+        return f"{dt:%H:%M}"
+    # Built by hand rather than with %-d, which is not portable across libcs.
+    return f"{dt:%b} {dt.day} {dt:%H:%M}"
+
+
 def _canonical_repo_url(url: str) -> str | None:
     """Return canonical https://github.com/OWNER/REPO or None if not github.com."""
     parsed = urlparse(url)
