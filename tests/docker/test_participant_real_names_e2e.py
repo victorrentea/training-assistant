@@ -123,9 +123,10 @@ class TestFirstVisitGate:
         ctx, page, _ = _open_pax(browser, session_id)
         try:
             expect(_gate(page)).to_be_visible(timeout=10000)
-            # Warning present as hover text + tooltip title.
+            # Warning present as hover text + tooltip. The tooltip is the shared
+            # data-tip component (static/tooltip.js), never a native title=.
             anon = page.locator("#name-gate-anon")
-            assert "attendance sheet" in (anon.get_attribute("title") or "")
+            assert "attendance sheet" in (anon.get_attribute("data-tip") or "")
             expect(page.locator("#name-gate-anon-warning")).to_contain_text(
                 "attendance sheet"
             )
