@@ -426,6 +426,39 @@
         }
       }
     },
+    "/api/drive/zip": {
+      "get": {
+        "summary": "Get Drive Zip",
+        "description": "Stream the pasted Drive folder as a zip. A single file streams as itself.\n\nEvery byte is relayed through this server \u2014 we follow Drive's own redirects\ninside drive_client and never hand one to the browser, because the\nparticipants this exists for cannot reach Google at all.",
+        "operationId": "get_drive_zip",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Url"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/{session_id}/upload/{file_id}": {
       "get": {
         "summary": "Download For Daemon",
