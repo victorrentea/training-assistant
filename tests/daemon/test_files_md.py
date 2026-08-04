@@ -12,84 +12,139 @@ def test_render_empty_doc():
     assert doc.render() == files_md.EMPTY_STATE
 
 
-def test_render_single_repo_linked():
-    doc = files_md.Doc(repos=[
-        files_md.Repo(
-            url="https://github.com/owner/repo",
-            name="repo",
-            default_branch="main",
-            entries=[
-                files_md.Entry(
-                    basename="a.py",
-                    blob_url="https://github.com/owner/repo/blob/main/src/a.py",
-                    path="src/a.py",
-                    ts="2026-05-27T10:00:00Z",
-                    reason=None,
-                ),
-            ],
+def _repo_with(entries, branch="master"):
+    return files_md.Repo(
+        url="https://github.com/owner/repo",
+        name="repo",
+        default_branch="master",
+        branch=branch,
+        entries=entries,
+    )
+
+
+def test_render_linked_entry_on_repo_branch(tz_bucharest):
+    doc = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(
+            path="src/a.py",
+            branch="master",
+            ts="2026-08-04T06:41:07Z",
+            blob_url="https://github.com/owner/repo/blob/master/src/a.py",
+            ref="branch",
         ),
-    ])
-    expected = (
+    ])])
+    assert doc.render() == (
+        "# Files opened this session\n\n"
+        "## [repo](https://github.com/owner/repo) — branch `master` "
+        "<!-- branch:master default_branch:master -->\n\n"
+        "- [src/a.py](https://github.com/owner/repo/blob/master/src/a.py) — 09:41 "
+        "<!-- ts:2026-08-04T06:41:07Z branch:master ref:branch -->\n"
+    )
+
+
+def test_render_entry_on_divergent_branch_shows_visible_chip(tz_bucharest):
+    doc = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(
+            path="src/b.py",
+            branch="solved",
+            ts="2026-08-04T07:05:12Z",
+            blob_url="https://github.com/owner/repo/blob/solved/src/b.py",
+            ref="branch",
+        ),
+    ])])
+    # The chip must be in the VISIBLE text: sanitize_for_wire strips comments
+    # before participants ever see the document.
+    assert "— 10:05 · branch `solved`" in doc.render()
+    assert "· branch" in files_md.sanitize_for_wire(doc.render())
+
+
+def test_render_unlinked_entry_has_no_link(tz_bucharest):
+    doc = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(path="src/c.py", branch="master", ts="2026-08-04T08:20:31Z",
+                       reason="not-pushed"),
+    ])])
+    rendered = doc.render()
+    assert "- src/c.py — 11:20 <!-- ts:2026-08-04T08:20:31Z branch:master reason:not-pushed -->" in rendered
+    assert "](" not in rendered.split("\n")[-2]
+
+
+def test_render_switches_all_entries_to_dated_when_days_differ(tz_bucharest):
+    doc = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(path="src/a.py", branch="master", ts="2026-08-04T06:41:07Z",
+                       blob_url="https://github.com/owner/repo/blob/master/src/a.py", ref="branch"),
+        files_md.Entry(path="src/b.py", branch="master", ts="2026-08-05T06:41:07Z",
+                       blob_url="https://github.com/owner/repo/blob/master/src/b.py", ref="branch"),
+    ])])
+    rendered = doc.render()
+    assert "— Aug 4 09:41 " in rendered
+    assert "— Aug 5 09:41 " in rendered
+    assert "— 09:41 " not in rendered
+
+
+def test_parse_roundtrip(tz_bucharest):
+    original = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(path="src/a.py", branch="master", ts="2026-08-04T06:41:07Z",
+                       blob_url="https://github.com/owner/repo/blob/master/src/a.py", ref="branch"),
+        files_md.Entry(path="src/b.py", branch="solved", ts="2026-08-04T07:05:12Z",
+                       blob_url="https://github.com/owner/repo/blob/solved/src/b.py", ref="branch"),
+        files_md.Entry(path="src/c.py", branch="master", ts="2026-08-04T08:20:31Z",
+                       reason="not-pushed"),
+    ])])
+    rendered = original.render()
+    parsed = files_md.Doc.parse(rendered)
+    assert parsed.render() == rendered
+    assert [e.path for e in parsed.repos[0].entries] == ["src/a.py", "src/b.py", "src/c.py"]
+    assert parsed.repos[0].entries[1].branch == "solved"
+    assert parsed.repos[0].branch == "master"
+
+
+def test_parse_path_with_spaces_roundtrips(tz_bucharest):
+    original = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(path="src/my folder/a.py", branch="master", ts="2026-08-04T06:41:07Z",
+                       blob_url="https://github.com/owner/repo/blob/master/src/my%20folder/a.py",
+                       ref="branch"),
+    ])])
+    parsed = files_md.Doc.parse(original.render())
+    assert parsed.repos[0].entries[0].path == "src/my folder/a.py"
+
+
+def test_parse_old_format_linked_entry_uses_path_comment(tz_bucharest):
+    old = (
         "# Files opened this session\n\n"
         "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->\n\n"
-        "- [src/a.py](https://github.com/owner/repo/blob/main/src/a.py)"
-        " <!-- ts:2026-05-27T10:00:00Z path:src/a.py -->\n"
+        "- [a.py](https://github.com/owner/repo/blob/main/src/a.py) "
+        "<!-- ts:2026-05-27T10:00:00Z path:src/a.py -->\n"
     )
-    assert doc.render() == expected
+    parsed = files_md.Doc.parse(old)
+    assert len(parsed.repos) == 1
+    assert parsed.repos[0].branch == "main"          # falls back to default_branch
+    assert parsed.repos[0].entries[0].path == "src/a.py"
+    assert parsed.repos[0].entries[0].branch == "main"
 
 
-def test_render_single_repo_unlinked():
-    doc = files_md.Doc(repos=[
-        files_md.Repo(
-            url="https://github.com/owner/repo",
-            name="repo",
-            default_branch="main",
-            entries=[
-                files_md.Entry(
-                    basename="x.py",
-                    blob_url=None,
-                    path=None,
-                    ts="2026-05-27T10:01:00Z",
-                    reason="blob-404",
-                ),
-            ],
-        ),
-    ])
-    expected = (
+def test_parse_old_format_drops_entries_without_path():
+    old = (
         "# Files opened this session\n\n"
         "## [repo](https://github.com/owner/repo) <!-- default_branch:main -->\n\n"
         "- x.py <!-- ts:2026-05-27T10:01:00Z reason:blob-404 -->\n"
     )
-    assert doc.render() == expected
+    parsed = files_md.Doc.parse(old)
+    assert parsed.repos[0].entries == []
 
 
-def test_parse_roundtrip(tmp_path: Path):
-    original = files_md.Doc(repos=[
-        files_md.Repo(
-            url="https://github.com/owner/repo",
-            name="repo",
-            default_branch="main",
-            entries=[
-                files_md.Entry(
-                    basename="a.py",
-                    blob_url="https://github.com/owner/repo/blob/main/src/a.py",
-                    path="src/a.py",
-                    ts="2026-05-27T10:00:00Z",
-                    reason=None,
-                ),
-                files_md.Entry(
-                    basename="x.py",
-                    blob_url=None,
-                    path=None,
-                    ts="2026-05-27T10:01:00Z",
-                    reason="blob-404",
-                ),
-            ],
-        ),
-    ])
-    rendered = original.render()
-    parsed = files_md.Doc.parse(rendered)
-    assert parsed.render() == rendered
+def test_parse_unlinked_file_at_repo_root_survives(tz_bucharest):
+    """A root-level unlinked file has no "/" in its path — it must not be
+    mistaken for a legacy basename-only entry and dropped."""
+    original = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(path="README.md", branch="master", ts="2026-08-04T06:41:07Z",
+                       reason="not-pushed"),
+    ])])
+    parsed = files_md.Doc.parse(original.render())
+    assert [e.path for e in parsed.repos[0].entries] == ["README.md"]
+
+
+def test_entry_basename_is_derived_from_path():
+    e = files_md.Entry(path="src/deep/A.java", branch="master", ts="2026-08-04T06:41:07Z")
+    assert e.basename == "A.java"
 
 
 def test_parse_empty_returns_empty_doc():
@@ -107,27 +162,22 @@ def test_count_open_files_empty_state(tmp_path: Path):
     assert files_md.count_open_files(tmp_path) == 0
 
 
-def test_count_open_files_counts_entries_across_repos(tmp_path: Path):
+def test_count_open_files_counts_entries_across_repos(tmp_path: Path, tz_bucharest):
     doc = files_md.Doc(repos=[
-        files_md.Repo(
-            url="https://github.com/owner/repo",
-            name="repo",
-            default_branch="main",
-            entries=[
-                files_md.Entry("a.py", "https://github.com/owner/repo/blob/main/src/a.py",
-                               "src/a.py", "2026-05-27T10:00:00Z", None),
-                files_md.Entry("x.py", None, None, "2026-05-27T10:01:00Z", "blob-404"),
-            ],
-        ),
-        files_md.Repo(
-            url="https://github.com/owner/other",
-            name="other",
-            default_branch="main",
-            entries=[
-                files_md.Entry("c.py", "https://github.com/owner/other/blob/main/c.py",
-                               "c.py", "2026-05-27T10:02:00Z", None),
-            ],
-        ),
+        files_md.Repo(url="https://github.com/owner/repo", name="repo",
+                      default_branch="main", branch="main", entries=[
+                          files_md.Entry(path="src/a.py", branch="main", ts="2026-08-04T06:41:07Z",
+                                         blob_url="https://github.com/owner/repo/blob/main/src/a.py",
+                                         ref="branch"),
+                          files_md.Entry(path="src/x.py", branch="main", ts="2026-08-04T06:42:07Z",
+                                         reason="not-pushed"),
+                      ]),
+        files_md.Repo(url="https://github.com/owner/other", name="other",
+                      default_branch="main", branch="main", entries=[
+                          files_md.Entry(path="c.py", branch="main", ts="2026-08-04T06:43:07Z",
+                                         blob_url="https://github.com/owner/other/blob/main/c.py",
+                                         ref="branch"),
+                      ]),
     ])
     (tmp_path / "opened-files.md").write_text(doc.render(), encoding="utf-8")
     assert files_md.count_open_files(tmp_path) == 3
@@ -233,39 +283,6 @@ def test_record_rate_limited_on_known_public_repo_writes_unlinked(session_folder
     text = (session_folder / "opened-files.md").read_text()
     assert "- [src/first.py](https://github.com/owner/repo/blob/main/src/first.py)" in text
     assert "- second.py <!-- ts:2026-05-27T10:02:00Z reason:rate-limited -->" in text
-
-
-def test_record_dedup_same_basename_skips(session_folder, monkeypatch):
-    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
-    info = github_client.RepoInfo(default_branch="main")
-    with patch.object(github_client, "get_repo_info", return_value=info), \
-         patch.object(github_client, "get_repo_tree", return_value=None), \
-         patch.object(github_client, "head_blob", return_value=True):
-        files_md.record_file_opened("https://github.com/owner/repo", "src/a.py")
-        _freeze_now(monkeypatch, "2026-05-27T10:05:00Z")
-        files_md.record_file_opened("https://github.com/owner/repo", "src/a.py")
-    text = (session_folder / "opened-files.md").read_text()
-    assert text.count("- [src/a.py]") == 1
-    assert "ts:2026-05-27T10:00:00Z" in text
-    assert "ts:2026-05-27T10:05:00Z" not in text
-
-
-def test_record_collision_downgrades_to_unlinked(session_folder, monkeypatch):
-    """HEAD-fallback path: two distinct full paths with same basename — first links,
-    second triggers collision downgrade to unlinked."""
-    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
-    info = github_client.RepoInfo(default_branch="main")
-    # get_repo_tree=None forces HEAD fallback so head_blob is consulted
-    with patch.object(github_client, "get_repo_info", return_value=info), \
-         patch.object(github_client, "get_repo_tree", return_value=None), \
-         patch.object(github_client, "head_blob", return_value=True):
-        files_md.record_file_opened("https://github.com/owner/repo", "src/foo/utils.py")
-        _freeze_now(monkeypatch, "2026-05-27T10:05:00Z")
-        files_md.record_file_opened("https://github.com/owner/repo", "src/bar/utils.py")
-    text = (session_folder / "opened-files.md").read_text()
-    assert text.count("utils.py") == 1
-    assert "- utils.py <!-- ts:2026-05-27T10:00:00Z reason:ambiguous -->" in text
-    assert "[utils.py]" not in text  # link stripped
 
 
 def test_record_empty_path_drops_event(session_folder, monkeypatch):

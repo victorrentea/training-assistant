@@ -1,8 +1,12 @@
 """opened-files.md — the canonical store of files opened during a session.
 
 All feature state lives in the markdown file itself:
-- Repo default branch cached in `<!-- default_branch:... -->` on the `##` heading.
-- File first-open timestamp + path/reason cached in HTML comments on each bullet.
+- Each repo heading carries its most-recently-opened branch and its GitHub
+  default branch in `<!-- branch:... default_branch:... -->`.
+- Each entry carries its own branch, timestamp, and (for unlinked entries) a
+  reason, all cached in an HTML comment on the bullet. The visible text is
+  always the full repo-relative path (as link text, or bare for unlinked
+  entries) — nothing is duplicated into the comment.
 
 HTML comments are stripped before serving to participants — see `sanitize_for_wire`.
 """
@@ -24,25 +28,38 @@ EMPTY_STATE = "# Files opened this session\n\nNo files opened yet\n"
 _TITLE = "# Files opened this session"
 
 _RE_REPO = re.compile(
-    r"^## \[(?P<name>[^\]]+)\]\((?P<url>[^)]+)\) <!-- default_branch:(?P<branch>[^ ]+) -->$"
+    r"^## \[(?P<name>[^\]]+)\]\((?P<url>[^)]+)\).*?<!-- (?P<meta>.*?) -->$"
 )
 _RE_LINKED = re.compile(
-    r"^- \[(?P<basename>[^\]]+)\]\((?P<blob>[^)]+)\) "
-    r"<!-- ts:(?P<ts>[^ ]+) path:(?P<path>[^ ]+) -->$"
+    r"^- \[(?P<text>.+?)\]\((?P<blob>[^)]+)\).*?<!-- (?P<meta>.*?) -->$"
 )
-_RE_UNLINKED = re.compile(
-    r"^- (?P<basename>\S+) <!-- ts:(?P<ts>[^ ]+) reason:(?P<reason>[^ ]+) -->$"
-)
+_RE_UNLINKED = re.compile(r"^- (?P<text>.+?) +<!-- (?P<meta>.*?) -->$")
 _RE_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+
+
+def _parse_meta(text: str) -> dict[str, str]:
+    """Split `k:v k:v` metadata. Values never contain spaces; `ts` contains colons,
+    so we split on the FIRST colon only."""
+    out: dict[str, str] = {}
+    for token in text.split():
+        key, sep, value = token.partition(":")
+        if sep and value:
+            out[key] = value
+    return out
 
 
 @dataclass
 class Entry:
-    basename: str
-    blob_url: str | None
-    path: str | None
+    path: str
+    branch: str
     ts: str
-    reason: str | None
+    blob_url: str | None = None
+    ref: str | None = None      # "branch" | "default" — which ref resolved the link
+    reason: str | None = None   # "not-pushed" | "no-branch" | "rate-limited"
+
+    @property
+    def basename(self) -> str:
+        return self.path.rsplit("/", 1)[-1]
 
 
 @dataclass
@@ -50,6 +67,7 @@ class Repo:
     url: str
     name: str
     default_branch: str
+    branch: str                 # branch of the most recent open in this repo
     entries: list[Entry] = field(default_factory=list)
 
 
@@ -66,27 +84,18 @@ class Doc:
     def render(self) -> str:
         if not self.repos:
             return EMPTY_STATE
+        with_date = _needs_date([e.ts for r in self.repos for e in r.entries])
         parts = [_TITLE, ""]
         for repo in self.repos:
             parts.append(
-                f"## [{repo.name}]({repo.url}) <!-- default_branch:{repo.default_branch} -->"
+                f"## [{repo.name}]({repo.url}) — branch `{repo.branch}` "
+                f"<!-- branch:{repo.branch} default_branch:{repo.default_branch} -->"
             )
             parts.append("")
             for e in repo.entries:
-                if e.blob_url and e.path:
-                    # Link text is the full repo-relative path so participants
-                    # see where the file lives (e.g. `src/main/java/Foo.java`)
-                    # instead of just the bare basename.
-                    parts.append(
-                        f"- [{e.path}]({e.blob_url}) <!-- ts:{e.ts} path:{e.path} -->"
-                    )
-                else:
-                    parts.append(
-                        f"- {e.basename} <!-- ts:{e.ts} reason:{e.reason or 'no-path'} -->"
-                    )
+                parts.append(_render_entry(e, repo.branch, with_date))
             parts.append("")
-        text = "\n".join(parts).rstrip() + "\n"
-        return text
+        return "\n".join(parts).rstrip() + "\n"
 
     @classmethod
     def parse(cls, text: str) -> Doc:
@@ -100,44 +109,76 @@ class Doc:
                 continue
             m = _RE_REPO.match(line)
             if m:
+                meta = _parse_meta(m.group("meta"))
+                default_branch = meta.get("default_branch", "main")
                 current = Repo(
                     url=m.group("url"),
                     name=m.group("name"),
-                    default_branch=m.group("branch"),
+                    default_branch=default_branch,
+                    # Documents written before branches were tracked have no
+                    # `branch:` — everything in them was resolved on the default.
+                    branch=meta.get("branch", default_branch),
                 )
                 doc.repos.append(current)
                 continue
             if current is None:
                 continue
-            m = _RE_LINKED.match(line)
-            if m:
-                # `path:` in the trailing comment is authoritative — older files
-                # rendered the link text as the basename, newer ones render the
-                # full path, but the comment carries the canonical path either way.
-                path = m.group("path")
-                basename = path.rsplit("/", 1)[-1] if path else m.group("basename")
-                current.entries.append(
-                    Entry(
-                        basename=basename,
-                        blob_url=m.group("blob"),
-                        path=path,
-                        ts=m.group("ts"),
-                        reason=None,
-                    )
-                )
-                continue
-            m = _RE_UNLINKED.match(line)
-            if m:
-                current.entries.append(
-                    Entry(
-                        basename=m.group("basename"),
-                        blob_url=None,
-                        path=None,
-                        ts=m.group("ts"),
-                        reason=m.group("reason"),
-                    )
-                )
+            entry = _parse_entry(line, current)
+            if entry is not None:
+                current.entries.append(entry)
         return doc
+
+
+def _render_entry(e: Entry, repo_branch: str, with_date: bool) -> str:
+    time_text = format_local_time(e.ts, with_date)
+    # Only spell out the branch when it differs from the repo heading's — and do
+    # it in the VISIBLE text, because sanitize_for_wire strips every comment
+    # before the document reaches a participant.
+    chip = f" · branch `{e.branch}`" if e.branch != repo_branch else ""
+    tail = f"ref:{e.ref}" if e.blob_url else f"reason:{e.reason or 'not-pushed'}"
+    meta = f"ts:{e.ts} branch:{e.branch} {tail}"
+    name = f"[{e.path}]({e.blob_url})" if e.blob_url else e.path
+    return f"- {name} — {time_text}{chip} <!-- {meta} -->"
+
+
+def _parse_entry(line: str, repo: Repo) -> Entry | None:
+    """Parse one bullet. Returns None for lines that are not entries, and for
+    legacy entries that carry no recoverable path."""
+    m = _RE_LINKED.match(line)
+    blob_url: str | None = None
+    if m:
+        blob_url = m.group("blob")
+    else:
+        m = _RE_UNLINKED.match(line)
+        if not m:
+            return None
+    meta = _parse_meta(m.group("meta"))
+    ts = meta.get("ts")
+    if not ts:
+        return None
+    # Three shapes to tell apart, and `branch:` in the metadata is what
+    # distinguishes them — never the presence of a "/" in the text, which would
+    # silently drop a file sitting at the repo root.
+    #   old linked   → `path:` comment is authoritative (text was a basename)
+    #   new          → the visible text carries the full path
+    #   old unlinked → basename only, nothing to recover: drop it
+    text = m.group("text")
+    if meta.get("path"):
+        path = meta["path"]
+    elif "branch" in meta:
+        # Unlinked entries put the time after the path; linked ones keep the
+        # path inside the [...] and need no trimming.
+        path = text.split(" — ", 1)[0] if blob_url is None else text
+    else:
+        return None
+    return Entry(
+        path=path,
+        branch=meta.get("branch", repo.branch),
+        ts=ts,
+        blob_url=blob_url,
+        ref=meta.get("ref"),
+        reason=meta.get("reason"),
+    )
 
 
 def atomic_write(target: Path, text: str) -> None:
@@ -165,11 +206,6 @@ def session_filename() -> str:
     return _FILENAME
 # Sentinel the macOS IDE addon sends when a project is open but no file is selected.
 _ADDON_NO_FILE_SENTINEL = "(none)"
-# Basenames the IDE addon occasionally reports that are not real files.
-# Drop these events on ingestion AND prune any historical entries on load.
-_NOISE_BASENAMES: frozenset[str] = frozenset({
-    "✻",  # Claude Code spinner character that occasionally leaks through IntelliJ
-})
 
 
 def _get_active_session_folder() -> Path | None:
@@ -234,18 +270,19 @@ def _load_doc(folder: Path) -> Doc:
     if not target.exists():
         return Doc()
     try:
-        doc = Doc.parse(target.read_text(encoding="utf-8"))
+        raw = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        _log.error(_NAME, f"read {target} failed: {exc}; starting fresh")
+        return Doc()
+    try:
+        doc = Doc.parse(raw)
     except Exception as exc:  # noqa: BLE001
         _log.error(_NAME, f"parse {target} failed: {exc}; starting fresh")
         return Doc()
-    changed = False
-    if _strip_noise_entries(doc):
-        _log.info(_NAME, f"pruned noise entries from {target.name}")
-        changed = True
-    if _upgrade_unlinked_entries(doc):
-        _log.info(_NAME, f"upgraded previously-unlinked entries in {target.name}")
-        changed = True
-    if changed:
+    # Rewrite whenever parsing normalised something — that is how a document in
+    # the pre-branch format migrates, and how legacy path-less entries get dropped.
+    rendered = doc.render()
+    if rendered != raw:
         _save_doc(folder, doc)
     return doc
 
@@ -266,45 +303,6 @@ def count_open_files(folder: Path | None) -> int:
     except Exception:  # noqa: BLE001
         return 0
     return sum(len(repo.entries) for repo in doc.repos)
-
-
-def _strip_noise_entries(doc: Doc) -> bool:
-    """Remove entries whose basename is a known noise token. Returns True if anything was stripped."""
-    changed = False
-    for repo in doc.repos:
-        before = len(repo.entries)
-        repo.entries = [e for e in repo.entries if e.basename not in _NOISE_BASENAMES]
-        if len(repo.entries) != before:
-            changed = True
-    return changed
-
-
-def _upgrade_unlinked_entries(doc: Doc) -> bool:
-    """Retry path resolution for previously-unlinked entries via the (now-cached) repo tree.
-
-    Skips entries flagged `ambiguous` — those have multiple matches in the tree by design.
-    Returns True if any entry was upgraded to linked.
-    """
-    changed = False
-    for repo_obj in doc.repos:
-        owner, repo = _owner_repo(repo_obj.url)
-        tree = github_client.get_repo_tree(owner, repo, repo_obj.default_branch)
-        if tree is None or tree.truncated:
-            continue
-        for e in repo_obj.entries:
-            if e.blob_url is not None:
-                continue
-            if e.reason == "ambiguous":
-                continue
-            matches = tree.paths_by_basename.get(e.basename, [])
-            if len(matches) == 1:
-                e.blob_url = github_client.build_blob_url(
-                    owner, repo, repo_obj.default_branch, matches[0]
-                )
-                e.path = matches[0]
-                e.reason = None
-                changed = True
-    return changed
 
 
 def _save_doc(folder: Path, doc: Doc) -> None:
@@ -346,8 +344,6 @@ def _record_into_folder(folder: Path, url: str, file_path: str) -> None:
 
     basename = file_path.rsplit("/", 1)[-1].strip()
     if not basename:
-        return
-    if basename in _NOISE_BASENAMES:
         return
 
     owner, repo = _owner_repo(canonical)

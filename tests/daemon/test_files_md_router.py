@@ -60,5 +60,8 @@ def test_files_md_endpoint_returns_sanitized_markdown(session_folder):
     body = resp.json()
     assert "<!--" not in body["raw_markdown"]
     assert "## [repo](https://github.com/owner/repo)" in body["raw_markdown"]
-    assert "- [a.py](https://github.com/owner/repo/blob/main/src/a.py)" in body["raw_markdown"]
+    # The on-disk file is in the old (pre-branch) format: `_load_doc` parses it,
+    # recovers the path from the legacy `path:` comment, and re-renders in the
+    # new format — link text becomes the full path, not the old basename.
+    assert "- [src/a.py](https://github.com/owner/repo/blob/main/src/a.py)" in body["raw_markdown"]
     assert body["updated_at"] is not None  # ISO timestamp from file mtime

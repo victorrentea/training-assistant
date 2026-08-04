@@ -20,16 +20,16 @@ def _write_files(folder: Path, n: int) -> None:
     if n:
         entries = [
             files_md.Entry(
-                basename=f"f{i}.py",
-                blob_url=f"https://github.com/o/r/blob/main/f{i}.py",
                 path=f"f{i}.py",
+                branch="main",
                 ts=f"2026-05-27T10:0{i}:00Z",
-                reason=None,
+                blob_url=f"https://github.com/o/r/blob/main/f{i}.py",
+                ref="branch",
             )
             for i in range(n)
         ]
         doc = files_md.Doc(repos=[
-            files_md.Repo("https://github.com/o/r", "r", "main", entries)
+            files_md.Repo("https://github.com/o/r", "r", "main", "main", entries)
         ])
     else:
         doc = files_md.Doc()
