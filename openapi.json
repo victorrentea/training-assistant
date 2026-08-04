@@ -260,6 +260,50 @@
         }
       }
     },
+    "/api/materials/zip/upload": {
+      "post": {
+        "summary": "Upload Materials Zip",
+        "description": "Receive the archive (or a build error) from the daemon.",
+        "operationId": "upload_materials_zip_api_materials_zip_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_materials_zip_api_materials_zip_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialsZipUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
     "/internal/upload-static": {
       "post": {
         "summary": "Upload Static",
@@ -703,6 +747,44 @@
         }
       }
     },
+    "/{session_id}/api/materials/zip": {
+      "get": {
+        "summary": "Get Materials Zip",
+        "description": "Serve the session materials archive, rebuilding it when the cache is stale.",
+        "operationId": "get_materials_zip",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/{session_id}/": {
       "get": {
         "summary": "Participant Page",
@@ -853,6 +935,41 @@
         ],
         "title": "Body_upload_file__session_id__api_upload_post"
       },
+      "Body_upload_materials_zip_api_materials_zip_upload_post": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "default": ""
+          },
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "default": ""
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/octet-stream"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "Body_upload_materials_zip_api_materials_zip_upload_post"
+      },
       "Body_upload_slide_pdf_api_slides_upload_post": {
         "properties": {
           "file": {
@@ -914,6 +1031,29 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "MaterialsZipUploadResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "default": 0
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "MaterialsZipUploadResponse"
       },
       "RefreshSlideRequest": {
         "properties": {
