@@ -76,22 +76,31 @@ def build_plan(root: DriveFile) -> TransferPlan:
     Guards against Drive's shortcut-induced cycles (a folder reachable from
     inside itself) and against pathological depth.
     """
-    if not drive_client.is_folder(root):
-        resolved = _resolve(root)
-        name = _safe_name(drive_client.archive_name(resolved))
+    # A root passed in can itself be a shortcut — shortcuts have their own
+    # shareable link, so a participant pasting one is normal, not exotic.
+    # Resolve it once, up front, before deciding which branch applies: an
+    # unresolved shortcut-to-folder would fail is_folder() and fall through
+    # to the single-file branch below, wrapping the folder itself as a bogus
+    # file entry instead of descending into it.
+    resolved_root = _resolve(root)
+
+    if not drive_client.is_folder(resolved_root):
+        name = _safe_name(drive_client.archive_name(resolved_root))
         return TransferPlan(
-            root_name=resolved.name,
-            entries=(PlannedEntry(archive_path=name, file=resolved),),
-            known_bytes=resolved.size or 0,
-            has_unsized_files=resolved.size is None,
+            root_name=resolved_root.name,
+            entries=(PlannedEntry(archive_path=name, file=resolved_root),),
+            known_bytes=resolved_root.size or 0,
+            has_unsized_files=resolved_root.size is None,
         )
 
     entries: list[PlannedEntry] = []
     known_bytes = 0
     has_unsized = False
 
-    visited: set[str] = {root.id}
-    queue: deque[tuple[DriveFile, str, int]] = deque([(root, "", 0)])
+    # Seed the cycle guard with the resolved folder's own id, not the
+    # shortcut's — the guard must protect the folder actually being walked.
+    visited: set[str] = {resolved_root.id}
+    queue: deque[tuple[DriveFile, str, int]] = deque([(resolved_root, "", 0)])
 
     while queue:
         current, prefix, depth = queue.popleft()
@@ -123,7 +132,7 @@ def build_plan(root: DriveFile) -> TransferPlan:
         queue.extend(pending_folders)
 
     return TransferPlan(
-        root_name=root.name,
+        root_name=resolved_root.name,
         entries=tuple(entries),
         known_bytes=known_bytes,
         has_unsized_files=has_unsized,

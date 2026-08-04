@@ -157,6 +157,36 @@ def test_a_folder_cycle_terminates(drive):
     assert [e.archive_path for e in plan.entries] == ["Loop/Real.pdf"]
 
 
+def test_shortcut_root_pointing_at_a_folder_is_traversed(drive):
+    """A shortcut has its own shareable link; pasting one that targets a folder
+    must behave exactly as if the target folder itself had been pasted."""
+    tree_map, by_id = drive
+    tree_map["real"] = [pdf("a", "Intro.pdf", 100), folder("sub", "Day 2")]
+    tree_map["sub"] = [pdf("b", "Lab.pdf", 50)]
+    by_id["real"] = folder("real", "Workshop")
+
+    plan = tree.build_plan(shortcut("s1", "Link to workshop", "real"))
+
+    assert plan.root_name == "Workshop"
+    assert [e.archive_path for e in plan.entries] == ["Intro.pdf", "Day 2/Lab.pdf"]
+    assert plan.known_bytes == 150
+    assert plan.has_unsized_files is False
+
+
+def test_shortcut_root_pointing_at_a_file_still_produces_single_entry(drive):
+    """Guards the existing shortcut-to-file root behavior against regressions
+    from fixing the shortcut-to-folder root case above."""
+    _, by_id = drive
+    by_id["real"] = pdf("real", "Deck.pdf", size=777)
+
+    plan = tree.build_plan(shortcut("s1", "Link to deck", "real"))
+
+    assert plan.root_name == "Deck.pdf"
+    assert [e.archive_path for e in plan.entries] == ["Deck.pdf"]
+    assert plan.known_bytes == 777
+    assert plan.has_unsized_files is False
+
+
 def test_depth_is_bounded(drive):
     tree_map, _ = drive
     for depth in range(tree.MAX_DEPTH + 5):
