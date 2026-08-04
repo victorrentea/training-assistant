@@ -212,14 +212,21 @@ Visual polish is deliberately deferred to a follow-up pass.
 |---|---|---|
 | Unrecognized link | 400 | "That doesn't look like a Google Drive link" |
 | Drive returns 404/403 | 404 | "This folder is not shared publicly, or the link is wrong" |
-| Owner is not the configured account | 403 | "This folder is not shared publicly, or the link is wrong" |
+| Owner is not the configured account | 404 | "This folder is not shared publicly, or the link is wrong" |
 | Drive quota / 5xx | 502 | "Google Drive is not responding right now — please try again" |
 | Folder over 500 MB (pre-check) | 413 | "This folder is larger than 500 MB — ask Victor to split it or send it another way" |
 | Cap exceeded mid-stream | — | Archive is cut off at the cap; logged server-side as a pre-check miss. |
 | Failure mid-stream | — | Truncated archive; unavoidable. Logged server-side, browser reports an incomplete download. |
 
-The 403 message is deliberately identical to the 404 message so the endpoint cannot
-be used as an oracle for which folders belong to Victor.
+A folder owned by someone else answers **404, not 403** — same status, same message as
+a folder that does not exist. An earlier draft used 403 with a matching message, but
+matching only the message still leaves the status code as an oracle: 403 fires solely
+for folders that are real, public and owned by someone else, so an attacker could sort
+folder ids into "Victor's" and "not Victor's" without reading the body at all.
+
+The cost is accepted deliberately: when Victor himself pastes a folder he does not own,
+he is told "not shared publicly, or the link is wrong", which is misleading. The server
+log keeps the true reason.
 
 ## Invariants (enforced by tests)
 

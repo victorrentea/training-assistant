@@ -1474,8 +1474,10 @@ DRIVE_DOWN = "Google Drive is not responding right now — please try again"
 TOO_LARGE = "This folder is larger than 500 MB — ask Victor to split it or send it another way"
 ```
 
-`NOT_AVAILABLE` is intentionally shared between the 404 and the 403 so the endpoint
-cannot be used to discover which folders are Victor's.
+A folder owned by someone else answers 404, not 403 — same status AND same message as
+a folder that does not exist. Matching only the message still leaves the status code as
+an oracle: 403 would fire solely for folders that are real, public and owned by someone
+else, sorting folder ids into "Victor's" and "not Victor's" without reading the body.
 
 Blocking `urllib` calls must not run on the event loop: wrap them in
 `starlette.concurrency.run_in_threadpool`.
@@ -1568,11 +1570,11 @@ def test_preview_rejects_a_folder_owned_by_someone_else(drive, monkeypatch):
 
     response = client.get("/api/drive/preview", params={"url": FOLDER_URL})
 
-    assert response.status_code == 403
+    assert response.status_code == 404
     assert response.json()["detail"] == relay.NOT_AVAILABLE
 
 
-def test_403_and_404_are_indistinguishable_to_the_caller(drive, monkeypatch):
+def test_missing_and_not_owned_are_indistinguishable(drive, monkeypatch):
     """The message must not reveal which folders belong to the trainer."""
     def missing(fid):
         raise DriveError(404, "gone")
@@ -1691,7 +1693,7 @@ def _load_root(url: str) -> DriveFile:
     emails, permission_ids = ownership.configured_identity()
     if not ownership.is_owned_by_host(root, emails=emails, permission_ids=permission_ids):
         logger.warning("[drive-relay] refused %s: not owned by the configured trainer", file_id)
-        raise HTTPException(status_code=403, detail=NOT_AVAILABLE)
+        raise HTTPException(status_code=404, detail=NOT_AVAILABLE)
 
     return root
 
@@ -2497,7 +2499,7 @@ def test_a_strangers_folder_is_refused(backend_url):
     response = requests.get(f"{backend_url}/api/drive/zip",
                             params={"url": drive_url(STRANGER_ID)}, timeout=30)
 
-    assert response.status_code == 403
+    assert response.status_code == 404
 
 
 def test_the_browser_is_never_redirected_to_google(backend_url):
@@ -2655,7 +2657,7 @@ The task is not done until production is confirmed live.
 | Preview endpoint | 7 |
 | Single-file link streams directly | 8 |
 | Error table and exact copy | 7, 8 |
-| 403/404 indistinguishable | 7 |
+| Not-owned and missing are indistinguishable (both 404) | 7 |
 | Page, three states, disabled button | 9 |
 | Rate limiting, logging | 8 |
 | No browser-to-Google traffic | 8 (no-redirect test), 9 (page content test), 10 (hermetic) |
