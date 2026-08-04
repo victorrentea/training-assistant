@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import urllib.error
@@ -16,6 +17,30 @@ class FakeResponse(io.BytesIO):
         return False
 
 
+class RaisingResponse(io.BytesIO):
+    """A fake response whose `.read()` yields a few chunks, then raises.
+
+    Models a connection that dies mid-body: the socket accepted the request
+    and started sending bytes (or sent none at all), then broke.
+    """
+
+    def __init__(self, chunks, exc):
+        super().__init__(b"")
+        self._chunks = list(chunks)
+        self._exc = exc
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self, size=-1):
+        if self._chunks:
+            return self._chunks.pop(0)
+        raise self._exc
+
+
 @pytest.fixture(autouse=True)
 def api_config(monkeypatch):
     monkeypatch.setenv("GOOGLE_DRIVE_API_KEY", "test-key")
@@ -30,6 +55,24 @@ def install_urlopen(monkeypatch, handler):
         url = request.full_url
         calls.append(url)
         return FakeResponse(handler(url))
+
+    monkeypatch.setattr(dc.urllib.request, "urlopen", fake_urlopen)
+    return calls
+
+
+def install_urlopen_response(monkeypatch, response_factory):
+    """Route every urlopen call to a response object built by `response_factory(url)`.
+
+    Unlike `install_urlopen`, this hands back the response object itself rather
+    than always wrapping plain bytes — needed for `RaisingResponse`, where the
+    failure has to happen inside `.read()`, not while urlopen() connects.
+    """
+    calls = []
+
+    def fake_urlopen(request, **kwargs):
+        url = request.full_url
+        calls.append(url)
+        return response_factory(url)
 
     monkeypatch.setattr(dc.urllib.request, "urlopen", fake_urlopen)
     return calls
@@ -154,3 +197,37 @@ def test_native_download_uses_the_pdf_export_endpoint(monkeypatch):
     assert b"".join(dc.open_download(file)) == b"%PDF-1.4"
     assert "/files/d1/export" in urls[0]
     assert "mimeType=application%2Fpdf" in urls[0]
+
+
+def test_body_read_failure_becomes_502(monkeypatch):
+    """A connection that drops while reading the metadata body is still a DriveError."""
+    install_urlopen_response(
+        monkeypatch,
+        lambda url: RaisingResponse([], http.client.IncompleteRead(b"partial")),
+    )
+
+    with pytest.raises(dc.DriveError) as exc:
+        dc.get_metadata("abc")
+    assert exc.value.status == 502
+
+
+def test_streaming_read_failure_becomes_502(monkeypatch):
+    """A connection that drops mid-download must not escape as IncompleteRead."""
+    install_urlopen_response(
+        monkeypatch,
+        lambda url: RaisingResponse([b"first-chunk"], http.client.IncompleteRead(b"")),
+    )
+    file = dc.DriveFile(id="f1", name="a.bin", mime_type="application/octet-stream",
+                        size=100, owners=(), shortcut_target_id=None)
+
+    with pytest.raises(dc.DriveError) as exc:
+        list(dc.open_download(file))
+    assert exc.value.status == 502
+
+
+def test_malformed_json_becomes_502(monkeypatch):
+    install_urlopen(monkeypatch, lambda url: b"{not valid json")
+
+    with pytest.raises(dc.DriveError) as exc:
+        dc.get_metadata("abc")
+    assert exc.value.status == 502

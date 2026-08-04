@@ -9,14 +9,24 @@ server, so the participant's browser never talks to Google.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from typing import TypeVar
+
+_T = TypeVar("_T")
+
+# Anything that means "the connection to Drive misbehaved," as opposed to Drive
+# giving us a clean HTTP status. Covers urlopen() itself (URLError, socket
+# timeouts via OSError) and body reads after a successful connect
+# (http.client.IncompleteRead is an HTTPException, not an OSError).
+_CONNECTION_ERRORS = (urllib.error.URLError, OSError, http.client.HTTPException)
 
 FOLDER_MIME = "application/vnd.google-apps.folder"
 SHORTCUT_MIME = "application/vnd.google-apps.shortcut"
@@ -84,19 +94,34 @@ def _build_url(path: str, params: dict) -> str:
     return f"{_base_url()}{path}?{query}"
 
 
-def _open(url: str):
-    request = urllib.request.Request(url, method="GET")
+def _guarded(func: Callable[..., _T], *args, **kwargs) -> _T:
+    """Run a urllib/http.client call, translating its failures into DriveError.
+
+    Used both for the initial `urlopen()` and for the body reads that happen
+    afterwards (`response.read(...)`) — a dropped connection mid-download is
+    just as much a DriveError(502) as one that never connected at all, and
+    callers (the router) must only ever have to catch one exception type.
+    """
     try:
-        return urllib.request.urlopen(request, context=_ssl_ctx(), timeout=_TIMEOUT_S)
+        return func(*args, **kwargs)
     except urllib.error.HTTPError as exc:
         raise DriveError(exc.code, f"Drive returned {exc.code}") from exc
-    except (urllib.error.URLError, OSError) as exc:
+    except _CONNECTION_ERRORS as exc:
         raise DriveError(502, f"Drive is unreachable: {exc}") from exc
+
+
+def _open(url: str):
+    request = urllib.request.Request(url, method="GET")
+    return _guarded(urllib.request.urlopen, request, context=_ssl_ctx(), timeout=_TIMEOUT_S)
 
 
 def _get_json(path: str, params: dict) -> dict:
     with _open(_build_url(path, params)) as response:
-        return json.loads(response.read().decode("utf-8"))
+        raw = _guarded(response.read)
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except json.JSONDecodeError as exc:
+            raise DriveError(502, f"Drive returned malformed JSON: {exc}") from exc
 
 
 def _to_file(raw: dict) -> DriveFile:
@@ -179,7 +204,7 @@ def open_download(file: DriveFile) -> Iterator[bytes]:
 
     with _open(url) as response:
         while True:
-            chunk = response.read(_CHUNK_BYTES)
+            chunk = _guarded(response.read, _CHUNK_BYTES)
             if not chunk:
                 return
             yield chunk
