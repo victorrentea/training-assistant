@@ -19,7 +19,7 @@ from starlette.concurrency import run_in_threadpool
 from railway.features.drive_relay import drive_client, ownership, tree
 from railway.features.drive_relay.drive_client import DriveError, DriveFile
 from railway.features.drive_relay.link_parser import InvalidDriveLink, parse_drive_url
-from railway.features.drive_relay.tree import TransferPlan
+from railway.features.drive_relay.tree import PlannedEntry, TransferPlan
 from railway.features.drive_relay.zip_stream import TransferCapExceeded, stream_zip
 from railway.shared.rate_limit import rate_limit_drive_zip, rate_limit_probe
 
@@ -135,21 +135,56 @@ def _content_disposition(filename: str) -> str:
     return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quoted}"
 
 
+def _guarded_chunks(chunks: Iterator[bytes], *, context: str) -> Iterator[bytes]:
+    """Relay a Drive byte stream, logging and cutting it off on failure or overrun.
+
+    Shared tail behaviour for both the zip path and the single-file path: by
+    the time either one is running, headers are already on the wire, so a
+    failure can only end the stream early — it can never turn into a status
+    code. Both paths therefore log the same way and simply stop.
+    """
+    try:
+        yield from chunks
+    except TransferCapExceeded:
+        # Reaching here means the pre-check under-counted, which happens when
+        # the file(s) involved are Google-native (they report no size).
+        logger.warning("[drive-relay] transfer cap hit mid-stream for %s", context)
+    except DriveError as exc:
+        logger.warning("[drive-relay] download failed mid-stream for %s: %s", context, exc)
+
+
+def _capped(chunks: Iterator[bytes], max_bytes: int) -> Iterator[bytes]:
+    """Cut a byte stream off once it passes ``max_bytes``.
+
+    The zip path gets this for free from zip_stream.stream_zip's own running
+    counter. The single-file path streams drive_client.open_download directly
+    with no counter of its own — without this, a Google-native file (which
+    always reports size=None, so the pre-check in resolve_plan can never catch
+    it) would stream unbounded.
+    """
+    written = 0
+    for chunk in chunks:
+        written += len(chunk)
+        if written > max_bytes:
+            raise TransferCapExceeded(f"Transfer exceeded {max_bytes} bytes")
+        yield chunk
+
+
 def _archive_chunks(plan: TransferPlan) -> Iterator[bytes]:
     """Yield the archive, downloading each file only as the client consumes it."""
     entries = ((entry.archive_path, drive_client.open_download(entry.file))
                for entry in plan.entries)
-    try:
-        yield from stream_zip(entries, max_bytes=MAX_TRANSFER_BYTES)
-    except TransferCapExceeded:
-        # Mid-response: the status line is long gone, so the download is simply
-        # cut off. Reaching here means the pre-check under-counted, which happens
-        # when the folder is full of Google-native files (they report no size).
-        logger.warning("[drive-relay] transfer cap hit mid-stream for %s", plan.root_name)
-        return
-    except DriveError as exc:
-        logger.warning("[drive-relay] download failed mid-stream for %s: %s", plan.root_name, exc)
-        return
+    yield from _guarded_chunks(
+        stream_zip(entries, max_bytes=MAX_TRANSFER_BYTES), context=plan.root_name
+    )
+
+
+def _single_file_chunks(entry: PlannedEntry) -> Iterator[bytes]:
+    """Yield one file's bytes, capped and guarded exactly like the zip path."""
+    yield from _guarded_chunks(
+        _capped(drive_client.open_download(entry.file), MAX_TRANSFER_BYTES),
+        context=entry.archive_path,
+    )
 
 
 @router.get(
@@ -172,7 +207,7 @@ async def get_drive_zip(url: str) -> StreamingResponse:
         logger.info("[drive-relay] ↓ single file %s (%s bytes)", entry.archive_path,
                     entry.file.size)
         return StreamingResponse(
-            drive_client.open_download(entry.file),
+            _single_file_chunks(entry),
             media_type=entry.file.mime_type or "application/octet-stream",
             headers={
                 "Content-Disposition": _content_disposition(entry.archive_path),

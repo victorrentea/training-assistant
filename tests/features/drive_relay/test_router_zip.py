@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from railway.app import app
 from railway.features.drive_relay import router as relay
-from railway.features.drive_relay.drive_client import FOLDER_MIME, DriveFile, DriveOwner
+from railway.features.drive_relay.drive_client import FOLDER_MIME, DriveError, DriveFile, DriveOwner
 from railway.shared import rate_limit
 
 FOLDER_ID = "1A2b3C4d5E6f7G8h9I0jKlMnOpQrStUv"
@@ -158,6 +158,63 @@ def test_a_single_file_link_streams_that_file_not_a_zip(drive, monkeypatch):
     assert response.headers["content-type"] == "application/pdf"
     assert "Deck.pdf" in response.headers["content-disposition"]
     assert single.name == "Deck.pdf"
+
+
+def test_single_file_native_export_is_capped(drive, monkeypatch):
+    """Google-native files (Docs/Sheets/Slides) always report size=None, so the
+    pre-check in resolve_plan can never catch an oversized export — the single
+    -file streaming path must enforce the cap itself, just like the zip path
+    does via stream_zip. Use a tiny monkeypatched cap instead of generating a
+    real 500 MB body."""
+    monkeypatch.setattr(relay, "MAX_TRANSFER_BYTES", 20)
+    huge_native = DriveFile(
+        id="doc1", name="Huge Deck", mime_type="application/vnd.google-apps.document",
+        size=None,
+        owners=(DriveOwner(email="victorrentea@gmail.com", permission_id="1", display_name="V"),),
+        shortcut_target_id=None,
+    )
+    monkeypatch.setattr(relay.drive_client, "get_metadata", lambda fid: huge_native)
+    # 10 chunks of 10 bytes = 100 bytes total, well over the 20-byte cap.
+    monkeypatch.setattr(relay.drive_client, "open_download",
+                        lambda file: iter([b"X" * 10 for _ in range(10)]))
+
+    response = client.get(
+        "/api/drive/zip",
+        params={"url": f"https://drive.google.com/file/d/{FOLDER_ID}/view"},
+    )
+
+    assert response.status_code == 200
+    assert len(response.content) <= 20
+    assert len(response.content) < 100
+
+
+def test_single_file_drive_error_mid_stream_is_caught_and_logged(drive, monkeypatch, caplog):
+    """A dropped Drive connection mid-download must not raise out of the app —
+    same contract as the zip path's _archive_chunks — and must be logged with
+    the same [drive-relay] prefix so the operator doesn't lose the signal."""
+    single = DriveFile(
+        id="f2", name="Deck.pdf", mime_type="application/pdf", size=4,
+        owners=(DriveOwner(email="victorrentea@gmail.com", permission_id="1", display_name="V"),),
+        shortcut_target_id=None,
+    )
+    monkeypatch.setattr(relay.drive_client, "get_metadata", lambda fid: single)
+
+    def failing_download(file):
+        yield b"PDF!"
+        raise DriveError(502, "connection dropped")
+
+    monkeypatch.setattr(relay.drive_client, "open_download", failing_download)
+
+    with caplog.at_level("WARNING"):
+        response = client.get(
+            "/api/drive/zip",
+            params={"url": f"https://drive.google.com/file/d/{FOLDER_ID}/view"},
+        )
+
+    assert response.status_code == 200
+    assert response.content == b"PDF!"
+    assert "[drive-relay]" in caplog.text
+    assert "download failed mid-stream" in caplog.text
 
 
 def test_rate_limiter_allows_three_downloads_then_throttles(monkeypatch, drive):
