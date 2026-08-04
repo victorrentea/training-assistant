@@ -43,9 +43,10 @@ def relink_folder(folder: Path) -> dict[str, int]:
     for repo_obj in doc.repos:
         owner, repo = files_md._owner_repo(repo_obj.url)
         info = github_client.get_repo_info(owner, repo)
-        if info is None or info is github_client.RATE_LIMITED:
-            # Leave the block untouched: a 404 or a rate limit here says more
-            # about the network than about the repo.
+        if not isinstance(info, github_client.RepoInfo):
+            # None (private/404) or RATE_LIMITED. Leave the block untouched: a
+            # 404 or a rate limit here says more about the network than about
+            # the repo.
             _log.info(_NAME, f"skipping {repo_obj.url} (unavailable)")
             continue
         summary["repos"] += 1
