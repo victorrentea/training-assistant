@@ -57,10 +57,6 @@ class Entry:
     ref: str | None = None      # "branch" | "default" — which ref resolved the link
     reason: str | None = None   # "not-pushed" | "no-branch" | "rate-limited"
 
-    @property
-    def basename(self) -> str:
-        return self.path.rsplit("/", 1)[-1]
-
 
 @dataclass
 class Repo:

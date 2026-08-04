@@ -29,12 +29,12 @@ _NAME = "addons   "
 def _handle_git_file_opened(data: dict) -> None:
     from daemon import files_md
     url = data.get("url", "")
-    branch = data.get("branch", "")
+    branch = data.get("branch", "") or ""
     file_path = data.get("file", "")
     if not url or not file_path:
         return
     files_md.record_file_opened(url, branch, file_path)
-    log.debug(_NAME, f"← git {url.split('/')[-1]} {file_path}")
+    log.debug(_NAME, f"← git {url.split('/')[-1]}@{branch or '?'} {file_path}")
 
 
 class AddonBridgeClient:

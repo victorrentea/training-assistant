@@ -159,7 +159,7 @@ def test_get_repo_info_does_not_cache_500_error():
 # get_repo_tree tests
 # ---------------------------------------------------------------------------
 
-def test_get_repo_tree_indexes_by_basename():
+def test_get_repo_tree_lists_blob_paths_only():
     import json
     body = json.dumps({
         "tree": [
@@ -176,8 +176,6 @@ def test_get_repo_tree_indexes_by_basename():
     assert "docs/packages.puml" in tree.paths
     assert "src/a.py" in tree.paths
     assert "src" not in tree.paths  # directories excluded
-    assert tree.paths_by_basename["packages.puml"] == ["docs/packages.puml"]
-    assert tree.paths_by_basename["a.py"] == ["src/a.py"]
 
 
 def test_get_repo_tree_truncated_flag_propagated():
@@ -241,4 +239,3 @@ def test_get_repo_tree_skips_directory_entries():
     assert "src" not in tree.paths
     assert "docs" not in tree.paths
     assert "README.md" in tree.paths
-    assert list(tree.paths_by_basename.keys()) == ["README.md"]

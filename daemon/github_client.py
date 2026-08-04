@@ -35,8 +35,7 @@ class RepoInfo:
 
 @dataclass(frozen=True)
 class RepoTree:
-    paths: frozenset[str]                   # full paths in the tree (blobs only)
-    paths_by_basename: dict[str, list[str]] # basename → [full paths]
+    paths: frozenset[str]  # full paths in the tree (blobs only)
     truncated: bool
 
 
@@ -147,11 +146,7 @@ def get_repo_tree(owner: str, repo: str, branch: str) -> RepoTree | None:
                 if isinstance(p, str) and p:
                     paths.append(p)
         truncated = bool(data.get("truncated", False))
-        index: dict[str, list[str]] = {}
-        for p in paths:
-            b = p.rsplit("/", 1)[-1]
-            index.setdefault(b, []).append(p)
-        tree = RepoTree(paths=frozenset(paths), paths_by_basename=index, truncated=truncated)
+        tree = RepoTree(paths=frozenset(paths), truncated=truncated)
         _TREE_CACHE[key] = tree
         return tree
     except urllib.error.HTTPError as err:

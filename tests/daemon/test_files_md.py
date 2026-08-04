@@ -142,11 +142,6 @@ def test_parse_unlinked_file_at_repo_root_survives(tz_bucharest):
     assert [e.path for e in parsed.repos[0].entries] == ["README.md"]
 
 
-def test_entry_basename_is_derived_from_path():
-    e = files_md.Entry(path="src/deep/A.java", branch="master", ts="2026-08-04T06:41:07Z")
-    assert e.basename == "A.java"
-
-
 def test_parse_empty_returns_empty_doc():
     assert files_md.Doc.parse("").repos == []
     assert files_md.Doc.parse(files_md.EMPTY_STATE).repos == []
@@ -395,7 +390,6 @@ def test_migration_no_op_when_no_git_repos(session_folder, monkeypatch):
 def _tree(*paths):
     return github_client.RepoTree(
         paths=frozenset(paths),
-        paths_by_basename={},
         truncated=False,
     )
 
