@@ -62,6 +62,7 @@ COPY tests/docker/features/ ./features/
 COPY tests/docker/step_defs/ ./step_defs/
 COPY tests/docker/generate_fixture_pdfs.py .
 COPY tests/docker/mock_drive_server.py .
+COPY tests/docker/test_drive_relay.py .
 COPY tests/docker/mock_github_server.py .
 COPY tests/docker/test_files_md_e2e.py .
 COPY tests/docker/test_participant_tab_url.py .
