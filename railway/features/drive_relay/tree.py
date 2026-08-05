@@ -19,10 +19,12 @@ MAX_DEPTH = 20
 # each archive_path is built by joining per-folder names with "/", so a raw "/"
 # in a Drive name must never survive into a name segment.
 _PATH_SEPARATORS = re.compile(r"[/\\]")
-# After separators are flattened to ".", a name that used to be "../../etc" would
-# otherwise leave literal ".." runs in the result. Collapse any run of 2+ dots
-# down to one so no ".." substring can ever appear in an archive path.
-_DOT_RUN = re.compile(r"\.{2,}")
+# Once separators are flattened, a name is a single archive path component,
+# and a single component can only navigate upward if it is entirely dots
+# ("." or ".."). A dot run embedded in real text — e.g. a date range like
+# "2026-08-03..04" — is just text once there is no separator around it; it
+# cannot escape anything and must be left alone.
+_ONLY_DOTS = re.compile(r"^\.+$")
 
 
 @dataclass(frozen=True)
@@ -40,10 +42,16 @@ class TransferPlan:
 
 
 def _safe_name(name: str) -> str:
-    """Flatten a Drive-supplied name into a single safe archive path segment."""
-    flattened = _PATH_SEPARATORS.sub(".", name)
-    flattened = _DOT_RUN.sub(".", flattened)
-    return flattened.strip() or "untitled"
+    """Flatten a Drive-supplied name into a single safe archive path segment.
+
+    Only the degenerate cases are rejected: empty, whitespace-only, or a name
+    that is entirely dots. Everything else — including dot runs in the middle
+    of a name — passes through unchanged once separators are gone.
+    """
+    flattened = _PATH_SEPARATORS.sub(".", name).strip()
+    if not flattened or _ONLY_DOTS.fullmatch(flattened):
+        return "untitled"
+    return flattened
 
 
 def _unique(name: str, taken: set[str]) -> str:

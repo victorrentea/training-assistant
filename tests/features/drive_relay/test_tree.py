@@ -111,14 +111,34 @@ def test_path_separators_in_drive_names_cannot_escape_the_archive(drive):
 
     paths = [e.archive_path for e in tree.build_plan(folder("root", "W")).entries]
 
-    # NOTE: deviates from the task-5 brief's literal ["......etc.passwd", "a.b.pdf"].
-    # That expectation is self-contradicting: a run of 6 dots still contains ".."
-    # as a substring, so it cannot satisfy the very safety assertion below in the
-    # same test. Separators are flattened to ".", and any run of 2+ dots left
-    # over from the original name (e.g. from "..") is then collapsed to a single
-    # "." so no ".." substring can ever survive into an archive path.
-    assert paths == [".etc.passwd", "a.b.pdf"]
-    assert not any(p.startswith("/") or ".." in p for p in paths)
+    # A dot run left over in the middle of a flattened name (e.g. from
+    # "../../etc") is just text once there is no "/" left to make it a
+    # separate path component on its own — it cannot escape anything. What
+    # actually matters is: no separator survives, and the component itself
+    # is never exactly "." or "..".
+    assert paths == ["......etc.passwd", "a.b.pdf"]
+    for path in paths:
+        assert "/" not in path
+        assert "\\" not in path
+        assert not path.startswith("/")
+        assert path not in (".", "..")
+
+
+def test_dot_run_in_the_middle_of_a_name_survives_unchanged():
+    """Real course folders are named like "<start>..<end> <course>", using
+    ".." as a date-range separator — e.g. the project owner's own
+    "2026-08-03..04 AI@Orange+ops+qa". The old collapse-every-dot-run rule
+    mangled every one of these into a single dot; a dot run that is not the
+    *entire* component is not a traversal risk once separators are gone, so
+    it must survive untouched."""
+    name = "2026-08-03..04 AI@Orange+ops+qa"
+
+    assert tree._safe_name(name) == name
+
+
+@pytest.mark.parametrize("name", ["..", ".", "....", "", "   "])
+def test_degenerate_dot_only_or_empty_names_become_untitled(name):
+    assert tree._safe_name(name) == "untitled"
 
 
 def test_internal_session_files_are_dropped(drive):
