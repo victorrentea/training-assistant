@@ -27,11 +27,6 @@ export FIXTURE_PDF_DIR=/tmp/fixture-pdfs
 export MOCK_DRIVE_PORT=9090
 export MOCK_GITHUB_PORT=9091
 
-# Point the Drive relay at the mock Drive API v3 server (hermetic drive-relay coverage)
-export DRIVE_API_BASE_URL=http://localhost:${MOCK_DRIVE_PORT}/drive/v3
-export GOOGLE_DRIVE_API_KEY=hermetic-test-key
-export DRIVE_OWNER_EMAILS=victorrentea@gmail.com
-
 # OpenTelemetry
 export OTEL_TRACES_FILE=/tmp/traces.jsonl
 export OTEL_SDK_DISABLED=false

@@ -14,11 +14,9 @@ Routes:
 import hashlib
 import json
 import os
-import re
 import sys
 import threading
 import time
-import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -28,56 +26,6 @@ MOCK_DRIVE_PORT = int(os.environ.get("MOCK_DRIVE_PORT", "9090"))
 _request_counts: dict[str, int] = {}
 _delays: dict[str, float] = {}   # slug → seconds to sleep before responding
 _lock = threading.Lock()
-
-# Drive API v3 surface for the drive-relay tests. Shape mirrors the real API
-# closely enough that railway/features/drive_relay/drive_client.py cannot tell.
-DRIVE_FIXTURES = {
-    "rootfolder0000000000": {
-        "id": "rootfolder0000000000", "name": "Hermetic Materials",
-        "mimeType": "application/vnd.google-apps.folder",
-        "owners": [{"emailAddress": "victorrentea@gmail.com",
-                    "permissionId": "111", "displayName": "Victor"}],
-        "children": ["intro000000000000000", "subfolder00000000000"],
-    },
-    "subfolder00000000000": {
-        "id": "subfolder00000000000", "name": "Day 2",
-        "mimeType": "application/vnd.google-apps.folder",
-        "owners": [{"emailAddress": "victorrentea@gmail.com",
-                    "permissionId": "111", "displayName": "Victor"}],
-        "children": ["lab00000000000000000"],
-    },
-    "intro000000000000000": {
-        "id": "intro000000000000000", "name": "Intro.pdf",
-        "mimeType": "application/pdf", "size": "5", "body": b"INTRO",
-        "owners": [{"emailAddress": "victorrentea@gmail.com",
-                    "permissionId": "111", "displayName": "Victor"}],
-    },
-    "lab00000000000000000": {
-        "id": "lab00000000000000000", "name": "Lab.pdf",
-        "mimeType": "application/pdf", "size": "3", "body": b"LAB",
-        "owners": [{"emailAddress": "victorrentea@gmail.com",
-                    "permissionId": "111", "displayName": "Victor"}],
-    },
-    "agenda00000000000000": {
-        "id": "agenda00000000000000", "name": "Agenda",
-        "mimeType": "application/vnd.google-apps.document", "body": b"%PDF-agenda",
-        "owners": [{"emailAddress": "victorrentea@gmail.com",
-                    "permissionId": "111", "displayName": "Victor"}],
-    },
-    "stranger000000000000": {
-        "id": "stranger000000000000", "name": "Someone Else's Folder",
-        "mimeType": "application/vnd.google-apps.folder",
-        "owners": [{"emailAddress": "stranger@example.com",
-                    "permissionId": "999", "displayName": "Stranger"}],
-        "children": [],
-    },
-}
-
-_METADATA_KEYS = ("id", "name", "mimeType", "size", "owners")
-
-
-def _metadata(entry):
-    return {k: entry[k] for k in _METADATA_KEYS if k in entry}
 
 
 class MockDriveHandler(BaseHTTPRequestHandler):
@@ -121,31 +69,6 @@ class MockDriveHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
-            return
-
-        parsed = urllib.parse.urlparse(self.path)
-        query = urllib.parse.parse_qs(parsed.query)
-
-        # GET /drive/v3/files?q='<id>' in parents and trashed = false
-        if parsed.path == "/drive/v3/files":
-            q = (query.get("q") or [""])[0]
-            match = re.search(r"'([^']+)' in parents", q)
-            parent = DRIVE_FIXTURES.get(match.group(1)) if match else None
-            files = [_metadata(DRIVE_FIXTURES[c]) for c in (parent or {}).get("children", [])]
-            self._send_json({"files": files})
-            return
-
-        # GET /drive/v3/files/{id}[?alt=media]  and  /drive/v3/files/{id}/export
-        api_match = re.match(r"^/drive/v3/files/([^/]+)(/export)?$", parsed.path)
-        if api_match:
-            entry = DRIVE_FIXTURES.get(api_match.group(1))
-            if entry is None:
-                self.send_error(404)
-                return
-            if api_match.group(2) or query.get("alt") == ["media"]:
-                self._send_bytes(entry.get("body", b""), entry.get("mimeType", "application/octet-stream"))
-            else:
-                self._send_json(_metadata(entry))
             return
 
         slug = self._parse_slug()
@@ -220,21 +143,6 @@ class MockDriveHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"{}")
             return
         self.send_error(404)
-
-    def _send_json(self, payload):
-        body = json.dumps(payload).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def _send_bytes(self, body, content_type):
-        self.send_response(200)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
 
     def log_message(self, format, *args):
         # Suppress default logging to keep output clean

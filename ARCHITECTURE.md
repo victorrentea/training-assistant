@@ -56,15 +56,15 @@ System(workshop, "Workshop Live Interaction Tool", "Session-aware audience inter
 System_Ext(claude_api, "Anthropic Claude API", "Used by the daemon for quiz generation/refinement and debate cleanup.")
 System_Ext(macos_addons, "victor-macos-addons", "Local Mac helper exposing slide events and overlay/session notifications over WebSocket.")
 System_Ext(nominatim, "Nominatim", "Optional reverse geocoding for participant location sharing.")
-System_Ext(google_drive, "Google Drive", "Source of slide PDF exports that Railway caches for participants; also the origin folder for the Drive relay's on-demand zip downloads.")
+System_Ext(google_drive, "Google Drive", "Source of slide PDF exports that Railway caches for participants.")
 
 Rel(host, workshop, "Controls sessions, activities, slides, and participant state", "Browser + localhost daemon")
-Rel(participant, workshop, "Votes, reacts, uploads, follows slides, reads notes/key points, pastes a Drive link for a zip download", "HTTPS / WSS")
+Rel(participant, workshop, "Votes, reacts, uploads, follows slides, reads notes/key points", "HTTPS / WSS")
 
 Rel(workshop, claude_api, "Quiz generation/refinement and debate AI cleanup", "HTTPS")
 Rel(workshop, macos_addons, "Receives slide events; sends emoji and session notifications", "Local WSS")
 Rel(participant, nominatim, "Shares optional location", "HTTPS")
-Rel(workshop, google_drive, "Downloads slide PDFs into Railway cache; relays a pasted folder link back to the participant as a zip", "HTTPS")
+Rel(workshop, google_drive, "Downloads slide PDFs into Railway cache", "HTTPS")
 @enduml
 ```
 
@@ -85,7 +85,7 @@ Person(participant, "Participant")
 System_Boundary(workshop, "Workshop Tool") {
     Container(participant_spa, "Participant SPA", "Vanilla HTML/CSS/JS served by Railway", "Join flow, participant UI, slides dock, notes/key points, uploads, emoji, live updates.")
     Container(host_spa, "Host SPA", "Vanilla HTML/CSS/JS served by the daemon host server", "Session creation/resume and live control panel.")
-    Container(railway_backend, "Railway Backend", "FastAPI on Railway", "Session validation, browser/daemon WebSockets, slide cache, temporary uploads, static sync endpoints, public participant pages, session-free Google Drive relay.")
+    Container(railway_backend, "Railway Backend", "FastAPI on Railway", "Session validation, browser/daemon WebSockets, slide cache, temporary uploads, static sync endpoints, public participant pages.")
     Container(training_daemon, "Training Daemon", "Python CLI with embedded FastAPI", "Local host control plane, state ownership, persistence, quiz/debate/slides jobs, Railway bridge.")
 }
 
@@ -109,7 +109,7 @@ Rel(training_daemon, macos_addons, "Receives slide events; sends emoji/session n
 Rel(training_daemon, host_files, "Reads and writes session files", "Local filesystem")
 Rel(training_daemon, local_rag, "Indexes and queries local materials", "Local filesystem")
 
-Rel(railway_backend, google_drive, "Downloads slide PDFs into cache; relays pasted folder links as a zip download", "HTTPS")
+Rel(railway_backend, google_drive, "Downloads slide PDFs into cache", "HTTPS")
 @enduml
 ```
 
@@ -119,7 +119,7 @@ Rel(railway_backend, google_drive, "Downloads slide PDFs into cache; relays past
 | --- | --- | --- |
 | Participant SPA | [`static/landing.html`](static/landing.html), [`static/participant.html`](static/participant.html), [`static/participant.js`](static/participant.js) | Participant join flow and live UI rendered from Railway paths such as `/{session_id}` and `/{session_id}/api/*`. |
 | Host SPA | [`static/host-landing.html`](static/host-landing.html), [`static/host-landing.js`](static/host-landing.js), [`static/host.html`](static/host.html), [`static/host.js`](static/host.js) | Host-only session creation/resume and live admin UI. The daemon advertises the local entrypoint `http://127.0.0.1:1234/host`. |
-| Railway Backend | [`railway/app.py`](railway/app.py) | Session gating, browser and daemon WebSockets, slide cache/download serving, temporary uploads, public notes/key-points endpoints, daemon-driven static file sync, and the session-free Google Drive relay (`/drive`, `/api/drive/*`). |
+| Railway Backend | [`railway/app.py`](railway/app.py) | Session gating, browser and daemon WebSockets, slide cache/download serving, temporary uploads, public notes/key-points endpoints, and daemon-driven static file sync. |
 | Training Daemon | [`daemon/__main__.py`](daemon/__main__.py) | Embedded host FastAPI server, feature state machines, session persistence, LLM jobs, addons bridge, upload handoff, and Railway bridge. |
 
 ---
@@ -148,7 +148,6 @@ Container_Boundary(railway, "Railway Backend") {
     Component(uploads, "railway/features/upload/router.py", "Temporary file upload bridge", "Streams uploads into `.server-data/uploads`, lets the daemon fetch and ack them.")
     Component(proxy, "railway/features/ws/proxy_bridge.py", "Participant REST proxy", "Forwards `/{session_id}/api/participant/*` calls to the daemon over `/ws/daemon`.")
     Component(internal, "railway/features/internal/router.py", "Static sync endpoints", "Allows the daemon to upload/delete files under `static/`.")
-    Component(drive_relay, "railway/features/drive_relay/*", "Google Drive relay", "Public `/drive` page plus `/api/drive/preview` and `/api/drive/zip`: paste a folder link, get a streamed zip. Root-level, session-free, and built with no import of session state or the daemon WS client.")
 }
 
 Rel(participant_spa, pages, "Loads participant pages", "HTTPS")
@@ -157,7 +156,6 @@ Rel(participant_spa, proxy, "Calls `/{session_id}/api/participant/*`", "HTTPS")
 Rel(participant_spa, notes, "Reads public notes and key points", "HTTPS")
 Rel(participant_spa, slides, "Reads slide catalog/check/download endpoints", "HTTPS")
 Rel(participant_spa, uploads, "Uploads participant files", "HTTPS")
-Rel(participant_spa, drive_relay, "Pastes a Drive link; previews and downloads the zip — no session required", "HTTPS")
 
 Rel(host_spa, pages, "Same host static files also mounted remotely", "HTTPS")
 
@@ -174,15 +172,6 @@ Rel(uploads, core, "Associates uploads with connected participants")
 Rel(proxy, ws, "Uses daemon WS for request/response correlation")
 
 Rel(slides, google_drive, "Downloads PDF exports on cache miss", "HTTPS")
-Rel(drive_relay, google_drive, "Fetches folder/file metadata, listing, and bytes; owner-gated by DRIVE_OWNER_EMAILS", "HTTPS")
-
-note bottom of drive_relay
-  Deliberately no Rel to training_daemon or core here: this is the
-  one Railway component with zero daemon dependency. It answers
-  /drive, /api/drive/preview, and /api/drive/zip with the trainer's
-  laptop closed and no session active — that independence is the
-  point of the feature, not an accident of the diagram.
-end note
 @enduml
 ```
 
@@ -192,7 +181,6 @@ end note
 - Browser WebSockets are session-scoped: `"/ws/{session_id}/{participant_id}"` for participants and host, plus `"/ws/daemon"` for the daemon.
 - Participant REST commands do not execute business logic inside Railway. They are forwarded by [`railway/features/ws/proxy_bridge.py`](railway/features/ws/proxy_bridge.py) to the daemon over the daemon WebSocket and resolved by a correlation-id response path.
 - Railway state is in-memory only. [`railway/shared/state.py`](railway/shared/state.py) tracks connections, session metadata, slide cache status, temporary uploads, and a few mirrored UI fields.
-- [`railway/features/drive_relay/`](railway/features/drive_relay/) is the one Railway component that is deliberately session-free and daemon-free: a participant on a network that blocks `drive.google.com` pastes a folder link on the public `/drive` page, and Railway fetches it from Google server-side and streams a zip back, so the participant's browser never contacts Google and the trainer's laptop does not need to be open.
 - Current Railway runtime files are:
   - `.server-data/uploads` for temporary participant uploads waiting for daemon pickup
   - `/tmp/slides-cache` for cached Google Drive PDFs
@@ -379,14 +367,6 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
    - The 3-second snapshot loop in [`daemon/__main__.py`](daemon/__main__.py) persists cumulative engagement into `PersistedParticipant.engagement` in `session-state.json`; `ParticipantState.sync_from_restore` restores it on session reopen.
    - `_build_host_participants_list` adds `engagement`, `last_active_at`, and `last_view` to each participant dict, riding to the host on the existing `participant_list_updated` message and the `/host/state` load.
    - The host browser derives "active now" locally from `last_active_at` (a 2s ticker counts participants seen within ~75s, so the count decays on its own) and renders the `👁 N active` footer badge with a hover popover showing the cumulative per-view time/visits/clicks breakdown.
-
-9. Google Drive relay (Drive-blocking network fallback)
-   - A participant on a network that blocks `drive.google.com` opens the public `GET /drive` page and pastes a folder (or file) link. No session id is involved and the daemon is never contacted — [`railway/features/drive_relay/router.py`](railway/features/drive_relay/router.py) has no import of session state or the daemon WS client.
-   - `GET /api/drive/preview?url=...` parses the link, fetches the file's Drive metadata, and checks that some owner matches `DRIVE_OWNER_EMAILS` / `DRIVE_OWNER_PERMISSION_IDS` ([`ownership.py`](railway/features/drive_relay/ownership.py)); a folder that exists but is owned by someone else returns the same `404` as a folder that does not exist, so the endpoint cannot be probed to enumerate the trainer's folders. It then lists the tree and returns `{name, file_count, total_bytes, has_unsized_files}`.
-   - `GET /api/drive/zip?url=...` re-validates ownership and streams the archive: [`zip_stream.py`](railway/features/drive_relay/zip_stream.py) builds a STORED zip into an unseekable in-memory sink and yields bytes as each file downloads from Drive, so nothing is buffered in full and nothing touches disk. A link to a single file streams that file directly instead of a one-entry zip.
-   - The 500 MB transfer cap is enforced twice: a pre-check on the summed listing sizes, and a running byte counter while streaming. The second check is load-bearing, not redundant — Google-native files (Docs/Sheets/Slides) report no size, so a folder of them looks like 0 bytes to the pre-check and can only be caught mid-stream.
-   - Known files are excluded from the archive by [`exclusions.py`](railway/features/drive_relay/exclusions.py): `session-state.json`, `attendees.md` (the participant roster), `Icon`/`Icon\r`, `~$*`, and `.obsidian/`. `*.zip` is deliberately kept, unlike the local materials-zip flow in item 7.
-   - `/api/drive/zip` carries its own strict per-IP rate-limit bucket (capacity 3, refill 1/5 min), separate from the general probe limiter on `/api/drive/preview`.
 
 ---
 

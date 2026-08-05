@@ -386,79 +386,6 @@
         ]
       }
     },
-    "/api/drive/preview": {
-      "get": {
-        "summary": "Get Drive Preview",
-        "description": "Validate a pasted Drive link and describe what a download would contain.",
-        "operationId": "get_drive_preview",
-        "parameters": [
-          {
-            "name": "url",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Url"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DrivePreviewResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/drive/zip": {
-      "get": {
-        "summary": "Get Drive Zip",
-        "description": "Stream the pasted Drive folder as a zip. A single file streams as itself.\n\nEvery byte is relayed through this server \u2014 we follow Drive's own redirects\ninside drive_client and never hand one to the browser, because the\nparticipants this exists for cannot reach Google at all.",
-        "operationId": "get_drive_zip",
-        "parameters": [
-          {
-            "name": "url",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Url"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/{session_id}/upload/{file_id}": {
       "get": {
         "summary": "Download For Daemon",
@@ -1091,34 +1018,6 @@
           "path"
         ],
         "title": "DeleteStaticRequest"
-      },
-      "DrivePreviewResponse": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "file_count": {
-            "type": "integer",
-            "title": "File Count"
-          },
-          "total_bytes": {
-            "type": "integer",
-            "title": "Total Bytes"
-          },
-          "has_unsized_files": {
-            "type": "boolean",
-            "title": "Has Unsized Files"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "file_count",
-          "total_bytes",
-          "has_unsized_files"
-        ],
-        "title": "DrivePreviewResponse"
       },
       "HTTPValidationError": {
         "properties": {

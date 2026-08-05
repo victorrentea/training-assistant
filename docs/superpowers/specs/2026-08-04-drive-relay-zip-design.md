@@ -1,3 +1,33 @@
+> **STATUS: ABANDONED — 2026-08-05.** This was built, reviewed, deployed and then
+> removed the same day. Keep the document: it records why the approach does not work,
+> so nobody rebuilds it.
+>
+> **What killed it.** The relay authenticates to Drive with a plain API key, on the
+> premise that "anyone with the link" folders are readable that way. That premise was
+> verified for `files.get` and `files.list` — and silently assumed to extend to file
+> *content*. It does not. Google answers `alt=media` content downloads for
+> unauthenticated API-key requests with a 403 anti-abuse page ("your computer or
+> network may be sending automated queries"), and trips it quickly on anything
+> sizeable. A 285 KB folder succeeded in production; a real 6.8 MB course folder
+> failed immediately.
+>
+> **Why it looked fine first.** The production verification used the smallest folder
+> available — precisely the case that does not trip the limit. Verifying the happy
+> path on the smallest input is not verifying the feature.
+>
+> **The second defect.** The 403 arrived after the response headers had been sent, so
+> the streaming handler could only log it and stop. The participant received `200 OK`
+> and a 0-byte archive that the browser reported as a completed download — a silent
+> failure, on the exact audience that has no other way to get the materials.
+>
+> **What a real fix would need.** Authenticated downloads — a service account with its
+> own project quota — not a retry loop, because this 403 is an anti-abuse block rather
+> than transient throttling. The owner judged that setup not worth it.
+>
+> **What remains supported.** The participant materials-zip download built by the
+> daemon from the local session folder (`daemon/materials/`, `railway/features/
+> materials/`), which requires the trainer's daemon to be online.
+
 # Google Drive Relay — design
 
 **Date:** 2026-08-04

@@ -13,8 +13,6 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 import railway.shared.metrics as metrics  # noqa: F401 - import for Prometheus metric registration side effects
 from railway.features.bridge.router import router as bridge_router
-from railway.features.drive_relay.router import page_router as drive_page_router
-from railway.features.drive_relay.router import router as drive_router
 from railway.features.inbox.router import router as inbox_router
 from railway.features.internal.router import router as internal_router
 from railway.features.materials import router as materials
@@ -157,11 +155,6 @@ app.include_router(materials.router)
 # Internal daemon → backend file management endpoints
 app.include_router(internal_router)
 
-# Google Drive relay: participants behind Drive-blocking networks paste a link and
-# get a zip. Root-level and session-free on purpose — it must answer with the daemon
-# offline. Registered here, before the /{session_id} catch-all at the bottom.
-app.include_router(drive_router)
-app.include_router(drive_page_router)
 
 
 # ── Session-scoped host dependency ──

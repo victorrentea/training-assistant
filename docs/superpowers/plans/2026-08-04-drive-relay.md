@@ -1,3 +1,7 @@
+> **STATUS: ABANDONED — 2026-08-05.** The feature this plan builds was removed the
+> same day it shipped. See the design doc's status banner for why:
+> `docs/superpowers/specs/2026-08-04-drive-relay-zip-design.md`.
+
 # Google Drive Relay Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

@@ -98,28 +98,3 @@ async def rate_limit_probe(request: Request) -> None:
             detail="Too many requests",
             headers={"Retry-After": "1"},
         )
-
-
-# Drive-relay downloads are the one endpoint where a single request can cost
-# hundreds of megabytes of egress, so it gets its own far stricter budget than
-# the probe endpoints: three downloads, then one more every five minutes.
-_DRIVE_ZIP_CAPACITY = int(os.environ.get("DRIVE_ZIP_RATE_CAPACITY", "3"))
-_DRIVE_ZIP_REFILL_PER_SEC = float(
-    os.environ.get("DRIVE_ZIP_RATE_REFILL_PER_SEC", str(1.0 / 300.0))
-)
-
-drive_zip_limiter = TokenBucketLimiter(_DRIVE_ZIP_CAPACITY, _DRIVE_ZIP_REFILL_PER_SEC)
-
-
-async def rate_limit_drive_zip(request: Request) -> None:
-    """FastAPI dependency: throttle Drive-relay zip downloads per client IP."""
-    if os.environ.get("GATEWAY_RATE_LIMIT_DISABLED") == "1":
-        return
-    if _is_exempt(request):
-        return
-    if not drive_zip_limiter.allow(_client_key(request)):
-        raise HTTPException(
-            status_code=429,
-            detail="Too many downloads — please wait a few minutes and try again",
-            headers={"Retry-After": "300"},
-        )
