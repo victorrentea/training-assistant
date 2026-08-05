@@ -2473,8 +2473,8 @@ def drive_url(file_id):
     return f"https://drive.google.com/drive/folders/{file_id}"
 
 
-def test_preview_describes_the_folder(backend_url):
-    response = requests.get(f"{backend_url}/api/drive/preview",
+def test_preview_describes_the_folder():
+    response = requests.get(f"{BASE}/api/drive/preview",
                             params={"url": drive_url(ROOT_ID)}, timeout=30)
 
     assert response.status_code == 200
@@ -2484,8 +2484,8 @@ def test_preview_describes_the_folder(backend_url):
     assert body["total_bytes"] == 8
 
 
-def test_zip_contains_the_whole_tree(backend_url):
-    response = requests.get(f"{backend_url}/api/drive/zip",
+def test_zip_contains_the_whole_tree():
+    response = requests.get(f"{BASE}/api/drive/zip",
                             params={"url": drive_url(ROOT_ID)}, timeout=60)
 
     assert response.status_code == 200
@@ -2495,15 +2495,15 @@ def test_zip_contains_the_whole_tree(backend_url):
     assert archive.read("Day 2/Lab.pdf") == b"LAB"
 
 
-def test_a_strangers_folder_is_refused(backend_url):
-    response = requests.get(f"{backend_url}/api/drive/zip",
+def test_a_strangers_folder_is_refused():
+    response = requests.get(f"{BASE}/api/drive/zip",
                             params={"url": drive_url(STRANGER_ID)}, timeout=30)
 
     assert response.status_code == 404
 
 
-def test_the_browser_is_never_redirected_to_google(backend_url):
-    response = requests.get(f"{backend_url}/api/drive/zip",
+def test_the_browser_is_never_redirected_to_google():
+    response = requests.get(f"{BASE}/api/drive/zip",
                             params={"url": drive_url(ROOT_ID)},
                             allow_redirects=False, timeout=60)
 
@@ -2511,9 +2511,9 @@ def test_the_browser_is_never_redirected_to_google(backend_url):
     assert "Location" not in response.headers
 
 
-def test_download_works_with_the_daemon_stopped(backend_url, stopped_daemon):
+def test_download_works_with_the_daemon_stopped(stopped_daemon):
     """The reason this feature exists: it must not depend on the trainer's laptop."""
-    response = requests.get(f"{backend_url}/api/drive/zip",
+    response = requests.get(f"{BASE}/api/drive/zip",
                             params={"url": drive_url(ROOT_ID)}, timeout=60)
 
     assert response.status_code == 200
@@ -2522,37 +2522,39 @@ def test_download_works_with_the_daemon_stopped(backend_url, stopped_daemon):
     ]
 ```
 
-Two fixtures are needed. Check `tests/docker/conftest.py` first: `backend_url` (or an
-equivalent) very likely exists already — reuse it rather than adding a second one. If
-`stopped_daemon` does not exist, add it to `tests/docker/conftest.py`, stopping the
-daemon container for the duration of the test and restarting it afterwards:
+There is NO docker-compose here and no `backend_url` fixture: the hermetic harness runs
+backend, daemon and mock servers as processes inside ONE container, started by
+`tests/docker/start_hermetic.sh`. Follow the conventions of the closest existing test,
+`tests/docker/test_materials_zip.py`:
 
 ```python
-@pytest.fixture
-def stopped_daemon(docker_compose_project):
-    """Stop the daemon container for the duration of one test, then bring it back."""
-    subprocess.run(["docker", "compose", "stop", "daemon"], check=True,
-                   cwd=docker_compose_project)
-    try:
-        yield
-    finally:
-        subprocess.run(["docker", "compose", "start", "daemon"], check=True,
-                       cwd=docker_compose_project)
+BASE = "http://localhost:8000"
 ```
 
-Match the existing conftest's naming for the compose project fixture — read it before
-writing this.
+with plain `urllib.request` rather than `requests`, and `sys.path.insert(0, "/app")`.
 
-- [ ] **Step 3: Point the backend container at the mock Drive**
+For the daemon-offline scenario, do NOT stop a container. The relay never talks to the
+daemon at all, so the honest assertion is that the endpoint answers while the daemon
+process is not running. `tests/docker/test_session_end_daemon_reconnect.py` shows the
+established pattern for stopping and restarting a process under test
+(`proc.send_signal(signal.SIGTERM)`, then poll a health endpoint until it comes back).
+Reuse that pattern rather than inventing another, and restore the daemon afterwards so
+later tests in the same container are unaffected — a test that leaves the daemon dead
+would fail every test that runs after it.
 
-In the docker compose file used by `tests/docker/run-hermetic.sh`, add to the backend
-service environment:
+- [ ] **Step 3: Point the backend at the mock Drive**
 
-```yaml
-      DRIVE_API_BASE_URL: http://mock-drive:9090/drive/v3
-      GOOGLE_DRIVE_API_KEY: hermetic-test-key
-      DRIVE_OWNER_EMAILS: victorrentea@gmail.com
+Everything runs in one container on localhost, so this is an export in
+`tests/docker/start_hermetic.sh`, next to the existing `MOCK_DRIVE_PORT` export:
+
+```bash
+export DRIVE_API_BASE_URL=http://localhost:${MOCK_DRIVE_PORT}/drive/v3
+export GOOGLE_DRIVE_API_KEY=hermetic-test-key
+export DRIVE_OWNER_EMAILS=victorrentea@gmail.com
 ```
+
+These must be exported BEFORE the backend process is launched in that script, or the
+backend will not see them.
 
 - [ ] **Step 4: Run the hermetic tests**
 
@@ -2566,7 +2568,7 @@ tests to actually run in Docker.
 
 ```bash
 git add tests/docker/mock_drive_server.py tests/docker/test_drive_relay.py \
-        tests/docker/conftest.py tests/docker/docker-compose*.yml
+        tests/docker/start_hermetic.sh
 git commit -m "test(drive-relay): hermetic coverage incl. download with daemon stopped"
 ```
 
@@ -2676,9 +2678,10 @@ response in Task 7, and the page's `body.has_unsized_files` in Task 9;
 
 **Known soft spots to watch during execution:**
 
-1. Task 10's fixtures (`backend_url`, the compose project fixture) are assumed from the
-   existing `tests/docker/conftest.py` — read it before writing, and reuse whatever is
-   already there.
+1. Task 10's harness was corrected after inspection: there is no docker-compose and no
+   `backend_url` fixture. Backend, daemon and mocks run as processes in one container
+   started by `tests/docker/start_hermetic.sh`; tests use `BASE = "http://localhost:8000"`
+   and stdlib `urllib`, per `tests/docker/test_materials_zip.py`.
 2. Task 8's rate-limit tests need `_EXEMPT_PEERS` neutralised because `TestClient`
    looks like loopback; the note is in the task but is easy to skip.
 3. If Task 1 finds no usable owner identity, Task 4's gate cannot work as written and
