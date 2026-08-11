@@ -29,6 +29,7 @@ import re
 import time
 from pathlib import Path
 from unittest.mock import AsyncMock
+from urllib.parse import urlparse
 
 import pytest
 from fastapi.testclient import TestClient
@@ -348,3 +349,41 @@ class TestContentSecurityPolicy:
                         violations.append(f"{rel}: style host {host} not in style-src")
 
         assert not violations, "CSP would break page assets:\n" + "\n".join(violations)
+
+    def test_csp_allowlists_every_absolute_url_the_pages_fetch(self):
+        """Audit: every absolute URL a served page fetches must be in connect-src.
+
+        The asset audit above only inspects <script src>/<link href>, so it saw
+        nothing wrong when connect-src omitted the loopback daemon — and every
+        host-machine feature (session auto-discovery, the trainer claim, the
+        new-session auto-switch, the summary highlight toolbar) died silently in
+        each one's catch block. XHR/fetch targets need the same audit.
+        """
+        d = _csp_directives()
+        connect_src = d["connect-src"]
+
+        violations: list[str] = []
+        for rel in _SERVED_PAGES:
+            f = _PROJECT_ROOT / rel
+            if not f.is_file():
+                continue
+            html = f.read_text(encoding="utf-8", errors="replace")
+            # Absolute URLs passed to fetch(...) — relative paths are 'self'.
+            for url in re.findall(r"""fetch\(\s*['"](https?://[^'"]+)['"]""", html):
+                parsed = urlparse(url)
+                origin = f"{parsed.scheme}://{parsed.netloc}"
+                if origin not in connect_src:
+                    violations.append(f"{rel}: fetch origin {origin} not in connect-src")
+
+        assert not violations, "CSP would block page fetches:\n" + "\n".join(violations)
+
+    def test_csp_permits_the_loopback_daemon(self):
+        """The host-machine features depend on reaching the daemon over loopback.
+
+        Pinned explicitly (not just via the audit above) because the daemon URLs
+        are built from a variable in participant.html, which a source scan of
+        fetch() literals cannot see.
+        """
+        connect_src = _csp_directives()["connect-src"]
+        assert "http://127.0.0.1:1234" in connect_src
+        assert "http://localhost:1234" in connect_src

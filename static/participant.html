@@ -2969,6 +2969,8 @@ var _myName = '';
 var HOST_MACHINE_DAEMON = 'http://127.0.0.1:1234';
 var HOST_MACHINE_POLL_MS = 1000;
 var HOST_MACHINE_TIMEOUT_MS = 800;
+var HOST_MACHINE_CLAIM_ATTEMPTS = 3;
+var HOST_MACHINE_CLAIM_RETRY_MS = 400;
 
 function _onHostMachine() {
   return document.cookie.split(';').some(function (p) {
@@ -2979,20 +2981,32 @@ function _onHostMachine() {
 // Claim the trainer identity over loopback. This is the ONLY thing that may
 // grant the reserved display name, and it never travels through Railway, so
 // there is no token to intercept or replay. Resolves false off the host machine.
+//
+// Retried, because the ONLY consequence of a false here is that the trainer gets
+// dropped into the name gate and has to type a name — and the daemon is a moving
+// target on this machine: start.sh restarts it on every push to master, so a
+// page load landing in that window would otherwise lose the trainer identity for
+// the whole session. Off the host machine the cookie check returns immediately,
+// so no participant pays for these retries.
 async function _claimTrainerIfOnHostMachine() {
   if (!_onHostMachine()) return false;
-  try {
-    var r = await fetch(HOST_MACHINE_DAEMON + '/api/host-machine/claim-trainer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ participant_id: _myUUID }),
-      signal: AbortSignal.timeout(HOST_MACHINE_TIMEOUT_MS)
-    });
-    if (!r.ok) return false;
-    return (await r.json()).granted === true;
-  } catch (e) {
-    return false;  // not on the host machine, or the daemon is down
+  for (var attempt = 0; attempt < HOST_MACHINE_CLAIM_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      await new Promise(function (res) { setTimeout(res, HOST_MACHINE_CLAIM_RETRY_MS); });
+    }
+    try {
+      var r = await fetch(HOST_MACHINE_DAEMON + '/api/host-machine/claim-trainer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant_id: _myUUID }),
+        signal: AbortSignal.timeout(HOST_MACHINE_TIMEOUT_MS)
+      });
+      if (r.ok) return (await r.json()).granted === true;
+    } catch (e) {
+      // Daemon restarting or unreachable — fall through and retry.
+    }
   }
+  return false;
 }
 
 // Jump to a freshly started session. The daemon reports it locally; the code

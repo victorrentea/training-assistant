@@ -1,7 +1,7 @@
 """The trainer display name may only be held by a UUID that claimed it locally.
 
 Without this gate the whole feature is an impersonation vector: the auto-switch
-sets the name "Victor (trainer)", and any participant could simply type it.
+sets the reserved name, and any participant could otherwise simply type it.
 """
 import pytest
 from fastapi import FastAPI
@@ -27,16 +27,21 @@ def clean_state():
     "variant",
     [
         RESERVED_TRAINER_NAME,
-        "  victor   (TRAINER) ",
-        "VICTOR (Trainer)",
-        "Victor (trainer)",  # NBSP instead of a plain space
+        "  🧑‍🏫   victor   RENTEA ",
+        "🧑‍🏫VICTOR Rentea",
+        "🧑‍🏫Victor Rentea",  # NBSP instead of a plain space
     ],
 )
 def test_reserved_name_matches_case_and_spacing_variants(variant):
     assert is_reserved_trainer_name(variant)
 
 
-@pytest.mark.parametrize("other", ["Victor", "trainer", "Victor (trainee)", "", None])
+@pytest.mark.parametrize(
+    "other",
+    # "Victor Rentea" without the badge is deliberately NOT reserved: only the
+    # emoji-prefixed form is the trainer identity.
+    ["Victor", "Victor Rentea", "Viktor Rentea", "🧑‍🏫Alice", "", None],
+)
 def test_ordinary_names_are_not_reserved(other):
     assert not is_reserved_trainer_name(other)
 
@@ -54,7 +59,7 @@ def test_impostor_cannot_register_under_the_reserved_name():
 def test_impostor_cannot_register_under_a_normalized_variant():
     r = client.post(
         "/api/participant/register",
-        json={"name": "  victor   (TRAINER) "},
+        json={"name": "  🧑‍🏫   victor   RENTEA "},
         headers={"X-Participant-ID": "impostor2"},
     )
     assert r.status_code == 403

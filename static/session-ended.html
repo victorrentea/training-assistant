@@ -8,14 +8,21 @@
   <!--
     Read-only landing for a RECENT PAST session (registry-valid but not the live
     session). Served at /{session_id}/ by railway/features/pages/router.py in
-    place of the participant SPA. Deliberately self-contained and script-free:
-    it must NOT boot the participant app (which would open a live participant
-    WebSocket and proxy to the daemon), so it can never leak the CURRENT cohort's
-    session into an old link. Distinct from the generic /?error=invalid page used
-    for UNKNOWN ids. {{SESSION_ID}} / {{SESSION_DATE_SUFFIX}} are filled in server
-    side from the in-memory registry entry (the only past-session data Railway
-    has — the daemon owns the archived content and is not connected for past
-    sessions).
+    place of the participant SPA. It must NOT boot the participant app (which
+    would open a live participant WebSocket and proxy to the daemon), so it can
+    never leak the CURRENT cohort's session into an old link. Distinct from the
+    generic /?error=invalid page used for UNKNOWN ids. {{SESSION_ID}} /
+    {{SESSION_DATE_SUFFIX}} are filled in server side from the in-memory registry
+    entry (the only past-session data Railway has — the daemon owns the archived
+    content and is not connected for past sessions).
+
+    The one script below is the host-machine escape hatch, and it does not weaken
+    the above: it never boots the SPA, it only navigates. It learns the live
+    session id from the trainer's own loopback daemon, which no participant's
+    browser can reach — the same "can you reach 127.0.0.1:1234?" boundary the
+    rest of the host-machine features rest on. Without it this page is a dead end
+    for the trainer, who reaches it constantly via browser autocomplete of
+    yesterday's link and would have to hand-edit the URL to get back in.
   -->
   <style>
     :root { color-scheme: light dark; }
@@ -55,5 +62,51 @@
     <p class="muted">Ask the host for the current link to join the active session.</p>
     <a class="btn" href="/">Join the current session</a>
   </main>
+  <script>
+    /* Host-machine only: steer the trainer off this dead end and into the live
+       session. Gated on the JS-readable ON_HOST_MACHINE cookie purely so no
+       participant's browser fires pointless requests at its own localhost — the
+       real boundary is that only the trainer's machine can reach the daemon.
+       Polls, so opening yesterday's link BEFORE starting today's session also
+       recovers the moment the session starts. */
+    (function () {
+      var DAEMON = 'http://127.0.0.1:1234';
+      var POLL_MS = 1000;
+      var TIMEOUT_MS = 800;
+      var CODE_RE = /^[a-z0-9]{6}$/;
+      var here = (location.pathname.split('/')[1] || '').toLowerCase();
+
+      if (!document.cookie.split(';').some(function (p) {
+        return p.trim() === 'ON_HOST_MACHINE=true';
+      })) return;
+
+      var inFlight = false;
+      async function tick() {
+        if (inFlight) return;
+        inFlight = true;
+        try {
+          var code;
+          try {
+            var r = await fetch(DAEMON + '/api/session/active',
+                                { signal: AbortSignal.timeout(TIMEOUT_MS) });
+            if (!r.ok) return;
+            code = ((await r.json()).session_id || '').toLowerCase();
+          } catch (e) {
+            return;  // daemon down or not this machine — keep showing the page
+          }
+          if (!CODE_RE.test(code) || code === here) return;
+          // Confirm the gateway knows this session before navigating: steering to
+          // an id Railway has not registered yet bounces to /?error=invalid.
+          var ok = await fetch('/' + code + '/api/status', { cache: 'no-store' });
+          if (!ok.ok) return;
+          location.replace('/' + code + '/');
+        } finally {
+          inFlight = false;
+        }
+      }
+      tick();
+      setInterval(tick, POLL_MS);
+    })();
+  </script>
 </body>
 </html>

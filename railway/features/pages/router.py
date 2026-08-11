@@ -51,7 +51,15 @@ _CSP = "; ".join([
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net "
     "https://unpkg.com https://cdnjs.cloudflare.com https://cdn.tailwindcss.com",
     "worker-src 'self' blob: https://cdn.jsdelivr.net",
-    "connect-src 'self' https://cdn.jsdelivr.net https://nominatim.openstreetmap.org",
+    # The loopback daemon is NOT an exfiltration risk (it is reachable only from
+    # the trainer's own machine), and omitting it silently breaks every
+    # host-machine feature: landing.html's session auto-discovery poll,
+    # participant.html's trainer claim + new-session auto-switch, and the
+    # summary highlight toolbar all fetch it directly. Both spellings are needed
+    # — landing.html uses localhost, participant.html uses 127.0.0.1 — because
+    # CSP matches the literal host, not the resolved address.
+    "connect-src 'self' https://cdn.jsdelivr.net https://nominatim.openstreetmap.org "
+    "http://127.0.0.1:1234 http://localhost:1234",
 ])
 
 

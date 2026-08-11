@@ -73,7 +73,7 @@ def sanitize_name(raw: str | None) -> str:
 # Only a UUID that claimed trainer over loopback (daemon/host_machine/router.py)
 # may hold it — otherwise any participant could impersonate the trainer by
 # typing it into the name field.
-RESERVED_TRAINER_NAME = "Victor (trainer)"
+RESERVED_TRAINER_NAME = "🧑‍🏫Victor Rentea"
 
 
 def _spoof_key(name: str) -> str:
@@ -85,7 +85,7 @@ def _spoof_key(name: str) -> str:
 
     - drop format (Cf) characters — zero-width space/joiner and BOM survive
       sanitize_name (it strips only Cc controls) and render as nothing, so
-      "Victor​ (trainer)" is visually identical to the reserved name;
+      "🧑‍🏫Victor​ Rentea" is visually identical to the reserved name;
     - NFKC rather than NFC — folds fullwidth "Ｖ" and Roman-numeral "Ⅴ" onto
       plain ASCII letters.
 
@@ -93,7 +93,11 @@ def _spoof_key(name: str) -> str:
     handles the handful that matter for this specific name.
     """
     stripped = "".join(ch for ch in str(name) if unicodedata.category(ch) != "Cf")
-    collapsed = " ".join(stripped.split())
+    # Whitespace is DROPPED, not collapsed: spacing is invisible to the eye, so
+    # "🧑‍🏫 Victor Rentea" and "Victor(trainer)" must fold onto the reserved key
+    # exactly like the double-spaced variants already did. Matters more now that
+    # the name starts with an emoji, where an inserted space reads as no gap.
+    collapsed = "".join(stripped.split())
     return unicodedata.normalize("NFKC", collapsed).casefold()
 
 
@@ -108,17 +112,28 @@ def _wildcard_key(name: str) -> str:
 
     This blocks homoglyphs from every script at once, while genuinely different
     names survive: "Виктор (тренер)" folds to a different length than
-    "Victor (trainer)" and is allowed through.
+    the reserved name and is allowed through.
     """
     return "".join(ch if ch.isascii() else "�" for ch in _spoof_key(name))
 
 
 def _looks_like(candidate: str, target: str) -> bool:
-    """True if candidate matches target once wildcards stand in for any letter."""
+    """True if candidate matches target once wildcards stand in for any letter.
+
+    A wildcard stands in for a target character that is a letter OR is itself
+    non-ASCII. The second arm is load-bearing: the reserved name carries an emoji
+    prefix, and _wildcard_key blanks the candidate's emoji to "�". Matching only
+    ``b.isalpha()`` would fail against an emoji target (category So, not
+    alphabetic), so the reserved name would not even match ITSELF — silently
+    turning the whole impersonation gate off.
+    """
     c, t = _wildcard_key(candidate), _spoof_key(target)
     if len(c) != len(t):
         return False
-    return all(a == b or (a == "�" and b.isalpha()) for a, b in zip(c, t))
+    return all(
+        a == b or (a == "�" and (b.isalpha() or not b.isascii()))
+        for a, b in zip(c, t)
+    )
 
 
 def is_reserved_trainer_name(name: str | None) -> bool:
