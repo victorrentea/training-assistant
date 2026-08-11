@@ -73,7 +73,7 @@ def sanitize_name(raw: str | None) -> str:
 # Only a UUID that claimed trainer over loopback (daemon/host_machine/router.py)
 # may hold it — otherwise any participant could impersonate the trainer by
 # typing it into the name field.
-RESERVED_TRAINER_NAME = "🧑‍🏫Victor Rentea"
+RESERVED_TRAINER_NAME = "🧑‍🏫 Victor Rentea"
 
 
 def _spoof_key(name: str) -> str:
@@ -85,7 +85,7 @@ def _spoof_key(name: str) -> str:
 
     - drop format (Cf) characters — zero-width space/joiner and BOM survive
       sanitize_name (it strips only Cc controls) and render as nothing, so
-      "🧑‍🏫Victor​ Rentea" is visually identical to the reserved name;
+      "🧑‍🏫 Victor​ Rentea" is visually identical to the reserved name;
     - NFKC rather than NFC — folds fullwidth "Ｖ" and Roman-numeral "Ⅴ" onto
       plain ASCII letters.
 
@@ -94,9 +94,9 @@ def _spoof_key(name: str) -> str:
     """
     stripped = "".join(ch for ch in str(name) if unicodedata.category(ch) != "Cf")
     # Whitespace is DROPPED, not collapsed: spacing is invisible to the eye, so
-    # "🧑‍🏫 Victor Rentea" and "Victor(trainer)" must fold onto the reserved key
-    # exactly like the double-spaced variants already did. Matters more now that
-    # the name starts with an emoji, where an inserted space reads as no gap.
+    # "🧑‍🏫Victor Rentea" (the gap after the emoji closed up) must fold onto the
+    # reserved key exactly like the double-spaced variants already did. Matters
+    # most next to the emoji, where a present-or-absent space reads the same.
     collapsed = "".join(stripped.split())
     return unicodedata.normalize("NFKC", collapsed).casefold()
 

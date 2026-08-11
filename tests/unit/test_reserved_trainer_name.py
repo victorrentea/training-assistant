@@ -28,8 +28,8 @@ def clean_state():
     [
         RESERVED_TRAINER_NAME,
         "  🧑‍🏫   victor   RENTEA ",
-        "🧑‍🏫VICTOR Rentea",
-        "🧑‍🏫Victor Rentea",  # NBSP instead of a plain space
+        "🧑‍🏫 VICTOR Rentea",
+        "🧑‍🏫 Victor Rentea",  # NBSP instead of a plain space
     ],
 )
 def test_reserved_name_matches_case_and_spacing_variants(variant):
@@ -40,7 +40,7 @@ def test_reserved_name_matches_case_and_spacing_variants(variant):
     "other",
     # "Victor Rentea" without the badge is deliberately NOT reserved: only the
     # emoji-prefixed form is the trainer identity.
-    ["Victor", "Victor Rentea", "Viktor Rentea", "🧑‍🏫Alice", "", None],
+    ["Victor", "Victor Rentea", "Viktor Rentea", "🧑‍🏫 Alice", "", None],
 )
 def test_ordinary_names_are_not_reserved(other):
     assert not is_reserved_trainer_name(other)
