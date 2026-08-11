@@ -71,6 +71,14 @@ def _with_csp(response: _ResponseT) -> _ResponseT:
     ``Response``.
     """
     response.headers["Content-Security-Policy"] = _CSP
+    # The CSP rides on the RESPONSE, so a heuristically-cached copy of this page
+    # keeps enforcing whatever policy shipped with it. That is how the
+    # connect-src fix above stayed invisible after deploying: the browser reused
+    # a cached document and went on blocking the loopback daemon. no-cache still
+    # allows the 304 round-trip (ETag/Last-Modified are untouched) — it only
+    # forbids serving the page without revalidating, so a policy change can never
+    # again take an unbounded time to reach an already-open browser.
+    response.headers["Cache-Control"] = "no-cache"
     return response
 
 

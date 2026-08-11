@@ -310,6 +310,22 @@ class TestContentSecurityPolicy:
             assert resp.status_code == 200, path
             assert resp.headers.get("content-security-policy") == _CSP, path
 
+    def test_pages_must_revalidate_so_the_csp_cannot_go_stale(self, monkeypatch):
+        """A cached page keeps enforcing the CSP it shipped with.
+
+        Without this, deploying a CSP change leaves already-open browsers
+        enforcing the old policy for an unbounded time — which is exactly how the
+        missing connect-src entry survived its own fix in production.
+        """
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        client = TestClient(app)
+        state.session_id = "sess01"
+
+        for path in ("/", "/sess01/", "/sess01/notes-print"):
+            resp = client.get(path)
+            assert resp.status_code == 200, path
+            assert "no-cache" in resp.headers.get("cache-control", ""), path
+
     def test_csp_contains_hardening_directives(self):
         d = _csp_directives()
         assert d["default-src"] == {"'self'"}
