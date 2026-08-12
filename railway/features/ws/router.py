@@ -115,7 +115,6 @@ def _clear_session_caches() -> None:
     state.upload_next_id = 0
     state.participant_history = set()
     state.participant_ips = {}
-    state.participant_names = {}
     state.participant_avatars = {}
 
 
@@ -361,12 +360,12 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
     ws_connections_active.labels(role=role).inc()
 
     if is_host:
-        state.participant_names["__host__"] = "Host"
         logger.info(f"Host connected ({len(state.participants)} total)")
     else:
-        # Participant registered via daemon REST — broadcast presence
-        name = state.participant_names.get(pid, "")
-        logger.info(f"WS connected: {pid} name={name!r} ({len(state.participants)} total)")
+        # Participant registered via daemon REST — broadcast presence.
+        # Display names live on the daemon (it owns participant identity); the
+        # gateway only knows uuids.
+        logger.info(f"WS connected: {pid} ({len(state.participants)} total)")
         presence_msg: dict = {"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": True}
         # Browser-reported IANA timezone — piggybacks on the WS join so the host
         # sees a participant's local clock without requiring location sharing.

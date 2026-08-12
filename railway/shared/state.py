@@ -10,8 +10,9 @@ class AppState:
 
     def reset(self):
         self.participants: dict[str, WebSocket] = {}
-        self.participant_history: set[str] = set()  # uuids seen in this session (online or offline)
-        self.participant_names: dict[str, str] = {}  # uuid -> display_name
+        # uuids that joined THIS session (online or offline) — the gateway's notion
+        # of "is this one of ours". Display names/avatars belong to the daemon.
+        self.participant_history: set[str] = set()
         self.participant_avatars: dict[str, str] = {}
         self.participant_ips: dict[str, str] = {}  # uuid → IP address
         self.uploaded_files: dict[str, list[dict]] = {}  # uuid → [{id, filename, size, disk_path}]

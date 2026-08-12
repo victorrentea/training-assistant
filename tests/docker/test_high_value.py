@@ -152,6 +152,57 @@ def test_participant_file_upload_reaches_host():
         browser.close()
 
 
+def test_participant_upload_survives_a_dropped_websocket():
+    """Upload still works while the participant's WS is momentarily down.
+
+    Reproduces the reported bug ("Unknown participant"): the gateway used to gate
+    /api/upload on the live-socket map, so any blip — phone waking, network switch,
+    daemon restart evicting clients — rejected a legitimate upload with HTTP 400.
+    """
+    session_id = fresh_session("UploadWsDown")
+    with sync_playwright() as p:
+        browser, _, _, pax, pax_page = _open_browser_trio(p, session_id)
+        pax.join("Flaky")
+
+        _await_condition(
+            lambda: daemon_has_participant(session_id, "Flaky"),
+            timeout_ms=5000, msg="Host doesn't see Flaky"
+        )
+
+        # Kill the socket without letting the page reconnect, then upload.
+        pax_page.evaluate("_ws.onclose = null; _ws.close();")
+        _await_condition(
+            lambda: pax_page.evaluate("_ws.readyState") == 3,
+            timeout_ms=5000, msg="participant WS did not close",
+        )
+
+        pax_page.evaluate("showView('upload-paste')")
+        pax_page.set_input_files(
+            "#upload-input",
+            {
+                "name": "offline-upload.txt",
+                "mimeType": "text/plain",
+                "buffer": b"uploaded while the socket was down",
+            },
+        )
+        expect(pax_page.locator("#upload-paste-send-btn")).to_be_enabled(timeout=3000)
+
+        with pax_page.expect_response(
+            lambda r: r.request.method == "POST" and r.url.endswith("/api/upload"),
+            timeout=10000,
+        ) as upload_response_info:
+            pax_page.locator("#upload-paste-send-btn").click(force=True)
+
+        upload_response = upload_response_info.value
+        assert upload_response.status == 200, (
+            f"Upload with a closed WS failed with HTTP {upload_response.status}; "
+            f"body={upload_response.text()}"
+        )
+
+        print("SUCCESS: Upload accepted with the participant socket closed!")
+        browser.close()
+
+
 # ── 3. Participant count updates on host ──────────────────────────────────────
 
 def test_participant_count_updates():

@@ -36,7 +36,15 @@ async def upload_file(
 ):
     if not uuid or uuid.startswith("__"):
         raise HTTPException(400, "Invalid participant UUID")
-    if uuid not in state.participant_names and uuid not in state.participants:
+    # Membership is IDENTITY, not liveness: participant_history holds everyone who
+    # joined THIS session (and is wiped on session switch, so a past cohort can
+    # never upload into the current one). The old guard also accepted
+    # state.participants — the live-socket map — with state.participant_names as
+    # the "offline but known" fallback; that fallback went dead when names moved
+    # to the daemon, leaving only "has a socket open right this instant". Every WS
+    # blip (phone waking, network switch, daemon restart evicting clients) then
+    # turned a legitimate upload into 400 "Unknown participant".
+    if uuid not in state.participant_history:
         raise HTTPException(400, "Unknown participant")
 
     filename = (file.filename or "file").strip()

@@ -35,7 +35,7 @@ def test_ws_unknown_uuid_allowed_through():
 
 def test_ws_known_participant_allowed_through():
     """A known participant UUID is allowed through normally."""
-    state.participant_names = {"active-uuid": "Alice"}
+    state.participant_history.add("active-uuid")
 
     client = TestClient(app)
     with client.websocket_connect(f"/ws/{state.session_id}/active-uuid") as ws:
@@ -71,17 +71,14 @@ def test_ws_forwards_browser_tz_query_param_to_daemon():
 
 
 def test_ws_participant_count_uses_connected_participants():
-    """Count reflects currently connected (live WS) non-host participants, not offline known names.
+    """Count reflects currently connected (live WS) non-host participants, not everyone
+    who ever joined.
 
-    Commit 1abe5ca0: switched from participant_names to participants so count stays accurate
-    even when Railway restarts and participant_names haven't been re-synced from daemon yet.
+    Commit 1abe5ca0: switched the count away from the "known participants" map to the
+    live-socket map so it stays accurate across Railway restarts.
     """
-    # These are known but offline — should NOT be counted
-    state.participant_names = {
-        "offline-1": "Alice",
-        "offline-2": "Bob",
-        "offline-3": "Charlie",
-    }
+    # These joined earlier but are offline now — should NOT be counted
+    state.participant_history.update({"offline-1", "offline-2", "offline-3"})
 
     client = TestClient(app)
     with client.websocket_connect(f"/ws/{state.session_id}/only-live-client") as ws:
