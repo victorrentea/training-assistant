@@ -98,3 +98,26 @@ def test_post_feedback_form_404_without_active_session(monkeypatch):
         json={"title": "AI@Acme", "url": "https://freeonlinesurveys.com/s/demo1234"},
     )
     assert resp.status_code == 404
+    # not merely an unregistered route — the handler ran and found no session
+    assert resp.json()["detail"] == "no active session"
+
+
+def test_post_feedback_form_400_on_blank_url(tmp_path, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from daemon.misc import router as misc_router
+
+    sent = []
+    monkeypatch.setattr(misc_router, "broadcast", lambda msg: sent.append(msg))
+    monkeypatch.setattr(misc_router, "get_active_session_folder", lambda: tmp_path)
+
+    app = FastAPI()
+    app.include_router(misc_router.local_router)
+    resp = TestClient(app).post("/feedback-form", json={"title": "AI@Acme", "url": "   "})
+
+    assert resp.status_code == 400
+    # a rejected request must leave no trace anywhere
+    assert load_feedback_form(tmp_path) is None
+    assert session_shared_state.get_feedback_url() is None
+    assert sent == []
