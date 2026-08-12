@@ -46,6 +46,7 @@ channels:
           - $ref: '#/components/messages/notes_appended'
           - $ref: '#/components/messages/summary_updated'
           - $ref: '#/components/messages/agenda_updated'
+          - $ref: '#/components/messages/feedback_form_updated'
           - $ref: '#/components/messages/files_count_updated'
           - $ref: '#/components/messages/reload'
           - $ref: '#/components/messages/emoji_counters_updated'
@@ -545,6 +546,21 @@ components:
           has_agenda:
             type: boolean
             description: Whether an agenda .docx is available in the session folder
+
+    feedback_form_updated:
+      summary: End-of-session participant feedback form link published
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [feedback_form_updated]
+          feedback_url:
+            type: string
+            nullable: true
+            description: Published freeonlinesurveys URL, or null when cleared
 
     # ── Files ─────────────────────────────────────────────────────────────────
 

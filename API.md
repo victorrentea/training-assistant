@@ -385,6 +385,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | A fresh snippet was appended to the session notes — toast it for copy<br>`notes_appended` | `text: string  # The newly-appended snippet (bullet stripped, trimmed)`<br>`at: string  # ISO timestamp when the daemon observed the append` |
 | AI summary file changed — mtime timestamp updated<br>`summary_updated` | `updated_at?: string  # ISO timestamp of ai-summary.md mtime` |
 | Agenda .docx availability changed in the session folder<br>`agenda_updated` | `has_agenda?: bool  # Whether an agenda .docx is available in the session folder` |
+| End-of-session participant feedback form link published<br>`feedback_form_updated` | `feedback_url?: string  # Published freeonlinesurveys URL, or null when cleared` |
 
 ### Host REST
 | Endpoint | Request | Response |

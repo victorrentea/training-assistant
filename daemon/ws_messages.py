@@ -355,6 +355,15 @@ class AgendaUpdatedMsg(BaseModel):
     has_agenda: bool = False  # whether an agenda .docx is available in the session folder
 
 
+class FeedbackFormUpdatedMsg(BaseModel):
+    """Participant-only: the end-of-session feedback form link is available.
+
+    Sent when the form is published (or cleared with None at session teardown).
+    """
+    type: Literal["feedback_form_updated"] = "feedback_form_updated"
+    feedback_url: str | None = None  # published FOS survey URL, None when cleared
+
+
 # ── Files ─────────────────────────────────────────────────────────────────────
 
 class FilesCountUpdatedMsg(BaseModel):
@@ -434,6 +443,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "notes_appended": NotesAppendedMsg,
     "summary_updated": SummaryUpdatedMsg,
     "agenda_updated": AgendaUpdatedMsg,
+    "feedback_form_updated": FeedbackFormUpdatedMsg,
     # Files
     "files_count_updated": FilesCountUpdatedMsg,
     # Emoji
@@ -520,6 +530,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "notes_appended": "notes_summary",
     "summary_updated": "notes_summary",
     "agenda_updated": "notes_summary",
+    "feedback_form_updated": "notes_summary",
     # Files
     "files_count_updated": "files",
     # Emoji
