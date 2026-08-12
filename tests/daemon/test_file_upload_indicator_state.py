@@ -58,7 +58,7 @@ def test_upload_download_persists_indicator_and_notifies_host(tmp_path):
     with patch("daemon.upload.urllib.request.urlopen", return_value=_Resp(b"abc")), \
          patch("daemon.upload._post_json", side_effect=lambda *args, **kwargs: ack_calls.append((args, kwargs))), \
          patch("daemon.upload.notify_host", mock_notify_host), \
-         patch("daemon.slides.router.get_event_loop", return_value=mock_loop), \
+         patch("daemon.loop.get_event_loop", return_value=mock_loop), \
          patch("daemon.upload.asyncio.run_coroutine_threadsafe", side_effect=fake_run_coroutine_threadsafe):
         _do_download(
             "http://server",
@@ -86,6 +86,23 @@ def test_upload_download_persists_indicator_and_notifies_host(tmp_path):
     assert notified_msg.model_dump()["id"] == "42"
     assert ack_calls, "Daemon should ack upload back to Railway"
     _reset_runtime_state()
+
+
+def test_event_loop_is_available_as_soon_as_the_host_server_starts():
+    """Regression: uploaded files never reached the host panel until a slide was opened.
+
+    ``get_event_loop()`` used to be populated as a side effect of serving
+    /api/slides/check/{slug}, so a session where nobody opened a deck dropped every
+    threaded host notification with "No event loop available".
+    """
+    import daemon.loop as daemon_loop
+    from daemon.host_server import create_app
+
+    daemon_loop._loop = None
+    with TestClient(create_app("http://localhost:8000")):
+        loop = daemon_loop.get_event_loop()
+        assert loop is not None, "host server startup must capture the daemon event loop"
+    daemon_loop._loop = None
 
 
 def test_host_participant_list_keeps_uploaded_files_and_seen_flag():

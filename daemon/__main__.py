@@ -296,7 +296,7 @@ def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
 
 def _schedule_backfill_location_metadata() -> None:
     """Schedule best-effort async backfill for snapshots missing location_tz/location_country/city."""
-    from daemon.slides.router import get_event_loop as _get_event_loop
+    from daemon.loop import get_event_loop as _get_event_loop
 
     loop = _get_event_loop()
     if loop and loop.is_running():
@@ -823,7 +823,7 @@ def run() -> None:
             import asyncio as _asyncio
 
             from daemon.host_state_router import _build_host_participants_list
-            from daemon.slides.router import get_event_loop as _get_event_loop
+            from daemon.loop import get_event_loop as _get_event_loop
             from daemon.ws_messages import ParticipantListUpdatedMsg
             from daemon.ws_publish import notify_host as _notify_host
 
@@ -1155,7 +1155,7 @@ def run() -> None:
                 try:
                     import asyncio as _asyncio
 
-                    from daemon.slides.router import get_event_loop as _get_event_loop
+                    from daemon.loop import get_event_loop as _get_event_loop
                     _loop = _get_event_loop()
                     if _loop and _loop.is_running():
                         from daemon.ws_messages import OverlayConnectedMsg

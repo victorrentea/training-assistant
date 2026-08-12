@@ -13,6 +13,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from daemon.loop import get_event_loop
 from daemon.misc.state import misc_state
 from daemon.slides.daemon import _ssl_context
 
@@ -21,9 +22,6 @@ logger = logging.getLogger(__name__)
 _RAILWAY_CHECK_TIMEOUT_S: float = 3.0
 _RAILWAY_DOWNLOAD_TIMEOUT_S: float = 120.0  # Railway downloads can take 10-15s from Drive
 
-# Module-level event loop reference — used by __main__.py for async scheduling
-# from the main (sync) thread (e.g. backfill location metadata, overlay notifications).
-_event_loop: asyncio.AbstractEventLoop | None = None
 
 # Unified download guard — single source of truth for both participant-triggered and
 # PPTX-change-triggered downloads. All access is protected by _download_guard_lock.
@@ -61,7 +59,7 @@ def _finish_download(slug: str) -> bool:
         pending = slug in _pending_redownload_slugs
         _pending_redownload_slugs.discard(slug)
     if event is not None:
-        loop = _event_loop
+        loop = get_event_loop()
         if loop is not None and loop.is_running():
             loop.call_soon_threadsafe(event.set)
         else:
@@ -92,11 +90,6 @@ def _trigger_pending_redownload(slug: str) -> None:
         name=f"redownload-{slug}",
     )
     t.start()
-
-
-def get_event_loop() -> asyncio.AbstractEventLoop | None:
-    """Return the daemon's FastAPI event loop."""
-    return _event_loop
 
 
 def _railway_base_url() -> str:
@@ -261,9 +254,6 @@ async def check_slide_cache(session_id: str, slug: str, force: bool = False):
     Otherwise calls Railway REST to download from Google Drive (blocking).
     Pass ?force=true to bypass the fast-path cache check and verify with Railway.
     """
-    global _event_loop
-    _event_loop = asyncio.get_event_loop()
-
     # Fast path: trust daemon-side cache status (kept in sync via WS reconnect probing).
     if not force and misc_state.slides_updated.get(slug, {}).get("status") == "cached":
         return SlidesCheckResponse(status="cached")

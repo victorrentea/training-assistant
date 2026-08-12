@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from daemon import log as daemon_log
 from daemon.host_proxy import create_http_client, proxy_http, proxy_websocket
+from daemon.loop import capture_running_loop
 from daemon.openapi_contract_metadata import enrich_openapi_contract
 from daemon.participant.router import host_router as participant_host_router
 from daemon.participant.router import router as participant_router
@@ -130,6 +131,9 @@ def create_app(backend_url: str) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app):
+        # Worker threads schedule host notifications back onto this loop; capture it
+        # here so it is available from the first request on (see daemon/loop.py).
+        capture_running_loop()
         _stamp_version_js()
         yield
         await http_client.aclose()

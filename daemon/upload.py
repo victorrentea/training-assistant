@@ -67,7 +67,7 @@ def _do_download(server_url: str, username: str, password: str,
     )
 
     try:
-        from daemon.slides.router import get_event_loop
+        from daemon.loop import get_event_loop
         loop = get_event_loop()
         if loop and loop.is_running():
             asyncio.run_coroutine_threadsafe(
