@@ -1031,6 +1031,19 @@ def run() -> None:
             session_shared_state.set_gdrive_url(None)
             log.error("session", "Google Drive not available at boot — start GDrive to enable the folder link")
 
+    # Boot-time feedback form restore. Unlike gdrive_url (cheap to re-resolve
+    # from DriveFS) this URL exists only where we wrote it, so it is read back
+    # from the session folder — the daemon restarts on every push to master and
+    # participants must not lose the link mid-session.
+    if session_name and config.session_folder:
+        from daemon.misc.feedback_form import load_feedback_form as _load_feedback_form
+        _boot_feedback = _load_feedback_form(config.session_folder)
+        if _boot_feedback:
+            session_shared_state.set_feedback_url(_boot_feedback["url"])
+            log.info("session", f"Feedback form: {_boot_feedback['url']}")
+        else:
+            session_shared_state.set_feedback_url(None)
+
     _prev_slides_history_count = len(misc_state.slides_viewed)
 
     notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
@@ -1250,6 +1263,19 @@ def run() -> None:
                             session_shared_state.set_gdrive_url(_new_gdrive_url)
                             if _new_gdrive_url:
                                 log.info("session", f"Google Drive: {_new_gdrive_url}")
+                            # Re-resolve the feedback form for the session being
+                            # entered: normally absent (clearing the previous
+                            # session's URL), present when resuming a session
+                            # whose form was already published.
+                            from daemon.misc.feedback_form import (
+                                load_feedback_form as _load_feedback_form_switch,
+                            )
+                            _new_feedback = _load_feedback_form_switch(folder)
+                            session_shared_state.set_feedback_url(
+                                _new_feedback["url"] if _new_feedback else None
+                            )
+                            if _new_feedback:
+                                log.info("session", f"Feedback form: {_new_feedback['url']}")
                             runtime_session_snapshot = restore_snapshot
                             _apply_runtime_snapshot_restore(restore_snapshot)
                             last_session_state_hash = _state_hash(runtime_session_snapshot)
@@ -1333,6 +1359,7 @@ def run() -> None:
                         config = dc_replace(config, session_folder=None, session_notes=None)
                         _active_session_id = None
                         session_shared_state.set_gdrive_url(None)
+                        session_shared_state.set_feedback_url(None)
                         # Notify addons that session ended
                         from daemon import addon_bridge_client
                         addon_bridge_client.send_session_ended()

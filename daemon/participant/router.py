@@ -320,6 +320,7 @@ class ParticipantStateResponse(BaseModel):
     slides_history_count: int
     files_count: int = 0
     gdrive_url: str | None = None
+    feedback_url: str | None = None
     has_agenda: bool = False
     emoji_catalog: list[EmojiDef]
     # Attention master switch — drives the bell button + notification affordance.
@@ -907,6 +908,8 @@ async def get_participant_state(request: Request):
         "files_count": _files_count(),
         # Google Drive folder link for session materials
         "gdrive_url": session_shared_state.get_gdrive_url(),
+        # End-of-session participant feedback form (freeonlinesurveys)
+        "feedback_url": session_shared_state.get_feedback_url(),
         # Agenda .docx availability
         "has_agenda": misc_state.agenda_docx_path is not None
         and misc_state.agenda_docx_path.exists(),

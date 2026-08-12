@@ -2892,6 +2892,11 @@ components:
           - type: string
           - type: 'null'
           title: Gdrive Url
+        feedback_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Feedback Url
         has_agenda:
           type: boolean
           title: Has Agenda
