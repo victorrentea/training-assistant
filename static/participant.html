@@ -851,8 +851,13 @@ body{visibility:hidden}
 <!-- End-of-session feedback CTA. Kept out of the <aside> on purpose: that
      element is `relative z-10`, which would trap this fixed overlay in its
      stacking context. Layout and color are inline because the vendored
-     Tailwind subset has no build step and lacks these utilities. -->
-<div id="feedback-cta" role="status" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:50;width:92%;max-width:24rem;padding:1rem 1.25rem;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,.25);background:var(--color-surface-container-high,#e1e9ee);color:var(--color-on-surface,#2a3439)">
+     Tailwind subset has no build step and lacks these utilities.
+     z-index 20 is deliberate — below the reaction bar (z-30, and its overflow
+     popup, which opens upwards into this space) and the attention-permission
+     bar (z-40). This card is a dismissible promo; every interactive floating
+     control on the page must win over it. `bottom` is also set from JS by
+     _positionFeedbackCta() so the card physically clears the reaction bar. -->
+<div id="feedback-cta" role="status" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:20;width:92%;max-width:24rem;padding:1rem 1.25rem;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,.25);background:var(--color-surface-container-high,#e1e9ee);color:var(--color-on-surface,#2a3439)">
 <button id="feedback-cta-close" onclick="dismissFeedbackCta()" aria-label="Dismiss" class="cursor-pointer" style="position:absolute;top:.5rem;right:.5rem;opacity:.6;background:none;border:none;color:inherit">
 <span class="material-symbols-outlined" style="font-size:1.1rem">close</span>
 </button>
@@ -3531,7 +3536,10 @@ function _applyFeedbackUrl(url) {
   var nav = document.getElementById('feedback-nav');
   var cta = document.getElementById('feedback-cta');
   var ctaLink = document.getElementById('feedback-cta-link');
+  if (!row || !nav || !cta || !ctaLink) return;
   if (!url) {
+    nav.href = '#';        // don't leave a stale link on the hidden row
+    ctaLink.href = '#';
     row.style.display = 'none';
     cta.style.display = 'none';
     return;
@@ -3542,7 +3550,30 @@ function _applyFeedbackUrl(url) {
   var dismissed = false;
   try { dismissed = localStorage.getItem('feedbackCtaDismissed') === url; } catch (e) {}
   cta.style.display = dismissed ? 'none' : '';
+  _positionFeedbackCta();
+  // The reaction bar may still be rendering from the same state payload; re-measure
+  // once it has laid out, otherwise the CTA settles back over it.
+  requestAnimationFrame(_positionFeedbackCta);
 }
+
+/* Lift the CTA clear of the floating reaction bar. The bar is the page's core
+   engagement control, and an opaque card sharing the bottom band swallows its
+   taps outright — at phone widths the bar spans the full viewport, so there is
+   no horizontal room and the CTA has to sit above it. Measured rather than
+   hardcoded: the bar's height changes as reactions and signal buttons render. */
+function _positionFeedbackCta() {
+  var cta = document.getElementById('feedback-cta');
+  if (!cta || cta.style.display === 'none') return;
+  var bottom = 24;  // the resting 1.5rem when there is no bar to clear
+  var bar = document.getElementById('floating-reactions');
+  if (bar && bar.offsetParent !== null) {
+    var r = bar.getBoundingClientRect();
+    if (r.height) bottom = Math.max(bottom, window.innerHeight - r.top + 12);
+  }
+  cta.style.bottom = bottom + 'px';
+}
+
+window.addEventListener('resize', _positionFeedbackCta);
 
 function dismissFeedbackCta() {
   var cta = document.getElementById('feedback-cta');
