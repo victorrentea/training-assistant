@@ -2110,6 +2110,36 @@ components:
       required:
       - emoji
       title: EmojiReactionRequest
+    FeedbackFormRequest:
+      properties:
+        title:
+          type: string
+          title: Title
+        url:
+          type: string
+          title: Url
+      type: object
+      required:
+      - title
+      - url
+      title: FeedbackFormRequest
+    FeedbackFormResponse:
+      properties:
+        title:
+          type: string
+          title: Title
+        url:
+          type: string
+          title: Url
+        created_at:
+          type: string
+          title: Created At
+      type: object
+      required:
+      - title
+      - url
+      - created_at
+      title: FeedbackFormResponse
     FilesMdResponse:
       properties:
         raw_markdown:

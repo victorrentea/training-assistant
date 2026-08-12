@@ -20,12 +20,14 @@ from daemon.misc.content_files import (
     read_notes_content,
     read_summary_payload,
 )
+from daemon.misc.feedback_form import save_feedback_form
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
+from daemon.session import state as session_shared_state
 from daemon.slides.models import Deck, SlidesHistoryResponse, SlidesLogEntry
 from daemon.summary.highlight import REJECTED, HighlightAnchor, apply_highlight_to_file
 from daemon.summary.loop import AI_SUMMARY_FILE, get_ai_summary_mtime
-from daemon.ws_messages import PasteReceivedMsg, SummaryUpdatedMsg
+from daemon.ws_messages import FeedbackFormUpdatedMsg, PasteReceivedMsg, SummaryUpdatedMsg
 from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
@@ -356,6 +358,38 @@ local_router = APIRouter(tags=["misc"])
 @local_router.post("/summary/highlight", response_model=HighlightResponse)
 async def highlight_summary_local(body: HighlightRequest):
     return await highlight_summary(body)
+
+
+class FeedbackFormRequest(BaseModel):
+    title: str
+    url: str
+
+
+class FeedbackFormResponse(BaseModel):
+    title: str
+    url: str
+    created_at: str
+
+
+@local_router.post("/feedback-form", response_model=FeedbackFormResponse)
+async def publish_feedback_form(body: FeedbackFormRequest):
+    """Publish the end-of-session participant feedback form link.
+
+    Host-machine-local, like /summary/highlight: called by the feedback-form
+    skill on 127.0.0.1 once the FOS survey is cloned, retitled and published.
+    """
+    folder = get_active_session_folder()
+    if folder is None:
+        return JSONResponse(status_code=404, content={"detail": "no active session"})
+    title = body.title.strip()
+    url = body.url.strip()
+    if not url:
+        return JSONResponse(status_code=400, content={"detail": "url is required"})
+    created_at = await asyncio.to_thread(save_feedback_form, folder, title, url)
+    session_shared_state.set_feedback_url(url)
+    logger.info("Feedback form: %s (%s)", url, title)
+    broadcast(FeedbackFormUpdatedMsg(feedback_url=url))  # participants reveal the nav item
+    return FeedbackFormResponse(title=title, url=url, created_at=created_at)
 
 
 @host_router.post("/uploads/seen", status_code=204)

@@ -49,3 +49,52 @@ def test_shared_state_roundtrip():
         assert session_shared_state.get_feedback_url() is None
     finally:
         session_shared_state.set_feedback_url(None)
+
+
+def test_post_feedback_form_persists_broadcasts_and_publishes(tmp_path, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from daemon.misc import router as misc_router
+
+    sent = []
+    monkeypatch.setattr(misc_router, "broadcast", lambda msg: sent.append(msg))
+    monkeypatch.setattr(misc_router, "get_active_session_folder", lambda: tmp_path)
+
+    app = FastAPI()
+    app.include_router(misc_router.local_router)
+    client = TestClient(app)
+    try:
+        resp = client.post(
+            "/feedback-form",
+            json={"title": "AI@Acme", "url": "https://freeonlinesurveys.com/s/demo1234"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["url"] == "https://freeonlinesurveys.com/s/demo1234"
+
+        # persisted for restart survival
+        assert load_feedback_form(tmp_path)["title"] == "AI@Acme"
+        # published to participants joining later
+        assert session_shared_state.get_feedback_url() == "https://freeonlinesurveys.com/s/demo1234"
+        # pushed to participants already connected
+        assert len(sent) == 1
+        assert sent[0].type == "feedback_form_updated"
+        assert sent[0].feedback_url == "https://freeonlinesurveys.com/s/demo1234"
+    finally:
+        session_shared_state.set_feedback_url(None)
+
+
+def test_post_feedback_form_404_without_active_session(monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from daemon.misc import router as misc_router
+
+    monkeypatch.setattr(misc_router, "get_active_session_folder", lambda: None)
+    app = FastAPI()
+    app.include_router(misc_router.local_router)
+    resp = TestClient(app).post(
+        "/feedback-form",
+        json={"title": "AI@Acme", "url": "https://freeonlinesurveys.com/s/demo1234"},
+    )
+    assert resp.status_code == 404
