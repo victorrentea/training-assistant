@@ -639,7 +639,20 @@ git fetch origin && git rebase origin/master && git push origin master
 
 Modelled directly on `#gdrive-row`, which is already a hidden nav row revealed by a URL arriving in state or in a broadcast. Note `gdrive_url` is handled in **two** places and the feedback link needs both: the state applier covers fresh loads and reconnects, the broadcast handler covers the live moment the link is published.
 
-**All line numbers in this task are approximate.** A parallel change is landing in `static/participant.html` — adding a "Report a bug" nav entry and deleting the orphaned `#feedback-view` / `sendFeedback()` (unreachable: no nav entry, no caller). Pull `master` first and locate each anchor by its surrounding markup, not by line number. There is no naming collision: "Report a bug" and "Feedback form" are distinct entries, and the deleted view was never reachable.
+**All line numbers in this task are approximate.** That parallel change has now landed (through `7a9b3b44`): `static/participant.html` gained a "Report a bug" nav entry between `data-nav="upload-paste"` and `data-nav="about"`, and the orphaned `#feedback-view` / `sendFeedback()` is deleted. Pull `master` first and locate each anchor by its surrounding markup, not by line number. No collision — `#feedback-row` goes between `#gdrive-row` and `data-nav="files"`.
+
+**`static/vendor/tailwind.css` is a PREBUILT SUBSET and there is no build step.** A class that isn't in that file is a silent no-op — no error, no warning, the style simply doesn't apply. Before using any utility class, verify it exists:
+
+```bash
+grep -oE '\.[-a-zA-Z0-9\\:/\[\]%.]+' static/vendor/tailwind.css | sed 's/^\.//; s/\\//g' | sort -u > /tmp/tw.txt
+grep -qx 'CLASS-NAME' /tmp/tw.txt && echo PRESENT || echo MISSING
+```
+
+This was checked for this task. **Present:** `fixed`, `absolute`, `bottom-6`, `left-1/2`, `rounded-2xl`, `px-5`, `px-4`, `shadow-lg`, `opacity-60`, `font-semibold`, `mb-3`, `text-sm`, `text-base`, `inline-flex`, `gap-2`, `gap-1`, `text-center`, plus every class in the `#gdrive-row` block. **MISSING — do not use:** `z-50`, `max-w-sm`, `py-4`, `top-2`, `right-2`, `mb-1`, `opacity-80`, `-translate-x-1/2`, `w-[92%]`.
+
+Because so much of the CTA's layout vocabulary is absent (including the `-translate-x-1/2` that would center it), **the CTA card below uses inline `style=` for all layout, spacing and color.** The nav row keeps Tailwind classes only because it is a verbatim copy of the working `#gdrive-row`.
+
+**The four-place tab registration does NOT apply here.** A new participant *view* must be registered in four places (`VIEWS`, `_PARTICIPANT_TAB_SLUGS` in `railway/features/pages/router.py`, `_KNOWN_VIEWS` in `daemon/participant/router.py`, `ENGAGEMENT_VIEW_LABELS` in `static/host.js`). `#feedback-row` is **not a view** — it is an external-link row exactly like `#gdrive-row`, with no `data-nav` attribute and no `showView()` call. It must NOT be added to any of those four lists, and it needs no `railway/**` change.
 
 - [ ] **Step 1: Add the hidden nav row**
 
@@ -659,17 +672,21 @@ In `static/participant.html`, directly after the `#gdrive-row` `</div>` (~line 8
 
 Directly after the nav row, still inside the page body, add the dismissible CTA:
 
+Layout, spacing and color are inline because the vendored Tailwind subset lacks the classes this needs (see the note above). Colors use the same CSS custom properties the rest of the participant page uses, so the card follows the light/dark theme.
+
 ```html
-<div id="feedback-cta" style="display:none" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-sm w-[92%] rounded-2xl px-5 py-4 shadow-lg" role="status">
-<button id="feedback-cta-close" onclick="dismissFeedbackCta()" aria-label="Dismiss" class="absolute top-2 right-2 cursor-pointer opacity-60">
+<div id="feedback-cta" role="status" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:50;width:92%;max-width:24rem;padding:1rem 1.25rem;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,.25);background:var(--surface,#182029);color:var(--text,#e6edf3)">
+<button id="feedback-cta-close" onclick="dismissFeedbackCta()" aria-label="Dismiss" class="cursor-pointer" style="position:absolute;top:.5rem;right:.5rem;opacity:.6;background:none;border:none;color:inherit">
 <span class="material-symbols-outlined" style="font-size:1.1rem">close</span>
 </button>
-<p class="text-base font-semibold mb-1">How was this training?</p>
-<p class="text-sm opacity-80 mb-3">Two minutes of your feedback shapes the next session.</p>
-<a id="feedback-cta-link" href="#" target="_blank" rel="noopener" onclick="dismissFeedbackCta()" class="inline-flex items-center gap-2 rounded-full px-4 py-2 font-semibold">
+<p class="font-semibold" style="margin:0 0 .25rem">How was this training?</p>
+<p class="text-sm" style="margin:0 0 .75rem;opacity:.8">Two minutes of your feedback shapes the next session.</p>
+<a id="feedback-cta-link" href="#" target="_blank" rel="noopener" onclick="dismissFeedbackCta()" class="inline-flex items-center gap-2 font-semibold" style="padding:.5rem 1rem;border-radius:9999px;background:var(--accent,#2563eb);color:#fff;text-decoration:none">
 <span class="material-symbols-outlined" style="font-size:1.1rem">rate_review</span>Open the feedback form</a>
 </div>
 ```
+
+Before committing, confirm the two CSS custom properties actually exist in `static/participant-theme.css` / `static/common.css`. If a name differs, use the real one — the `var(--x, fallback)` form means a wrong name fails silently to the fallback, which is exactly the class of bug this whole note exists to prevent.
 
 - [ ] **Step 3: Add the shared apply function**
 
