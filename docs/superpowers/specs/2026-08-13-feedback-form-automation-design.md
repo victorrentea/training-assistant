@@ -149,17 +149,26 @@ daemon's static sync on push, like any other participant change.
    view, and makes no daemon call. Revealed in **both** places gdrive is
    handled — the `state` applier (~`:3937`) and the broadcast handler (~`:4030`).
    This is the permanent way back to the form for the rest of the session.
-2. **CTA card + QR**, shown when the link first arrives — the attention grab
-   for a room that is about to disperse. The QR matters for onsite rooms where
-   the link is on the projector, not in their hands. It is **dismissible, and
-   dismissal is remembered per participant** (localStorage, as with other
-   participant-local UI state), so a reconnect does not re-nag someone who has
-   already filled it in. The nav item remains as the way back.
+2. **CTA card**, shown when the link first arrives — the attention grab for a
+   room that is about to disperse. It is **dismissible, and dismissal is
+   remembered per participant** (localStorage, as with other participant-local
+   UI state), so a reconnect does not re-nag someone who has already filled it
+   in. The nav item remains as the way back.
 
-**Naming.** The nav item is "Feedback form", deliberately distinct from the
-existing bottom-left participant feedback button, which emails Victor
-(`POST /api/participant/misc/feedback`). Two different things; the labels must
-not collide.
+**No QR on the participant page.** A QR rendered on a participant's own phone
+is useless — they are already on the device and can tap the link. The QR is for
+the projector, so the skill saves it as `<session folder>/feedback-qr.png` and
+Victor shows the file. `static/host.html` already loads `qrcodejs`, so
+rendering it in the host UI instead is a cheap follow-up if wanted; the
+participant page has no QR library and adding a CDN script there would fight
+its CSP for no benefit.
+
+**Naming.** The nav item is "Feedback form". There is **no competing UI element
+to collide with**: `#feedback-view` (`static/participant.html:954`) and its
+`sendFeedback()` handler have no nav entry and no caller — the view is
+unreachable except by typing `/{session}/feedback`, and Victor has approved
+deleting it. A parallel change is adding a "Report a bug" nav entry, which does
+not collide either.
 
 **Anonymity.** Participants click out to FOS, so no UUID or display name
 follows them. Anonymity holds by construction, with nothing to enforce.
