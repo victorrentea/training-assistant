@@ -13,6 +13,7 @@ _active_session_id: str | None = None
 _active_session_name: str | None = None  # folder name of active session
 _sessions_root: Path | None = None
 _gdrive_url: str | None = None
+_feedback_url: str | None = None
 
 
 def set_active_session(session_id: str | None, session_name: str | None) -> None:
@@ -37,6 +38,13 @@ def set_gdrive_url(url: str | None) -> None:
         _gdrive_url = url
 
 
+def set_feedback_url(url: str | None) -> None:
+    """Called whenever the active session's participant feedback form URL changes."""
+    global _feedback_url
+    with _lock:
+        _feedback_url = url
+
+
 def get_active_session_id() -> str | None:
     with _lock:
         return _active_session_id
@@ -55,3 +63,8 @@ def get_sessions_root() -> Path | None:
 def get_gdrive_url() -> str | None:
     with _lock:
         return _gdrive_url
+
+
+def get_feedback_url() -> str | None:
+    with _lock:
+        return _feedback_url
