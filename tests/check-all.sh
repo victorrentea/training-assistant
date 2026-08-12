@@ -21,6 +21,12 @@ echo "=== Frontend conventions ==="
 # Static-only checks (no browser): keeps the single-tooltip rule enforced.
 python3 -m pytest tests/frontend/ -q --confcutdir=tests/frontend
 echo ""
+echo "=== Participant tab routing (frontend/backend drift) ==="
+# test_frontend_views_are_all_routable pins the SPA's VIEWS array to the gateway's
+# _PARTICIPANT_TAB_SLUGS. The guard existed but ran in neither this hook nor CI, so
+# a new tab shipped with a 404 deep link ("Report a bug", 2026-08-13). Cheap (<1s).
+python3 -m pytest tests/features/pages/test_router.py -q
+echo ""
 echo "=== Architecture contracts (Structurizr -> Import Linter) ==="
 python3 -m pytest tests/docs/test_structurizr_import_linter.py -q
 echo ""

@@ -134,7 +134,7 @@ _PARTICIPANT_TAB_SLUGS = frozenset(
         "summary",
         "notes",
         "agenda",
-        "feedback",
+        "report-bug",
         "upload-paste",
         "files",
         "past-slides",

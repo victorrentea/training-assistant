@@ -32,7 +32,7 @@ def test_root_serves_participant_app():
 def test_tab_slug_serves_participant_app():
     client = TestClient(app)
     for tab in ("notes", "files", "slides", "activity", "summary",
-                "agenda", "upload-paste", "feedback", "past-slides"):
+                "agenda", "upload-paste", "report-bug", "past-slides"):
         resp = client.get(f"/{state.session_id}/{tab}")
         assert resp.status_code == 200, tab
         assert _APP_MARKER in resp.content, tab
