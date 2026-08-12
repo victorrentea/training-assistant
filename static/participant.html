@@ -961,9 +961,12 @@ body{visibility:hidden}
     placeholder="Report a bug or request a feature"
     oninput="updateReportBugBtns()"></textarea>
   <p id="report-bug-status" class="text-sm mt-3 text-on-surface-variant"></p>
-  <!-- mb-20 lifts this row clear of #floating-reactions, which hovers over every
-       view at bottom-right (z-30); the second button is wide enough to run under it. -->
-  <div class="mt-4 mb-20 flex flex-wrap items-center gap-3">
+  <!-- margin-bottom lifts this row clear of #floating-reactions, which hovers over
+       every view at bottom-right (z-30); the second button is wide enough to run
+       under it. Inline styles, not `mb-20`/`flex-wrap`: static/vendor/tailwind.css
+       is a PREBUILT subset (there is no build step) and ships neither class, so
+       both were silently doing nothing. -->
+  <div class="mt-4 flex items-center gap-3" style="flex-wrap:wrap;margin-bottom:5rem">
     <button id="report-bug-send-btn" onclick="sendBugReport()" disabled
       class="flex items-center gap-2 px-6 py-3 font-semibold rounded-full transition-all opacity-40 cursor-not-allowed bg-surface-container-highest text-on-surface-variant">
       Submit to Victor
