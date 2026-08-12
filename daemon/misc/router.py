@@ -389,9 +389,11 @@ async def publish_feedback_form(body: FeedbackFormRequest):
     url = body.url.strip()
     if not url:
         return JSONResponse(status_code=400, content={"detail": "url is required"})
+    from daemon import log
+
     created_at = await asyncio.to_thread(save_feedback_form, folder, title, url)
     session_shared_state.set_feedback_url(url)
-    logger.info("Feedback form: %s (%s)", url, title)
+    log.info("feedback-form", f"↑ Published: {title} → {url}")
     broadcast(FeedbackFormUpdatedMsg(feedback_url=url))  # participants reveal the nav item
     return FeedbackFormResponse(title=title, url=url, created_at=created_at)
 

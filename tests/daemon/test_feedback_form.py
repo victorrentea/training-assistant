@@ -102,6 +102,37 @@ def test_post_feedback_form_404_without_active_session(monkeypatch):
     assert resp.json()["detail"] == "no active session"
 
 
+def test_post_feedback_form_logs_the_publish_to_stdout(tmp_path, monkeypatch, capsys):
+    """The publish must be visible in the daemon log — it is the only trace of it.
+
+    Guards against reaching for the stdlib `logger`, which prints nothing here:
+    nothing in daemon/ configures stdlib logging, so an INFO record reaches only
+    logging.lastResort (WARNING) and is dropped.
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from daemon.misc import router as misc_router
+
+    monkeypatch.setattr(misc_router, "broadcast", lambda msg: None)
+    monkeypatch.setattr(misc_router, "get_active_session_folder", lambda: tmp_path)
+
+    app = FastAPI()
+    app.include_router(misc_router.local_router)
+    try:
+        TestClient(app).post(
+            "/feedback-form",
+            json={"title": "AI@Acme", "url": "https://freeonlinesurveys.com/s/demo1234"},
+        )
+    finally:
+        session_shared_state.set_feedback_url(None)
+
+    printed = capsys.readouterr().out
+    # daemon/log.py pads/truncates the logger name to 7 chars: "feedback-form" -> "feedbac"
+    assert "[feedbac] info " in printed
+    assert "↑ Published: AI@Acme → https://freeonlinesurveys.com/s/demo1234" in printed
+
+
 def test_post_feedback_form_400_on_blank_url(tmp_path, monkeypatch):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
