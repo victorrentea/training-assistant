@@ -254,7 +254,7 @@ def test_report_a_bug_view_submits_and_generates_an_agent_prompt():
 
         nav = pax_page.locator('[data-nav="report-bug"]')
         expect(nav).to_be_visible(timeout=5000)
-        expect(nav).to_contain_text("Report a bug")
+        expect(nav).to_contain_text("Improve this Tool")
 
         nav.click()
         textarea = pax_page.locator("#report-bug-textarea")

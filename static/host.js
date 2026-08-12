@@ -1158,7 +1158,7 @@ var _engagementTotal = 0;
 var ENGAGEMENT_FRESH_MS = 75000;  // 30s flush + 60s idle slack
 var ENGAGEMENT_VIEW_LABELS = {
   slides: 'Slides', notes: 'Notes', summary: 'Summary', files: 'Files',
-  agenda: 'Agenda', activity: 'Activity', 'upload-paste': 'Upload', 'report-bug': 'Bug report'
+  agenda: 'Agenda', activity: 'Activity', 'upload-paste': 'Upload', 'report-bug': 'Improve this Tool'
 };
 
 function _captureEngagement(participants) {
