@@ -532,7 +532,29 @@ In `daemon/__main__.py`, immediately after the boot-time GDrive block that ends 
             session_shared_state.set_feedback_url(None)
 ```
 
-- [ ] **Step 6: Clear it when the session is torn down**
+- [ ] **Step 6: Re-resolve it when the session switches**
+
+`set_gdrive_url` is driven from **four** places in `daemon/__main__.py`, not two. The session-switch site (~line 1250, `session_shared_state.set_gdrive_url(_new_gdrive_url)`, where a session is created or resumed) must be mirrored too — otherwise starting a new session leaves the *previous* client's feedback form live in the new room.
+
+Directly after that `set_gdrive_url(_new_gdrive_url)` / `log.info("session", f"Google Drive: …")` pair, add:
+
+```python
+                            # Re-resolve the feedback form for the session being
+                            # entered: normally absent (clearing the previous
+                            # session's URL), present when resuming a session
+                            # whose form was already published.
+                            from daemon.misc.feedback_form import (
+                                load_feedback_form as _load_feedback_form_switch,
+                            )
+                            _new_feedback = _load_feedback_form_switch(folder)
+                            session_shared_state.set_feedback_url(
+                                _new_feedback["url"] if _new_feedback else None
+                            )
+                            if _new_feedback:
+                                log.info("session", f"Feedback form: {_new_feedback['url']}")
+```
+
+- [ ] **Step 7: Clear it when the session is torn down**
 
 In `daemon/__main__.py`, find the existing `session_shared_state.set_gdrive_url(None)` teardown call (~line 1335) and add directly beneath it:
 
@@ -540,10 +562,49 @@ In `daemon/__main__.py`, find the existing `session_shared_state.set_gdrive_url(
                         session_shared_state.set_feedback_url(None)
 ```
 
+- [ ] **Step 8: Add the session-switch regression test**
+
+Append to `tests/daemon/test_feedback_form.py`:
+
+```python
+def test_session_switch_does_not_leak_the_previous_sessions_form(tmp_path):
+    """Entering a session with no form must clear the previous session's URL.
+
+    Otherwise one client's feedback form stays live in the next client's room.
+    """
+    previous = tmp_path / "2026-08-11..13 AI@Acme"
+    previous.mkdir()
+    save_feedback_form(previous, "AI@Acme", "https://freeonlinesurveys.com/s/old")
+    session_shared_state.set_feedback_url("https://freeonlinesurveys.com/s/old")
+
+    entering = tmp_path / "2026-08-20 DDD@ING"
+    entering.mkdir()
+    try:
+        found = load_feedback_form(entering)
+        session_shared_state.set_feedback_url(found["url"] if found else None)
+        assert session_shared_state.get_feedback_url() is None
+    finally:
+        session_shared_state.set_feedback_url(None)
+
+
+def test_session_switch_restores_a_resumed_sessions_form(tmp_path):
+    """Re-entering a session whose form was already published restores it."""
+    folder = tmp_path / "2026-08-11..13 AI@Acme"
+    folder.mkdir()
+    save_feedback_form(folder, "AI@Acme", "https://freeonlinesurveys.com/s/demo1234")
+    session_shared_state.set_feedback_url(None)
+    try:
+        found = load_feedback_form(folder)
+        session_shared_state.set_feedback_url(found["url"] if found else None)
+        assert session_shared_state.get_feedback_url() == "https://freeonlinesurveys.com/s/demo1234"
+    finally:
+        session_shared_state.set_feedback_url(None)
+```
+
 - [ ] **Step 7: Run the tests to verify they pass**
 
 Run: `uv run --extra dev --extra daemon python -m pytest tests/daemon/test_feedback_form.py -v --confcutdir=tests/daemon`
-Expected: PASS — 10 passed
+Expected: PASS — 12 passed
 
 - [ ] **Step 8: Regenerate the API snapshots (the participant state schema changed)**
 
