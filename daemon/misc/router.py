@@ -44,7 +44,6 @@ class BugReportDiagnostics(BaseModel):
     sanitises them into the mail body (see ``_clean_diagnostic``).
     """
     view: str = ""          # participant tab they were on
-    app_version: str = ""   # window.APP_VERSION
     user_agent: str = ""    # navigator.userAgent
     screen: str = ""        # e.g. "1512x982"
     url: str = ""
@@ -175,11 +174,16 @@ async def participant_bug_report(request: Request, body: BugReportRequest):
     session_name = _get_session_name_for_feedback() or "unknown"
     reporter = participant_state.participant_names.get(pid, pid)
     d = body.diagnostics
+    # The daemon stamps its own build, rather than asking the page for one: the
+    # participant page never defines window.APP_VERSION (only the host pages load
+    # version.js), so a client-reported version was reliably empty — and would be
+    # attacker-controlled anyway.
+    from daemon import host_server
     email_body = "\n".join([
         f"Reporter:    {_clean_diagnostic(reporter, 64)}",
         f"Session:     {session_name}",
         f"Tab:         {_clean_diagnostic(d.view, 32)}",
-        f"App version: {_clean_diagnostic(d.app_version, 32)}",
+        f"Daemon code: {_clean_diagnostic(host_server.code_timestamp or 'unknown', 40)}",
         f"Browser:     {_clean_diagnostic(d.user_agent, 256)}",
         f"Screen:      {_clean_diagnostic(d.screen, 32)}",
         f"URL:         {_clean_diagnostic(d.url, 256)}",

@@ -2319,7 +2319,6 @@ function _setReportBugStatus(msg, isError) {
 function _bugDiagnostics() {
   return {
     view: _viewBeforeBugReport,
-    app_version: window.APP_VERSION || '',
     user_agent: navigator.userAgent || '',
     screen: window.screen ? (window.screen.width + 'x' + window.screen.height) : '',
     url: location.href
@@ -2371,7 +2370,6 @@ function _bugAgentPrompt(report) {
     '',
     'Context collected automatically from the participant page:',
     '  Tab:         ' + (_viewBeforeBugReport || 'unknown'),
-    '  App version: ' + (window.APP_VERSION || 'unknown'),
     '  Browser:     ' + (navigator.userAgent || 'unknown'),
     '  Screen:      ' + (window.screen ? window.screen.width + 'x' + window.screen.height : 'unknown'),
     '  URL:         ' + location.href,

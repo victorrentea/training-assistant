@@ -41,7 +41,6 @@ def test_bug_report_emails_victor_with_the_report_and_diagnostics():
             resp = _post_bug_report(
                 client,
                 view="slides",
-                app_version="2026-08-13 01:26",
                 user_agent="Mozilla/5.0 (iPhone)",
             )
     assert resp.status_code == 204
@@ -50,6 +49,7 @@ def test_bug_report_emails_victor_with_the_report_and_diagnostics():
     assert "Alice" in subject
     assert "Reporter:    Alice" in body
     assert "Tab:         slides" in body
+    assert "Daemon code:" in body
     assert "Mozilla/5.0 (iPhone)" in body
     assert "The slides tab is blank." in body
     assert notify.call_args.kwargs["from_inbox"] == "victor.flux@agentmail.to"

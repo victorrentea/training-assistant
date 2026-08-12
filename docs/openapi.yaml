@@ -1624,10 +1624,6 @@ components:
           type: string
           title: View
           default: ''
-        app_version:
-          type: string
-          title: App Version
-          default: ''
         user_agent:
           type: string
           title: User Agent
@@ -1658,7 +1654,6 @@ components:
           $ref: '#/components/schemas/BugReportDiagnostics'
           default:
             view: ''
-            app_version: ''
             user_agent: ''
             screen: ''
             url: ''
