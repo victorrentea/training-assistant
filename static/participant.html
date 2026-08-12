@@ -349,6 +349,9 @@ body{visibility:hidden}
           white-space: pre-wrap;
         }
         .notes-toast .nt-body a { color: #065f46; text-decoration: underline; font-weight: 700; }
+        /* Source marker (🤖 prompt / 📋 sent by hand) — a label on the snippet,
+           so it sits slightly back from the text it introduces. */
+        .notes-toast .nt-mark { opacity: 0.7; margin-right: 0.15rem; }
         .notes-toast .nt-actions {
           margin-top: 0.55rem;
           display: flex;
@@ -813,7 +816,7 @@ body{visibility:hidden}
 </a>
 <a data-nav="report-bug" onclick="showView('report-bug')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">bug_report</span>
-<span class="text-base">Report a bug</span>
+<span class="text-base">Improve this Tool</span>
 </a>
 <a data-nav="about" onclick="showView('about')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">waving_hand</span>
@@ -3326,15 +3329,29 @@ function _hideAccessToast() {
 // ── Notes-append toasters ───────────────────────────────────────────────────
 // A copy-friendly toaster that pops top-center whenever the trainer appends a
 // snippet to the session notes (relayed by the daemon's `notes_appended` WS).
-// Toasts stack newest-on-top, carry a timestamp, copy button, and — when the
-// snippet is a single URL — render it as a clickable link. Copying or clicking
-// the link dismisses that toast; otherwise it auto-closes after 5 minutes.
+// Toasts stack newest-on-top, carry a timestamp, copy button, and render every
+// URL inside the snippet as a clickable link. Copying or clicking the link
+// dismisses that toast; otherwise it auto-closes after 5 minutes.
 var _NOTES_TOAST_TTL_MS = 5 * 60 * 1000;
 
-function _isSingleUrl(text) {
-  var t = (text || '').trim();
-  if (!t || /\s/.test(t)) return false;  // a single whitespace-free token only
-  return /^https?:\/\/[^\s]+$/i.test(t);
+// The addon marks each notes line with WHO put it there — 🤖 for an intercepted
+// agent prompt, 📋 for something the trainer sent by hand. The marker is
+// metadata, not content: it is shown as its own glyph, and kept out of both the
+// link detection and the Copy button, so copying a link still yields the bare
+// URL rather than "📋 https://…" (which no address bar accepts).
+function _splitNotesMarker(text) {
+  var m = /^([\u{1F916}\u{1F4CB}])\u{FE0F}?\s*/u.exec(text || '');
+  return m ? { mark: m[1], body: (text || '').slice(m[0].length) }
+           : { mark: '', body: text || '' };
+}
+
+// Linkify every http(s) URL in the snippet, wherever it sits. Anchoring the
+// match to the whole string (the old `_isSingleUrl`) meant one word — or the
+// marker above — in front of a URL was enough to leave it as dead text.
+function _linkifyNotesText(text) {
+  return _escapeHtml(text).replace(/(https?:\/\/[^\s]+)/gi, function (url) {
+    return '<a href="' + url + '" target="_blank" rel="noopener">' + url + '</a>';
+  });
 }
 
 function _escapeHtml(s) {
@@ -3435,9 +3452,10 @@ function _showNotesToast(text, atISO) {
   var whenMs = atISO ? new Date(atISO).getTime() : Date.now();
   if (isNaN(whenMs)) whenMs = Date.now();
 
-  var bodyHtml = _isSingleUrl(clean)
-    ? '<a href="' + _escapeHtml(clean) + '" target="_blank" rel="noopener">' + _escapeHtml(clean) + '</a>'
-    : _escapeHtml(clean);
+  var marked = _splitNotesMarker(clean);
+  var payload = marked.body.trim();
+  var bodyHtml = (marked.mark ? '<span class="nt-mark">' + marked.mark + '</span>' : '')
+    + _linkifyNotesText(payload);
 
   // "notes" in the hint is a live link to this session's standalone notes page.
   var notesHref = _sessionId ? ('/' + _sessionId + '/notes-print') : '';
@@ -3468,7 +3486,7 @@ function _showNotesToast(text, atISO) {
 
   toast.querySelector('.nt-close').addEventListener('click', close);
   toast.querySelector('.nt-copy').addEventListener('click', function () {
-    _copyToClipboard(clean).catch(function () {}).then(close);
+    _copyToClipboard(payload || clean).catch(function () {}).then(close);
   });
   var bodyLink = toast.querySelector('.nt-body a');
   if (bodyLink) bodyLink.addEventListener('click', close);
