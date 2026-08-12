@@ -805,6 +805,13 @@ body{visibility:hidden}
 <span id="gdrive-zip-icon" class="material-symbols-outlined" style="font-size:1.1rem">download</span>
 </button>
 </div>
+<div id="feedback-row" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all" style="display:none">
+<a id="feedback-nav" href="#" target="_blank" rel="noopener" class="flex items-center gap-3 flex-1 cursor-pointer">
+<span class="material-symbols-outlined flex-shrink-0">rate_review</span>
+<span class="text-base flex-1">Feedback form</span>
+<span class="material-symbols-outlined flex-shrink-0" style="font-size:1rem;opacity:0.5">open_in_new</span>
+</a>
+</div>
 <a data-nav="files" onclick="showView('files')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-size:22px;line-height:1;flex-shrink-0">commit</span>
 <span class="text-base">Opened Files</span>
@@ -841,6 +848,19 @@ body{visibility:hidden}
      name occurs >=2 times in the participant_names_updated broadcast. -->
 <div id="dup-indicator">⚠️ <b>duplicate</b> name — <span class="dup-change-link" onclick="_startNameEdit()">click here to change</span></div>
 </aside>
+<!-- End-of-session feedback CTA. Kept out of the <aside> on purpose: that
+     element is `relative z-10`, which would trap this fixed overlay in its
+     stacking context. Layout and color are inline because the vendored
+     Tailwind subset has no build step and lacks these utilities. -->
+<div id="feedback-cta" role="status" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:50;width:92%;max-width:24rem;padding:1rem 1.25rem;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,.25);background:var(--color-surface-container-high,#e1e9ee);color:var(--color-on-surface,#2a3439)">
+<button id="feedback-cta-close" onclick="dismissFeedbackCta()" aria-label="Dismiss" class="cursor-pointer" style="position:absolute;top:.5rem;right:.5rem;opacity:.6;background:none;border:none;color:inherit">
+<span class="material-symbols-outlined" style="font-size:1.1rem">close</span>
+</button>
+<p class="font-semibold" style="margin:0 0 .25rem">How was this training?</p>
+<p class="text-sm" style="margin:0 0 .75rem;opacity:.8">Two minutes of your feedback shapes the next session.</p>
+<a id="feedback-cta-link" href="#" target="_blank" rel="noopener" onclick="dismissFeedbackCta()" class="inline-flex items-center gap-2 font-semibold" style="padding:.5rem 1rem;border-radius:9999px;background:var(--color-primary,#4555ba);color:var(--color-on-primary,#f9f6ff);text-decoration:none">
+<span class="material-symbols-outlined" style="font-size:1.1rem">rate_review</span>Open the feedback form</a>
+</div>
 <div id="deploy-age-line" onclick="resetRemindersForTest()" data-tip="Click to reset break reminders (for testing)"
   class="fixed bottom-0 right-0 px-2 py-1 cursor-pointer select-none"
   style="font-size:0.625rem;line-height:1.3;color:var(--color-outline);opacity:0.5;transition:opacity 0.15s;z-index:100"
@@ -3503,6 +3523,36 @@ function _applyGdriveToast(url) {
   else { wrap.style.display = 'none'; }
 }
 
+/* Feedback form link. Mirrors the gdrive row: one URL drives a permanent
+   left-nav entry plus a one-time CTA. The CTA's dismissal is remembered
+   locally so a reconnect does not re-nag someone who already answered. */
+function _applyFeedbackUrl(url) {
+  var row = document.getElementById('feedback-row');
+  var nav = document.getElementById('feedback-nav');
+  var cta = document.getElementById('feedback-cta');
+  var ctaLink = document.getElementById('feedback-cta-link');
+  if (!url) {
+    row.style.display = 'none';
+    cta.style.display = 'none';
+    return;
+  }
+  nav.href = url;
+  row.style.display = '';
+  ctaLink.href = url;
+  var dismissed = false;
+  try { dismissed = localStorage.getItem('feedbackCtaDismissed') === url; } catch (e) {}
+  cta.style.display = dismissed ? 'none' : '';
+}
+
+function dismissFeedbackCta() {
+  var cta = document.getElementById('feedback-cta');
+  // getAttribute, not .href: the getter returns the browser-normalised absolute
+  // URL, which would not match the raw string _applyFeedbackUrl compares against.
+  var url = document.getElementById('feedback-cta-link').getAttribute('href');
+  cta.style.display = 'none';
+  try { localStorage.setItem('feedbackCtaDismissed', url); } catch (e) {}
+}
+
 var _zipDownloading = false;
 
 // Downloads the whole session folder as a zip, relayed through Railway.
@@ -4085,6 +4135,7 @@ function _setDuplicateIndicator(isDup) {
     if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveRow.style.display = ''; }
     else { gdriveRow.style.display = 'none'; }
     _applyGdriveToast(state.gdrive_url);
+    _applyFeedbackUrl(state.feedback_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
     document.getElementById('files-badge').classList.toggle('badge-alert', (state.files_count || 0) > 0 && LS.isFilesUnread());
     var saved = LS.getView();
@@ -4178,6 +4229,9 @@ function _applyState(msg) {
     if (msg.gdrive_url) { gdriveNav.href = msg.gdrive_url; gdriveRow.style.display = ''; }
     else { gdriveRow.style.display = 'none'; }
     _applyGdriveToast(msg.gdrive_url);
+  }
+  if (msg.feedback_url !== undefined) {
+    _applyFeedbackUrl(msg.feedback_url);
   }
   if (msg.has_agenda !== undefined) {
     document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
@@ -4632,6 +4686,7 @@ function _handleWsMessage(msg) {
       if (onSummary) loadSummary();
       break;
     }
+    case 'feedback_form_updated': _applyFeedbackUrl(msg.feedback_url); break;
     case 'agenda_updated': {
       document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
       if (msg.has_agenda) {
