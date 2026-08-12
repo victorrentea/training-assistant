@@ -2,6 +2,7 @@
 import asyncio
 import base64
 import logging
+import time
 import urllib.request
 from collections import defaultdict
 from io import BytesIO
@@ -12,6 +13,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from daemon import files_md as _files_md
+from daemon.email_notify import PARTICIPANT_INBOX_ID
 from daemon.email_notify import notify as email_notify
 from daemon.misc.content_files import (
     get_active_session_folder,
@@ -33,9 +35,22 @@ logger = logging.getLogger(__name__)
 class PasteRequest(BaseModel):
     text: str
 
-class FeedbackRequest(BaseModel):
+class BugReportDiagnostics(BaseModel):
+    """Context the participant page knows about itself, attached to every report.
+
+    Purely descriptive — the daemon never trusts these for any decision, it only
+    sanitises them into the mail body (see ``_clean_diagnostic``).
+    """
+    view: str = ""          # participant tab they were on
+    app_version: str = ""   # window.APP_VERSION
+    user_agent: str = ""    # navigator.userAgent
+    screen: str = ""        # e.g. "1512x982"
+    url: str = ""
+
+
+class BugReportRequest(BaseModel):
     text: str
-    participant_name: str | None = None
+    diagnostics: BugReportDiagnostics = BugReportDiagnostics()
 
 class NotesResponse(BaseModel):
     notes_content: Optional[str] = None
@@ -108,28 +123,82 @@ async def paste_text(request: Request, body: PasteRequest):
     return Response(status_code=204)
 
 
-@participant_router.post("/misc/feedback", status_code=204)
-async def participant_feedback(request: Request, body: FeedbackRequest):
-    """Participant feedback submitted from floating feedback modal."""
+MAX_BUG_REPORT_CHARS = 5000
+#: Anti-flood: a bored participant must not be able to bury Victor's inbox
+#: mid-workshop. Per-participant, reset when the session folder changes.
+MAX_BUG_REPORTS_PER_PARTICIPANT = 5
+MIN_SECONDS_BETWEEN_BUG_REPORTS = 20.0
+
+def _clean_diagnostic(value: str, limit: int) -> str:
+    """Keep printable characters only, then truncate. Diagnostics are attacker-controlled."""
+    return "".join(ch for ch in (value or "") if ch.isprintable())[:limit].strip()
+
+
+def _bug_report_rate_limit(pid: str, now: float) -> str | None:
+    """Return an error message when this participant may not send another report."""
+    sent = misc_state.bug_reports_sent.get(pid, [])
+    if len(sent) >= MAX_BUG_REPORTS_PER_PARTICIPANT:
+        return f"Report limit reached (max {MAX_BUG_REPORTS_PER_PARTICIPANT} per session)"
+    if sent and now - sent[-1] < MIN_SECONDS_BETWEEN_BUG_REPORTS:
+        return "Sending too fast — wait a few seconds and try again"
+    return None
+
+
+@participant_router.post("/misc/bug-report", status_code=204)
+async def participant_bug_report(request: Request, body: BugReportRequest):
+    """Participant reports a bug / requests a feature — emailed straight to Victor.
+
+    SECURITY NOTES
+    - The recipient is env-only (NOTIFY_EMAIL); nothing in this request can steer
+      where the mail goes.
+    - The reporter's name is resolved SERVER-SIDE from the participant id, never
+      taken from the body, so a report cannot be signed as somebody else.
+    - The mail is plain text and every user-derived fragment that reaches the
+      subject goes through header sanitisation, so neither HTML nor extra SMTP
+      headers can be injected.
+    """
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
     text = (body.text or "").strip()
-    if not text or len(text) > 5000:
-        return JSONResponse({"error": "Invalid feedback text"}, status_code=400)
+    if not text or len(text) > MAX_BUG_REPORT_CHARS:
+        return JSONResponse({"error": "Invalid report text"}, status_code=400)
+
+    now = time.monotonic()
+    limit_error = _bug_report_rate_limit(pid, now)
+    if limit_error:
+        return JSONResponse({"error": limit_error}, status_code=429)
 
     session_name = _get_session_name_for_feedback() or "unknown"
-    participant_name = (body.participant_name or "").strip()
-    if participant_name:
-        participant_name = participant_name[:64]
-    else:
-        participant_name = participant_state.participant_names.get(pid, pid)
-    email_notify(
-        f"Participant Feedback ({session_name})",
-        f"Participant: {participant_name}\nSession: {session_name}\n\n{text}",
+    reporter = participant_state.participant_names.get(pid, pid)
+    d = body.diagnostics
+    email_body = "\n".join([
+        f"Reporter:    {_clean_diagnostic(reporter, 64)}",
+        f"Session:     {session_name}",
+        f"Tab:         {_clean_diagnostic(d.view, 32)}",
+        f"App version: {_clean_diagnostic(d.app_version, 32)}",
+        f"Browser:     {_clean_diagnostic(d.user_agent, 256)}",
+        f"Screen:      {_clean_diagnostic(d.screen, 32)}",
+        f"URL:         {_clean_diagnostic(d.url, 256)}",
+        "",
+        "── Report ──────────────────────────────────────────",
+        text,
+    ])
+    # Log before sending: if the mail transport is down the report still survives
+    # in the daemon log instead of evaporating.
+    logger.info("Bug report from participant %s (%s):\n%s", pid, reporter, text)
+    sent = email_notify(
+        f"🐞 Bug report from {_clean_diagnostic(reporter, 64)} ({session_name})",
+        email_body,
+        from_inbox=PARTICIPANT_INBOX_ID,
     )
-    logger.info("Feedback received from participant %s", pid)
+    if not sent:
+        return JSONResponse(
+            {"error": "Could not send the email — please tell Victor directly"},
+            status_code=503,
+        )
+    misc_state.bug_reports_sent.setdefault(pid, []).append(now)
     return Response(status_code=204)
 
 

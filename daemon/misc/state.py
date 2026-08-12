@@ -25,6 +25,8 @@ class MiscState:
         self.talk_presentation_name: str | None = None
         self.talk_presentation_url: str | None = None
         self.talk_presentation_slug: str | None = None
+        # uuid → monotonic timestamps of bug reports emailed this session (anti-flood)
+        self.bug_reports_sent: dict[str, list[float]] = {}
 
     def sync_from_restore(self, data: dict):
         with self._lock:
@@ -163,6 +165,7 @@ class MiscState:
             self.talk_presentation_url = None
             self.talk_presentation_slug = None
             self.agenda_docx_path = None
+            self.bug_reports_sent.clear()
 
 
 misc_state = MiscState()

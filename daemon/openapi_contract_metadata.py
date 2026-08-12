@@ -15,6 +15,8 @@ HTTP_METHODS = {"get", "post", "put", "delete", "patch"}
 def _feature_for_misc_path(path: str) -> str:
     if "paste" in path or "upload" in path:
         return "paste_upload"
+    if "bug-report" in path:
+        return "bug_report"
     if "feedback" in path:
         return "feedback"
     if "/notes" in path or "/summary" in path or "/agenda" in path:

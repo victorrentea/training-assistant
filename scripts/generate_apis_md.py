@@ -48,6 +48,7 @@ FEATURE_LABELS: dict[str, str] = {
     "paste_upload": "Paste & File Upload",
     "notes_summary": "Notes, Summary & Agenda",
     "feedback": "Feedback",
+    "bug_report": "Bug Reports",
     "reload": "Cross-cutting: Reload",
     "transcription": "Transcription",
     "infrastructure": "Infrastructure",
@@ -74,6 +75,7 @@ FEATURE_ORDER = [
     "paste_upload",
     "notes_summary",
     "feedback",
+    "bug_report",
     "transcription",
     "reload",
     "infrastructure",
@@ -581,6 +583,8 @@ def _rest_response_shape(op: dict[str, Any], openapi: dict[str, Any]) -> str:
 def _feature_for_misc_path(path: str) -> str:
     if "paste" in path or "upload" in path:
         return "paste_upload"
+    if "bug-report" in path:
+        return "bug_report"
     if "feedback" in path:
         return "feedback"
     if "/notes" in path or "/summary" in path:

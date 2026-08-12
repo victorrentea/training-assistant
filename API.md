@@ -18,7 +18,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Emoji Reactions](#feature-emoji-reactions)
 - [Paste & File Upload](#feature-paste--file-upload)
 - [Notes, Summary & Agenda](#feature-notes,-summary--agenda)
-- [Feedback](#feature-feedback)
+- [Bug Reports](#feature-bug-reports)
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
 - [Infrastructure](#feature-infrastructure)
 - [Misc](#feature-misc)
@@ -405,12 +405,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Railway instructs daemon to force-generate a summary immediately<br>`summary_force` | - |
 | Railway instructs daemon to reset summary state entirely<br>`summary_full_reset` | - |
 
-## Feature: Feedback
+## Feature: Bug Reports
 
 ### Participant REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Participant Feedback<br>`POST /api/participant/misc/feedback` | `text: string`<br>`participant_name?: string` | - |
+| Participant Bug Report, participant reports a bug / requests a feature — emailed straight to Victor; SECURITY NOTES - The recipient is env-only (NOTIFY_EMAIL); nothing in this request can steer where the mail goes; - The reporter's name is resolved SERVER-SIDE from the participant id, never taken from the body, so a report cannot be signed as somebody else; - The mail is plain text and every user-derived fragment that reaches the subject goes through header sanitisation, so neither HTML nor extra SMTP headers can be injected.<br>`POST /api/participant/misc/bug-report` | `text: string`<br>`diagnostics?: BugReportDiagnostics{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`view?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`app_version?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`user_agent?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`screen?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`url?:string`<br>`}` | - |
 
 ## Feature: Cross-cutting: Reload
 

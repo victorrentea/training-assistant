@@ -672,23 +672,30 @@ paths:
         '204':
           description: Successful Response
       x-feature: paste_upload
-  /api/participant/misc/feedback:
+  /api/participant/misc/bug-report:
     post:
       tags:
       - misc
-      summary: Participant Feedback
-      description: Participant feedback submitted from floating feedback modal.
-      operationId: participant_feedback_api_participant_misc_feedback_post
+      summary: Participant Bug Report
+      description: "Participant reports a bug / requests a feature — emailed straight\
+        \ to Victor.\n\nSECURITY NOTES\n- The recipient is env-only (NOTIFY_EMAIL);\
+        \ nothing in this request can steer\n  where the mail goes.\n- The reporter's\
+        \ name is resolved SERVER-SIDE from the participant id, never\n  taken from\
+        \ the body, so a report cannot be signed as somebody else.\n- The mail is\
+        \ plain text and every user-derived fragment that reaches the\n  subject goes\
+        \ through header sanitisation, so neither HTML nor extra SMTP\n  headers can\
+        \ be injected."
+      operationId: participant_bug_report_api_participant_misc_bug_report_post
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FeedbackRequest'
+              $ref: '#/components/schemas/BugReportRequest'
         required: true
       responses:
         '204':
           description: Successful Response
-      x-feature: feedback
+      x-feature: bug_report
   /api/participant/notes:
     get:
       tags:
@@ -1611,6 +1618,54 @@ components:
       required:
       - avatar
       title: AvatarResponse
+    BugReportDiagnostics:
+      properties:
+        view:
+          type: string
+          title: View
+          default: ''
+        app_version:
+          type: string
+          title: App Version
+          default: ''
+        user_agent:
+          type: string
+          title: User Agent
+          default: ''
+        screen:
+          type: string
+          title: Screen
+          default: ''
+        url:
+          type: string
+          title: Url
+          default: ''
+      type: object
+      title: BugReportDiagnostics
+      description: 'Context the participant page knows about itself, attached to every
+        report.
+
+
+        Purely descriptive — the daemon never trusts these for any decision, it only
+
+        sanitises them into the mail body (see ``_clean_diagnostic``).'
+    BugReportRequest:
+      properties:
+        text:
+          type: string
+          title: Text
+        diagnostics:
+          $ref: '#/components/schemas/BugReportDiagnostics'
+          default:
+            view: ''
+            app_version: ''
+            user_agent: ''
+            screen: ''
+            url: ''
+      type: object
+      required:
+      - text
+      title: BugReportRequest
     ClaimTrainerRequest:
       properties:
         participant_id:
@@ -2055,20 +2110,6 @@ components:
       required:
       - emoji
       title: EmojiReactionRequest
-    FeedbackRequest:
-      properties:
-        text:
-          type: string
-          title: Text
-        participant_name:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Participant Name
-      type: object
-      required:
-      - text
-      title: FeedbackRequest
     FilesMdResponse:
       properties:
         raw_markdown:

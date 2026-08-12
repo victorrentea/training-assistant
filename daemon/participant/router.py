@@ -99,7 +99,7 @@ _KNOWN_VIEWS = {
     "summary",
     "notes",
     "agenda",
-    "feedback",
+    "report-bug",
     "upload-paste",
     "files",
 }
