@@ -2407,7 +2407,14 @@ function _bugAgentPrompt(report) {
     '  Tab:         ' + (_viewBeforeBugReport || 'unknown'),
     '  Browser:     ' + (navigator.userAgent || 'unknown'),
     '  Screen:      ' + (window.screen ? window.screen.width + 'x' + window.screen.height : 'unknown'),
-    '  URL:         ' + location.href,
+    '  Occurred:    ' + _incidentStamp(),
+    '',
+    'NEVER put the session link or the session id in the issue, not in the title,',
+    'the body, a screenshot or a quoted URL. Workshop sessions are live and the',
+    'tracker is public — a session link in a public issue hands strangers a way',
+    'into a running client workshop. Identify the incident by the date and time',
+    'above; the maintainer correlates it with his own session records. When you',
+    'quote a URL, write the session id as {session}, e.g. /{session}/slides.',
     '',
     'Do this:',
     '1. Find the root cause before proposing any fix. Read the relevant code in',
@@ -2416,13 +2423,39 @@ function _bugAgentPrompt(report) {
     '   failing test. Do not file anything you could not reproduce; say so instead.',
     '3. While reproducing, capture evidence: a screenshot of the broken state, the',
     '   exact steps, browser console errors, and the failing request/response',
-    '   (method, URL, status, body).',
-    '4. Only then run `gh issue create` on victorrentea/training-assistant with a',
-    '   title naming the broken behaviour, and a body containing: steps to',
-    '   reproduce, expected vs actual, the evidence above, the context block, and',
-    '   the file:line where you believe the cause sits.',
-    '5. Reply with the issue URL.'
+    '   (method, URL with the session id redacted, status, body).',
+    '4. Only then file the issue on victorrentea/training-assistant, with a title',
+    '   naming the broken behaviour and a body containing: steps to reproduce,',
+    '   expected vs actual, the evidence above, the context block, and the',
+    '   file:line where you believe the cause sits. Apply the labels',
+    '   participant-report, agent-filed and needs-repro. Route:',
+    '   a. `gh issue create -R victorrentea/training-assistant --title "..."',
+    '      --body-file <file> --label participant-report --label agent-filed',
+    '      --label needs-repro`',
+    '   b. If `gh` is missing or not authenticated and you cannot fix that',
+    '      quickly, do NOT go hunting through browser automation — it stalls on',
+    '      login walls and extension permission prompts. Instead print a',
+    '      prefilled link the participant can click and submit by hand:',
+    '      https://github.com/victorrentea/training-assistant/issues/new',
+    '      ?title=<urlencoded>&body=<urlencoded>',
+    '      &labels=participant-report,agent-filed,needs-repro',
+    '      Percent-encode properly — a naive join silently truncates the body.',
+    '      Then say in one line, plainly: "I could NOT file this myself — open',
+    '      the link and press Submit." Never imply it was filed when it was not.',
+    '5. Reply with the issue URL if you filed one; otherwise reply with the link',
+    '   and an explicit statement that nothing has been filed yet.'
   ].join('\n');
+}
+function _incidentStamp() {
+  // Date and time only — deliberately not the session URL, see the prompt above.
+  var d = new Date();
+  var p = function(n) { return (n < 10 ? '0' : '') + n; };
+  var off = -d.getTimezoneOffset();
+  var sign = off < 0 ? '-' : '+';
+  off = Math.abs(off);
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+    ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) +
+    ' (UTC' + sign + p(Math.floor(off / 60)) + ':' + p(off % 60) + ')';
 }
 function copyBugAgentPrompt() {
   var text = _reportBugText();
