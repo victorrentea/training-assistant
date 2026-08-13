@@ -536,12 +536,23 @@ def _read_text_or_none(path: Path | None) -> str | None:
         return None
 
 
+# The macOS addon stamps every line it writes with WHO put it there — 🤖 for an
+# intercepted agent prompt, 📋 for text the trainer sent by hand (⌘⌃S selection
+# or ⌃⌥V clipboard). That stamp is the only way to tell a deliberate share from
+# a line the trainer typed straight into the notes file in an editor: private
+# working notes that were never meant to pop up on everyone's screen. So the
+# marker is what licenses the toast — unmarked appends stay silent.
+_NOTES_SOURCE_MARKER_RE = re.compile("^[\U0001F916\U0001F4CB]\uFE0F?\\s*\\S")
+
+
 def _extract_appended_snippet(delta: str) -> str:
     """Clean an appended notes delta for display in the participant toaster.
 
-    The macOS addon writes one entry per action as a "- <text>" line; strip that
-    leading bullet so participants see just the shared text/URL. Internal newlines
-    (a multi-line clipboard pasted as one entry) are preserved.
+    The macOS addon writes one entry per action as a "- <marker> <text>" line;
+    strip that leading bullet so participants see just the shared text/URL. The
+    source marker is kept (the participant page renders it as its own glyph, out
+    of the copied text). Internal newlines (a multi-line clipboard pasted as one
+    entry) are preserved.
     """
     s = delta.strip()
     if s.startswith("-"):
@@ -552,9 +563,11 @@ def _extract_appended_snippet(delta: str) -> str:
 def _notes_append_snippet(prev_probe: dict | None, probe: dict, change_parts: str) -> str | None:
     """Return the snippet to toast when the notes file grew by a pure append, else None.
 
-    Only a genuine append to the *same* notes file toasts. Edits, full rewrites,
-    undo-truncations (file shrank), session switches, and the initial probe are all
-    intentionally silent — so participants only ever see freshly-shared text.
+    Only a genuine append to the *same* notes file toasts, and only when the
+    appended line carries an addon source marker (see `_NOTES_SOURCE_MARKER_RE`).
+    Hand-typed lines, edits, full rewrites, undo-truncations (file shrank),
+    session switches, and the initial probe are all intentionally silent — so
+    participants only ever see text the trainer deliberately shared.
     """
     if prev_probe is None or "notes" not in set(change_parts.split(",")):
         return None
@@ -564,7 +577,10 @@ def _notes_append_snippet(prev_probe: dict | None, probe: dict, change_parts: st
     curr_text = probe.get("notes_text") or ""
     if not prev_text or len(curr_text) <= len(prev_text) or not curr_text.startswith(prev_text):
         return None
-    return _extract_appended_snippet(curr_text[len(prev_text):]) or None
+    snippet = _extract_appended_snippet(curr_text[len(prev_text):])
+    if not snippet or not _NOTES_SOURCE_MARKER_RE.match(snippet):
+        return None
+    return snippet
 
 
 def _file_mtime_ns(path: Path | None) -> int | None:

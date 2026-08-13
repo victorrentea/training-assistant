@@ -500,7 +500,9 @@ components:
             description: ISO timestamp of notes file mtime
 
     notes_appended:
-      summary: A fresh snippet was appended to the session notes — toast it for copy
+      summary: >-
+        A fresh addon-stamped snippet was appended to the session notes — toast it for copy
+        (hand-typed notes lines are not broadcast)
       x-feature: notes_summary
       payload:
         type: object
@@ -511,7 +513,9 @@ components:
             enum: [notes_appended]
           text:
             type: string
-            description: The newly-appended snippet (bullet stripped, trimmed)
+            description: >-
+              The newly-appended snippet (bullet stripped, trimmed, addon source
+              marker 🤖/📋 kept)
           at:
             type: string
             format: date-time

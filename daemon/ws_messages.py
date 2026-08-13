@@ -338,10 +338,12 @@ class NotesAppendedMsg(BaseModel):
     """Participant-only: a fresh snippet was appended to the session notes.
 
     Drives a copy-friendly toaster so participants can grab the shared text/URL
-    without typing. Carries only the newly-appended delta (not the whole file).
+    without typing. Carries only the newly-appended delta (not the whole file),
+    and only for lines the macOS addon stamped with a source marker (🤖 prompt /
+    📋 sent by hand) — lines typed into the notes file by hand stay private.
     """
     type: Literal["notes_appended"] = "notes_appended"
-    text: str  # the newly-appended snippet (bullet stripped, trimmed)
+    text: str  # the newly-appended snippet (bullet stripped, trimmed, source marker kept)
     at: str  # ISO timestamp when the daemon observed the append
 
 
