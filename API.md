@@ -413,7 +413,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host REST
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| Retract Feedback Form, idempotent: retracting nothing is not an error.<br>`DELETE /feedback-form` | - | `retracted: bool` |
+| Retract Feedback Form, idempotent: retracting nothing is not an error.<br>`DELETE /feedback-form` | - | `retracted: bool`<br>`url?: string` |
 | Publish Feedback Form, host-machine-local, like /summary/highlight: called by the feedback-form skill on 127.0.0.1 once the FOS survey is cloned, retitled and published.<br>`POST /feedback-form` | `title: string`<br>`url: string` | `title: string`<br>`url: string`<br>`created_at: string` |
 
 ## Feature: Bug Reports

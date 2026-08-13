@@ -20,7 +20,11 @@ from daemon.misc.content_files import (
     read_notes_content,
     read_summary_payload,
 )
-from daemon.misc.feedback_form import clear_feedback_form, save_feedback_form
+from daemon.misc.feedback_form import (
+    FEEDBACK_FORM_FILE,
+    clear_feedback_form,
+    save_feedback_form,
+)
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
@@ -388,6 +392,11 @@ class FeedbackFormRetractedResponse(BaseModel):
     #: False when nothing was published — the retraction still succeeded, it
     #: simply had nothing to undo.
     retracted: bool
+    #: The link that was taken off the participants' screens. This endpoint
+    #: targets "whatever is active" and invites blind retries, so a retry issued
+    #: after a session switch destroys the *new* room's legitimate form — the
+    #: caller (and the log) must be told which URL actually went.
+    url: str | None = None
 
 
 @local_router.post("/feedback-form", response_model=FeedbackFormResponse)
@@ -428,11 +437,28 @@ async def retract_feedback_form():
         return JSONResponse(status_code=404, content={"detail": "no active session"})
     from daemon import log
 
-    removed = await asyncio.to_thread(clear_feedback_form, folder)
+    # Memory and browsers first, disk second. Deleting a file can fail (EPERM, a
+    # read-only volume, EISDIR) and this is a recovery endpoint: a disk problem
+    # must not block the half of the repair that would still have worked — the
+    # link coming off everyone's screen.
+    retracted_url = session_shared_state.get_feedback_url()
     session_shared_state.set_feedback_url(None)
-    log.info("feedback-form", "↑ Retracted" + ("" if removed else " (nothing was published)"))
     broadcast(FeedbackFormUpdatedMsg(feedback_url=None))  # participants hide the nav item
-    return FeedbackFormRetractedResponse(retracted=removed)
+    try:
+        removed = await asyncio.to_thread(clear_feedback_form, folder)
+    except OSError as e:
+        # The room is clean but the marker survived, so the next restart would
+        # resurrect the link — that must be loud, not a 200.
+        log.error("feedback-form", f"Retracted {retracted_url} from the room, but {FEEDBACK_FORM_FILE} survived: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"cleared from participants, but {FEEDBACK_FORM_FILE} could not be deleted: {e}"},
+        )
+    # Always name what went: shared state is the honest record of what the room
+    # was actually showing, even when the marker itself was unreadable.
+    went = retracted_url or ("an unreadable marker file" if removed else "nothing — none was published")
+    log.info("feedback-form", f"↑ Retracted: {went}")
+    return FeedbackFormRetractedResponse(retracted=removed, url=retracted_url)
 
 
 @host_router.post("/uploads/seen", status_code=204)

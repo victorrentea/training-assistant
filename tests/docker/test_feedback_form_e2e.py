@@ -23,6 +23,21 @@ from pathlib import Path
 
 import pytest
 
+# Hermetic-only, enforced at import time. This module drives a REAL daemon over
+# DAEMON_BASE — and since it gained the retract and session-switch cases it also
+# ends sessions and deletes marker files. Outside the container DAEMON_BASE
+# defaults to :1234, which is Victor's LIVE daemon, possibly mid-workshop; and
+# nothing stops a plain `pytest tests/docker/...` on the Mac from getting here
+# (testpaths includes tests/docker, tests/conftest.py puts tests/ on sys.path,
+# and no default -m deselects nightly). A stray publish already reached a real
+# session once; these verbs would end it and delete its files.
+if not Path("/app").exists() and os.environ.get("HERMETIC") != "1":
+    pytest.skip(
+        "hermetic-only: drives a real daemon (run via tests/docker/run-hermetic.sh, "
+        "or set HERMETIC=1 if you really mean the daemon on DAEMON_BASE)",
+        allow_module_level=True,
+    )
+
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
@@ -322,7 +337,11 @@ def test_retracting_the_form_hides_it_live_from_participants():
         expect(row).to_be_visible(timeout=10000)
         expect(cta).to_be_visible(timeout=10000)
 
-        assert _retract_feedback_form() == {"retracted": True}
+        retracted = _retract_feedback_form()
+        assert retracted["retracted"] is True
+        # the response names the link it destroyed, so a caller retrying blindly
+        # can tell afterwards which room's form it actually took down
+        assert retracted["url"] == RETRACT_FORM_URL
 
         # No reload: the null broadcast alone must take it back off the screen.
         expect(row).to_be_hidden(timeout=10000)
@@ -339,7 +358,7 @@ def test_retracting_the_form_hides_it_live_from_participants():
     assert not form_file.exists(), f"{form_file} survived the retraction"
     assert _participant_feedback_url() is None
     # Idempotent: a caller that retries blindly gets a success, not a 404/500.
-    assert _retract_feedback_form() == {"retracted": False}
+    assert _retract_feedback_form() == {"retracted": False, "url": None}
 
 
 def test_feedback_link_does_not_leak_into_the_next_clients_session():

@@ -2204,6 +2204,11 @@ components:
         retracted:
           type: boolean
           title: Retracted
+        url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Url
       type: object
       required:
       - retracted

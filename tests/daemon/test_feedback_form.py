@@ -178,7 +178,9 @@ def test_delete_feedback_form_retracts_from_disk_state_and_participants(tmp_path
 
         resp = client.delete("/feedback-form")
         assert resp.status_code == 200, resp.text
-        assert resp.json() == {"retracted": True}
+        # names the link it destroyed: this endpoint targets "whatever is active",
+        # so a retry after a session switch would take out a different room's form
+        assert resp.json() == {"retracted": True, "url": "https://example.com/"}
 
         # the marker is gone, so a daemon restart cannot resurrect the link
         assert not (tmp_path / FEEDBACK_FORM_FILE).exists()
@@ -212,9 +214,48 @@ def test_delete_feedback_form_is_not_an_error_when_nothing_is_published(tmp_path
     resp = TestClient(app).delete("/feedback-form")
 
     assert resp.status_code == 200, resp.text
-    assert resp.json() == {"retracted": False}  # nothing to undo, but no error
+    assert resp.json() == {"retracted": False, "url": None}  # nothing to undo, but no error
     assert session_shared_state.get_feedback_url() is None
     assert [msg.feedback_url for msg in sent] == [None]
+
+
+def test_delete_feedback_form_repairs_the_room_even_when_the_disk_refuses(tmp_path, monkeypatch):
+    """A failed unlink must not cost the repair that would have worked.
+
+    Deleting can fail (EPERM, read-only volume, EISDIR). Taking the link off
+    every screen cannot, so it happens first — and the surviving marker is then
+    reported as a 500, because the next restart would otherwise resurrect the
+    link with nobody having been told.
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from daemon.misc import router as misc_router
+
+    sent = []
+    monkeypatch.setattr(misc_router, "broadcast", lambda msg: sent.append(msg))
+    monkeypatch.setattr(misc_router, "get_active_session_folder", lambda: tmp_path)
+
+    app = FastAPI()
+    app.include_router(misc_router.local_router)
+    client = TestClient(app)
+    try:
+        client.post("/feedback-form", json={"title": "Oops", "url": "https://example.com/"})
+        sent.clear()
+
+        def _refuse(_folder):
+            raise PermissionError(13, "Permission denied")
+
+        monkeypatch.setattr(misc_router, "clear_feedback_form", _refuse)
+        resp = client.delete("/feedback-form")
+
+        assert resp.status_code == 500, resp.text
+        assert "feedback-form.json" in resp.json()["detail"]
+        # …but the room is already clean
+        assert session_shared_state.get_feedback_url() is None
+        assert [msg.feedback_url for msg in sent] == [None]
+    finally:
+        session_shared_state.set_feedback_url(None)
 
 
 def test_delete_feedback_form_404_without_active_session(monkeypatch):
