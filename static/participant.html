@@ -1611,9 +1611,16 @@ var LS = {
   // 'new:scroll_' prefix so clearScrolls() wipes it alongside the position.
   getScrollAtBottom: function(view) { return localStorage.getItem('new:scroll_atbottom_' + view) === '1'; },
   setScrollAtBottom: function(view, v) { localStorage.setItem('new:scroll_atbottom_' + view, v ? '1' : '0'); },
-  getView:   function()     { return localStorage.getItem(LS.VIEW) || 'activity'; },
+  // null when this participant has never picked a tab. The caller then applies
+  // the first-visit default (see _computeLandingView); any stored value is an
+  // explicit choice and beats that default.
+  getView:   function()     { return localStorage.getItem(LS.VIEW); },
   setView:   function(name) { localStorage.setItem(LS.VIEW, name); },
-  getFollow: function()     { var v = localStorage.getItem(LS.FOLLOW); return v === null ? false : v === '1'; },
+  clearView: function()     { localStorage.removeItem(LS.VIEW); },
+  // Following the host's slides is ON by default: the point of the tool is that
+  // the audience lands where the trainer is with nothing to click. Only an
+  // explicit untick (persisted here) turns it off, and it stays off.
+  getFollow: function()     { var v = localStorage.getItem(LS.FOLLOW); return v === null ? true : v === '1'; },
   setFollow: function(val)  { localStorage.setItem(LS.FOLLOW, val ? '1' : '0'); },
   getActiveSlide: function()     { return localStorage.getItem(LS.ACTIVE_SLIDE); },
   setActiveSlide: function(slug) { localStorage.setItem(LS.ACTIVE_SLIDE, slug); },
@@ -2860,12 +2867,32 @@ var Engagement = (function() {
 // entries or turn the mobile back-gesture into "undo tab change".
 function _setTabUrl(slug) {
   if (!_sessionId || !slug) return;
-  // Activity is the default landing tab, so keep the bare session link clean
-  // (e.g. /67nb47 rather than /67nb47/activity) — the link people actually share.
+  // Activity owns the bare session link (e.g. /67nb47 rather than /67nb47/activity)
+  // — that is the link people actually share, so it stays clean.
   var path = slug === 'activity' ? '/' + _sessionId : '/' + _sessionId + '/' + slug;
   if (location.pathname !== path) {
     try { history.replaceState(null, '', path); } catch (e) {}
   }
+}
+// Which tab a participant lands on when the page loads. Strongest signal wins:
+//   1. a tab slug in the URL (/<session>/poll) — a shared deep link is never hijacked
+//   2. the tab this participant last used — an explicit choice, remembered
+//   3. the first-visit default: Activity when a poll or quiz is live right now (nothing
+//      beats a running competition), otherwise Slides when the session actually has a
+//      deck, so the audience is already where the trainer is (with follow ticked they
+//      jump to his current slide by themselves). With no deck, Slides would be an empty
+//      canvas, so fall back to Activity.
+// Tabs whose content does not exist yet still fall back to Slides, as before.
+function _computeLandingView(opts) {
+  var urlTab = String(opts.urlTab || '').toLowerCase();
+  var fallback = (opts.hasSlides && !opts.hasLiveActivity) ? 'slides' : 'activity';
+  var view = (VIEWS.indexOf(urlTab) !== -1 || urlTab === 'past-slides')
+    ? urlTab
+    : (opts.savedView || fallback);
+  if (view === 'agenda' && !opts.hasAgenda) view = 'slides';
+  if (view === 'notes' && !opts.hasNotes) view = 'slides';
+  if (view === 'summary' && !opts.hasSummary) view = 'slides';
+  return view;
 }
 function showView(name) {
   // Remember where the participant came from: a bug report filed from the
@@ -4049,6 +4076,10 @@ function _setDuplicateIndicator(isDup) {
     if (!_sessionId) return;
     if (LS.getSessionId() !== _sessionId) {
       LS.clearScrolls();
+      // A different session is a fresh start: forget which tab was last used so the
+      // participant lands on this session's default (Slides) instead of the tab that
+      // happened to be open at the end of another workshop.
+      LS.clearView();
       LS.setSessionId(_sessionId);
     }
 
@@ -4094,7 +4125,15 @@ function _setDuplicateIndicator(isDup) {
     _bindNameEdit();
     _bindAvatarClick();
 
-    loadSlidesCatalog();
+    // Mirror the stored follow preference (ON by default) into the checkbox BEFORE
+    // the WS can deliver a slide event — _isSlidesFollowEnabled() reads the DOM, and
+    // an unchecked box would make the first host slide of the session get ignored.
+    var _followCbBoot = document.getElementById('slides-follow-checkbox');
+    if (_followCbBoot) _followCbBoot.checked = LS.getFollow();
+
+    // Kept as a promise: the landing-tab decision needs to know whether this session
+    // has any deck at all, and the fetch runs in parallel with the state fetch below.
+    var _slidesCatalogReady = loadSlidesCatalog();
     _connectWS();
     Engagement.init();
 
@@ -4169,15 +4208,17 @@ function _setDuplicateIndicator(isDup) {
     _applyFeedbackUrl(state.feedback_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
     document.getElementById('files-badge').classList.toggle('badge-alert', (state.files_count || 0) > 0 && LS.isFilesUnread());
-    var saved = LS.getView();
-    // A tab slug in the URL (e.g. /<session>/notes) overrides the last-used tab,
-    // so a shared deep link opens on the intended tab.
-    var urlTab = (location.pathname.split('/')[2] || '').toLowerCase();
-    if (VIEWS.indexOf(urlTab) !== -1 || urlTab === 'past-slides') saved = urlTab;
-    if (saved === 'agenda' && !state.has_agenda) saved = 'slides';
-    if (saved === 'notes' && !state.notes_updated_at) saved = 'slides';
-    if (saved === 'summary' && !state.summary_updated_at) saved = 'slides';
+    await _slidesCatalogReady; // never rejects: loadSlidesCatalog swallows its errors
     _hostSlidesCurrent = state.slides_current || null;
+    var saved = _computeLandingView({
+      urlTab: location.pathname.split('/')[2] || '',
+      savedView: LS.getView(),
+      hasSlides: _slidesCatalog.length > 0,
+      hasLiveActivity: _hasAnyActivity(), // _applyState() above filled the poll/quiz state
+      hasAgenda: state.has_agenda,
+      hasNotes: state.notes_updated_at,
+      hasSummary: state.summary_updated_at,
+    });
     if (saved === 'past-slides') {
       showView('slides');
       openPastSlides();
@@ -4187,6 +4228,13 @@ function _setDuplicateIndicator(isDup) {
     }
     var followCb = document.getElementById('slides-follow-checkbox');
     if (followCb) followCb.checked = LS.getFollow(); // init checkbox from LS (handles non-slides landing view)
+    // Landed on Slides with nothing to render — the host is not presenting (or is on a
+    // deck we don't have) and there is no slide to restore. Show the deck menu rather
+    // than a blank canvas, so the participant has something to click.
+    var _slideWillRender = LS.getFollow()
+      ? !!_findSlideForHostCurrent(_hostSlidesCurrent)
+      : !!LS.getActiveSlide();
+    if (saved === 'slides' && !_slideWillRender) openTopics();
   } catch (e) {
     console.error('[participant] failed to load state:', e);
     document.getElementById('loading-screen').style.display = 'none';

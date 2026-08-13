@@ -286,6 +286,85 @@ assert('equal counts do not flag (a re-opened file)', shouldFlagFilesUnread(3, 3
 assert('a higher count flags (a genuinely new file)', shouldFlagFilesUnread(4, 3) === true);
 assert('a lower count does not flag', shouldFlagFilesUnread(2, 3) === false);
 
+// ── Landing tab + follow default ────────────────────────────────────────────
+// A participant should arrive where the trainer already is: on the Slides tab,
+// with "follow" ticked, without touching anything. But an explicit signal — a
+// deep link, or a tab this participant chose earlier — must always beat that
+// default, and a session with no deck must not dump anyone on a blank canvas.
+
+const VIEWS_SRC =
+  'var VIEWS = ' +
+  fs.readFileSync(PARTICIPANT_HTML, 'utf8').match(/var VIEWS = (\[[^\]]*\]);/)[1] +
+  ';';
+const computeLandingView = new Function(
+  VIEWS_SRC + extractFunction(PARTICIPANT_HTML, '_computeLandingView') +
+  '; return _computeLandingView;'
+)();
+
+console.log('\n_computeLandingView()');
+
+assert('first visit with a deck lands on Slides',
+  computeLandingView({ urlTab: '', savedView: null, hasSlides: true }) === 'slides');
+assert('first visit with NO deck falls back to Activity',
+  computeLandingView({ urlTab: '', savedView: null, hasSlides: false }) === 'activity');
+assert('a live poll/quiz beats the Slides default',
+  computeLandingView({ urlTab: '', savedView: null, hasSlides: true, hasLiveActivity: true }) === 'activity');
+assert('a live poll/quiz does not override a deep link',
+  computeLandingView({ urlTab: 'slides', savedView: null, hasSlides: true, hasLiveActivity: true }) === 'slides');
+assert('a remembered tab beats the Slides default',
+  computeLandingView({ urlTab: '', savedView: 'activity', hasSlides: true }) === 'activity');
+assert('a deep link beats both the remembered tab and the default',
+  computeLandingView({ urlTab: 'files', savedView: 'activity', hasSlides: true }) === 'files');
+assert('an unknown URL segment is ignored, default still applies',
+  computeLandingView({ urlTab: 'nope', savedView: null, hasSlides: true }) === 'slides');
+assert('past-slides deep link is preserved',
+  computeLandingView({ urlTab: 'past-slides', savedView: null, hasSlides: true }) === 'past-slides');
+assert('a remembered Agenda tab with no agenda still falls back to Slides',
+  computeLandingView({ urlTab: '', savedView: 'agenda', hasSlides: true, hasAgenda: false }) === 'slides');
+assert('a remembered Notes tab with no notes still falls back to Slides',
+  computeLandingView({ urlTab: '', savedView: 'notes', hasSlides: true, hasNotes: null }) === 'slides');
+assert('a remembered Summary tab with a summary is kept',
+  computeLandingView({ urlTab: '', savedView: 'summary', hasSlides: true, hasSummary: '2026-08-13T10:00:00Z' }) === 'summary');
+
+// LS lives in an object literal, so pull the whole `var LS = {...}` block and run
+// it against a localStorage stub — this exercises the shipped accessors.
+function extractObjectLiteral(file, prefix) {
+  const src = fs.readFileSync(file, 'utf8');
+  const start = src.indexOf(prefix);
+  if (start < 0) throw new Error('not found: ' + prefix);
+  let depth = 0, end = -1;
+  for (let i = src.indexOf('{', start); i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}' && --depth === 0) { end = i + 1; break; }
+  }
+  if (end < 0) throw new Error('unterminated object literal: ' + prefix);
+  return src.slice(start, end) + ';';
+}
+
+function makeLS(store) {
+  const localStorage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+    key: (i) => Object.keys(store)[i] ?? null,
+    get length() { return Object.keys(store).length; },
+  };
+  return new Function('localStorage', extractObjectLiteral(PARTICIPANT_HTML, 'var LS = {') + 'return LS;')(localStorage);
+}
+
+console.log('\nLS follow/view defaults');
+
+assert('follow is ON for a participant who never touched it', makeLS({}).getFollow() === true);
+assert('an explicit untick is respected', makeLS({ 'new:slides_follow': '0' }).getFollow() === false);
+assert('an explicit tick is respected', makeLS({ 'new:slides_follow': '1' }).getFollow() === true);
+assert('no stored tab reads as null (so the default can apply)', makeLS({}).getView() === null);
+assert('a stored tab is returned verbatim', makeLS({ 'new:current_view': 'notes' }).getView() === 'notes');
+{
+  const store = { 'new:current_view': 'notes' };
+  makeLS(store).clearView();
+  assert('clearView forgets the remembered tab', !('new:current_view' in store));
+}
+
 // ── Host-machine auto session switch ────────────────────────────────────────
 // The security boundary is "can this browser reach the trainer's 127.0.0.1:1234".
 // These tests pin the client half: no traffic at all without the cookie, no
