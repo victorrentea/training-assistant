@@ -135,7 +135,7 @@ class TestSessionCreateGdrive:
 class TestSessionResumeGdrive:
     """Resume must re-resolve gdrive_url so a stale URL from the previous session
     never leaks into the new session's view (the original bug: a previous client's URL showed
-    up on the AI@Globex participant page after resuming via the landing card).
+    up on the next session's participant page after resuming via the landing card).
     """
 
     def test_returns_503_when_gdrive_unavailable(self, tmp_path):

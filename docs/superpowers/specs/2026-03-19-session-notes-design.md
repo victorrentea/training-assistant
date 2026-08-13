@@ -128,7 +128,7 @@ The existing "Agent" badge in the bottom-left status bar is extended:
 
 | State | Badge color | Tooltip (`title` attribute) |
 |---|---|---|
-| Daemon connected, folder + notes found | green | basename of `session_folder` (e.g. `2026-03-19 Microservices@Initech`) |
+| Daemon connected, folder + notes found | green | basename of `session_folder` (e.g. `2026-03-19 Microservices@Acme`) |
 | Daemon connected, folder found, no notes | orange | `Session folder found but no notes file` |
 | Daemon connected, no folder found | orange | `No session folder found for today` |
 | Daemon disconnected | grey (unchanged) | existing behaviour |
