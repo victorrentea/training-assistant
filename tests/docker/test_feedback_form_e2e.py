@@ -28,7 +28,7 @@ sys.path.insert(0, "/app/tests")
 
 from pages.participant_page import ParticipantPage
 from playwright.sync_api import expect, sync_playwright
-from session_utils import fresh_session
+from session_utils import _get_json, fresh_session
 
 pytestmark = pytest.mark.nightly
 
@@ -41,10 +41,13 @@ HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
 # Written by daemon/lock.py — the only reliable handle on the running daemon PID.
 LOCK_FILE = Path("/tmp/training_daemon.lock")
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-APP_ROOT = os.environ.get("APP_ROOT") or (
-    "/app" if os.path.isdir("/app") else os.path.normpath(os.path.join(_HERE, "..", ".."))
-)
+APP_ROOT = "/app"  # these tests only ever run inside the hermetic image
+
+# Daemon instances this module spawned, so they can be reaped. A process we
+# started and never wait() on becomes a zombie, and a zombie still answers
+# os.kill(pid, 0) — a later restart would then wait out every timeout on a
+# process that is already dead.
+_spawned_daemons: list[subprocess.Popen] = []
 
 FORM_URL = "https://freeonlinesurveys.com/s/demo1234"
 RESTART_FORM_URL = "https://freeonlinesurveys.com/s/restart42"
@@ -61,14 +64,6 @@ def _await_condition(fn, timeout_ms=10000, poll_ms=300, msg=""):
             return result
         time.sleep(poll_ms / 1000)
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
-
-
-def _get_json(url: str) -> dict:
-    try:
-        with urllib.request.urlopen(url, timeout=5) as resp:
-            return json.loads(resp.read())
-    except Exception:
-        return {}
 
 
 def _publish_feedback_form(title: str, url: str) -> dict:
@@ -109,6 +104,37 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
+def _kill_daemon(pid: int) -> None:
+    """SIGTERM the daemon, escalate to SIGKILL, and make sure it is really gone.
+
+    A daemon this module spawned must be reaped with wait(), not merely killed:
+    an unreaped child lingers as a zombie that os.kill(pid, 0) still reports as
+    alive, so the next restart would burn both timeouts and fail spuriously. The
+    very first daemon is a child of the harness shell, which reaps it for us —
+    that one can only be polled.
+    """
+    ours = next((p for p in _spawned_daemons if p.pid == pid), None)
+    os.kill(pid, signal.SIGTERM)
+    if ours is not None:
+        try:
+            ours.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            ours.kill()
+            ours.wait(timeout=10)
+        _spawned_daemons.remove(ours)
+        return
+    deadline = time.monotonic() + 15
+    while _pid_alive(pid) and time.monotonic() < deadline:
+        time.sleep(0.2)
+    if _pid_alive(pid):
+        os.kill(pid, signal.SIGKILL)
+        _await_condition(
+            lambda: not _pid_alive(pid),
+            timeout_ms=10000,
+            msg=f"Daemon PID {pid} survived SIGKILL",
+        )
+
+
 def _restart_daemon(session_id: str) -> int:
     """Kill the running daemon and start a fresh one; return the new PID.
 
@@ -116,22 +142,14 @@ def _restart_daemon(session_id: str) -> int:
     gone, so anything still visible afterwards came back off the disk.
     """
     old_pid = _daemon_pid()
-    os.kill(old_pid, signal.SIGTERM)
-    deadline = time.monotonic() + 15
-    while _pid_alive(old_pid) and time.monotonic() < deadline:
-        time.sleep(0.2)
-    if _pid_alive(old_pid):
-        os.kill(old_pid, signal.SIGKILL)
-        _await_condition(
-            lambda: not _pid_alive(old_pid),
-            timeout_ms=10000,
-            msg=f"Daemon PID {old_pid} survived SIGKILL",
-        )
+    _kill_daemon(old_pid)
     print(f"[restart] old daemon PID {old_pid} is gone")
 
     env = os.environ.copy()
     env["OTEL_SERVICE_NAME"] = "Daemon"
-    subprocess.Popen([sys.executable, "-m", "daemon"], cwd=APP_ROOT, env=env)
+    _spawned_daemons.append(
+        subprocess.Popen([sys.executable, "-m", "daemon"], cwd=APP_ROOT, env=env)
+    )
 
     # The new instance is up once it has re-adopted the active session…
     _await_condition(
@@ -170,8 +188,12 @@ def test_feedback_link_appears_live_without_reload():
         cta = page.locator("#feedback-cta")
 
         # Nothing published yet — both the nav entry and the CTA stay hidden.
-        expect(row).to_be_hidden(timeout=5000)
-        expect(cta).to_be_hidden(timeout=3000)
+        # to_be_hidden() alone is also satisfied by an absent element, which would
+        # make a typo'd selector look like a passing pre-condition.
+        expect(row).to_have_count(1, timeout=5000)
+        expect(cta).to_have_count(1, timeout=3000)
+        expect(row).to_be_hidden()
+        expect(cta).to_be_hidden()
 
         published = _publish_feedback_form("AI@Acme", FORM_URL)
         assert published["url"] == FORM_URL
