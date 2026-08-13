@@ -144,6 +144,48 @@ paths:
       x-feature: participant_state
       x-doc-notes:
       - Returns participant-personalized full state snapshot.
+  /api/{session_id}/host/participants/{participant_id}:
+    delete:
+      tags:
+      - participant
+      summary: Delete Participant
+      description: Delete an inactive participant and everything they left behind.
+      operationId: delete_participant_api__session_id__host_participants__participant_id__delete
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Session Id
+      - name: participant_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Participant Id
+      - name: force
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Force
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurgeReport'
+      x-feature: identity
+      x-doc-notes:
+      - Purges roster entry, score, quiz/poll votes, own Q&A questions and debate
+        arguments, upvotes, pastes and uploads (daemon/participant/purge.py).
+      - 'Loopback-only: 403 for any request carrying the Railway proxy marker. 404
+        for an unknown id. 409 while the participant is still active (connected, or
+        heard from in the last 90s) — pass ?force=true to delete anyway.'
+      - participant_id comes from GET /api/{session_id}/host/state → participants[].uuid.
   /api/{session_id}/host/participants/resolve-locations:
     post:
       tags:
@@ -3091,6 +3133,39 @@ components:
       required:
       - slug
       title: PptxUpdateDetectedRequest
+    PurgeReport:
+      properties:
+        participant_id:
+          type: string
+          title: Participant Id
+        name:
+          type: string
+          title: Name
+        removed:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Removed
+          default: {}
+        was_active:
+          type: boolean
+          title: Was Active
+          default: false
+      type: object
+      required:
+      - participant_id
+      - name
+      title: PurgeReport
+      description: 'What the purge actually removed — one entry per store it touched.
+
+
+        `removed` maps a store name to the number of entries dropped, and only
+
+        non-zero stores appear, so the report doubles as an explanation of what the
+
+        participant had accumulated. `was_active` records whether the delete had to
+
+        be forced past the liveness guard.'
     QAQuestionParticipant:
       properties:
         id:

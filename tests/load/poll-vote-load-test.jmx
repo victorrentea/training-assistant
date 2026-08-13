@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.4.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan"
+              testname="Poll Answering — Participant Vote Load Test" enabled="true">
+      <stringProp name="TestPlan.comments">Load test for the participant "poll answering" path.
+
+WHAT IT DOES
+  1. SETUP  (1 thread) — creates a 4-option poll draft and STARTs it, so votes are accepted.
+  2. PARTICIPANTS (${NUM_PARTICIPANTS} threads, ramped over ${RAMP_UP_SEC}s) — each virtual
+     participant casts VOTES_PER_PARTICIPANT votes (re-voting is realistic: votes are mutable),
+     each vote picking a random option 0..${MAX_OPTION_INDEX}.
+       POST ${VOTE_PATH}
+       Header:  X-Participant-ID: &lt;stable per-thread UUID&gt;
+       Body:    {"options":[&lt;random idx&gt;]}
+       Expect:  HTTP 204
+  3. TEARDOWN (1 thread) — clears the poll.
+
+DEFAULT TARGET = the LOCAL DAEMON (http://127.0.0.1:1234), which needs no auth and is the safe
+default (it does NOT hammer production). The daemon serves ONE session, so the participant vote
+path has no /{session_id} prefix and the host path's session segment is a throw-away placeholder.
+
+  ⚠ This mutates LIVE poll state on the target daemon (switches activity to "poll", broadcasts to
+    any connected participants). Run it against an idle/non-live daemon. Teardown clears it.
+
+TO POINT AT PRODUCTION (https://interact.victorrentea.ro) edit the User Defined Variables,
+substituting the active session id into the two paths:
+  PROTOCOL       = https
+  HOST           = interact.victorrentea.ro
+  PORT           = 443
+  VOTE_PATH      = /&lt;session_id&gt;/api/participant/poll/vote      (prod needs the session prefix)
+  HOST_POLL_BASE = /api/&lt;session_id&gt;/host/poll
+  AUTH_USER / AUTH_PASS = host-panel credentials (~/.training-assistants-secrets.env)
+(Host endpoints are Basic-Auth protected on prod; the AuthManager below supplies the
+credentials. On localhost the credentials are simply unused.)
+
+No plugins required — pure HTTP samplers.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments"
+                   guiclass="ArgumentsPanel" testclass="Arguments"
+                   testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <!-- ── Connection (defaults = local daemon) ─────────── -->
+          <elementProp name="PROTOCOL" elementType="Argument">
+            <stringProp name="Argument.name">PROTOCOL</stringProp>
+            <stringProp name="Argument.value">http</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="HOST" elementType="Argument">
+            <stringProp name="Argument.name">HOST</stringProp>
+            <stringProp name="Argument.value">127.0.0.1</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="PORT" elementType="Argument">
+            <stringProp name="Argument.name">PORT</stringProp>
+            <stringProp name="Argument.value">1234</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <!-- ── Paths (daemon-direct defaults) ───────────────── -->
+          <elementProp name="VOTE_PATH" elementType="Argument">
+            <stringProp name="Argument.name">VOTE_PATH</stringProp>
+            <!-- Daemon-direct: /api/participant/poll/vote
+                 Prod:          /&lt;session_id&gt;/api/participant/poll/vote  (put the real session id in the path) -->
+            <stringProp name="Argument.value">/api/participant/poll/vote</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="HOST_POLL_BASE" elementType="Argument">
+            <stringProp name="Argument.name">HOST_POLL_BASE</stringProp>
+            <!-- Base for host poll draft/start/clear. "loadtest" is a throw-away session segment
+                 for the daemon (which serves one session). Prod: /api/&lt;session_id&gt;/host/poll -->
+            <stringProp name="Argument.value">/api/loadtest/host/poll</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <!-- ── Auth (used only against production host endpoints) ─ -->
+          <elementProp name="AUTH_USER" elementType="Argument">
+            <stringProp name="Argument.name">AUTH_USER</stringProp>
+            <stringProp name="Argument.value">CHANGE_ME</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="AUTH_PASS" elementType="Argument">
+            <stringProp name="Argument.name">AUTH_PASS</stringProp>
+            <stringProp name="Argument.value">CHANGE_ME</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <!-- ── Poll shape ───────────────────────────────────── -->
+          <elementProp name="MULTI" elementType="Argument">
+            <stringProp name="Argument.name">MULTI</stringProp>
+            <!-- false = single-choice poll (each vote sends exactly one option) -->
+            <stringProp name="Argument.value">false</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="MAX_OPTION_INDEX" elementType="Argument">
+            <stringProp name="Argument.name">MAX_OPTION_INDEX</stringProp>
+            <!-- Highest valid 0-based option index. The setup poll has 4 options → 3.
+                 If you change the option count in the setup draft, update this too. -->
+            <stringProp name="Argument.value">3</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <!-- ── Load profile ─────────────────────────────────── -->
+          <elementProp name="NUM_PARTICIPANTS" elementType="Argument">
+            <stringProp name="Argument.name">NUM_PARTICIPANTS</stringProp>
+            <!-- Concurrent virtual participants -->
+            <stringProp name="Argument.value">200</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="RAMP_UP_SEC" elementType="Argument">
+            <stringProp name="Argument.name">RAMP_UP_SEC</stringProp>
+            <!-- Seconds to start all participant threads -->
+            <stringProp name="Argument.value">20</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="VOTES_PER_PARTICIPANT" elementType="Argument">
+            <stringProp name="Argument.name">VOTES_PER_PARTICIPANT</stringProp>
+            <!-- Votes (incl. re-votes) each participant casts. Total requests = NUM_PARTICIPANTS × this. -->
+            <stringProp name="Argument.value">5</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="VOTE_INTERVAL_MS" elementType="Argument">
+            <stringProp name="Argument.name">VOTE_INTERVAL_MS</stringProp>
+            <!-- Pause between a participant's successive votes. Set 0 for max-throughput stress. -->
+            <stringProp name="Argument.value">800</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+
+      <!-- Applies HOST/PORT/PROTOCOL to every HTTP sampler below -->
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement"
+                         testname="HTTP Request Defaults (${PROTOCOL}://${HOST}:${PORT})" enabled="true">
+        <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${PROTOCOL}</stringProp>
+        <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+        <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+      </ConfigTestElement>
+      <hashTree/>
+
+      <!-- Basic Auth — needed only for prod host endpoints; unused on localhost -->
+      <AuthManager guiclass="AuthPanel" testclass="AuthManager"
+                   testname="HTTP Basic Auth (host endpoints)" enabled="true">
+        <collectionProp name="AuthManager.auth_list">
+          <elementProp name="" elementType="Authorization">
+            <stringProp name="Authorization.url">${PROTOCOL}://${HOST}:${PORT}</stringProp>
+            <stringProp name="Authorization.username">${AUTH_USER}</stringProp>
+            <stringProp name="Authorization.password">${AUTH_PASS}</stringProp>
+            <stringProp name="Authorization.domain"></stringProp>
+            <stringProp name="Authorization.realm"></stringProp>
+            <stringProp name="Authorization.mechanism">BASIC</stringProp>
+          </elementProp>
+        </collectionProp>
+      </AuthManager>
+      <hashTree/>
+
+      <!-- ================================================================
+           1. SETUP: create a 4-option poll draft, then start it
+           ================================================================ -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup"
+                        testname="Setup: Create and Start Poll" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
+                     guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+      </SetupThreadGroup>
+      <hashTree>
+
+        <!-- Push the draft: 4 options. multi/public come from variables. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
+                          testname="PUT host/poll/update (4-option draft)" enabled="true">
+          <stringProp name="HTTPSampler.path">${HOST_POLL_BASE}/update</stringProp>
+          <stringProp name="HTTPSampler.method">PUT</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"question":"Load Test — pick an option","options":["Option A","Option B","Option C","Option D"],"multi":${MULTI},"public":true}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager"
+                         testname="Content-Type: application/json" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
+                             testname="Assert 204" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="51512">204</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">Failed to push poll draft (host/poll/update)</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Start the poll so participant votes are accepted -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
+                          testname="POST host/poll/start" enabled="true">
+          <stringProp name="HTTPSampler.path">${HOST_POLL_BASE}/start</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
+                             testname="Assert 204" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="51512">204</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">Failed to start poll (host/poll/start)</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+      </hashTree>
+
+      <!-- ================================================================
+           2. PARTICIPANTS: NUM_PARTICIPANTS threads each casting
+              VOTES_PER_PARTICIPANT votes (random option, paced).
+           ================================================================ -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup"
+                   testname="Participants (${NUM_PARTICIPANTS} threads)" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
+                     guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">${VOTES_PER_PARTICIPANT}</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${NUM_PARTICIPANTS}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${RAMP_UP_SEC}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- The vote request. X-Participant-ID identifies the (mutable) voter. -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
+                          testname="POST poll/vote (random option)" enabled="true">
+          <stringProp name="HTTPSampler.path">${VOTE_PATH}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"options":[${__Random(0,${MAX_OPTION_INDEX},)}]}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <!-- Identify the voter by thread number: ${__threadNum} is constant for a
+               given thread across all its loop iterations (so re-votes update the SAME
+               voter, exercising the mutable-vote path) and is unique across the group,
+               giving exactly NUM_PARTICIPANTS distinct voters. Pure built-in function —
+               no Groovy/JSR223, so it works under any Java (Groovy in JMeter 5.4.3 cannot
+               compile on Java 17+). -->
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager"
+                         testname="Content-Type + X-Participant-ID" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">X-Participant-ID</stringProp>
+                <stringProp name="Header.value">loadtest-p${__threadNum}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
+                             testname="Assert 204 (vote accepted)" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="51512">204</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">Vote rejected (409 = poll not active/invalid option; 400 = missing participant id)</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+          <!-- Pace between a participant's successive (re-)votes -->
+          <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer"
+                         testname="Pause between votes (${VOTE_INTERVAL_MS} ms)" enabled="true">
+            <stringProp name="ConstantTimer.delay">${VOTE_INTERVAL_MS}</stringProp>
+          </ConstantTimer>
+          <hashTree/>
+        </hashTree>
+
+      </hashTree>
+
+      <!-- ================================================================
+           3. TEARDOWN: clear the poll
+           ================================================================ -->
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup"
+                       testname="Teardown: Clear Poll" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
+                     guiclass="LoopControlPanel" testclass="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+      </PostThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
+                          testname="POST host/poll/clear" enabled="true">
+          <stringProp name="HTTPSampler.path">${HOST_POLL_BASE}/clear</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+      </hashTree>
+
+      <!-- ================================================================
+           LISTENERS — Summary + Aggregate enabled; Results Tree off (heavy)
+           ================================================================ -->
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector"
+                       testname="View Results Tree (debug — disabled)" enabled="false">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time><latency>true</latency><timestamp>true</timestamp><success>true</success>
+            <label>true</label><code>true</code><message>true</message><threadName>true</threadName>
+            <dataType>true</dataType><encoding>false</encoding><assertions>true</assertions>
+            <subresults>true</subresults><responseData>false</responseData><samplerData>false</samplerData>
+            <xml>false</xml><fieldNames>true</fieldNames><responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders><responseDataOnError>true</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <bytes>true</bytes><sentBytes>true</sentBytes><url>true</url><threadCounts>true</threadCounts>
+            <idleTime>true</idleTime><connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector"
+                       testname="Summary Report" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time><latency>true</latency><timestamp>true</timestamp><success>true</success>
+            <label>true</label><code>true</code><message>true</message><threadName>true</threadName>
+            <dataType>true</dataType><encoding>false</encoding><assertions>true</assertions>
+            <subresults>true</subresults><responseData>false</responseData><samplerData>false</samplerData>
+            <xml>false</xml><fieldNames>true</fieldNames><responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders><responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <bytes>true</bytes><sentBytes>true</sentBytes><url>true</url><threadCounts>true</threadCounts>
+            <idleTime>true</idleTime><connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+      <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector"
+                       testname="Aggregate Report (percentiles)" enabled="true">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time><latency>true</latency><timestamp>true</timestamp><success>true</success>
+            <label>true</label><code>true</code><message>true</message><threadName>true</threadName>
+            <dataType>true</dataType><encoding>false</encoding><assertions>true</assertions>
+            <subresults>true</subresults><responseData>false</responseData><samplerData>false</samplerData>
+            <xml>false</xml><fieldNames>true</fieldNames><responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders><responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <bytes>true</bytes><sentBytes>true</sentBytes><url>true</url><threadCounts>true</threadCounts>
+            <idleTime>true</idleTime><connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

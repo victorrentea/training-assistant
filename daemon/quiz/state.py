@@ -172,6 +172,14 @@ class QuizState:
         self._vote_counts_cache = None
         self.awarded_points = {}
 
+    def invalidate_counts(self) -> None:
+        """Call after mutating .votes from outside (e.g. purging a participant)
+        so vote_counts re-computes instead of serving the stale tally.
+
+        Mirrors PollState.invalidate_counts so both vote stores expose the same
+        public way to drop the cache."""
+        self._vote_counts_dirty = True
+
     def vote_counts(self) -> list[int]:
         if not self._vote_counts_dirty and self._vote_counts_cache is not None:
             return self._vote_counts_cache

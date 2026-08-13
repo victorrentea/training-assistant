@@ -53,6 +53,11 @@ _DOC_NOTES: dict[tuple[str, str], list[str]] = {
     ("GET", "/api/{session_id}/host/state"): [
         "Returns host-facing full state snapshot.",
     ],
+    ("DELETE", "/api/{session_id}/host/participants/{participant_id}"): [
+        "Purges roster entry, score, quiz/poll votes, own Q&A questions and debate arguments, upvotes, pastes and uploads (daemon/participant/purge.py).",
+        "Loopback-only: 403 for any request carrying the Railway proxy marker. 404 for an unknown id. 409 while the participant is still active (connected, or heard from in the last 90s) — pass ?force=true to delete anyway.",
+        "participant_id comes from GET /api/{session_id}/host/state → participants[].uuid.",
+    ],
     ("GET", "/api/participant/slides/decks"): [
         "Returns cache status snapshot for all known decks on initial page load; decks_updated WS carries full data so no re-polling needed.",
     ],

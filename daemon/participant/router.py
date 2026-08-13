@@ -40,10 +40,15 @@ from daemon.participant.sanitize import (
     normalize_for_dedup,
     sanitize_name,
 )
+from daemon.participant.purge import PurgeReport
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
-from daemon.ws_messages import ParticipantListUpdatedMsg, ParticipantNamesUpdatedMsg
+from daemon.ws_messages import (
+    ParticipantListUpdatedMsg,
+    ParticipantNamesUpdatedMsg,
+    ScoresUpdatedMsg,
+)
 from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
@@ -548,6 +553,19 @@ async def _notify_host_participant_list():
     _publish_names_if_changed()
 
 
+async def _publish_scores_after_purge() -> None:
+    """Re-publish the scoreboard after a participant was removed from it.
+
+    The roster push alone would leave the leaderboard showing the deleted
+    participant until the next scoring event. Participants get the UUID-free
+    token-keyed map; the trusted host keeps the UUID-keyed one.
+    """
+    from daemon.scores import notify_host_scores, scores
+
+    broadcast(ScoresUpdatedMsg(scores=scores.snapshot_tokenized()))
+    await notify_host_scores()
+
+
 router = APIRouter(prefix="/api/participant", tags=["participant"])
 
 
@@ -937,6 +955,51 @@ def _get_current_session_id() -> str | None:
 # ── Host-only router ──
 
 host_router = APIRouter(prefix="/api/{session_id}/host", tags=["participant"])
+
+
+# Clears strays out of a live session — a test join, a second tab that took its
+# own name, someone who left before the workshop started — without the
+# stop-the-daemon-and-hand-edit-`session-state.json` dance that was the only way
+# before. `daemon/participant/purge.py` owns the list of stores it clears; the
+# three guards below are what keep a destructive endpoint boring:
+#   * the proxy marker check keeps it on the trainer's machine. The host UI talks
+#     to this daemon over loopback, so nothing legitimate arrives through Railway,
+#     and this must never be one routing mistake away from the room.
+#   * an unknown id is a 404, not a silent success — you asked to delete
+#     something that is not there, and that usually means a mistyped uuid.
+#   * an active participant is a 409, because deleting someone mid-session yanks
+#     their identity out from under an open tab. `?force=true` says you mean it.
+@host_router.delete("/participants/{participant_id}", response_model=PurgeReport)
+async def delete_participant(
+    request: Request, session_id: str, participant_id: str, force: bool = False
+):
+    """Delete an inactive participant and everything they left behind."""
+    from daemon.participant.purge import is_active, is_known, purge_participant
+    from daemon.proxy_handler import RAILWAY_PROXY_MARKER
+
+    if request.headers.get(RAILWAY_PROXY_MARKER):
+        return JSONResponse({"error": "Not available through the proxy"}, status_code=403)
+    if not is_known(participant_id):
+        return JSONResponse({"error": "Unknown participant"}, status_code=404)
+    if is_active(participant_id) and not force:
+        return JSONResponse(
+            {
+                "error": "Participant is still active — retry with ?force=true to delete anyway",
+                "name": participant_state.participant_names.get(participant_id, ""),
+            },
+            status_code=409,
+        )
+
+    report = purge_participant(participant_id)
+    from daemon import log as _log
+
+    _log.info(
+        "participant",
+        f"🗑️  purged {report.name!r} ({participant_id[:8]}…) — {report.removed or 'nothing stored'}",
+    )
+    await _notify_host_participant_list()
+    await _publish_scores_after_purge()
+    return report
 
 
 @host_router.post("/participants/resolve-locations", status_code=204)

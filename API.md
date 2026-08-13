@@ -79,6 +79,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Resolve Participant Locations, backfill city name + timezone + country for all participants missing geo metadata.<br>`POST /api/{session_id}/host/participants/resolve-locations` | - | - |
+| Delete Participant, purges roster entry, score, quiz/poll votes, own Q&A questions and debate arguments, upvotes, pastes and uploads (daemon/participant/purge.py); loopback-only: 403 for any request carrying the Railway proxy marker; 404 for an unknown id; 409 while the participant is still active (connected, or heard from in the last 90s) — pass ?force=true to delete anyway; participant_id comes from GET /api/{session_id}/host/state → participants[].uuid.<br>`DELETE /api/{session_id}/host/participants/{participant_id}` | - | `participant_id: string`<br>`name: string`<br>`removed?: dict[str, int]`<br>`was_active?: bool` |
 
 ### Host WS
 | Message | Payload |

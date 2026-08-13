@@ -46,6 +46,29 @@ Transcription (Whisper, audio capture) is in [`victor-macos-addons`](https://git
 Transcript query: `python3 -m daemon.transcript_query <from_iso> <to_iso>`
 Transcript rebuild: `python3 -m daemon.rebuild_normalized_transcripts --from-iso <iso_datetime>`
 
+### Deleting a stray participant
+
+A test join, a duplicate tab, someone who left before the workshop started —
+delete it through the daemon instead of stopping the daemon and hand-editing
+`session-state.json` (that was the old procedure; do not go back to it).
+
+```bash
+# The daemon serves exactly one active session, so {session_id} in host paths is
+# a placeholder it never validates — `cur` below works regardless of the real id.
+# 1. find the uuid (the name is not the key — names can collide)
+curl -s localhost:1234/api/cur/host/state \
+  | python3 -c 'import sys,json;[print(p["uuid"],p["online"],p["name"]) for p in json.load(sys.stdin)["participants"]]'
+# 2. delete (add ?force=true only to delete someone still active)
+curl -s -X DELETE localhost:1234/api/cur/host/participants/<uuid>
+```
+
+Clears roster entry, score, quiz/poll votes, their own Q&A questions and debate
+arguments, their upvotes on everyone else's, pastes and uploads — and returns a
+report of what it removed. Loopback-only (403 through the Railway proxy), 404 on
+an unknown uuid, 409 while the participant is still active. `attendees.md` and
+the host roster refresh themselves; the 3-second snapshot flush persists it, so
+no restart is needed.
+
 ---
 
 ## Memory
