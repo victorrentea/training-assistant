@@ -31,6 +31,7 @@ from daemon.participant.names import (
 from daemon.participant.names import (
     refresh_avatar as _refresh_avatar_logic,
 )
+from daemon.participant.purge import PurgeReport
 from daemon.participant.sanitize import (
     MAX_NAME_LEN as _MAX_NAME_LEN_SHARED,
 )
@@ -40,7 +41,6 @@ from daemon.participant.sanitize import (
     normalize_for_dedup,
     sanitize_name,
 )
-from daemon.participant.purge import PurgeReport
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
