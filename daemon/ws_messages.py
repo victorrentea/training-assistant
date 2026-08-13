@@ -356,9 +356,9 @@ class AgendaUpdatedMsg(BaseModel):
 
 
 class FeedbackFormUpdatedMsg(BaseModel):
-    """Participant-only: the end-of-session feedback form link is available.
+    """Participant-only: the end-of-session feedback form link changed.
 
-    Sent when the form is published (or cleared with None at session teardown).
+    Sent when the form is published, and again with None when it is retracted.
     """
     type: Literal["feedback_form_updated"] = "feedback_form_updated"
     feedback_url: str | None = None  # published FOS survey URL, None when cleared

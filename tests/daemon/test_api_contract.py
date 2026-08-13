@@ -30,10 +30,18 @@ def _extract_clean_openapi() -> dict:
     app = create_app("http://test-backend")
     openapi = copy.deepcopy(app.openapi())
 
-    # Keep only /api/ routes, exclude catch-all proxy
+    # Host-machine-local routes live outside the /api/ namespace by design (no
+    # {session_id} in the path), but they are real REST contracts called from
+    # outside this repo — /feedback-form is the one the skills repo POSTs to.
+    # Read them off the router rather than hardcoding, so a new local route is
+    # documented (or fails this snapshot) the moment it is registered.
+    from daemon.misc.router import local_router
+    local_paths = {getattr(route, "path", None) for route in local_router.routes}
+
+    # Keep only /api/ + host-local routes, exclude static, WS and catch-all proxy
     filtered_paths = {}
     for path, methods in openapi["paths"].items():
-        if not path.startswith("/api/"):
+        if not path.startswith("/api/") and path not in local_paths:
             continue
         if "{path" in path:
             continue
@@ -47,8 +55,8 @@ def _extract_clean_openapi() -> dict:
         schemas.pop(internal, None)
 
     # Clean up 422 validation error responses (FastAPI noise)
-    for path, methods in openapi["paths"].items():
-        for method, details in methods.items():
+    for _path, methods in openapi["paths"].items():
+        for _method, details in methods.items():
             if isinstance(details, dict) and "responses" in details:
                 details["responses"].pop("422", None)
 

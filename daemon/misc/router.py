@@ -20,7 +20,7 @@ from daemon.misc.content_files import (
     read_notes_content,
     read_summary_payload,
 )
-from daemon.misc.feedback_form import save_feedback_form
+from daemon.misc.feedback_form import clear_feedback_form, save_feedback_form
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
@@ -384,6 +384,12 @@ class FeedbackFormResponse(BaseModel):
     created_at: str
 
 
+class FeedbackFormRetractedResponse(BaseModel):
+    #: False when nothing was published — the retraction still succeeded, it
+    #: simply had nothing to undo.
+    retracted: bool
+
+
 @local_router.post("/feedback-form", response_model=FeedbackFormResponse)
 async def publish_feedback_form(body: FeedbackFormRequest):
     """Publish the end-of-session participant feedback form link.
@@ -405,6 +411,28 @@ async def publish_feedback_form(body: FeedbackFormRequest):
     log.info("feedback-form", f"↑ Published: {title} → {url}")
     broadcast(FeedbackFormUpdatedMsg(feedback_url=url))  # participants reveal the nav item
     return FeedbackFormResponse(title=title, url=url, created_at=created_at)
+
+
+# The undo for a wrong publish. Publishing deliberately has no host allowlist
+# (vendor identity is the calling skill's job), so a misbehaving caller can land
+# any well-formed link on every participant screen; without this route the only
+# recovery is to delete the marker file, restart the daemon and ask the whole
+# room to reload. The broadcast goes out even when nothing was published — a
+# participant showing a link the daemon no longer knows about is exactly the
+# state a blind retry is meant to repair.
+@local_router.delete("/feedback-form", response_model=FeedbackFormRetractedResponse)
+async def retract_feedback_form():
+    """Retract the published feedback form link. Idempotent: retracting nothing is not an error."""
+    folder = get_active_session_folder()
+    if folder is None:
+        return JSONResponse(status_code=404, content={"detail": "no active session"})
+    from daemon import log
+
+    removed = await asyncio.to_thread(clear_feedback_form, folder)
+    session_shared_state.set_feedback_url(None)
+    log.info("feedback-form", "↑ Retracted" + ("" if removed else " (nothing was published)"))
+    broadcast(FeedbackFormUpdatedMsg(feedback_url=None))  # participants hide the nav item
+    return FeedbackFormRetractedResponse(retracted=removed)
 
 
 @host_router.post("/uploads/seen", status_code=204)

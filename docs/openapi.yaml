@@ -908,6 +908,67 @@ paths:
             application/json:
               schema: {}
       x-feature: slides
+  /summary/highlight:
+    post:
+      tags:
+      - misc
+      summary: Highlight Summary Local
+      operationId: highlight_summary_local_summary_highlight_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HighlightRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HighlightResponse'
+      x-feature: notes_summary
+  /feedback-form:
+    post:
+      tags:
+      - misc
+      summary: Publish Feedback Form
+      description: 'Publish the end-of-session participant feedback form link.
+
+
+        Host-machine-local, like /summary/highlight: called by the feedback-form
+
+        skill on 127.0.0.1 once the FOS survey is cloned, retitled and published.'
+      operationId: publish_feedback_form_feedback_form_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackFormRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackFormResponse'
+      x-feature: feedback
+    delete:
+      tags:
+      - misc
+      summary: Retract Feedback Form
+      description: 'Retract the published feedback form link. Idempotent: retracting
+        nothing is not an error.'
+      operationId: retract_feedback_form_feedback_form_delete
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackFormRetractedResponse'
+      x-feature: feedback
   /api/{session_id}/host/quiz/queue:
     post:
       tags:
@@ -2138,6 +2199,15 @@ components:
       - url
       - created_at
       title: FeedbackFormResponse
+    FeedbackFormRetractedResponse:
+      properties:
+        retracted:
+          type: boolean
+          title: Retracted
+      type: object
+      required:
+      - retracted
+      title: FeedbackFormRetractedResponse
     FilesMdResponse:
       properties:
         raw_markdown:

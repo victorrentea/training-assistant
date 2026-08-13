@@ -18,6 +18,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Emoji Reactions](#feature-emoji-reactions)
 - [Paste & File Upload](#feature-paste--file-upload)
 - [Notes, Summary & Agenda](#feature-notes,-summary--agenda)
+- [Feedback](#feature-feedback)
 - [Bug Reports](#feature-bug-reports)
 - [Cross-cutting: Reload](#feature-cross-cutting-reload)
 - [Infrastructure](#feature-infrastructure)
@@ -385,7 +386,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | A fresh snippet was appended to the session notes — toast it for copy<br>`notes_appended` | `text: string  # The newly-appended snippet (bullet stripped, trimmed)`<br>`at: string  # ISO timestamp when the daemon observed the append` |
 | AI summary file changed — mtime timestamp updated<br>`summary_updated` | `updated_at?: string  # ISO timestamp of ai-summary.md mtime` |
 | Agenda .docx availability changed in the session folder<br>`agenda_updated` | `has_agenda?: bool  # Whether an agenda .docx is available in the session folder` |
-| End-of-session participant feedback form link published<br>`feedback_form_updated` | `feedback_url?: string  # Published freeonlinesurveys URL, or null when cleared` |
+| End-of-session participant feedback form link published or retracted<br>`feedback_form_updated` | `feedback_url?: string  # Published freeonlinesurveys URL, or null when cleared` |
 
 ### Host REST
 | Endpoint | Request | Response |
@@ -393,6 +394,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Get Host Notes, return current session notes content.<br>`GET /api/{session_id}/host/notes` | - | `notes_content?: string` |
 | Get Host Summary, return summary points, raw markdown, and updated_at timestamp.<br>`GET /api/{session_id}/host/summary` | - | `points?: list[SummaryPoint{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`text:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`source:string`<br>`}]`<br>`raw_markdown?: string`<br>`updated_at?: string` |
 | Highlight Summary, wrap a host-selected passage of ai-summary.md in <mark>, deterministically; race-safe against a concurrent AI editing the same file: the anchor is resolved against the current file at write time, or the request is rejected (409) if the passage moved/changed — so content is never scrambled.<br>`POST /api/{session_id}/host/summary/highlight` | `exact: string`<br>`prefix?: string`<br>`suffix?: string`<br>`start?: int`<br>`end?: int`<br>`base_rev?: string` | `status: string`<br>`updated_at?: string`<br>`reason?: string` |
+| Highlight Summary Local<br>`POST /summary/highlight` | `exact: string`<br>`prefix?: string`<br>`suffix?: string`<br>`start?: int`<br>`end?: int`<br>`base_rev?: string` | `status: string`<br>`updated_at?: string`<br>`reason?: string` |
 
 ### Host WS
 | Message | Payload |
@@ -405,6 +407,14 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- |
 | Railway instructs daemon to force-generate a summary immediately<br>`summary_force` | - |
 | Railway instructs daemon to reset summary state entirely<br>`summary_full_reset` | - |
+
+## Feature: Feedback
+
+### Host REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Retract Feedback Form, idempotent: retracting nothing is not an error.<br>`DELETE /feedback-form` | - | `retracted: bool` |
+| Publish Feedback Form, host-machine-local, like /summary/highlight: called by the feedback-form skill on 127.0.0.1 once the FOS survey is cloned, retitled and published.<br>`POST /feedback-form` | `title: string`<br>`url: string` | `title: string`<br>`url: string`<br>`created_at: string` |
 
 ## Feature: Bug Reports
 

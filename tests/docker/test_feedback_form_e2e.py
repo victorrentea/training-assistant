@@ -28,7 +28,7 @@ sys.path.insert(0, "/app/tests")
 
 from pages.participant_page import ParticipantPage
 from playwright.sync_api import expect, sync_playwright
-from session_utils import _get_json, fresh_session
+from session_utils import _get_json, _req, fresh_session
 
 pytestmark = pytest.mark.nightly
 
@@ -51,6 +51,8 @@ _spawned_daemons: list[subprocess.Popen] = []
 
 FORM_URL = "https://freeonlinesurveys.com/s/demo1234"
 RESTART_FORM_URL = "https://freeonlinesurveys.com/s/restart42"
+RETRACT_FORM_URL = "https://freeonlinesurveys.com/s/oops99"
+LEAK_FORM_URL = "https://freeonlinesurveys.com/s/leak7x"
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,6 +79,52 @@ def _publish_feedback_form(title: str, url: str) -> dict:
     with urllib.request.urlopen(req, timeout=15) as resp:
         assert resp.status == 200, f"POST /feedback-form returned {resp.status}"
         return json.loads(resp.read())
+
+
+def _retract_feedback_form() -> dict:
+    """DELETE the host-machine-local /feedback-form route — the undo for a bad publish."""
+    req = urllib.request.Request(f"{DAEMON_BASE}/feedback-form", method="DELETE")
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        assert resp.status == 200, f"DELETE /feedback-form returned {resp.status}"
+        return json.loads(resp.read())
+
+
+def _participant_feedback_url() -> str | None:
+    """The feedback URL the daemon would hand a participant joining right now."""
+    return _get_json(f"{DAEMON_BASE}/api/participant/state").get("feedback_url")
+
+
+def _end_session() -> None:
+    try:
+        _req("POST", f"{DAEMON_BASE}/api/session/end")
+    except json.JSONDecodeError:
+        pass  # /end answers 204 with an empty body; only the decode is tolerated
+
+    _await_condition(
+        lambda: _get_json(f"{DAEMON_BASE}/api/session/active").get("session_id", "?") is None,
+        msg="Daemon still reports an active session after /end",
+    )
+
+
+def _resume_session(folder_name: str) -> str:
+    """Re-enter an existing session folder; returns its session_id.
+
+    Requires no active session: the daemon only re-resolves per-session state
+    (gdrive_url, feedback form, participant caches) when it enters a session
+    from an empty stack.
+    """
+    result = _req(
+        "POST",
+        f"{DAEMON_BASE}/api/session/resume",
+        json.dumps({"folder": folder_name}).encode(),
+    )
+    session_id = result["session_id"]
+    _await_condition(
+        lambda: _get_json(f"{DAEMON_BASE}/api/session/active").get("session_id") == session_id,
+        timeout_ms=20000,
+        msg=f"Daemon did not enter resumed session {folder_name!r}",
+    )
+    return session_id
 
 
 def _active_session_folder_name(session_id: str) -> str:
@@ -248,3 +296,92 @@ def test_feedback_link_survives_daemon_restart():
     assert state.get("feedback_url") == RESTART_FORM_URL, (
         f"Participant state lost feedback_url after restart: {state.get('feedback_url')!r}"
     )
+
+
+def test_retracting_the_form_hides_it_live_from_participants():
+    """The undo for a wrong publish, all the way to the browser.
+
+    Publishing has no host allowlist by design, so a bad link genuinely reaches
+    the room (it did once during this feature's development). This is the only
+    exercise of the clear direction of ``_applyFeedbackUrl`` — hiding a row and a
+    CTA that were previously shown, and resetting both hrefs so a stale link
+    cannot be clicked out of a hidden element.
+    """
+    session_id = fresh_session("FeedbackRetract")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_context().new_page()
+        page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        ParticipantPage(page).join("RetractTester")
+
+        row = page.locator("#feedback-row")
+        cta = page.locator("#feedback-cta")
+
+        _publish_feedback_form("Oops", RETRACT_FORM_URL)
+        expect(row).to_be_visible(timeout=10000)
+        expect(cta).to_be_visible(timeout=10000)
+
+        assert _retract_feedback_form() == {"retracted": True}
+
+        # No reload: the null broadcast alone must take it back off the screen.
+        expect(row).to_be_hidden(timeout=10000)
+        expect(cta).to_be_hidden(timeout=10000)
+        assert page.locator("#feedback-nav").get_attribute("href") == "#"
+        assert page.locator("#feedback-cta-link").get_attribute("href") == "#"
+
+        browser.close()
+
+    # The marker is deleted, not blanked — otherwise the next restart brings it back.
+    form_file = (
+        Path(SESSIONS_FOLDER) / _active_session_folder_name(session_id) / "feedback-form.json"
+    )
+    assert not form_file.exists(), f"{form_file} survived the retraction"
+    assert _participant_feedback_url() is None
+    # Idempotent: a caller that retries blindly gets a success, not a 404/500.
+    assert _retract_feedback_form() == {"retracted": False}
+
+
+def test_feedback_link_does_not_leak_into_the_next_clients_session():
+    """Entering another session must re-resolve the feedback URL from its folder.
+
+    The defect this guards: yesterday's client's form staying live in today's
+    room. Both directions of the switch are exercised against the real daemon —
+    entering a session with no form clears it, entering one whose form was
+    published restores it. The restore direction is what pins the session-switch
+    call site specifically: ending a session also clears the URL, but nothing
+    except the enter path can bring it back.
+    """
+    session_a = fresh_session("FeedbackLeakA")
+    folder_a = _active_session_folder_name(session_a)
+    _publish_feedback_form("AI@Acme", LEAK_FORM_URL)
+    assert _participant_feedback_url() == LEAK_FORM_URL
+
+    # ── Into the next client's session: the previous form must not follow ──
+    session_b = fresh_session("FeedbackLeakB")
+    assert _participant_feedback_url() is None, (
+        "Previous session's feedback form is still live in the new session"
+    )
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_context().new_page()
+        page.goto(f"{BASE}/{session_b}", wait_until="networkidle")
+        ParticipantPage(page).join("LeakTester")
+        expect(page.locator("#feedback-row")).to_have_count(1, timeout=5000)
+        expect(page.locator("#feedback-row")).to_be_hidden()
+        expect(page.locator("#feedback-cta")).to_be_hidden()
+        browser.close()
+
+    # ── Back into the first session: its own form is restored from its folder ──
+    _end_session()
+    resumed = _resume_session(folder_a)
+    assert resumed == session_a, "Resuming a folder must keep its persistent session_id"
+    _await_condition(
+        lambda: _participant_feedback_url() == LEAK_FORM_URL,
+        timeout_ms=15000,
+        msg="Resumed session did not restore its own feedback form",
+    )
+
+    # Leave the daemon clean for whatever runs next.
+    _retract_feedback_form()

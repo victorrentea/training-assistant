@@ -548,7 +548,7 @@ components:
             description: Whether an agenda .docx is available in the session folder
 
     feedback_form_updated:
-      summary: End-of-session participant feedback form link published
+      summary: End-of-session participant feedback form link published or retracted
       x-feature: notes_summary
       payload:
         type: object

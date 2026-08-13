@@ -6,6 +6,7 @@ import pytest
 
 from daemon.misc.feedback_form import (
     FEEDBACK_FORM_FILE,
+    clear_feedback_form,
     load_feedback_form,
     save_feedback_form,
 )
@@ -41,6 +42,49 @@ def test_save_overwrites_previous_form(tmp_path):
     save_feedback_form(tmp_path, "Old", "https://freeonlinesurveys.com/s/old")
     save_feedback_form(tmp_path, "New", "https://freeonlinesurveys.com/s/new")
     assert load_feedback_form(tmp_path)["title"] == "New"
+
+
+def test_clear_deletes_the_marker_so_a_restart_cannot_resurrect_the_link(tmp_path):
+    """Deleting, not blanking: the boot restore keys off the file's existence."""
+    save_feedback_form(tmp_path, "AI@Acme", "https://freeonlinesurveys.com/s/demo1234")
+    assert clear_feedback_form(tmp_path) is True
+    assert not (tmp_path / FEEDBACK_FORM_FILE).exists()
+    assert load_feedback_form(tmp_path) is None
+
+
+def test_clear_is_idempotent_when_nothing_was_published(tmp_path):
+    """Retracting nothing is a no-op, not an error — the caller may retry blindly."""
+    assert clear_feedback_form(tmp_path) is False
+
+
+@pytest.mark.parametrize(
+    "stored_url",
+    [
+        pytest.param(12345, id="int"),
+        pytest.param(["https://freeonlinesurveys.com/s/x"], id="list"),
+        pytest.param({"href": "https://freeonlinesurveys.com/s/x"}, id="dict"),
+        pytest.param("not a url at all", id="free_text"),
+        pytest.param("/s/demo1234", id="bare_path"),
+        pytest.param("javascript:alert(1)", id="javascript_scheme"),
+        pytest.param("file:///etc/passwd", id="file_scheme"),
+        pytest.param("", id="empty"),
+        pytest.param(None, id="null"),
+    ],
+)
+def test_load_holds_the_file_to_the_endpoint_s_own_standard(tmp_path, stored_url):
+    """The read-back path validates exactly what the POST path validates.
+
+    ``/api/participant/state`` returns ``JSONResponse(dict)``, so whatever this
+    function returns is served verbatim and assigned to ``nav.href``. A file
+    hand-edited (or half-written) into holding an int, a list or ``javascript:``
+    must not reach a participant screen through the back door, when the very same
+    value posted to /feedback-form would have been rejected with a 422.
+    """
+    (tmp_path / FEEDBACK_FORM_FILE).write_text(
+        json.dumps({"title": "AI@Acme", "url": stored_url, "created_at": ""}),
+        encoding="utf-8",
+    )
+    assert load_feedback_form(tmp_path) is None
 
 
 def test_shared_state_roundtrip():
@@ -102,6 +146,89 @@ def test_post_feedback_form_404_without_active_session(monkeypatch):
     )
     assert resp.status_code == 404
     # not merely an unregistered route — the handler ran and found no session
+    assert resp.json()["detail"] == "no active session"
+
+
+def test_delete_feedback_form_retracts_from_disk_state_and_participants(tmp_path, monkeypatch):
+    """The undo for a wrong publish must reach all three places the publish did.
+
+    A link published by mistake reaches every participant screen; leaving any one
+    of disk / shared state / connected browsers un-cleared means it comes back —
+    at the next daemon restart, for the next joiner, or not at all for the people
+    already looking at it.
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from daemon.misc import router as misc_router
+
+    sent = []
+    monkeypatch.setattr(misc_router, "broadcast", lambda msg: sent.append(msg))
+    monkeypatch.setattr(misc_router, "get_active_session_folder", lambda: tmp_path)
+
+    app = FastAPI()
+    app.include_router(misc_router.local_router)
+    client = TestClient(app)
+    try:
+        client.post(
+            "/feedback-form",
+            json={"title": "Oops", "url": "https://example.com/"},
+        )
+        sent.clear()
+
+        resp = client.delete("/feedback-form")
+        assert resp.status_code == 200, resp.text
+        assert resp.json() == {"retracted": True}
+
+        # the marker is gone, so a daemon restart cannot resurrect the link
+        assert not (tmp_path / FEEDBACK_FORM_FILE).exists()
+        # participants joining later get nothing
+        assert session_shared_state.get_feedback_url() is None
+        # participants already connected are told to hide it
+        assert len(sent) == 1
+        assert sent[0].type == "feedback_form_updated"
+        assert sent[0].feedback_url is None
+    finally:
+        session_shared_state.set_feedback_url(None)
+
+
+def test_delete_feedback_form_is_not_an_error_when_nothing_is_published(tmp_path, monkeypatch):
+    """Idempotent: retracting nothing still succeeds, and still repairs browsers.
+
+    The broadcast goes out regardless — a participant showing a link the daemon
+    no longer knows about is exactly the state a blind retry is trying to fix.
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from daemon.misc import router as misc_router
+
+    sent = []
+    monkeypatch.setattr(misc_router, "broadcast", lambda msg: sent.append(msg))
+    monkeypatch.setattr(misc_router, "get_active_session_folder", lambda: tmp_path)
+
+    app = FastAPI()
+    app.include_router(misc_router.local_router)
+    resp = TestClient(app).delete("/feedback-form")
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"retracted": False}  # nothing to undo, but no error
+    assert session_shared_state.get_feedback_url() is None
+    assert [msg.feedback_url for msg in sent] == [None]
+
+
+def test_delete_feedback_form_404_without_active_session(monkeypatch):
+    """Same shape as the publish endpoint: no session is a 404, not a silent no-op."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from daemon.misc import router as misc_router
+
+    monkeypatch.setattr(misc_router, "get_active_session_folder", lambda: None)
+    app = FastAPI()
+    app.include_router(misc_router.local_router)
+    resp = TestClient(app).delete("/feedback-form")
+    assert resp.status_code == 404
     assert resp.json()["detail"] == "no active session"
 
 
@@ -213,11 +340,15 @@ def test_participant_state_payload_carries_feedback_url():
 
 
 def test_participant_state_endpoint_serves_the_published_url():
-    """The link must survive the response_model filter, not just exist on it.
+    """A reconnecting participant is really served the URL, over the wire.
 
-    A field added to the payload dict but not to ParticipantStateResponse (or
-    vice versa) is silently dropped by FastAPI, so the served response is the
-    only honest proof that a reconnecting participant sees the form.
+    Note what this does NOT prove: the handler returns ``JSONResponse(state_msg)``
+    (daemon/participant/router.py), which bypasses ``response_model`` entirely —
+    a value of the wrong type, or a field absent from ``ParticipantStateResponse``,
+    is served verbatim rather than filtered or coerced. What this test earns is
+    the other direction: that the dict entry exists and reaches the wire at all.
+    The declared-contract side is guarded by its companion above,
+    ``test_participant_state_payload_carries_feedback_url``.
     """
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -274,7 +405,7 @@ def test_every_gdrive_url_call_site_has_a_feedback_url_counterpart():
     # co-location: a feedback_url call in some unrelated branch satisfies the
     # arithmetic while the session-switch site silently regresses. The window is
     # 20 lines because each counterpart sits behind its own explanatory comment
-    # block (widest real gap today: 14 lines), while the sites themselves are
+    # block (widest real gap today: 14 lines), while the pairs themselves are
     # hundreds of lines apart.
     orphans = [
         line + 1  # 1-based, to match the editor
