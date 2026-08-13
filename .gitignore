@@ -24,6 +24,7 @@ daemon/.venv/
 /workshop_daemon.egg-info/SOURCES.txt
 /workshop_daemon.egg-info/top_level.txt
 /.deploy.log
+/jmeter.log
 deploy-history.txt
 .server-data/
 .idea
