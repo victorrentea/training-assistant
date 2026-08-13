@@ -67,6 +67,7 @@ COPY tests/docker/test_files_md_e2e.py .
 COPY tests/docker/test_participant_tab_url.py .
 COPY tests/docker/test_materials_zip.py .
 COPY tests/docker/test_quiz_countdown.py .
+COPY tests/docker/test_feedback_form_e2e.py .
 COPY tests/docker/start_hermetic.sh /start_hermetic.sh
 RUN chmod +x /start_hermetic.sh
 
