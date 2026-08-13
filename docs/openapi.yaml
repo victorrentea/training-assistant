@@ -2112,6 +2112,9 @@ components:
           title: Title
         url:
           type: string
+          maxLength: 2083
+          minLength: 1
+          format: uri
           title: Url
       type: object
       required:

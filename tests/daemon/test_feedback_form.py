@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from daemon.misc.feedback_form import (
     FEEDBACK_FORM_FILE,
     load_feedback_form,
@@ -134,7 +136,22 @@ def test_post_feedback_form_logs_the_publish_to_stdout(tmp_path, monkeypatch, ca
     assert "↑ Published: AI@Acme → https://freeonlinesurveys.com/s/demo1234" in printed
 
 
-def test_post_feedback_form_400_on_blank_url(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        pytest.param("   ", id="blank"),
+        pytest.param("not a url at all", id="free_text"),
+        pytest.param("/s/demo1234", id="bare_path"),
+        pytest.param("freeonlinesurveys.com/s/demo1234", id="no_scheme"),
+    ],
+)
+def test_post_feedback_form_rejects_anything_that_is_not_a_url(tmp_path, monkeypatch, bad_url):
+    """Garbage must never reach a participant screen — and must leave no trace.
+
+    422, not 400: `url` is a Pydantic ``HttpUrl``, so FastAPI rejects the body
+    before the handler runs. That is the point — the daemon, not just the calling
+    skill, is what stands between arbitrary text and everyone's browser.
+    """
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
@@ -146,13 +163,44 @@ def test_post_feedback_form_400_on_blank_url(tmp_path, monkeypatch):
 
     app = FastAPI()
     app.include_router(misc_router.local_router)
-    resp = TestClient(app).post("/feedback-form", json={"title": "AI@Acme", "url": "   "})
+    resp = TestClient(app).post("/feedback-form", json={"title": "AI@Acme", "url": bad_url})
 
-    assert resp.status_code == 400
+    assert resp.status_code == 422, resp.text
     # a rejected request must leave no trace anywhere
     assert load_feedback_form(tmp_path) is None
     assert session_shared_state.get_feedback_url() is None
     assert sent == []
+
+
+def test_post_feedback_form_keeps_the_url_a_plain_string_everywhere(tmp_path, monkeypatch):
+    """HttpUrl is a Url object, not a str — every hop must carry the string form.
+
+    The participant page does ``nav.href = url``, so a serialised object anywhere
+    in this chain breaks the link silently rather than loudly.
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from daemon.misc import router as misc_router
+
+    sent = []
+    monkeypatch.setattr(misc_router, "broadcast", lambda msg: sent.append(msg))
+    monkeypatch.setattr(misc_router, "get_active_session_folder", lambda: tmp_path)
+
+    app = FastAPI()
+    app.include_router(misc_router.local_router)
+    url = "https://freeonlinesurveys.com/s/demo1234"
+    try:
+        resp = TestClient(app).post("/feedback-form", json={"title": "AI@Acme", "url": url})
+        assert resp.status_code == 200, resp.text
+
+        on_disk = json.loads((tmp_path / FEEDBACK_FORM_FILE).read_text(encoding="utf-8"))
+        assert on_disk["url"] == url and isinstance(on_disk["url"], str)
+        assert isinstance(sent[0].feedback_url, str) and sent[0].feedback_url == url
+        assert isinstance(session_shared_state.get_feedback_url(), str)
+        assert isinstance(resp.json()["url"], str) and resp.json()["url"] == url
+    finally:
+        session_shared_state.set_feedback_url(None)
 
 
 def test_participant_state_payload_carries_feedback_url():

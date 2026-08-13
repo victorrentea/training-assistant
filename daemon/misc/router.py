@@ -10,7 +10,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 
 from daemon import files_md as _files_md
 from daemon.email_notify import PARTICIPANT_INBOX_ID
@@ -366,12 +366,21 @@ async def highlight_summary_local(body: HighlightRequest):
 
 class FeedbackFormRequest(BaseModel):
     title: str
-    url: str
+    #: HttpUrl, not str: this endpoint is the single chokepoint through which a
+    #: link reaches every participant screen, so the daemon validates the shape
+    #: itself rather than trusting its caller (a stray POST of arbitrary text
+    #: would otherwise be persisted and broadcast to the whole room).
+    #:
+    #: Deliberately NOT a host allowlist — do not "harden" this into one. Tying a
+    #: generic daemon endpoint to freeonlinesurveys.com would break the day Victor
+    #: switches survey tools. Vendor identity and reachability are the calling
+    #: skill's job (it checks the host and fetches the link before POSTing here).
+    url: HttpUrl
 
 
 class FeedbackFormResponse(BaseModel):
     title: str
-    url: str
+    url: str  # plain string on the wire — participant JS assigns it to nav.href
     created_at: str
 
 
@@ -386,9 +395,9 @@ async def publish_feedback_form(body: FeedbackFormRequest):
     if folder is None:
         return JSONResponse(status_code=404, content={"detail": "no active session"})
     title = body.title.strip()
-    url = body.url.strip()
-    if not url:
-        return JSONResponse(status_code=400, content={"detail": "url is required"})
+    # str(): body.url is a pydantic Url object, and everything downstream (the
+    # JSON on disk, the WS payload, the response) must carry a plain string.
+    url = str(body.url)
     from daemon import log
 
     created_at = await asyncio.to_thread(save_feedback_form, folder, title, url)
