@@ -28,6 +28,8 @@ body{visibility:hidden}
 #files-content .file-tree-folder,#files-content .file-tree-file{display:flex;align-items:center;gap:.4em;line-height:1.6;white-space:nowrap;overflow-x:auto;border-radius:4px;padding:0 .35em;margin-left:-.35em}
 #files-content .file-tree-folder:hover,#files-content .file-tree-file:hover{background:var(--color-surface-container-high,rgba(136,146,156,.18))}
 #files-content .ft-icon{font-size:1.1em;line-height:1;flex:none;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
+/* Folder names sit back a step so the file names read as the content */
+#files-content .file-tree-folder{color:var(--color-on-surface-variant,#888)}
 #files-content .file-tree-folder .ft-icon{color:#dcb67a}
 #files-content .file-tree-file a{color:inherit;text-decoration:none}
 #files-content .file-tree-file a:hover{color:var(--color-primary);text-decoration:underline}
