@@ -1,4 +1,6 @@
+import re
 import json
+from datetime import date
 from pathlib import Path
 from daemon import files_md
 
@@ -132,7 +134,7 @@ def test_render_unlinked_entry_has_no_link(tz_bucharest):
     assert "](" not in rendered.split("\n")[-2]
 
 
-def test_render_switches_all_entries_to_dated_when_days_differ(tz_bucharest):
+def test_render_switches_all_entries_to_day_labels_when_days_differ(tz_bucharest):
     doc = files_md.Doc(repos=[_repo_with([
         files_md.Entry(path="src/a.py", branch="master", ts="2026-08-04T06:41:07Z",
                        blob_url="https://github.com/owner/repo/blob/master/src/a.py", ref="branch"),
@@ -140,8 +142,8 @@ def test_render_switches_all_entries_to_dated_when_days_differ(tz_bucharest):
                        blob_url="https://github.com/owner/repo/blob/master/src/b.py", ref="branch"),
     ])])
     rendered = doc.render()
-    assert "— Aug 4 09:41 " in rendered
-    assert "— Aug 5 09:41 " in rendered
+    assert "— Day 1, 09:41 " in rendered
+    assert "— Day 2, 09:41 " in rendered
     assert "— 09:41 " not in rendered
 
 
@@ -728,26 +730,94 @@ def test_to_local_converts_utc_to_configured_zone(tz_bucharest):
     assert files_md._to_local("2026-08-04T06:41:07Z").hour == 9
 
 
-def test_needs_date_false_for_single_local_day(tz_bucharest):
-    assert files_md._needs_date(["2026-08-04T06:41:07Z", "2026-08-04T08:20:31Z"]) is False
+def test_day_one_none_for_single_local_day(tz_bucharest):
+    assert files_md._day_one(["2026-08-04T06:41:07Z", "2026-08-04T08:20:31Z"]) is None
 
 
-def test_needs_date_true_across_local_days(tz_bucharest):
-    assert files_md._needs_date(["2026-08-04T06:41:07Z", "2026-08-05T06:41:07Z"]) is True
+def test_day_one_is_the_first_local_day(tz_bucharest):
+    assert files_md._day_one(["2026-08-05T06:41:07Z", "2026-08-04T06:41:07Z"]) == date(2026, 8, 4)
 
 
-def test_needs_date_uses_local_not_utc_calendar(tz_bucharest):
+def test_day_one_uses_local_not_utc_calendar(tz_bucharest):
     # 22:30 UTC on the 4th is 01:30 local on the 5th — two local days, one UTC day.
-    assert files_md._needs_date(["2026-08-04T07:00:00Z", "2026-08-04T22:30:00Z"]) is True
+    assert files_md._day_one(["2026-08-04T07:00:00Z", "2026-08-04T22:30:00Z"]) == date(2026, 8, 4)
 
 
-def test_needs_date_empty_list_is_false():
-    assert files_md._needs_date([]) is False
+def test_day_one_empty_list_is_none():
+    assert files_md._day_one([]) is None
 
 
-def test_format_local_time_without_date(tz_bucharest):
-    assert files_md.format_local_time("2026-08-04T06:41:07Z", False) == "09:41"
+def test_format_local_time_single_day_is_bare_clock(tz_bucharest):
+    assert files_md.format_local_time("2026-08-04T06:41:07Z", None) == "09:41"
 
 
-def test_format_local_time_with_date(tz_bucharest):
-    assert files_md.format_local_time("2026-08-04T06:41:07Z", True) == "Aug 4 09:41"
+def test_format_local_time_labels_the_session_day_not_the_calendar_date(tz_bucharest):
+    """A participant looks for "day 2 of the workshop", not for August 5th."""
+    day_one = date(2026, 8, 4)
+    assert files_md.format_local_time("2026-08-04T06:41:07Z", day_one) == "Day 1, 09:41"
+    assert files_md.format_local_time("2026-08-05T15:07:00Z", day_one) == "Day 2, 18:07"
+
+
+def test_day_label_stays_within_the_participant_regex_class(tz_bucharest):
+    """participant.html only accepts [0-9A-Za-z:, ] after the em dash — anything
+    else silently drops the row from the rendered tree."""
+    text = files_md.format_local_time("2026-08-05T15:07:00Z", date(2026, 8, 4))
+    assert re.fullmatch(r"[0-9A-Za-z:, ]+", text)
+
+
+def test_resolve_entry_prefers_the_sessions_dominant_branch(monkeypatch):
+    """A file opened during a detour onto main, but present on the session's
+    branch too, must link to the session's branch."""
+    probed: list[str] = []
+
+    def fake_check_ref(owner, repo, ref, path):
+        probed.append(ref)
+        return ref == "mm26"
+
+    monkeypatch.setattr(files_md, "_check_ref", fake_check_ref)
+    blob_url, ref, reason = files_md.resolve_entry(
+        "owner", "repo", "main", "main", "src/a.py", dominant="mm26")
+    assert ref == "dominant" and reason is None
+    assert blob_url == "https://github.com/owner/repo/blob/mm26/src/a.py"
+    assert probed == ["mm26"]  # won on the first probe, nothing else asked
+
+
+def test_resolve_entry_falls_back_when_the_dominant_branch_lacks_the_file(monkeypatch):
+    monkeypatch.setattr(files_md, "_check_ref",
+                        lambda owner, repo, ref, path: ref == "main")
+    blob_url, ref, reason = files_md.resolve_entry(
+        "owner", "repo", "main", "main", "src/a.py", dominant="mm26")
+    assert ref == "branch" and reason is None
+    assert blob_url == "https://github.com/owner/repo/blob/main/src/a.py"
+
+
+def test_resolve_entry_inconclusive_dominant_probe_is_not_a_no(monkeypatch):
+    """A transient GitHub failure on the dominant branch must not be reported as
+    'not-pushed' — that would read as a settled fact about the code."""
+    monkeypatch.setattr(files_md, "_check_ref",
+                        lambda owner, repo, ref, path: None if ref == "mm26" else False)
+    monkeypatch.setattr(files_md, "_ref_exists", lambda owner, repo, ref: True)
+    blob_url, ref, reason = files_md.resolve_entry(
+        "owner", "repo", "main", "main", "src/a.py", dominant="mm26")
+    assert (blob_url, ref, reason) == (None, None, "unknown")
+
+
+def test_resolve_entry_without_dominant_is_unchanged(monkeypatch):
+    monkeypatch.setattr(files_md, "_check_ref",
+                        lambda owner, repo, ref, path: ref == "main")
+    _, ref, _ = files_md.resolve_entry("owner", "repo", "main", "main", "src/a.py")
+    assert ref == "branch"
+
+
+def test_resolve_entry_skips_the_dominant_probe_when_it_is_the_entrys_branch(monkeypatch):
+    probed: list[str] = []
+
+    def fake_check_ref(owner, repo, ref, path):
+        probed.append(ref)
+        return True
+
+    monkeypatch.setattr(files_md, "_check_ref", fake_check_ref)
+    _, ref, _ = files_md.resolve_entry("owner", "repo", "mm26", "main", "src/a.py",
+                                       dominant="mm26")
+    assert ref == "branch"
+    assert probed == ["mm26"]  # probed once, not twice

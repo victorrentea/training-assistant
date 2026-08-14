@@ -43,7 +43,7 @@ def test_relink_upgrades_a_now_pushed_file(tmp_path, monkeypatch, tz_bucharest):
     text = (tmp_path / files_md.session_filename()).read_text()
     assert "blob/solved/src/a.py" in text
     assert summary == {"repos": 1, "entries": 1, "linked_branch": 1,
-                       "linked_default": 0, "unlinked": 0, "skipped": 0}
+                       "linked_default": 0, "adopted_dominant": 0, "unlinked": 0, "skipped": 0}
 
 
 def test_relink_degrades_a_link_whose_branch_vanished(tmp_path, monkeypatch, tz_bucharest):
@@ -112,13 +112,13 @@ def test_relink_steady_state_does_not_touch_the_file(tmp_path, monkeypatch, tz_b
 
     assert target.stat().st_mtime_ns == mtime_before
     assert summary == {"repos": 1, "entries": 1, "linked_branch": 1,
-                       "linked_default": 0, "unlinked": 0, "skipped": 0}
+                       "linked_default": 0, "adopted_dominant": 0, "unlinked": 0, "skipped": 0}
 
 
 def test_relink_missing_file_returns_zero_summary(tmp_path):
     assert relink_open_files.relink_folder(tmp_path) == {
         "repos": 0, "entries": 0, "linked_branch": 0, "linked_default": 0,
-        "unlinked": 0, "skipped": 0}
+        "adopted_dominant": 0, "unlinked": 0, "skipped": 0}
 
 
 def test_relink_unreadable_file_returns_zero_summary_instead_of_raising(tmp_path, monkeypatch):
@@ -135,7 +135,7 @@ def test_relink_unreadable_file_returns_zero_summary_instead_of_raising(tmp_path
     summary = relink_open_files.relink_folder(tmp_path)
 
     assert summary == {"repos": 0, "entries": 0, "linked_branch": 0,
-                       "linked_default": 0, "unlinked": 0, "skipped": 0}
+                       "linked_default": 0, "adopted_dominant": 0, "unlinked": 0, "skipped": 0}
 
 
 def test_relink_leaves_unknown_entries_untouched_and_counts_skipped(tmp_path, monkeypatch, tz_bucharest):
@@ -159,7 +159,7 @@ def test_relink_leaves_unknown_entries_untouched_and_counts_skipped(tmp_path, mo
     assert "blob/solved/src/a.py" in text  # untouched, not degraded
     assert "reason:unknown" not in text
     assert summary == {"repos": 1, "entries": 0, "linked_branch": 0,
-                       "linked_default": 0, "unlinked": 0, "skipped": 1}
+                       "linked_default": 0, "adopted_dominant": 0, "unlinked": 0, "skipped": 1}
 
 
 def test_relink_canonicalizes_a_non_canonical_stored_url(tmp_path, monkeypatch, tz_bucharest):
@@ -204,3 +204,64 @@ def test_cli_prints_json_summary(tmp_path):
         capture_output=True, text=True, check=True,
     )
     assert json.loads(result.stdout)["entries"] == 0
+
+
+def test_relink_moves_a_stray_main_file_onto_the_sessions_branch(tmp_path, monkeypatch,
+                                                                 tz_bucharest):
+    """The one file opened during a detour onto master, but present on the
+    session's branch too, must end up linked on the session's branch — and stop
+    advertising a branch chip the room never worked on."""
+    _seed(tmp_path, [
+        files_md.Entry(path="src/a.py", branch="solved", ts="2026-08-04T06:00:00Z",
+                       blob_url="https://github.com/owner/repo/blob/solved/src/a.py",
+                       ref="branch"),
+        files_md.Entry(path="src/b.py", branch="solved", ts="2026-08-04T06:10:00Z",
+                       blob_url="https://github.com/owner/repo/blob/solved/src/b.py",
+                       ref="branch"),
+        files_md.Entry(path="src/c.py", branch="master", ts="2026-08-04T07:00:00Z",
+                       blob_url="https://github.com/owner/repo/blob/master/src/c.py",
+                       ref="branch"),
+    ])
+    monkeypatch.setattr(github_client, "get_repo_info",
+                        lambda o, r: github_client.RepoInfo(default_branch="master"))
+    # Everything exists on both branches — the choice is purely about which one
+    # the session lived on.
+    monkeypatch.setattr(github_client, "get_repo_tree",
+                        lambda o, r, b: _tree("src/a.py", "src/b.py", "src/c.py"))
+
+    summary = relink_open_files.relink_folder(tmp_path)
+
+    text = (tmp_path / files_md.session_filename()).read_text()
+    assert "blob/master/" not in text
+    assert "blob/solved/src/c.py" in text
+    assert "· branch `" not in text          # the stray chip is gone
+    assert summary["adopted_dominant"] == 1
+
+
+def test_relink_keeps_a_file_that_only_exists_on_its_own_branch(tmp_path, monkeypatch,
+                                                                tz_bucharest):
+    """Promotion is opt-in on presence: a file the session's branch does not
+    carry stays where it is, chip and all."""
+    _seed(tmp_path, [
+        files_md.Entry(path="src/a.py", branch="solved", ts="2026-08-04T06:00:00Z",
+                       blob_url="https://github.com/owner/repo/blob/solved/src/a.py",
+                       ref="branch"),
+        files_md.Entry(path="src/b.py", branch="solved", ts="2026-08-04T06:10:00Z",
+                       blob_url="https://github.com/owner/repo/blob/solved/src/b.py",
+                       ref="branch"),
+        files_md.Entry(path="only-on-master.py", branch="master",
+                       ts="2026-08-04T07:00:00Z", reason="not-pushed"),
+    ])
+    monkeypatch.setattr(github_client, "get_repo_info",
+                        lambda o, r: github_client.RepoInfo(default_branch="master"))
+    monkeypatch.setattr(
+        github_client, "get_repo_tree",
+        lambda o, r, b: _tree("src/a.py", "src/b.py") if b == "solved"
+        else _tree("only-on-master.py"))
+
+    summary = relink_open_files.relink_folder(tmp_path)
+
+    text = (tmp_path / files_md.session_filename()).read_text()
+    assert "blob/master/only-on-master.py" in text
+    assert "· branch `master`" in text
+    assert summary["adopted_dominant"] == 0

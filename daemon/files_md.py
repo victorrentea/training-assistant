@@ -16,7 +16,7 @@ import json as _json
 import os
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -107,7 +107,7 @@ class Doc:
         repos = [r for r in self.repos if r.entries]
         if not repos:
             return EMPTY_STATE
-        with_date = _needs_date([e.ts for r in repos for e in r.entries])
+        day_one = _day_one([e.ts for r in repos for e in r.entries])
         parts = [_TITLE, ""]
         for repo in repos:
             # Visible heading = the repo's dominant branch; the `branch:` comment
@@ -119,7 +119,7 @@ class Doc:
             )
             parts.append("")
             for e in repo.entries:
-                parts.append(_render_entry(e, shown, with_date))
+                parts.append(_render_entry(e, shown, day_one))
             parts.append("")
         return "\n".join(parts).rstrip() + "\n"
 
@@ -155,8 +155,8 @@ class Doc:
         return doc
 
 
-def _render_entry(e: Entry, repo_branch: str, with_date: bool) -> str:
-    time_text = format_local_time(e.ts, with_date)
+def _render_entry(e: Entry, repo_branch: str, day_one: date | None) -> str:
+    time_text = format_local_time(e.ts, day_one)
     # Only spell out the branch when it differs from the repo heading's — and do
     # it in the VISIBLE text, because sanitize_for_wire strips every comment
     # before the document reaches a participant.
@@ -252,31 +252,34 @@ def _to_local(ts: str) -> datetime:
     return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone()
 
 
-def _needs_date(timestamps: list[str]) -> bool:
-    """True when the timestamps do not all fall on the same LOCAL calendar date.
+def _day_one(timestamps: list[str]) -> date | None:
+    """The session's first LOCAL day, or None when everything is on one day.
 
     Decided per document so every entry in a file renders the same way — a
     session that spans midnight or two days must not mix bare times with dated
-    ones.
+    ones. None means "one day only", where a day label would be pure noise.
     """
-    return len({_to_local(ts).date() for ts in timestamps}) > 1
+    days = {_to_local(ts).date() for ts in timestamps}
+    return min(days) if len(days) > 1 else None
 
 
-def format_local_time(ts: str, with_date: bool) -> str:
+def format_local_time(ts: str, day_one: date | None) -> str:
     """Render a canonical UTC timestamp for humans, in the machine's timezone.
 
-    Output must stay within `[0-9A-Za-z: ]` — that is exactly the character
-    class both participant.html parsing regexes expect after ` — `. Nothing
-    here calls `locale.setlocale`, so `%b` is safely ASCII today, but if that
-    ever changes, a locale whose month abbreviation contains e.g. `.` or a
-    non-ASCII letter would silently break the regex match and drop the row
-    from the rendered tree.
+    A multi-day session is labelled by its day *within the session* — `Day 2,
+    18:07` — not by a calendar date: a participant re-reading this knows which
+    day of the workshop they are looking for, and does not care that it was
+    August 14th.
+
+    Output must stay within `[0-9A-Za-z:, ]` — that is exactly the character
+    class both participant.html parsing regexes expect after ` — `, and the
+    comma is there for this format. A character outside it silently breaks the
+    regex match and drops the row from the rendered tree.
     """
     dt = _to_local(ts)
-    if not with_date:
+    if day_one is None:
         return f"{dt:%H:%M}"
-    # Built by hand rather than with %-d, which is not portable across libcs.
-    return f"{dt:%b} {dt.day} {dt:%H:%M}"
+    return f"Day {(dt.date() - day_one).days + 1}, {dt:%H:%M}"
 
 
 def _canonical_repo_url(url: str) -> str | None:
@@ -389,19 +392,37 @@ def _ref_exists(owner: str, repo: str, ref: str) -> bool | None:
 
 
 def resolve_entry(
-    owner: str, repo: str, branch: str, default_branch: str, path: str
+    owner: str, repo: str, branch: str, default_branch: str, path: str,
+    dominant: str | None = None,
 ) -> tuple[str | None, str | None, str | None]:
     """Resolve one path to a blob URL. Returns (blob_url, ref, reason).
 
-    Captured branch first, default branch second, no link third — see
+    Dominant branch first (when given), captured branch second, default branch
+    third, no link fourth — see
     docs/superpowers/specs/2026-08-04-open-files-git-linking-design.md.
 
-    `reason` is "unknown" whenever neither ref could be checked to a
-    definitive answer — a transient GitHub failure must never be reported as
-    "not-pushed" or "no-branch", both of which participants would read as
-    settled facts about the code.
+    `dominant` is the branch most of the repo's files were opened on — the one
+    the session actually lives on. A file opened during a two-minute detour
+    onto `main` still belongs, for the room, to the workshop's branch: if that
+    branch carries the same path, that is the copy a participant wants to open,
+    not an unrelated `main` version of it. It returns the ref `"dominant"` when
+    it wins, so the caller can adopt the branch and drop the now-misleading
+    per-file branch chip.
+
+    `reason` is "unknown" whenever no ref could be checked to a definitive
+    answer — a transient GitHub failure must never be reported as "not-pushed"
+    or "no-branch", both of which participants would read as settled facts
+    about the code.
     """
     definitive = True
+    if dominant and dominant != branch:
+        present = _check_ref(owner, repo, dominant, path)
+        if present:
+            return github_client.build_blob_url(owner, repo, dominant, path), "dominant", None
+        # An inconclusive probe here must not block the entry's own branch from
+        # resolving — it only forfeits the promotion until the next pass.
+        if present is None:
+            definitive = False
     if branch:
         present = _check_ref(owner, repo, branch, path)
         if present:
@@ -490,6 +511,12 @@ def _record_into_folder(folder: Path, url: str, branch: str, file_path: str) -> 
             return
         blob_url, ref, reason = None, None, "rate-limited"
     else:
+        # No `dominant=` here on purpose. At capture time the live signal is
+        # authoritative: re-opening a file on another branch is a deliberate
+        # act, and dominance computed from the handful of entries recorded so
+        # far would quietly overrule it. The promotion belongs to the whole-
+        # document reconciliation in `relink_open_files`, which sees the
+        # finished session.
         blob_url, ref, reason = resolve_entry(owner, repo, effective_branch,
                                               default_branch, path)
         if reason == "unknown" and existing is not None:

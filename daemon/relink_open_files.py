@@ -34,7 +34,8 @@ def relink_folder(folder: Path) -> dict[str, int]:
     """
     target = folder / files_md.session_filename()
     summary = {"repos": 0, "entries": 0, "linked_branch": 0,
-               "linked_default": 0, "unlinked": 0, "skipped": 0}
+               "linked_default": 0, "adopted_dominant": 0,
+               "unlinked": 0, "skipped": 0}
     if not target.exists():
         return summary
     try:
@@ -67,20 +68,32 @@ def relink_folder(folder: Path) -> dict[str, int]:
             continue
         summary["repos"] += 1
         repo_obj.default_branch = info.default_branch
+        # The branch this repo's session actually happened on. Frozen before the
+        # loop: entries adopt it as they are promoted, and a dominance that
+        # shifted mid-pass would resolve the first half of the list against a
+        # different branch than the second.
+        dominant = repo_obj.display_branch()
         for entry in repo_obj.entries:
             blob_url, ref, reason = files_md.resolve_entry(
-                owner, repo, entry.branch, info.default_branch, entry.path)
+                owner, repo, entry.branch, info.default_branch, entry.path,
+                dominant=dominant)
             if reason == "unknown":
                 # A transient GitHub failure on this one entry must not
                 # overwrite whatever it already had — leave it exactly as is.
                 summary["skipped"] += 1
                 continue
             entry.blob_url, entry.ref, entry.reason = blob_url, ref, reason
+            if ref == "dominant":
+                # It lives on the session's branch too: adopt it, so the entry
+                # stops advertising a branch the room never worked on and the
+                # next pass probes the right ref first.
+                entry.branch = dominant
+                summary["adopted_dominant"] += 1
             summary["entries"] += 1
-            if ref == "branch":
-                summary["linked_branch"] += 1
-            elif ref == "default":
+            if ref == "default":
                 summary["linked_default"] += 1
+            elif ref:
+                summary["linked_branch"] += 1
             else:
                 summary["unlinked"] += 1
 

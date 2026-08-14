@@ -33,7 +33,9 @@ body{visibility:hidden}
 #files-content .file-tree-folder .ft-icon{color:#dcb67a}
 #files-content .file-tree-file a{color:inherit;text-decoration:none}
 #files-content .file-tree-file a:hover{color:var(--color-primary);text-decoration:underline}
-#files-content .file-tree-time{color:var(--color-on-surface-variant,#888);font-size:.75em;margin-left:.5em}
+/* Timestamps are context, not content: dimmed, small and italic so a dense
+   tree reads as file names first. */
+#files-content .file-tree-time{color:var(--color-on-surface-variant,#888);font-size:.75em;font-style:italic;margin-left:.5em}
 #files-content .file-tree-branch{font-size:.72em;padding:1px 6px;border-radius:999px;border:1px solid currentColor;opacity:.7;margin-left:.4rem}
 /* Host highlighter: the host marks a passage and the agent wraps it in <mark>
    in ai-summary.md. Warm amber band, legible in light + dark; box-decoration
@@ -5459,12 +5461,12 @@ function parseFilesMd(md) {
       return;
     }
     if (!current) return;
-    m = line.match(/^- \[(.+?)\]\(([^)]+)\)(?: — ([0-9A-Za-z: ]+?))?(?: · branch `([^`]+)`)?$/);
+    m = line.match(/^- \[(.+?)\]\(([^)]+)\)(?: — ([0-9A-Za-z:, ]+?))?(?: · branch `([^`]+)`)?$/);
     if (m) {
       current.entries.push({ path: m[1], href: m[2], time: m[3] || '', branch: m[4] || '' });
       return;
     }
-    m = line.match(/^- (?!\[)(.+?)(?: — ([0-9A-Za-z: ]+?))?(?: · branch `([^`]+)`)?$/);
+    m = line.match(/^- (?!\[)(.+?)(?: — ([0-9A-Za-z:, ]+?))?(?: · branch `([^`]+)`)?$/);
     if (m) {
       current.entries.push({ path: m[1], href: null, time: m[2] || '', branch: m[3] || '' });
     }
