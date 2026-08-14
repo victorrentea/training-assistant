@@ -18,10 +18,20 @@ body{visibility:hidden}
 #notes-content .notes-para:not(:last-child){margin-bottom:0.6em}
 #summary-content{font-size:calc(1rem * var(--participant-zoom))}
 #files-content{font-size:calc(1rem * var(--participant-zoom))}
-#files-content .file-tree-repo{font-weight:700;margin:.75rem 0 .35rem}
-#files-content .file-tree-folder{opacity:.8;white-space:nowrap;overflow-x:auto;line-height:1.8}
-#files-content .file-tree-file{white-space:nowrap;overflow-x:auto;line-height:1.8}
-#files-content .file-tree-time{color:var(--color-on-surface-variant,#888);font-size:.78em;margin-left:.5rem}
+/* Opened Files renders like an IDE project view: each folder owns a nested
+   container, so its children are indented past it and a thin guide line marks
+   which folder they belong to. */
+#files-content .file-tree-repo{font-weight:700;margin:1rem 0 .3rem;display:flex;align-items:center;gap:.4em}
+#files-content .file-tree-repo:first-child{margin-top:.2rem}
+#files-content .ft-children{margin-left:.75em;padding-left:.9em;border-left:1px solid var(--color-outline-variant,#888)}
+#files-content .ft-children.ft-root{margin-left:0;padding-left:.15em;border-left:0}
+#files-content .file-tree-folder,#files-content .file-tree-file{display:flex;align-items:center;gap:.4em;line-height:1.6;white-space:nowrap;overflow-x:auto;border-radius:4px;padding:0 .35em;margin-left:-.35em}
+#files-content .file-tree-folder:hover,#files-content .file-tree-file:hover{background:var(--color-surface-container-high,rgba(136,146,156,.18))}
+#files-content .ft-icon{font-size:1.1em;line-height:1;flex:none;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
+#files-content .file-tree-folder .ft-icon{color:#dcb67a}
+#files-content .file-tree-file a{color:inherit;text-decoration:none}
+#files-content .file-tree-file a:hover{color:var(--color-primary);text-decoration:underline}
+#files-content .file-tree-time{color:var(--color-on-surface-variant,#888);font-size:.75em;margin-left:.5em}
 #files-content .file-tree-branch{font-size:.72em;padding:1px 6px;border-radius:999px;border:1px solid currentColor;opacity:.7;margin-left:.4rem}
 /* Host highlighter: the host marks a passage and the agent wraps it in <mark>
    in ai-summary.md. Warm amber band, legible in light + dark; box-decoration
@@ -5496,20 +5506,55 @@ function buildFileTree(paths) {
   return finalizeFileNode(root, false);
 }
 
+// Material Symbols glyph + colour per file extension, IDE-style. Keep the list
+// short: anything unknown falls back to a neutral document.
+var FILE_ICONS = {
+  md: ['article', '#7aa2d6'], txt: ['article', '#9aa5ad'],
+  js: ['javascript', '#e6c34a'], mjs: ['javascript', '#e6c34a'], cjs: ['javascript', '#e6c34a'],
+  ts: ['code', '#4f9ae0'], tsx: ['code', '#4f9ae0'], jsx: ['code', '#e6c34a'],
+  py: ['code', '#57a05a'], java: ['code', '#d97757'], kt: ['code', '#a879e6'], go: ['code', '#4fbedc'],
+  rb: ['code', '#d4564f'], rs: ['code', '#d98a4f'], php: ['php', '#8a8fd6'],
+  sh: ['terminal', '#6fb96f'], bash: ['terminal', '#6fb96f'], zsh: ['terminal', '#6fb96f'],
+  json: ['data_object', '#c9a227'], yml: ['data_object', '#c9a227'], yaml: ['data_object', '#c9a227'],
+  toml: ['data_object', '#c9a227'], xml: ['data_object', '#c9a227'], properties: ['settings', '#9aa5ad'],
+  html: ['html', '#e07b4f'], css: ['css', '#4f9ae0'], scss: ['css', '#d6699e'],
+  sql: ['database', '#5fa8c9'], pdf: ['picture_as_pdf', '#d4564f'],
+  png: ['image', '#a879e6'], jpg: ['image', '#a879e6'], jpeg: ['image', '#a879e6'],
+  gif: ['image', '#a879e6'], svg: ['image', '#a879e6'], webp: ['image', '#a879e6']
+};
+
+function _fileIcon(name) {
+  var dot = name.lastIndexOf('.');
+  var spec = (dot > 0 && FILE_ICONS[name.slice(dot + 1).toLowerCase()]) || ['draft', '#9aa5ad'];
+  var icon = document.createElement('span');
+  icon.className = 'material-symbols-outlined ft-icon';
+  icon.textContent = spec[0];
+  icon.style.color = spec[1];
+  return icon;
+}
+
 function _renderFileNode(node, byPath, depth, out) {
   node.folders.forEach(function (folder) {
     var row = document.createElement('div');
     row.className = 'file-tree-folder';
-    row.style.paddingLeft = (depth * 1.1) + 'rem';
-    row.textContent = '▾ ' + folder.name;
+    var icon = document.createElement('span');
+    icon.className = 'material-symbols-outlined ft-icon';
+    icon.textContent = 'folder';
+    row.appendChild(icon);
+    row.appendChild(document.createTextNode(folder.name));
     out.appendChild(row);
-    _renderFileNode(folder, byPath, depth + 1, out);
+    // Children live in their own indented box: that box's left border is the
+    // guide line tying them back to this folder.
+    var kids = document.createElement('div');
+    kids.className = 'ft-children';
+    out.appendChild(kids);
+    _renderFileNode(folder, byPath, depth + 1, kids);
   });
   node.files.forEach(function (file) {
     var entry = byPath[file.path] || {};
     var row = document.createElement('div');
     row.className = 'file-tree-file';
-    row.style.paddingLeft = (depth * 1.1) + 'rem';
+    row.appendChild(_fileIcon(file.name));
     if (entry.href) {
       var a = document.createElement('a');
       a.href = entry.href;
@@ -5549,6 +5594,10 @@ async function loadFilesMd() {
     repos.forEach(function (repo) {
       var head = document.createElement('div');
       head.className = 'file-tree-repo';
+      var repoIcon = document.createElement('span');
+      repoIcon.className = 'material-symbols-outlined ft-icon';
+      repoIcon.textContent = 'inventory_2';
+      head.appendChild(repoIcon);
       var link = document.createElement('a');
       link.href = repo.url;
       link.target = '_blank';
@@ -5564,8 +5613,11 @@ async function loadFilesMd() {
       el.appendChild(head);
       var byPath = {};
       repo.entries.forEach(function (e) { byPath[e.path] = e; });
+      var root = document.createElement('div');
+      root.className = 'ft-children ft-root';
+      el.appendChild(root);
       _renderFileNode(buildFileTree(repo.entries.map(function (e) { return e.path; })),
-                      byPath, 0, el);
+                      byPath, 0, root);
     });
   } catch (e) {
     el.textContent = 'Failed to load files.';

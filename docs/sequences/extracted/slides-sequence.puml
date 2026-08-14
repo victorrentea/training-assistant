@@ -1,6 +1,6 @@
 @startuml
 hide footbox
-title Feature: Slides Catalog, Viewing, and Follow Mode
+title Feature: Slides C1atalog, Viewing, and Follow Mode
 caption <color:gray>Generated 2026-04-26 05:57</color>
 
 participant "Host"
