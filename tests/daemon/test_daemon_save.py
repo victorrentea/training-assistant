@@ -217,11 +217,52 @@ def test_save_session_state_translates_engagement_into_activity(capsys):
         capsys.readouterr()
         _save_session_state(
             folder,
-            {"participants": {"u1": {"name": "Alice", "engagement": {"slides": {"seconds": 30, "visits": 1, "clicks": 2}}}}},
+            {"participants": {"u1": {"name": "Alice", "engagement": {"notes": {"seconds": 30, "visits": 1, "clicks": 2}}}}},
         )
         out = capsys.readouterr().out
-        assert "participants(viewed slides)" in out
+        assert "participants(viewed notes)" in out
         assert "engagement" not in out
+
+
+def test_save_session_state_names_the_slide_participants_are_watching(capsys):
+    """Participants follow the host's deck, so slide engagement is logged as 'deck:page'."""
+    with tempfile.TemporaryDirectory() as d:
+        from daemon.session_state import save_session_state as _save_session_state
+
+        folder = Path(d) / "session"
+        folder.mkdir(parents=True, exist_ok=True)
+        _save_session_state(folder, {"participants": {"u1": {"name": "Alice"}}, "current_slide": {"slug": "spring", "page": 12}})
+        capsys.readouterr()
+        _save_session_state(
+            folder,
+            {
+                "participants": {"u1": {"name": "Alice", "engagement": {"slides": {"seconds": 30, "visits": 1, "clicks": 2}}}},
+                "current_slide": {"slug": "spring", "page": 12},
+            },
+        )
+        out = capsys.readouterr().out
+        assert "participants(viewed slides spring:12)" in out
+
+
+def test_save_session_state_logs_current_slide_and_viewed_pages(capsys):
+    """current_slide and slides_viewed changes name the deck and page, not just the key."""
+    with tempfile.TemporaryDirectory() as d:
+        from daemon.session_state import save_session_state as _save_session_state
+
+        folder = Path(d) / "session"
+        folder.mkdir(parents=True, exist_ok=True)
+        _save_session_state(folder, {"current_slide": {"slug": "spring", "page": 3}})
+        capsys.readouterr()
+        _save_session_state(
+            folder,
+            {
+                "current_slide": {"slug": "spring", "page": 4},
+                "slides_viewed": [{"slug": "spring", "page": 4, "seconds": 12}],
+            },
+        )
+        out = capsys.readouterr().out
+        assert "current_slide(spring:4)" in out
+        assert "slides_viewed(spring:4)" in out
 
 
 def test_save_session_state_engagement_falls_back_to_unknown(capsys):

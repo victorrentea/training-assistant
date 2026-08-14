@@ -314,23 +314,81 @@ _VIEW_ACTIVITIES = {
 }
 
 
-def _describe_engagement(old_v, new_v) -> set[str]:
-    """Translate a participant's changed engagement map into 'viewed <activity>' phrases."""
+_MAX_SLIDE_REFS = 4
+
+
+def _slide_ref(slug, page) -> str:
+    """Render a slide as 'deck:page' (just 'deck' when the page is unknown)."""
+    slug = str(slug or "").strip() or "unknown"
+    return f"{slug}:{page}" if isinstance(page, int) else slug
+
+
+def _current_slide_ref(snapshot: dict) -> str | None:
+    """The slide the host is projecting right now, as 'deck:page' — participants follow it."""
+    cur = snapshot.get("current_slide") if isinstance(snapshot, dict) else None
+    if not isinstance(cur, dict) or not str(cur.get("slug") or "").strip():
+        return None
+    return _slide_ref(cur.get("slug"), cur.get("page"))
+
+
+def _join_slide_refs(refs: list[str]) -> str:
+    """Comma-join slide refs, capped so a bulk load does not print a wall of pages."""
+    shown = sorted(set(refs))
+    if len(shown) > _MAX_SLIDE_REFS:
+        return f"{', '.join(shown[:_MAX_SLIDE_REFS])} +{len(shown) - _MAX_SLIDE_REFS} more"
+    return ", ".join(shown)
+
+
+def _describe_slides_viewed(old_v, new_v) -> str:
+    """Name the (deck, page) pairs whose accumulated viewing time changed."""
+    def as_map(v) -> dict:
+        return {
+            (sv.get("slug"), sv.get("page")): sv.get("seconds")
+            for sv in (v if isinstance(v, list) else [])
+            if isinstance(sv, dict)
+        }
+
+    old_m, new_m = as_map(old_v), as_map(new_v)
+    changed = [k for k in set(old_m) | set(new_m) if old_m.get(k) != new_m.get(k)]
+    refs = _join_slide_refs([_slide_ref(slug, page) for slug, page in changed])
+    return f"({refs})" if refs else ""
+
+
+def _describe_engagement(old_v, new_v, snapshot: dict) -> set[str]:
+    """Translate a participant's changed engagement map into 'viewed <activity>' phrases.
+
+    Participants have no per-person page of their own to report, but the slides view follows
+    the host, so the currently projected slide is what they were looking at.
+    """
     old_views = old_v if isinstance(old_v, dict) else {}
     new_views = new_v if isinstance(new_v, dict) else {}
     changed = [v for v in set(old_views) | set(new_views) if old_views.get(v) != new_views.get(v)]
     if not changed:
         return {"viewed unknown"}
-    return {f"viewed {_VIEW_ACTIVITIES.get(str(v), 'unknown')}" for v in changed}
+    slide_ref = _current_slide_ref(snapshot)
+    phrases = set()
+    for view in changed:
+        activity = _VIEW_ACTIVITIES.get(str(view), "unknown")
+        if view == "slides" and slide_ref:
+            activity = f"slides {slide_ref}"
+        phrases.add(f"viewed {activity}")
+    return phrases
 
 
-def _describe_changed_value(old_v, new_v) -> str:
+def _describe_changed_value(key: str, old_v, new_v, snapshot: dict) -> str:
     """Return a parenthesised sub-field hint for a changed value, or '' if no detail to add.
 
     For dict[str, dict] values (e.g. participants, qa_questions) this reports added/removed
     entry counts and the union of changed inner field names — so a save log like
     'participants(score)' tells us a score changed, not just that the collection moved.
+
+    Slide-shaped values are named as 'deck:page' instead of just reporting that they moved.
     """
+    if key == "slides_viewed":
+        return _describe_slides_viewed(old_v, new_v)
+    if key == "current_slide":
+        ref = _current_slide_ref({"current_slide": new_v})
+        return f"({ref})" if ref else ""
     if not (isinstance(old_v, dict) and isinstance(new_v, dict)):
         return ""
     # Only drill in if entries look like nested dicts (e.g. participants[uuid] -> {name, score, ...}).
@@ -348,7 +406,7 @@ def _describe_changed_value(old_v, new_v) -> str:
             for fk in set(ov.keys()) | set(nv.keys()):
                 if ov.get(fk) != nv.get(fk):
                     if fk == "engagement":
-                        subfields |= _describe_engagement(ov.get(fk), nv.get(fk))
+                        subfields |= _describe_engagement(ov.get(fk), nv.get(fk), snapshot)
                     else:
                         subfields.add(fk)
         elif ov != nv:
@@ -384,7 +442,7 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
         old_v = existing.get(k) if isinstance(existing, dict) else None
         new_v = payload.get(k)
         if old_v != new_v:
-            changed_descriptors.append(f"{k}{_describe_changed_value(old_v, new_v)}")
+            changed_descriptors.append(f"{k}{_describe_changed_value(k, old_v, new_v, payload)}")
     if not changed_descriptors:
         return
     path = session_state_path(session_folder)
