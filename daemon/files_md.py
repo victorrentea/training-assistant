@@ -66,6 +66,29 @@ class Repo:
     branch: str                 # branch of the most recent open in this repo
     entries: list[Entry] = field(default_factory=list)
 
+    def display_branch(self) -> str:
+        """The branch shown beside the repo, and the baseline entries compare against.
+
+        Not the most recent open: a single file opened on `main` used to
+        re-label a repo whose whole session happened on a feature branch, and
+        then every real entry grew a redundant ` · branch` chip. The branch most
+        of the repo's files were opened on is what the heading is actually
+        claiming, so count them; ties break toward the most recent open.
+        """
+        if not self.entries:
+            return self.branch
+        counts: dict[str, int] = {}
+        for e in self.entries:
+            counts[e.branch] = counts.get(e.branch, 0) + 1
+        top = max(counts.values())
+        tied = {b for b, c in counts.items() if c == top}
+        if self.branch in tied:
+            return self.branch
+        for e in sorted(self.entries, key=lambda e: e.ts, reverse=True):
+            if e.branch in tied:
+                return e.branch
+        return self.branch
+
 
 @dataclass
 class Doc:
@@ -87,13 +110,16 @@ class Doc:
         with_date = _needs_date([e.ts for r in repos for e in r.entries])
         parts = [_TITLE, ""]
         for repo in repos:
+            # Visible heading = the repo's dominant branch; the `branch:` comment
+            # stays the most-recent one, which is what record/parse rely on.
+            shown = repo.display_branch()
             parts.append(
-                f"## [{repo.name}]({repo.url}) — branch `{repo.branch}` "
+                f"## [{repo.name}]({repo.url}) — branch `{shown}` "
                 f"<!-- branch:{repo.branch} default_branch:{repo.default_branch} -->"
             )
             parts.append("")
             for e in repo.entries:
-                parts.append(_render_entry(e, repo.branch, with_date))
+                parts.append(_render_entry(e, shown, with_date))
             parts.append("")
         return "\n".join(parts).rstrip() + "\n"
 

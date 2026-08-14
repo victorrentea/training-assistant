@@ -44,6 +44,13 @@ def test_render_linked_entry_on_repo_branch(tz_bucharest):
 def test_render_entry_on_divergent_branch_shows_visible_chip(tz_bucharest):
     doc = files_md.Doc(repos=[_repo_with([
         files_md.Entry(
+            path="src/a.py",
+            branch="master",
+            ts="2026-08-04T06:41:07Z",
+            blob_url="https://github.com/owner/repo/blob/master/src/a.py",
+            ref="branch",
+        ),
+        files_md.Entry(
             path="src/b.py",
             branch="solved",
             ts="2026-08-04T07:05:12Z",
@@ -55,6 +62,30 @@ def test_render_entry_on_divergent_branch_shows_visible_chip(tz_bucharest):
     # before participants ever see the document.
     assert "— 10:05 · branch `solved`" in doc.render()
     assert "· branch" in files_md.sanitize_for_wire(doc.render())
+    # ...and only on the entry that diverges from the heading's branch.
+    assert "— 09:41 <!--" in doc.render()
+
+
+def test_repo_heading_follows_the_dominant_branch_not_the_latest_open(tz_bucharest):
+    """One stray file opened on master must not re-label a feature-branch repo."""
+    doc = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(path="src/a.py", branch="solved", ts="2026-08-04T06:00:00Z"),
+        files_md.Entry(path="src/b.py", branch="solved", ts="2026-08-04T06:10:00Z"),
+        files_md.Entry(path="src/c.py", branch="master", ts="2026-08-04T07:00:00Z"),
+    ], branch="master")])
+    rendered = doc.render()
+    assert "— branch `solved` <!-- branch:master" in rendered
+    # The two `solved` files carry no chip; the lone `master` one does.
+    assert rendered.count("· branch `") == 1
+    assert "· branch `master`" in rendered
+
+
+def test_dominant_branch_ties_break_toward_the_most_recent_open(tz_bucharest):
+    doc = files_md.Doc(repos=[_repo_with([
+        files_md.Entry(path="src/a.py", branch="solved", ts="2026-08-04T06:00:00Z"),
+        files_md.Entry(path="src/b.py", branch="master", ts="2026-08-04T07:00:00Z"),
+    ], branch="master")])
+    assert "— branch `master`" in doc.render()
 
 
 def test_render_linked_entry_with_no_ref_falls_back_to_default(tz_bucharest):

@@ -21,8 +21,8 @@ body{visibility:hidden}
 /* Opened Files renders like an IDE project view: each folder owns a nested
    container, so its children are indented past it and a thin guide line marks
    which folder they belong to. */
-#files-content .file-tree-repo{font-weight:700;margin:1rem 0 .3rem;display:flex;align-items:center;gap:.4em}
-#files-content .file-tree-repo:first-child{margin-top:.2rem}
+#files-content .file-tree-repo{font-weight:700;margin:1.4rem 0 .35rem;padding-top:1.4rem;border-top:1px solid var(--color-outline-variant,#888);display:flex;align-items:center;gap:.4em}
+#files-content .file-tree-repo:first-child{margin-top:.2rem;padding-top:0;border-top:0}
 #files-content .ft-children{margin-left:.75em;padding-left:.9em;border-left:1px solid var(--color-outline-variant,#888)}
 #files-content .ft-children.ft-root{margin-left:0;padding-left:.15em;border-left:0}
 #files-content .file-tree-folder,#files-content .file-tree-file{display:flex;align-items:center;gap:.4em;line-height:1.6;white-space:nowrap;overflow-x:auto;border-radius:4px;padding:0 .35em;margin-left:-.35em}
