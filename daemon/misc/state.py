@@ -21,6 +21,11 @@ class MiscState:
         # Synced from Railway state (slides + session info)
         self.current_slide: dict | None = None
         self.slides_viewed: list[dict] = []  # [{slug, page, seconds}]
+        # When each slide actually held the screen: one entry per reporting
+        # window, append-only. `slides_viewed` totals answer "which slides got
+        # airtime"; only this answers "which slide was up while he was saying
+        # THAT", which is what ties a summary paragraph to a slide number.
+        self.slide_timeline: list[dict] = []  # [{slug, page, seconds, at}]
         self.agenda_docx_path: Path | None = None
         self.talk_presentation_name: str | None = None
         self.talk_presentation_url: str | None = None
@@ -64,6 +69,8 @@ class MiscState:
                 self.current_slide = data["current_slide"]
             if "slides_viewed" in data:
                 self.slides_viewed = list(data.get("slides_viewed") or [])
+            if "slide_timeline" in data:
+                self.slide_timeline = list(data.get("slide_timeline") or [])
             if "talk_presentation_name" in data:
                 self.talk_presentation_name = data["talk_presentation_name"]
             if "talk_presentation_url" in data:
@@ -146,6 +153,7 @@ class MiscState:
             "paste_texts": {k: list(v) for k, v in self.paste_texts.items()},
             "uploaded_files": {k: [dict(e) for e in v] for k, v in self.uploaded_files.items()},
             "slides_viewed": [dict(sv) for sv in self.slides_viewed],
+            "slide_timeline": [dict(sm) for sm in self.slide_timeline],
         }
 
     def reset_for_new_session(self) -> None:
@@ -161,6 +169,7 @@ class MiscState:
             # (PDF cache + PPTX file timestamps) that survives session changes.
             self.current_slide = None
             self.slides_viewed = []
+            self.slide_timeline = []
             self.talk_presentation_name = None
             self.talk_presentation_url = None
             self.talk_presentation_slug = None

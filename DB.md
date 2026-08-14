@@ -84,6 +84,12 @@ slides_viewed?: list[ViewedSlide{
   page:int  # 1-based slide number
   seconds?:int  # Cumulative seconds viewed
 }]  # Accumulated per-slide viewing durations from addons
+slide_timeline?: list[SlideMoment{
+  slug:string  # Railway slug identifying the slide deck
+  page:int  # 1-based slide number
+  seconds?:int  # Focused seconds within this window
+  at:string  # ISO timestamp of the end of the window
+}]  # Append-only log of when each slide held the screen, for tying summary sections to slide numbers
 emoji_counters?: dict[str, int]  # emoji → cumulative reaction count (talk mode)
 ```
 

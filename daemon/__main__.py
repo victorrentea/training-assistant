@@ -245,6 +245,7 @@ def _build_runtime_session_snapshot(
         },
         "current_slide": misc_state.current_slide,
         "slides_viewed": [dict(sv) for sv in misc_state.slides_viewed],
+        "slide_timeline": [dict(sm) for sm in misc_state.slide_timeline],
         "talk_presentation_name": misc_state.talk_presentation_name,
         "talk_presentation_url": misc_state.talk_presentation_url,
         "talk_presentation_slug": misc_state.talk_presentation_slug,
@@ -1170,7 +1171,10 @@ def run() -> None:
                     for k, v in misc_state.slides_catalog.items()
                     if v.get("source_name")
                 }
-                merge_slides_viewed(misc_state.slides_viewed, _sv_batch, _slug_map)
+                merge_slides_viewed(
+                    misc_state.slides_viewed, _sv_batch, _slug_map,
+                    timeline=misc_state.slide_timeline,
+                )
             _slides_history_count_after = len(misc_state.slides_viewed)
             if _slides_history_count_after != _prev_slides_history_count:
                 from daemon.ws_messages import SlidesHistoryCountUpdatedMsg

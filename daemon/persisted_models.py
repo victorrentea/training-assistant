@@ -110,6 +110,22 @@ class ViewedSlide(PersistedModel):
     seconds: int = Field(default=0, description="Cumulative seconds viewed")
 
 
+class SlideMoment(PersistedModel):
+    """One reporting window in which a slide held the screen.
+
+    `ViewedSlide` totals say which slides got airtime; only these say *when*,
+    which is what lets a transcript minute be attributed to a slide number.
+    Seconds are counted by the addons app **only while PowerPoint is the
+    frontmost app**, so an entry means the slide was actually being looked at,
+    not merely open behind something else.
+    """
+
+    slug: str = Field(description="Railway slug identifying the slide deck")
+    page: int = Field(description="1-based slide number")
+    seconds: int = Field(default=0, description="Focused seconds within this window")
+    at: str = Field(description="ISO timestamp of the end of the window")
+
+
 class PersistedSessionState(PersistedModel):
     """Runtime session snapshot persisted in `session-state.json`."""
 
@@ -185,6 +201,7 @@ class PersistedSessionState(PersistedModel):
     talk_presentation_slug: str | None = Field(default=None, description="Railway slug under which the talk PPTX PDF is cached")
     current_slide: dict[str, Any] | None = Field(default=None, description="{slug, page}")
     slides_viewed: list[ViewedSlide] = Field(default_factory=list, description="Accumulated per-slide viewing durations from addons")
+    slide_timeline: list[SlideMoment] = Field(default_factory=list, description="Append-only log of when each slide held the screen, for tying summary sections to slide numbers")
     emoji_counters: dict[str, int] = Field(default_factory=dict, description="emoji → cumulative reaction count (talk mode)")
 
     @model_validator(mode="before")
