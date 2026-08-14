@@ -35,6 +35,7 @@ EMOJI_CATALOG: list[EmojiDef] = [
     EmojiDef(emoji="🔥", title="", section="primary"),
     EmojiDef(emoji="🤔", title="That's interesting...", section="primary"),
     EmojiDef(emoji="🖥️", title="I can't see your screen.", section="signal", badge="❌"),
+    EmojiDef(emoji="👏", title="Applause!", section="overflow"),
     EmojiDef(emoji="⚔️", title="Let's debate this!", section="overflow"),
     EmojiDef(emoji="😂", title="I'm dead 💀", section="overflow"),
     EmojiDef(emoji="🤯", title="Mind-blowing!", section="overflow"),

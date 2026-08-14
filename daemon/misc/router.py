@@ -128,6 +128,10 @@ async def paste_text(request: Request, body: PasteRequest):
     return Response(status_code=204)
 
 
+#: Named in every bug-report mail so Victor can tell at a glance which of his
+#: projects a report belongs to — several of them mail him from the same inbox.
+PROJECT_REPO_URL = "https://github.com/victorrentea/training-assistant"
+
 MAX_BUG_REPORT_CHARS = 5000
 #: Anti-flood: a bored participant must not be able to bury Victor's inbox
 #: mid-workshop. Per-participant, reset when the session folder changes.
@@ -184,6 +188,7 @@ async def participant_bug_report(request: Request, body: BugReportRequest):
     # attacker-controlled anyway.
     from daemon import host_server
     email_body = "\n".join([
+        f"Project:     {PROJECT_REPO_URL}",
         f"Reporter:    {_clean_diagnostic(reporter, 64)}",
         f"Session:     {session_name}",
         f"Tab:         {_clean_diagnostic(d.view, 32)}",

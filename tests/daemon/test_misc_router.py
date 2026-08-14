@@ -48,6 +48,9 @@ def test_bug_report_emails_victor_with_the_report_and_diagnostics():
     subject, body = notify.call_args.args
     assert "Alice" in subject
     assert "Reporter:    Alice" in body
+    # The repo link tells Victor which project the report is about — he runs
+    # several tools that mail him from the same inbox.
+    assert "Project:     https://github.com/victorrentea/training-assistant" in body
     assert "Tab:         slides" in body
     assert "Daemon code:" in body
     assert "Mozilla/5.0 (iPhone)" in body
@@ -98,7 +101,7 @@ def test_bug_report_strips_header_injection_from_diagnostics():
     # cannot forge an extra "Field: value" row (nor a header, once in a subject).
     header_block = body.split("── Report ──")[0]
     assert "\r" not in header_block
-    assert len(header_block.strip().splitlines()) == 7
+    assert len(header_block.strip().splitlines()) == 8
     assert "slidesX-Injected: yes" in header_block  # newline dropped, text kept
 
 
