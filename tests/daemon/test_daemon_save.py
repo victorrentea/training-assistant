@@ -157,6 +157,7 @@ def test_load_session_state_drops_non_persisted_transient_fields():
 
 
 def test_save_session_state_logs_compact_write_line(capsys):
+    """The write line is just the floppy icon plus what changed — no filename, no session name."""
     with tempfile.TemporaryDirectory() as d:
         from daemon.session_state import save_session_state as _save_session_state
 
@@ -164,7 +165,9 @@ def test_save_session_state_logs_compact_write_line(capsys):
         folder.mkdir(parents=True, exist_ok=True)
         _save_session_state(folder, {"mode": "new"})
         out = capsys.readouterr().out
-        assert "💾 session-state.json in 2026-04-07..09 AI@Globex" in out
+        assert "💾 mode" in out
+        assert "session-state.json" not in out
+        assert "AI@Globex" not in out
 
 
 def test_save_session_state_logs_participant_subfield_change(capsys):
@@ -201,3 +204,38 @@ def test_save_session_state_logs_participant_added_and_field(capsys):
         )
         out = capsys.readouterr().out
         assert "participants(+1, location)" in out
+
+
+def test_save_session_state_translates_engagement_into_activity(capsys):
+    """'engagement' is opaque — the log must say which part of the tool they were on."""
+    with tempfile.TemporaryDirectory() as d:
+        from daemon.session_state import save_session_state as _save_session_state
+
+        folder = Path(d) / "session"
+        folder.mkdir(parents=True, exist_ok=True)
+        _save_session_state(folder, {"participants": {"u1": {"name": "Alice"}}})
+        capsys.readouterr()
+        _save_session_state(
+            folder,
+            {"participants": {"u1": {"name": "Alice", "engagement": {"slides": {"seconds": 30, "visits": 1, "clicks": 2}}}}},
+        )
+        out = capsys.readouterr().out
+        assert "participants(viewed slides)" in out
+        assert "engagement" not in out
+
+
+def test_save_session_state_engagement_falls_back_to_unknown(capsys):
+    """An unrecognised view slug degrades to 'unknown' rather than leaking the raw key."""
+    with tempfile.TemporaryDirectory() as d:
+        from daemon.session_state import save_session_state as _save_session_state
+
+        folder = Path(d) / "session"
+        folder.mkdir(parents=True, exist_ok=True)
+        _save_session_state(folder, {"participants": {"u1": {"name": "Alice"}}})
+        capsys.readouterr()
+        _save_session_state(
+            folder,
+            {"participants": {"u1": {"name": "Alice", "engagement": {"holodeck": {"seconds": 5}}}}},
+        )
+        out = capsys.readouterr().out
+        assert "participants(viewed unknown)" in out

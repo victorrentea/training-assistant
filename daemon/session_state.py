@@ -274,7 +274,7 @@ def load_session_state(session_folder: Path) -> dict:
                     tmp.write_text(json.dumps(data, default=str, indent=2), encoding="utf-8")
                     tmp.replace(path)
                     legacy_meta.unlink(missing_ok=True)
-                    log.info("session", f"💾 {SESSION_STATE_FILENAME} in {session_folder.name}")
+                    log.info("session", "💾 migrated legacy session state")
                     return data
             except Exception:
                 pass
@@ -297,6 +297,31 @@ def load_session_state(session_folder: Path) -> dict:
     except Exception as e:
         log.error("session", f"Failed to load {SESSION_STATE_FILENAME}: {e}")
         return {}
+
+
+# Participant-page view slugs (see _KNOWN_VIEWS in daemon/participant/router.py) → what
+# the participant was actually doing there. "engagement" alone says nothing; "viewed slides"
+# tells us how the tool is being used.
+_VIEW_ACTIVITIES = {
+    "activity": "the live activity",
+    "slides": "slides",
+    "summary": "the summary",
+    "notes": "notes",
+    "agenda": "the agenda",
+    "report-bug": "the bug report form",
+    "upload-paste": "the paste/upload form",
+    "files": "files",
+}
+
+
+def _describe_engagement(old_v, new_v) -> set[str]:
+    """Translate a participant's changed engagement map into 'viewed <activity>' phrases."""
+    old_views = old_v if isinstance(old_v, dict) else {}
+    new_views = new_v if isinstance(new_v, dict) else {}
+    changed = [v for v in set(old_views) | set(new_views) if old_views.get(v) != new_views.get(v)]
+    if not changed:
+        return {"viewed unknown"}
+    return {f"viewed {_VIEW_ACTIVITIES.get(str(v), 'unknown')}" for v in changed}
 
 
 def _describe_changed_value(old_v, new_v) -> str:
@@ -322,7 +347,10 @@ def _describe_changed_value(old_v, new_v) -> str:
         if isinstance(ov, dict) and isinstance(nv, dict):
             for fk in set(ov.keys()) | set(nv.keys()):
                 if ov.get(fk) != nv.get(fk):
-                    subfields.add(fk)
+                    if fk == "engagement":
+                        subfields |= _describe_engagement(ov.get(fk), nv.get(fk))
+                    else:
+                        subfields.add(fk)
         elif ov != nv:
             subfields.add("<value>")
     parts: list[str] = []
@@ -363,7 +391,7 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
     tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
     tmp.write_text(json.dumps(payload, default=str, indent=2), encoding="utf-8")
     tmp.replace(path)
-    log.info("session", f"💾 {SESSION_STATE_FILENAME} in {session_folder.name}: {', '.join(changed_descriptors)}")
+    log.info("session", f"💾 {', '.join(changed_descriptors)}")
 
 
 # ── Notes file helper ──────────────────────────────────────────────────────────
