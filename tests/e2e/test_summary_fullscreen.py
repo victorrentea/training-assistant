@@ -22,9 +22,13 @@ def test_summary_fullscreen_button_toggles(pax):
     assert page.evaluate(
         "document.querySelector('#summary-fs-btn .material-symbols-outlined').textContent"
     ) == "fullscreen_exit"
+    # Downloading is a windowed act; fullscreen keeps only the way back out.
+    assert not page.locator("#summary-dl .summary-dl-md").is_visible()
+    assert not page.locator("#summary-dl .summary-dl-pdf").is_visible()
 
     page.locator("#summary-fs-btn").click()
     page.wait_for_function("() => !document.fullscreenElement", timeout=5000)
     assert page.evaluate(
         "document.querySelector('#summary-fs-btn .material-symbols-outlined').textContent"
     ) == "fullscreen"
+    assert page.locator("#summary-dl .summary-dl-pdf").is_visible()

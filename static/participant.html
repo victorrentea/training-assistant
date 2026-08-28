@@ -165,6 +165,13 @@ body{visibility:hidden}
             height: 100%;
             background: var(--color-surface, rgb(247 249 251));
         }
+        /* Downloading is a windowed act: fullscreen is for reading, and a
+           .md / .pdf pair sitting over the text is one more thing to look
+           past. The pill keeps only the way back out. */
+        #summary-view:fullscreen .summary-dl-md,
+        #summary-view:fullscreen .summary-dl-pdf { display: none; }
+        #summary-view:-webkit-full-screen .summary-dl-md,
+        #summary-view:-webkit-full-screen .summary-dl-pdf { display: none; }
         ::-webkit-scrollbar {
             width: 12px;
         }
