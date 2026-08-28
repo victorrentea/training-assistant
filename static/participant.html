@@ -143,6 +143,28 @@ body{visibility:hidden}
             margin-right: 0.25rem;
             opacity: 1;
         }
+        /* ── Summary fullscreen (zen review) ──────────────────────
+           The button asks the browser to make #summary-view itself the
+           fullscreen root. That is why nothing here hides the sidebar or
+           the reaction bar: they live outside that subtree, and the
+           browser renders only the subtree. A hiding rule would have to
+           be kept in sync with every future floating control; this
+           cannot drift.
+           Fullscreen takes the element out of the flex layout it was
+           inheriting its size and surface from, so both are restated.
+           The two vendor selectors are separate rules on purpose — a
+           browser that does not know one of them drops the whole rule. */
+        #summary-dl .summary-dl-fs { margin-right: 0.35rem; }
+        #summary-view:fullscreen {
+            width: 100%;
+            height: 100%;
+            background: var(--color-surface, rgb(247 249 251));
+        }
+        #summary-view:-webkit-full-screen {
+            width: 100%;
+            height: 100%;
+            background: var(--color-surface, rgb(247 249 251));
+        }
         ::-webkit-scrollbar {
             width: 12px;
         }
@@ -939,6 +961,9 @@ body{visibility:hidden}
 </div>
 <div id="summary-view" style="display:none" class="relative h-full flex flex-col">
   <div id="summary-dl" class="absolute top-6 right-6 z-20 flex items-center p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
+    <button id="summary-fs-btn" onclick="toggleSummaryFullscreen()" class="summary-dl-fs p-2 rounded-full text-on-surface-variant transition-all flex items-center hover-green" data-tip="Fullscreen — the summary on the whole screen">
+      <span class="material-symbols-outlined" style="font-size:1.25rem">fullscreen</span>
+    </button>
     <button onclick="downloadSummaryMd()" class="summary-dl-md py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" data-tip="Download as Markdown">
       <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
       <span>.md</span>
@@ -5646,6 +5671,46 @@ function downloadNotes() {
   a.click();
   URL.revokeObjectURL(a.href);
 }
+/* ── Fullscreen (zen) review of the AI summary ──────────────────────
+   Only this view gets it. The summary is the one long document in the
+   app, and reviewing it means reading it and zooming into parts of it,
+   which the sidebar and the reaction bar only compete with.
+   Fullscreen is asked of #summary-view itself rather than of the page,
+   so the left menu and the emoji bar are gone by construction — they
+   are outside the subtree the browser renders. Escape is the browser's
+   own exit and needs no key handler here; `fullscreenchange` is what
+   the icon follows, so it stays right however the mode was left. */
+function toggleSummaryFullscreen() {
+  var view = document.getElementById('summary-view');
+  if (!view) return;
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    return;
+  }
+  var request = view.requestFullscreen || view.webkitRequestFullscreen;
+  if (!request) return;  // an old browser simply keeps the windowed view
+  // Chrome answers with a promise (rejected when the gesture is stale or the
+  // permission is blocked); Safari's prefixed form answers with nothing.
+  var pending = request.call(view);
+  if (pending && pending.catch) {
+    pending.catch(function(e) { console.error('summary fullscreen refused', e); });
+  }
+}
+function _syncSummaryFullscreenBtn() {
+  var btn = document.getElementById('summary-fs-btn');
+  if (!btn) return;
+  var on = (document.fullscreenElement || document.webkitFullscreenElement)
+           === document.getElementById('summary-view');
+  var tip = on ? 'Exit fullscreen (or press Escape)'
+               : 'Fullscreen — the summary on the whole screen';
+  btn.querySelector('.material-symbols-outlined').textContent = on ? 'fullscreen_exit' : 'fullscreen';
+  btn.setAttribute('data-tip', tip);
+  // The shared tooltip names the button once, on first hover, and would then
+  // keep announcing "Fullscreen" while it exits it.
+  btn.setAttribute('aria-label', tip);
+}
+document.addEventListener('fullscreenchange', _syncSummaryFullscreenBtn);
+document.addEventListener('webkitfullscreenchange', _syncSummaryFullscreenBtn);
 function downloadSummaryMd() {
   if (!_summaryRawMarkdown) return;
   var a = document.createElement('a');

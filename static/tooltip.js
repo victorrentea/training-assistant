@@ -62,8 +62,12 @@
       el = document.createElement('div');
       el.id = 'app-tooltip';
       el.setAttribute('role', 'tooltip');
-      document.body.appendChild(el);
     }
+    // While an element is fullscreen the browser renders only that subtree, so
+    // a bubble parked on <body> is invisible exactly where the hints are the
+    // only labels left (the summary's fullscreen review). Follow the root.
+    var host = document.fullscreenElement || document.webkitFullscreenElement || document.body;
+    if (el.parentNode !== host) host.appendChild(el);
     return el;
   }
 
