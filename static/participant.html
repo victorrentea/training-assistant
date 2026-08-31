@@ -99,11 +99,11 @@ body{visibility:hidden}
             backdrop-filter: blur(20px);
         }
         /* ── Summary download control ─────────────────────────────
-           Collapsed to a single PDF download icon; on hover the pill
-           expands leftward to reveal the .md button and the .pdf label.
-           The PDF download icon is the stationary anchor (rightmost,
-           constant right padding) so it stays put under the cursor —
-           making PDF the default click target. */
+           Collapsed to a PDF download icon; on hover the pill expands
+           leftward to reveal the .md button and the .pdf label.
+           The fullscreen button is last (rightmost) so that it is the
+           stationary anchor: everything that grows on hover grows to its
+           left, and it never slips out from under the cursor. */
         #summary-dl .summary-dl-md,
         #summary-dl .summary-dl-pdf { white-space: nowrap; }
         #summary-dl .summary-dl-pdf {
@@ -154,7 +154,7 @@ body{visibility:hidden}
            inheriting its size and surface from, so both are restated.
            The two vendor selectors are separate rules on purpose — a
            browser that does not know one of them drops the whole rule. */
-        #summary-dl .summary-dl-fs { margin-right: 0.35rem; }
+        #summary-dl .summary-dl-fs { margin-left: 0.35rem; }
         #summary-view:fullscreen {
             width: 100%;
             height: 100%;
@@ -968,9 +968,6 @@ body{visibility:hidden}
 </div>
 <div id="summary-view" style="display:none" class="relative h-full flex flex-col">
   <div id="summary-dl" class="absolute top-6 right-6 z-20 flex items-center p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
-    <button id="summary-fs-btn" onclick="toggleSummaryFullscreen()" class="summary-dl-fs p-2 rounded-full text-on-surface-variant transition-all flex items-center hover-green" data-tip="Fullscreen — the summary on the whole screen">
-      <span class="material-symbols-outlined" style="font-size:1.25rem">fullscreen</span>
-    </button>
     <button onclick="downloadSummaryMd()" class="summary-dl-md py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" data-tip="Download as Markdown">
       <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
       <span>.md</span>
@@ -978,6 +975,9 @@ body{visibility:hidden}
     <button onclick="downloadSummaryPdf()" class="summary-dl-pdf py-2 rounded-full text-on-surface-variant transition-all flex items-center hover-green text-sm font-semibold" data-tip="Download as PDF">
       <span class="summary-dl-pdf-label">.pdf</span>
       <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
+    </button>
+    <button id="summary-fs-btn" onclick="toggleSummaryFullscreen()" class="summary-dl-fs p-2 rounded-full text-on-surface-variant transition-all flex items-center hover-green" data-tip="Fullscreen — the summary on the whole screen">
+      <span class="material-symbols-outlined" style="font-size:1.25rem">fullscreen</span>
     </button>
   </div>
   <div id="summary-scroll" class="flex-grow overflow-y-auto px-16 pt-12" style="padding-bottom:125px" onscroll="saveScroll('summary',this)">
