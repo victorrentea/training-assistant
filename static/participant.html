@@ -37,6 +37,16 @@ body{visibility:hidden}
    tree reads as file names first. */
 #files-content .file-tree-time{color:var(--color-on-surface-variant,#888);font-size:.75em;font-style:italic;margin-left:.5em}
 #files-content .file-tree-branch{font-size:.72em;padding:1px 6px;border-radius:999px;border:1px solid currentColor;opacity:.7;margin-left:.4rem}
+/* Prompts tab: one card per agent prompt the trainer sent from his machine.
+   Monospace, because what is on screen is the literal text an agent received —
+   participants retype and adapt these, so the exact characters matter. */
+#prompts-content .prompt-card{position:relative;background:var(--color-surface-container-high,#dde3e5);border-radius:.75rem;padding:.9rem 3rem .9rem 1rem;margin-bottom:.7rem}
+#prompts-content .prompt-num{position:absolute;left:-2.2rem;top:1rem;font-size:.75rem;font-weight:700;color:var(--color-on-surface-variant,#5e6b70);opacity:.6}
+#prompts-content .prompt-text{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:calc(0.95rem * var(--participant-zoom));white-space:pre-wrap;word-break:break-word;line-height:1.5}
+#prompts-content .prompt-text a{color:var(--color-primary,#4555ba);text-decoration:underline}
+#prompts-content .prompt-copy{position:absolute;top:.6rem;right:.6rem;opacity:0;transition:opacity .15s;color:var(--color-on-surface-variant,#5e6b70);cursor:pointer;background:none;border:0}
+#prompts-content .prompt-card:hover .prompt-copy,#prompts-content .prompt-copy:focus{opacity:.85}
+#prompts-content .prompt-empty{color:var(--color-on-surface-variant,#5e6b70)}
 /* Host highlighter: the host marks a passage and the agent wraps it in <mark>
    in ai-summary.md. Warm amber band, legible in light + dark; box-decoration
    keeps the band continuous across line wraps. Applies to every markdown view. */
@@ -64,7 +74,7 @@ body{visibility:hidden}
 .pdf-buffer { position: absolute; inset: 0; }
 .buf-front  { opacity: 1; pointer-events: auto; z-index: 2; }
 .buf-back   { opacity: 0; pointer-events: none; z-index: 1; }
-#notes-badge,#summary-badge,#files-badge{background:#9ca3af}
+#notes-badge,#summary-badge,#files-badge,#prompts-badge{background:#9ca3af}
 .badge-alert{background:#ef4444!important}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes follow-pulse{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
@@ -853,6 +863,11 @@ body{visibility:hidden}
 <span class="text-base">Opened Files</span>
 <span id="files-badge" class="badge-new" style="display:none"></span>
 </a>
+<a data-nav="prompts" onclick="showView('prompts')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="text-base">Prompts</span>
+<span id="prompts-badge" class="badge-new" style="display:none"></span>
+</a>
 <a data-nav="upload-paste" onclick="showView('upload-paste')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">upload</span>
 <span class="text-base">Upload / Paste</span>
@@ -988,6 +1003,12 @@ body{visibility:hidden}
 <div id="files-view" style="display:none" class="h-full flex flex-col">
   <div id="files-scroll" class="flex-grow overflow-y-auto px-16 py-12" onscroll="saveScroll('files',this)">
     <div id="files-content" class="text-on-surface leading-relaxed prose max-w-none">Loading…</div>
+  </div>
+</div>
+<!-- Prompts View -->
+<div id="prompts-view" style="display:none" class="h-full flex flex-col">
+  <div id="prompts-scroll" class="flex-grow overflow-y-auto px-16 py-12" onscroll="saveScroll('prompts',this)">
+    <div id="prompts-content" class="text-on-surface leading-relaxed">Loading…</div>
   </div>
 </div>
 <!-- Agenda View -->
@@ -1634,6 +1655,7 @@ var LS = {
   NOTES_UNREAD: 'new:notes_unread',
   SUMMARY_UNREAD: 'new:summary_unread',
   FILES_UNREAD: 'new:files_unread',
+  PROMPTS_UNREAD: 'new:prompts_unread',
   ACTIVITY_SEEN: 'new:activity_seen',
   INTRO_SEEN: 'new:intro_seen',
   ACCESS_TOAST_DISMISSED: 'new:access_toast_dismissed_date',
@@ -1676,6 +1698,8 @@ var LS = {
   setSummaryUnread: function(v){ localStorage.setItem(LS.SUMMARY_UNREAD, v ? 'true' : 'false'); },
   isFilesUnread:   function()  { return localStorage.getItem(LS.FILES_UNREAD) === 'true'; },
   setFilesUnread:  function(v) { localStorage.setItem(LS.FILES_UNREAD, v ? 'true' : 'false'); },
+  isPromptsUnread: function()  { return localStorage.getItem(LS.PROMPTS_UNREAD) === 'true'; },
+  setPromptsUnread: function(v){ localStorage.setItem(LS.PROMPTS_UNREAD, v ? 'true' : 'false'); },
   isActivitySeen:  function()  { return !!localStorage.getItem(LS.ACTIVITY_SEEN); },
   setActivitySeen: function()  { localStorage.setItem(LS.ACTIVITY_SEEN, '1'); },
   isIntroSeen:     function()  { return !!localStorage.getItem(LS.INTRO_SEEN); },
@@ -1957,6 +1981,13 @@ function _setPastSlidesBadge(total) {
 }
 function _setFilesBadge(total) {
   var badge = document.getElementById('files-badge');
+  if (!badge) return;
+  var n = Math.max(0, Number(total || 0));
+  badge.textContent = String(n);
+  badge.style.display = n > 0 ? '' : 'none';
+}
+function _setPromptsBadge(total) {
+  var badge = document.getElementById('prompts-badge');
   if (!badge) return;
   var n = Math.max(0, Number(total || 0));
   badge.textContent = String(n);
@@ -2795,7 +2826,7 @@ function scheduleHideOverflow() {
     el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-1');
   }, 120);
 }
-var VIEWS = ['activity', 'slides', 'summary', 'notes', 'agenda', 'report-bug', 'upload-paste', 'files', 'about'];
+var VIEWS = ['activity', 'slides', 'summary', 'notes', 'agenda', 'report-bug', 'upload-paste', 'files', 'prompts', 'about'];
 var _suppressScrollSave = new Set();
 function saveScroll(name, el) {
   if (_suppressScrollSave.has(name)) return;
@@ -2997,6 +3028,7 @@ function showView(name) {
   if (name === 'notes') { loadNotes(); _applyNotesBadgeUnread(false); }
   if (name === 'summary') { loadSummary(); _applySummaryBadgeUnread(false); }
   if (name === 'files') { _filesDirty = true; loadFilesMd(); _applyFilesBadgeUnread(false); }
+  if (name === 'prompts') { _promptsDirty = true; loadPrompts(); _applyPromptsBadgeUnread(false); }
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
@@ -4287,6 +4319,7 @@ function _setDuplicateIndicator(isDup) {
     _applyFeedbackUrl(state.feedback_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
     document.getElementById('files-badge').classList.toggle('badge-alert', (state.files_count || 0) > 0 && LS.isFilesUnread());
+    document.getElementById('prompts-badge').classList.toggle('badge-alert', (state.prompts_count || 0) > 0 && LS.isPromptsUnread());
     await _slidesCatalogReady; // never rejects: loadSlidesCatalog swallows its errors
     _hostSlidesCurrent = state.slides_current || null;
     var saved = _computeLandingView({
@@ -4336,6 +4369,18 @@ function _applyFilesBadgeUnread(unread) {
 // Only a genuinely new file earns the unread flag; a re-opened file rewrites
 // opened-files.md (moving its timestamp) without changing the count.
 function shouldFlagFilesUnread(newCount, previousCount) {
+  return newCount > previousCount;
+}
+
+function _applyPromptsBadgeUnread(unread) {
+  LS.setPromptsUnread(unread);
+  document.getElementById('prompts-badge').classList.toggle('badge-alert', unread);
+}
+
+// A prompt is only ever appended, so a higher count is the one and only signal
+// that something new arrived. Editing the notes by hand can lower it; that must
+// not light the badge red.
+function shouldFlagPromptsUnread(newCount, previousCount) {
   return newCount > previousCount;
 }
 
@@ -4401,6 +4446,10 @@ function _applyState(msg) {
   if (msg.files_count != null) {
     _setFilesBadge(msg.files_count);
     _lastFilesCount = msg.files_count;
+  }
+  if (msg.prompts_count != null) {
+    _setPromptsBadge(msg.prompts_count);
+    _lastPromptsCount = msg.prompts_count;
   }
   // Sync name from server — but ignore a snapshot that predates our last local
   // rename (its my_name differs from what we just committed). Once the server
@@ -4943,6 +4992,18 @@ function _handleWsMessage(msg) {
       }
       break;
     }
+    case 'prompts_count_updated': {
+      var previousPromptsCount = _lastPromptsCount;
+      _lastPromptsCount = msg.count;
+      _setPromptsBadge(msg.count);
+      var onPrompts = document.getElementById('prompts-view').style.display !== 'none';
+      if (onPrompts) { _promptsDirty = true; loadPrompts(); _applyPromptsBadgeUnread(false); }
+      else {
+        _promptsDirty = true;
+        if (shouldFlagPromptsUnread(msg.count, previousPromptsCount)) _applyPromptsBadgeUnread(true);
+      }
+      break;
+    }
     case 'active_participants_count_updated': {
       var paxDisplay = document.getElementById('pax-count-display');
       document.getElementById('pax-count').textContent = msg.count;
@@ -5476,6 +5537,8 @@ async function loadSummary() {
 }
 
 var _filesDirty = true;
+var _promptsDirty = true;
+var _lastPromptsCount = 0;
 var _lastFilesCount = 0;
 
 // Parse the sanitized opened-files.md. Every HTML comment is stripped server-side,
@@ -5658,6 +5721,55 @@ async function loadFilesMd() {
   } catch (e) {
     el.textContent = 'Failed to load files.';
     _filesDirty = true;
+  }
+}
+
+// The Prompts tab: every prompt the trainer's coding agent received, in the
+// order he sent them. The daemon reads them back out of the 🤖-stamped lines of
+// the session notes, so this list is exactly what landed in the notes file — no
+// second store that could drift from it.
+async function loadPrompts() {
+  if (!_promptsDirty) return;
+  _promptsDirty = false;
+  const el = document.getElementById('prompts-content');
+  if (!el.firstChild) el.textContent = 'Loading…';
+  try {
+    const data = await fetch(`/${_sessionId}/api/participant/prompts`).then(r => r.ok ? r.json() : Promise.reject('not found'));
+    const prompts = (data && data.prompts) || [];
+    _lastPromptsCount = prompts.length;
+    _setPromptsBadge(prompts.length);
+    el.textContent = '';
+    if (!prompts.length) {
+      var empty = document.createElement('div');
+      empty.className = 'prompt-empty';
+      empty.textContent = 'No prompts sent yet.';
+      el.appendChild(empty);
+      return;
+    }
+    prompts.forEach(function (text, i) {
+      var card = document.createElement('div');
+      card.className = 'prompt-card';
+      var num = document.createElement('span');
+      num.className = 'prompt-num';
+      num.textContent = String(i + 1);
+      card.appendChild(num);
+      var body = document.createElement('div');
+      body.className = 'prompt-text';
+      body.innerHTML = _linkifyNotesText(text);
+      card.appendChild(body);
+      var copy = document.createElement('button');
+      copy.className = 'prompt-copy';
+      copy.title = 'Copy prompt';
+      copy.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.1rem">content_copy</span>';
+      copy.addEventListener('click', function () {
+        _copyToClipboard(text).then(function () { showToast('Prompt copied!'); }).catch(function () {});
+      });
+      card.appendChild(copy);
+      el.appendChild(card);
+    });
+  } catch (e) {
+    el.textContent = 'Failed to load prompts.';
+    _promptsDirty = true;
   }
 }
 

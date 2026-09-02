@@ -18,6 +18,8 @@ from daemon.email_notify import notify as email_notify
 from daemon.misc.content_files import (
     get_active_session_folder,
     read_notes_content,
+    read_notes_updated_at,
+    read_prompts,
     read_summary_payload,
 )
 from daemon.misc.feedback_form import (
@@ -265,6 +267,22 @@ async def get_files_md():
     sanitized = _files_md.sanitize_for_wire(raw)
     iso = datetime.fromtimestamp(target.stat().st_mtime_ns / 1e9, tz=timezone.utc).isoformat()
     return FilesMdResponse(raw_markdown=sanitized, updated_at=iso)
+
+
+class PromptsResponse(BaseModel):
+    prompts: list[str]
+    updated_at: str | None
+
+
+@participant_router.get("/prompts", response_model=PromptsResponse)
+async def get_prompts():
+    """Return the agent prompts intercepted this session, oldest first.
+
+    They are read back out of the same session notes file the macOS addon
+    appends them to (each stamped 🤖), so the room sees exactly what was sent to
+    the agent — no second store to keep in sync with the notes.
+    """
+    return PromptsResponse(prompts=read_prompts(), updated_at=read_notes_updated_at())
 
 
 @participant_router.get("/slides/decks", response_model=DecksResponse)

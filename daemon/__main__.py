@@ -494,6 +494,7 @@ def _broadcast_notes_summary_counts(probe: dict, change_parts: str, prev_probe: 
         FilesCountUpdatedMsg,
         NotesAppendedMsg,
         NotesUpdatedMsg,
+        PromptsCountUpdatedMsg,
         SummaryUpdatedMsg,
     )
     from daemon.ws_publish import broadcast
@@ -503,6 +504,9 @@ def _broadcast_notes_summary_counts(probe: dict, change_parts: str, prev_probe: 
         if notes_mtime_ns:
             notes_updated_at = datetime.fromtimestamp(notes_mtime_ns / 1e9, tz=timezone.utc).isoformat()
         broadcast(NotesUpdatedMsg(updated_at=notes_updated_at))
+        # The prompts live inside the notes file, so a notes change is also the
+        # only moment their count can move.
+        broadcast(PromptsCountUpdatedMsg(count=int(probe.get("prompts_count") or 0)))
     snippet = _notes_append_snippet(prev_probe, probe, change_parts)
     if snippet:
         broadcast(NotesAppendedMsg(text=snippet, at=datetime.now(timezone.utc).isoformat()))
@@ -595,8 +599,9 @@ def _file_mtime_ns(path: Path | None) -> int | None:
 
 def _build_notes_summary_probe(session_folder: Path | None) -> dict:
     from daemon import files_md
-    from daemon.misc.content_files import _parse_summary_points
+    from daemon.misc.content_files import _parse_summary_points, parse_prompts
     notes_file = find_notes_in_folder(session_folder) if session_folder else None
+    notes_text = _read_text_or_none(notes_file)
     summary_file = (session_folder / "ai-summary.md") if session_folder else None
     if summary_file and not summary_file.exists():
         summary_file = None
@@ -615,7 +620,8 @@ def _build_notes_summary_probe(session_folder: Path | None) -> dict:
         "notes_file": str(notes_file) if notes_file else None,
         "notes_mtime_ns": _file_mtime_ns(notes_file),
         "notes_non_empty_lines": _read_non_empty_line_count(notes_file),
-        "notes_text": _read_text_or_none(notes_file),
+        "notes_text": notes_text,
+        "prompts_count": len(parse_prompts(notes_text)),
         "summary_file": str(summary_file) if summary_file else None,
         "summary_mtime_ns": _file_mtime_ns(summary_file),
         "summary_point_count": len(_parse_summary_points(summary_raw)),

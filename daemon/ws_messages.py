@@ -368,6 +368,16 @@ class FeedbackFormUpdatedMsg(BaseModel):
 
 # ── Files ─────────────────────────────────────────────────────────────────────
 
+class PromptsCountUpdatedMsg(BaseModel):
+    """Participant-only: total number of agent prompts intercepted this session.
+
+    Sourced from the 🤖-stamped lines of the session notes, so it moves the
+    moment the trainer confirms a captured prompt on the bottom-left pill.
+    """
+    type: Literal["prompts_count_updated"] = "prompts_count_updated"
+    count: int
+
+
 class FilesCountUpdatedMsg(BaseModel):
     """Participant-only: total number of files opened this session."""
     type: Literal["files_count_updated"] = "files_count_updated"
@@ -448,6 +458,8 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "feedback_form_updated": FeedbackFormUpdatedMsg,
     # Files
     "files_count_updated": FilesCountUpdatedMsg,
+    # Prompts
+    "prompts_count_updated": PromptsCountUpdatedMsg,
     # Emoji
     "emoji_counters_updated": EmojiCountersUpdatedMsg,
     # Attention (bell + host notifications)
@@ -535,6 +547,8 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "feedback_form_updated": "notes_summary",
     # Files
     "files_count_updated": "files",
+    # Prompts
+    "prompts_count_updated": "prompts",
     # Emoji
     "emoji_counters_updated": "emoji",
     # Attention (bell + host notifications)

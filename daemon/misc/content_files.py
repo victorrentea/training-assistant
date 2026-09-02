@@ -1,6 +1,7 @@
 """Session notes/summary readers from active session folder on disk."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from daemon.session import state as session_shared_state
@@ -49,6 +50,57 @@ def read_notes_content() -> str | None:
     except OSError:
         return None
     return text if text.strip() else None
+
+
+# Lines the macOS addon appends for an INTERCEPTED AGENT PROMPT look like
+# "- 🤖 <prompt>" (SessionNotesAppender.Marker.agentPrompt); text the trainer
+# sent by hand carries 📋 instead. The 🤖 stamp is therefore the only thing that
+# separates "this went to a coding agent" from every other line in the notes,
+# which is exactly the distinction the participants' Prompts tab is made of.
+#
+# A dictated prompt is a single line. A pasted multi-line one keeps its newlines
+# and only its FIRST line carries the marker, so an entry runs from its marker
+# line through the following non-blank lines that start neither a new bullet nor
+# one of Victor's "=== section" headers. That is the conservative rule: it never
+# swallows the hand-typed notes that follow a prompt.
+_PROMPT_LINE_RE = re.compile(r"^-\s*\U0001F916\uFE0F?\s*(.*)$")
+
+
+def parse_prompts(notes_text: str | None) -> list[str]:
+    """Intercepted agent prompts found in `notes_text`, oldest first."""
+    if not notes_text:
+        return []
+    prompts: list[str] = []
+    current: list[str] | None = None
+
+    def flush() -> None:
+        nonlocal current
+        if current is not None:
+            entry = "\n".join(current).strip()
+            if entry:
+                prompts.append(entry)
+            current = None
+
+    for line in notes_text.splitlines():
+        match = _PROMPT_LINE_RE.match(line)
+        if match:
+            flush()
+            current = [match.group(1)]
+            continue
+        if current is None:
+            continue
+        stripped = line.strip()
+        if not stripped or stripped.startswith("-") or stripped.startswith("="):
+            flush()
+        else:
+            current.append(line)
+    flush()
+    return prompts
+
+
+def read_prompts() -> list[str]:
+    """Intercepted agent prompts of the active session, oldest first."""
+    return parse_prompts(read_notes_content())
 
 
 def _parse_summary_points(raw_markdown: str | None) -> list[dict]:

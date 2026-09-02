@@ -784,6 +784,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/FilesMdResponse'
       x-feature: misc
+  /api/participant/prompts:
+    get:
+      tags:
+      - misc
+      summary: Get Prompts
+      description: 'Return the agent prompts intercepted this session, oldest first.
+
+
+        They are read back out of the same session notes file the macOS addon
+
+        appends them to (each stamped 🤖), so the room sees exactly what was sent to
+
+        the agent — no second store to keep in sync with the notes.'
+      operationId: get_prompts_api_participant_prompts_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptsResponse'
+      x-feature: misc
   /api/participant/slides/decks:
     get:
       tags:
@@ -3007,6 +3029,10 @@ components:
           type: integer
           title: Files Count
           default: 0
+        prompts_count:
+          type: integer
+          title: Prompts Count
+          default: 0
         gdrive_url:
           anyOf:
           - type: string
@@ -3133,6 +3159,23 @@ components:
       required:
       - slug
       title: PptxUpdateDetectedRequest
+    PromptsResponse:
+      properties:
+        prompts:
+          items:
+            type: string
+          type: array
+          title: Prompts
+        updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Updated At
+      type: object
+      required:
+      - prompts
+      - updated_at
+      title: PromptsResponse
     PurgeReport:
       properties:
         participant_id:

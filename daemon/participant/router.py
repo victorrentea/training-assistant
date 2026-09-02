@@ -324,6 +324,7 @@ class ParticipantStateResponse(BaseModel):
     summary_updated_at: str | None = None
     slides_history_count: int
     files_count: int = 0
+    prompts_count: int = 0
     gdrive_url: str | None = None
     feedback_url: str | None = None
     has_agenda: bool = False
@@ -338,6 +339,13 @@ def _files_count() -> int:
     from daemon.misc.content_files import get_active_session_folder
 
     return files_md.count_open_files(get_active_session_folder())
+
+
+def _prompts_count() -> int:
+    """Number of agent prompts intercepted in the active session (0 if none)."""
+    from daemon.misc.content_files import read_prompts
+
+    return len(read_prompts())
 
 
 def _build_qa_for_participant(pid: str) -> list[dict]:
@@ -924,6 +932,8 @@ async def get_participant_state(request: Request):
         "slides_history_count": len(misc_state.slides_viewed),
         # Files opened this session (count only — full list fetched on demand)
         "files_count": _files_count(),
+        # Agent prompts intercepted this session (count only — texts fetched on demand)
+        "prompts_count": _prompts_count(),
         # Google Drive folder link for session materials
         "gdrive_url": session_shared_state.get_gdrive_url(),
         # End-of-session participant feedback form (freeonlinesurveys)

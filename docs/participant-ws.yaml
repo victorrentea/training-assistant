@@ -48,6 +48,7 @@ channels:
           - $ref: '#/components/messages/agenda_updated'
           - $ref: '#/components/messages/feedback_form_updated'
           - $ref: '#/components/messages/files_count_updated'
+          - $ref: '#/components/messages/prompts_count_updated'
           - $ref: '#/components/messages/reload'
           - $ref: '#/components/messages/emoji_counters_updated'
           - $ref: '#/components/messages/attention_enabled'
@@ -578,6 +579,23 @@ components:
           type:
             type: string
             enum: [files_count_updated]
+          count:
+            type: integer
+
+    # ── Prompts ───────────────────────────────────────────────────────────────
+
+    prompts_count_updated:
+      summary: Number of agent prompts intercepted this session changed
+      x-feature: prompts
+      x-doc-notes:
+        - Sourced from the 🤖-stamped lines of the session notes file; moves when the trainer confirms a captured prompt.
+      payload:
+        type: object
+        required: [type, count]
+        properties:
+          type:
+            type: string
+            enum: [prompts_count_updated]
           count:
             type: integer
 
