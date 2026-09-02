@@ -5842,10 +5842,40 @@ function downloadSummaryPdf() {
   var content = document.getElementById('summary-content');
   if (!content || !_summaryRawMarkdown) return;
   var w = window.open('', '_blank');
-  w.document.write('<!DOCTYPE html><html><head><title>Summary</title><style>body{font-family:system-ui,sans-serif;padding:1rem 2rem;max-width:800px;margin:0 auto;font-size:0.55rem;line-height:1.6}h1,h2,h3,h4{margin-top:1.5em;line-height:1.3}li{margin:.3em 0}code{background:#f0f0f0;padding:.1em .3em;border-radius:3px}pre{background:#f0f0f0;padding:1em;border-radius:6px;overflow-x:auto}.material-symbols-outlined{display:none}</style></head><body>' + content.innerHTML + '</body></html>');
+  /* The print sheet is its own document, so nothing of the app's CSS reaches it —
+     including the reset that keeps images inside the column on screen. The slides
+     are pasted at their full resolution (~1500px) into a ~720px page, so without
+     `img{max-width:100%}` they run off the right edge and the printer cuts them.
+     `max-height` keeps a tall portrait screenshot from taking a whole page (with
+     break-inside:avoid that would leave the page before it half empty), and `pre`
+     wraps because a horizontal scrollbar is a clip once it is on paper. */
+  w.document.write('<!DOCTYPE html><html><head><title>Summary</title><style>body{font-family:system-ui,sans-serif;padding:1rem 2rem;max-width:800px;margin:0 auto;font-size:0.55rem;line-height:1.6}h1,h2,h3,h4{margin-top:1.5em;line-height:1.3}li{margin:.3em 0}code{background:#f0f0f0;padding:.1em .3em;border-radius:3px}pre{background:#f0f0f0;padding:1em;border-radius:6px;white-space:pre-wrap;word-wrap:break-word}img{max-width:100%;max-height:13cm;height:auto;display:block;margin:1em auto;break-inside:avoid;page-break-inside:avoid}.material-symbols-outlined{display:none}@page{margin:12mm}</style></head><body>' + content.innerHTML + '</body></html>');
   w.document.close();
   w.focus();
-  setTimeout(function() { w.print(); }, 400);
+  _printWhenImagesReady(w);
+}
+
+/* The summary's slides come from Google Drive, so at print time they are still
+   in flight: printing on a fixed timer prints their empty boxes. Wait for every
+   image to settle (loaded or failed), with a cap so one blocked host can never
+   leave the reader in front of a window that never prints. */
+function _printWhenImagesReady(w, capMs) {
+  var pending = Array.prototype.filter.call(w.document.images, function(im) { return !im.complete; });
+  var printed = false;
+  function go() {
+    if (printed || w.closed) return;
+    printed = true;
+    w.focus();
+    w.print();
+  }
+  if (!pending.length) { setTimeout(go, 100); return; }
+  var left = pending.length;
+  pending.forEach(function(im) {
+    var settle = function() { if (--left === 0) go(); };
+    im.addEventListener('load', settle);
+    im.addEventListener('error', settle);
+  });
+  setTimeout(go, capMs || 8000);
 }
 </script>
 <!-- Name-reminder nudge: shown beside the profile card when a name-relevant activity opens -->
