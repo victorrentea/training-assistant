@@ -1345,12 +1345,18 @@ var PdfCache = (function() {
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
       // The canvas is rendered at `viewport` pixel size but displayed at `w-full`,
       // so every overlay is built at viewport size and CSS-scaled down to match.
+      section.dataset.vw = viewport.width;
       const cssScale = canvas.offsetWidth / viewport.width;
       // Invisible, selectable copy of the page's text, over the canvas but under
       // the annotation layer so link clicks still win over text selection.
+      // TextLayer.render() overwrites width/height with
+      // `round(down, var(--total-scale-factor) * Npx, var(--scale-round-x))`, so
+      // --scale-round-* must be defined here or the whole declaration is invalid
+      // and the layer collapses onto the section box — spans then land in a
+      // different coordinate space than the link rects below.
       const textLayerDiv = document.createElement('div');
-      textLayerDiv.className = 'textLayer';
-      textLayerDiv.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;transform:scale(${cssScale});transform-origin:top left;--scale-factor:${scale};--total-scale-factor:${scale};`;
+      textLayerDiv.className = 'textLayer pdf-overlay';
+      textLayerDiv.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;transform:scale(${cssScale});transform-origin:top left;--scale-factor:${scale};--total-scale-factor:${scale};--scale-round-x:1px;--scale-round-y:1px;`;
       section.appendChild(textLayerDiv);
       await new pdfjsLib.TextLayer({
         textContentSource: page.streamTextContent(),
@@ -1363,6 +1369,7 @@ var PdfCache = (function() {
       const annotations = await page.getAnnotations({ intent: 'display' });
       if (annotations && annotations.length) {
         const annLayer = document.createElement('div');
+        annLayer.className = 'pdf-overlay';
         annLayer.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;pointer-events:none;transform:scale(${cssScale});transform-origin:top left;`;
         section.appendChild(annLayer);
         for (const ann of annotations) {
@@ -1556,6 +1563,24 @@ var PdfCache = (function() {
     });
     infoEl.textContent = current + ' / ' + doc.numPages;
   }
+
+  // Both overlays are built at viewport pixel size and CSS-scaled onto the
+  // canvas, so their scale has to follow the canvas when the layout changes.
+  function rescaleOverlays() {
+    for (const buf of [Slides.front.el, Slides.back.el]) {
+      if (!buf) continue;
+      buf.querySelectorAll('section[data-page]').forEach(function(section) {
+        const vw = Number(section.dataset.vw);
+        const canvas = section.querySelector('canvas');
+        if (!vw || !canvas || !canvas.offsetWidth) return;
+        const s = canvas.offsetWidth / vw;
+        section.querySelectorAll('.pdf-overlay').forEach(function(layer) {
+          layer.style.transform = 'scale(' + s + ')';
+        });
+      });
+    }
+  }
+  window.addEventListener('resize', rescaleOverlays);
 
   // ---- Link-aware copy ---------------------------------------------------
   // The text layer is a flat set of absolutely-positioned spans, so a plain copy
