@@ -1363,9 +1363,6 @@ var PdfCache = (function() {
         container: textLayerDiv,
         viewport,
       }).render();
-      // Link rectangles in the same coordinate space as the text spans, so a copy
-      // can re-attach the URL to the words that sit inside a link (see onSlidesCopy).
-      section._links = [];
       const annotations = await page.getAnnotations({ intent: 'display' });
       if (annotations && annotations.length) {
         const annLayer = document.createElement('div');
@@ -1395,7 +1392,6 @@ var PdfCache = (function() {
             link.href = ann.url || ann.unsafeUrl;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
-            section._links.push({ left, top, width, height, url: link.href });
           } else if (ann.dest) {
             link.href = '#';
             link.addEventListener('click', async (ev) => {
@@ -1591,31 +1587,54 @@ var PdfCache = (function() {
     return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // Offset of `el` inside the text layer, i.e. in the same coordinates as the
-  // link rects (markedContent wrappers are positioned, so walk the chain).
-  function offsetIn(root, el) {
-    let x = 0, y = 0, node = el;
-    while (node && node !== root) {
-      x += node.offsetLeft;
-      y += node.offsetTop;
-      node = node.offsetParent;
-    }
-    return { x, y };
+  // The rendered <a> overlays are the ground truth for where a link sits on the
+  // page — measuring them in client coordinates sidesteps every scale factor.
+  function linkBoxesIn(section) {
+    return [...section.querySelectorAll('a[href]')]
+      .filter(a => a.getAttribute('href') !== '#')
+      .map(a => ({ r: a.getBoundingClientRect(), url: a.href }));
   }
 
-  function linkForSpan(section, textLayerDiv, span) {
-    const links = section._links;
-    if (!links || !links.length) return null;
-    const at = offsetIn(textLayerDiv, span);
-    const cx = at.x + span.offsetWidth / 2;
-    const cy = at.y + span.offsetHeight / 2;
+  function urlAt(links, rect) {
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
     for (const l of links) {
-      if (cx >= l.left && cx <= l.left + l.width && cy >= l.top && cy <= l.top + l.height) return l.url;
+      if (cx >= l.r.left && cx <= l.r.right && cy >= l.r.top && cy <= l.r.bottom) return l.url;
     }
     return null;
   }
 
-  function collectRuns(node, range, section, textLayerDiv, runs) {
+  function overlaps(a, b) {
+    return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  }
+
+  // A single text run can be half inside a link ("ANAF (RO IRS) rejects … with
+  // ChatGPT replies citing fictionary laws" is one span, only its tail is the
+  // link), so split it per character whenever it straddles a link's edge.
+  function pushRuns(range, links, runs) {
+    const text = range.toString();
+    if (!text) return;
+    const box = range.getBoundingClientRect();
+    const hit = links.filter(l => overlaps(l.r, box));
+    if (!hit.length) { runs.push({ text }); return; }
+    const node = range.startContainer;
+    if (node !== range.endContainer || node.nodeType !== 3) {
+      runs.push({ text, url: urlAt(hit, box) });
+      return;
+    }
+    const probe = document.createRange();
+    let cur, buf = '';
+    for (let i = range.startOffset; i < range.endOffset; i++) {
+      probe.setStart(node, i);
+      probe.setEnd(node, i + 1);
+      const url = urlAt(hit, probe.getBoundingClientRect());
+      if (buf && url !== cur) { runs.push({ text: buf, url: cur }); buf = ''; }
+      cur = url;
+      buf += node.data[i];
+    }
+    if (buf) runs.push({ text: buf, url: cur });
+  }
+
+  function collectRuns(node, range, links, runs) {
     for (const child of node.childNodes) {
       if (child.nodeType !== 1) continue;
       if (child.classList.contains('endOfContent')) continue;
@@ -1624,7 +1643,7 @@ var PdfCache = (function() {
         continue;
       }
       if (child.querySelector('span, br')) {
-        collectRuns(child, range, section, textLayerDiv, runs);
+        collectRuns(child, range, links, runs);
         continue;
       }
       if (!range.intersectsNode(child)) continue;
@@ -1634,9 +1653,7 @@ var PdfCache = (function() {
       r.selectNodeContents(child);
       if (r.compareBoundaryPoints(Range.START_TO_START, range) < 0) r.setStart(range.startContainer, range.startOffset);
       if (r.compareBoundaryPoints(Range.END_TO_END, range) > 0) r.setEnd(range.endContainer, range.endOffset);
-      const text = r.toString();
-      if (!text) continue;
-      runs.push({ text, url: linkForSpan(section, textLayerDiv, child) });
+      pushRuns(r, links, runs);
     }
   }
 
@@ -1652,7 +1669,7 @@ var PdfCache = (function() {
       const textLayerDiv = section.querySelector('.textLayer');
       if (!textLayerDiv || !range.intersectsNode(textLayerDiv)) return;
       if (runs.length) runs.push({ br: true });
-      collectRuns(textLayerDiv, range, section, textLayerDiv, runs);
+      collectRuns(textLayerDiv, range, linkBoxesIn(section), runs);
     });
     if (!runs.length) return;
 
