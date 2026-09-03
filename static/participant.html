@@ -90,7 +90,7 @@ body{visibility:hidden}
    on the page. While a drag that started on the text is in progress they
    stop taking pointer events, so the selection runs through them; a click
    that starts on a link itself never sets the class, so links still work. */
-#pdf-stack.selecting-text .pdf-links a{pointer-events:none}
+#pdf-stack.selecting-text .pdf-links a{pointer-events:none!important}
 .buf-front  { opacity: 1; pointer-events: auto; z-index: 2; }
 .buf-back   { opacity: 0; pointer-events: none; z-index: 1; }
 #notes-badge,#summary-badge,#files-badge,#prompts-badge{background:#9ca3af}
