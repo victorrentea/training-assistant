@@ -1616,14 +1616,18 @@ var PdfCache = (function() {
     const box = range.getBoundingClientRect();
     const hit = links.filter(l => overlaps(l.r, box));
     if (!hit.length) { runs.push({ text }); return; }
-    const node = range.startContainer;
-    if (node !== range.endContainer || node.nodeType !== 3) {
-      runs.push({ text, url: urlAt(hit, box) });
-      return;
-    }
+    // A range over a whole span reports the span element as its container, so
+    // resolve down to the text node the offsets have to address.
+    const node = range.startContainer.nodeType === 3 ? range.startContainer
+      : range.endContainer.nodeType === 3 ? range.endContainer
+      : range.startContainer.firstChild;
+    if (!node || node.nodeType !== 3) { runs.push({ text, url: urlAt(hit, box) }); return; }
+    const from = range.startContainer === node ? range.startOffset : 0;
+    const to = range.endContainer === node ? range.endOffset : node.data.length;
+    if (to - from !== text.length) { runs.push({ text, url: urlAt(hit, box) }); return; }
     const probe = document.createRange();
     let cur, buf = '';
-    for (let i = range.startOffset; i < range.endOffset; i++) {
+    for (let i = from; i < to; i++) {
       probe.setStart(node, i);
       probe.setEnd(node, i + 1);
       const url = urlAt(hit, probe.getBoundingClientRect());
@@ -1694,6 +1698,18 @@ var PdfCache = (function() {
     }
   }
   document.addEventListener('copy', onSlidesCopy);
+  // pdf.js's own drag mitigation: while dragging, .endOfContent covers the page
+  // so releasing past the last glyph does not run into the next page's spans.
+  document.addEventListener('pointerdown', function(e) {
+    const layer = e.target && e.target.closest && e.target.closest('.textLayer');
+    if (layer) layer.classList.add('selecting');
+  });
+  document.addEventListener('pointerup', function() {
+    document.querySelectorAll('.textLayer.selecting').forEach(function(el) {
+      el.classList.remove('selecting');
+    });
+  });
+
 
   (function init() {
     Slides.front.el = document.getElementById('pdf-pages');
