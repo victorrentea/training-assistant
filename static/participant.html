@@ -85,6 +85,10 @@ body{visibility:hidden}
 .textLayer.selecting .endOfContent{top:0}
 /* The canvas underneath must not steal the drag that starts a selection. */
 #pdf-stack canvas{user-select:none}
+/* Link overlays sit above the text layer and after it in the DOM, so a drag
+   released over one would put the selection focus past the whole page and
+   swallow every span below it. Keep them clickable but unselectable. */
+#pdf-stack .pdf-links,#pdf-stack .pdf-links a{user-select:none}
 .buf-front  { opacity: 1; pointer-events: auto; z-index: 2; }
 .buf-back   { opacity: 0; pointer-events: none; z-index: 1; }
 #notes-badge,#summary-badge,#files-badge,#prompts-badge{background:#9ca3af}
@@ -1366,7 +1370,7 @@ var PdfCache = (function() {
       const annotations = await page.getAnnotations({ intent: 'display' });
       if (annotations && annotations.length) {
         const annLayer = document.createElement('div');
-        annLayer.className = 'pdf-overlay';
+        annLayer.className = 'pdf-overlay pdf-links';
         annLayer.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;pointer-events:none;transform:scale(${cssScale});transform-origin:top left;`;
         section.appendChild(annLayer);
         for (const ann of annotations) {
