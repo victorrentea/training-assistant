@@ -72,6 +72,19 @@ body{visibility:hidden}
 .badge-blink{animation:badge-blink 0.35s ease-in-out 3}
 #past-slides-badge{background:#9ca3af;transition:background-color 3s ease}
 .pdf-buffer { position: absolute; inset: 0; }
+/* pdf.js text layer — invisible, exactly-positioned copies of the slide's text
+   laid over the rendered canvas, so participants can select and copy it.
+   Trimmed from pdfjs-dist/web/pdf_viewer.css (only the rules the plain
+   TextLayer needs; no editor / highlight / structTree rules). */
+.textLayer{position:absolute;text-align:initial;inset:0;overflow:clip;opacity:1;line-height:1;text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0;caret-color:CanvasText;z-index:0}
+.textLayer :is(span,br){color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+.textLayer > :not(.markedContent),.textLayer .markedContent span:not(.markedContent){z-index:1}
+.textLayer span.markedContent{top:0;height:0}
+.textLayer span[role="img"]{user-select:none;cursor:default}
+.textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:0;cursor:default;user-select:none}
+.textLayer.selecting .endOfContent{top:0}
+/* The canvas underneath must not steal the drag that starts a selection. */
+#pdf-stack canvas{user-select:none}
 .buf-front  { opacity: 1; pointer-events: auto; z-index: 2; }
 .buf-back   { opacity: 0; pointer-events: none; z-index: 1; }
 #notes-badge,#summary-badge,#files-badge,#prompts-badge{background:#9ca3af}
@@ -1330,10 +1343,26 @@ var PdfCache = (function() {
       if (i === numPages) section.classList.add('pb-32');
       container.appendChild(section);
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      // The canvas is rendered at `viewport` pixel size but displayed at `w-full`,
+      // so every overlay is built at viewport size and CSS-scaled down to match.
+      const cssScale = canvas.offsetWidth / viewport.width;
+      // Invisible, selectable copy of the page's text, over the canvas but under
+      // the annotation layer so link clicks still win over text selection.
+      const textLayerDiv = document.createElement('div');
+      textLayerDiv.className = 'textLayer';
+      textLayerDiv.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;transform:scale(${cssScale});transform-origin:top left;--scale-factor:${scale};--total-scale-factor:${scale};`;
+      section.appendChild(textLayerDiv);
+      await new pdfjsLib.TextLayer({
+        textContentSource: page.streamTextContent(),
+        container: textLayerDiv,
+        viewport,
+      }).render();
+      // Link rectangles in the same coordinate space as the text spans, so a copy
+      // can re-attach the URL to the words that sit inside a link (see onSlidesCopy).
+      section._links = [];
       const annotations = await page.getAnnotations({ intent: 'display' });
       if (annotations && annotations.length) {
         const annLayer = document.createElement('div');
-        const cssScale = canvas.offsetWidth / viewport.width;
         annLayer.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;pointer-events:none;transform:scale(${cssScale});transform-origin:top left;`;
         section.appendChild(annLayer);
         for (const ann of annotations) {
@@ -1359,6 +1388,7 @@ var PdfCache = (function() {
             link.href = ann.url || ann.unsafeUrl;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
+            section._links.push({ left, top, width, height, url: link.href });
           } else if (ann.dest) {
             link.href = '#';
             link.addEventListener('click', async (ev) => {
@@ -1526,6 +1556,102 @@ var PdfCache = (function() {
     });
     infoEl.textContent = current + ' / ' + doc.numPages;
   }
+
+  // ---- Link-aware copy ---------------------------------------------------
+  // The text layer is a flat set of absolutely-positioned spans, so a plain copy
+  // loses every hyperlink the slide had. Rebuild the clipboard payload from the
+  // selection instead: a run of text whose span sits inside a link annotation's
+  // rectangle becomes a real <a> in text/html and carries its URL in text/plain.
+  function escapeHtml(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Offset of `el` inside the text layer, i.e. in the same coordinates as the
+  // link rects (markedContent wrappers are positioned, so walk the chain).
+  function offsetIn(root, el) {
+    let x = 0, y = 0, node = el;
+    while (node && node !== root) {
+      x += node.offsetLeft;
+      y += node.offsetTop;
+      node = node.offsetParent;
+    }
+    return { x, y };
+  }
+
+  function linkForSpan(section, textLayerDiv, span) {
+    const links = section._links;
+    if (!links || !links.length) return null;
+    const at = offsetIn(textLayerDiv, span);
+    const cx = at.x + span.offsetWidth / 2;
+    const cy = at.y + span.offsetHeight / 2;
+    for (const l of links) {
+      if (cx >= l.left && cx <= l.left + l.width && cy >= l.top && cy <= l.top + l.height) return l.url;
+    }
+    return null;
+  }
+
+  function collectRuns(node, range, section, textLayerDiv, runs) {
+    for (const child of node.childNodes) {
+      if (child.nodeType !== 1) continue;
+      if (child.classList.contains('endOfContent')) continue;
+      if (child.tagName === 'BR') {
+        if (range.intersectsNode(child)) runs.push({ br: true });
+        continue;
+      }
+      if (child.querySelector('span, br')) {
+        collectRuns(child, range, section, textLayerDiv, runs);
+        continue;
+      }
+      if (!range.intersectsNode(child)) continue;
+      // Clamp the span's own range to the selection — only the span the selection
+      // starts or ends inside is actually trimmed.
+      const r = document.createRange();
+      r.selectNodeContents(child);
+      if (r.compareBoundaryPoints(Range.START_TO_START, range) < 0) r.setStart(range.startContainer, range.startOffset);
+      if (r.compareBoundaryPoints(Range.END_TO_END, range) > 0) r.setEnd(range.endContainer, range.endOffset);
+      const text = r.toString();
+      if (!text) continue;
+      runs.push({ text, url: linkForSpan(section, textLayerDiv, child) });
+    }
+  }
+
+  function onSlidesCopy(e) {
+    const sel = document.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const front = Slides.front.el;
+    if (!front || !front.contains(range.commonAncestorContainer)) return;
+
+    const runs = [];
+    front.querySelectorAll('section[data-page]').forEach(function(section) {
+      const textLayerDiv = section.querySelector('.textLayer');
+      if (!textLayerDiv || !range.intersectsNode(textLayerDiv)) return;
+      if (runs.length) runs.push({ br: true });
+      collectRuns(textLayerDiv, range, section, textLayerDiv, runs);
+    });
+    if (!runs.length) return;
+
+    let html = '', plain = '';
+    for (const run of runs) {
+      if (run.br) { html += '<br>'; plain += '\n'; continue; }
+      if (run.url) {
+        html += '<a href="' + escapeHtml(run.url) + '">' + escapeHtml(run.text) + '</a>';
+        plain += run.text + (run.text.trim() === run.url ? '' : ' <' + run.url + '>');
+      } else {
+        html += escapeHtml(run.text);
+        plain += run.text;
+      }
+    }
+    if (!plain.trim()) return;
+    try {
+      e.clipboardData.setData('text/plain', plain);
+      e.clipboardData.setData('text/html', '<div>' + html + '</div>');
+      e.preventDefault();
+    } catch (_) {
+      // Leave the browser's default copy in place.
+    }
+  }
+  document.addEventListener('copy', onSlidesCopy);
 
   (function init() {
     Slides.front.el = document.getElementById('pdf-pages');
