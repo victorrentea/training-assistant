@@ -137,6 +137,7 @@ _PARTICIPANT_TAB_SLUGS = frozenset(
         "report-bug",
         "upload-paste",
         "files",
+        "prompts",
         "past-slides",
         "about",
     }
