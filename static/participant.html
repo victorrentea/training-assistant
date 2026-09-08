@@ -40,12 +40,17 @@ body{visibility:hidden}
 /* Prompts tab: one card per agent prompt the trainer sent from his machine.
    Monospace, because what is on screen is the literal text an agent received —
    participants retype and adapt these, so the exact characters matter. */
-#prompts-content .prompt-card{position:relative;background:var(--color-surface-container-high,#dde3e5);border-radius:.75rem;padding:.9rem 3rem .9rem 1rem;margin-bottom:.7rem}
+#prompts-content .prompt-card{position:relative;background:var(--color-surface-container-high,#dde3e5);border-radius:.75rem;padding:.9rem 6.5rem .9rem 1rem;margin-bottom:.7rem}
 #prompts-content .prompt-num{position:absolute;left:-2.2rem;top:1rem;font-size:.75rem;font-weight:700;color:var(--color-on-surface-variant,#5e6b70);opacity:.6}
 #prompts-content .prompt-text{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:calc(0.95rem * var(--participant-zoom));white-space:pre-wrap;word-break:break-word;line-height:1.5}
 #prompts-content .prompt-text a{color:var(--color-primary,#4555ba);text-decoration:underline}
-#prompts-content .prompt-copy{position:absolute;top:.6rem;right:.6rem;opacity:0;transition:opacity .15s;color:var(--color-on-surface-variant,#5e6b70);cursor:pointer;background:none;border:0}
-#prompts-content .prompt-card:hover .prompt-copy,#prompts-content .prompt-copy:focus{opacity:.85}
+/* The copy button is a labelled pill, not a bare glyph, and it is visible
+   without hovering: participants read this tab on phones, where `:hover` never
+   happens, so an icon that only appeared on hover was invisible to half the
+   room — and copying the prompt is the entire reason the tab exists. The word
+   comes first, the icon after it, because the word is what is scanned for. */
+#prompts-content .prompt-copy{position:absolute;top:.55rem;right:.55rem;display:inline-flex;align-items:center;gap:.32rem;opacity:.6;transition:opacity .15s,background-color .15s;color:var(--color-on-surface-variant,#5e6b70);cursor:pointer;background:var(--color-surface,#fff);border:1px solid currentColor;border-radius:999px;padding:.3rem .62rem;font-size:calc(0.82rem * var(--participant-zoom));font-weight:600;line-height:1}
+#prompts-content .prompt-card:hover .prompt-copy,#prompts-content .prompt-copy:hover,#prompts-content .prompt-copy:focus{opacity:1}
 #prompts-content .prompt-empty{color:var(--color-on-surface-variant,#5e6b70)}
 /* Host highlighter: the host marks a passage and the agent wraps it in <mark>
    in ai-summary.md. Warm amber band, legible in light + dark; box-decoration
@@ -6091,7 +6096,8 @@ async function loadPrompts() {
       var copy = document.createElement('button');
       copy.className = 'prompt-copy';
       copy.title = 'Copy prompt';
-      copy.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.1rem">content_copy</span>';
+      copy.setAttribute('aria-label', 'Copy prompt');
+      copy.innerHTML = 'Copy<span class="material-symbols-outlined" style="font-size:1.35rem">content_copy</span>';
       copy.addEventListener('click', function () {
         _copyToClipboard(text).then(function () { showToast('Prompt copied!'); }).catch(function () {});
       });
