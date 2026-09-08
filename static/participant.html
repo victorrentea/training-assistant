@@ -62,6 +62,29 @@ body{visibility:hidden}
    Use 800 and inherit the container's theme-aware text colour so it stays crisp
    and legible in both light and dark. */
 #summary-content strong,#agenda-content strong,#files-content strong{font-weight:800;color:inherit}
+/* ── Collapsible summary bullets ──────────────────────────────────────────
+   A day's summary is a wall of text read off a projector: the top-level
+   bullet is the unit, the sub-bullets are detail nobody finishes. A
+   top-level bullet that HAS children grows a pill (chevron + child count) at
+   the end of its own line and hides its sub-list until the pill is clicked.
+   A childless bullet is untouched — same marker, same indentation, nothing
+   added to its DOM.
+   The chevron and the count are CSS `content`, never DOM text: the host
+   highlighter maps a selection back into ai-summary.md by counting rendered
+   characters (`_renderedOffsetWithin`), and generated content is invisible to
+   Range.toString(). Hiding is `display:none`, which Range.toString() also
+   ignores — so the offsets are identical collapsed or expanded. */
+#summary-content li.sum-collapsed > ul,#summary-content li.sum-collapsed > ol{display:none}
+#summary-content .sum-toggle{display:inline-flex;align-items:center;justify-content:center;gap:.25em;vertical-align:baseline;margin-left:.5em;min-height:2.35em;min-width:2.9em;padding:.2em .7em;border:1px solid var(--color-outline-variant,#9aa5ab);border-radius:999px;background:var(--color-surface-container-high,rgba(136,146,156,.18));color:var(--color-on-surface-variant,#5e6b70);font-family:inherit;font-size:.9em;font-weight:700;line-height:1;cursor:pointer;user-select:none;-webkit-user-select:none;transition:background-color .15s,color .15s,border-color .15s}
+/* The triangle is a plain geometric glyph, not the icon font: it must render
+   the same when the Google font request is slow, blocked, or offline. */
+#summary-content .sum-toggle::before{content:'\25B8';font-family:system-ui,-apple-system,'Segoe UI Symbol',sans-serif;font-size:1.4em;line-height:1;transition:transform .18s ease}
+#summary-content .sum-toggle::after{content:attr(data-count)}
+#summary-content li.sum-expanded > .sum-toggle::before{transform:rotate(90deg)}
+#summary-content li.sum-expanded > .sum-toggle{background:var(--color-primary-container,#dfe0ff);color:var(--color-on-primary-container,#3747ac);border-color:transparent}
+#summary-content .sum-toggle:hover{background:var(--color-primary-container,#dfe0ff);color:var(--color-on-primary-container,#3747ac)}
+#summary-content .sum-toggle:focus-visible{outline:2px solid var(--color-primary,#4555ba);outline-offset:2px}
+@media (prefers-color-scheme: dark){#summary-content .sum-toggle{background:rgba(136,146,156,.22)}}
 #agenda-content{font-size:calc(0.875rem * var(--participant-zoom))}
 #notes-scroll,#summary-scroll,#agenda-view{overflow-anchor:none}
 /* Notes/agenda/summary get a 3× thicker scrollbar (vs. the 12px global) */
@@ -1002,6 +1025,12 @@ body{visibility:hidden}
 </div>
 <div id="summary-view" style="display:none" class="relative h-full flex flex-col">
   <div id="summary-dl" class="absolute top-6 right-6 z-20 flex items-center p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
+    <!-- Reading the whole summary aloud: one control instead of a click per
+         bullet. Unlike .md/.pdf it stays visible in fullscreen — that is the
+         mode the room is projected in. Hidden entirely when nothing nests. -->
+    <button id="summary-expand-btn" onclick="toggleAllSummary()" style="display:none" class="summary-dl-expand p-2 rounded-full text-on-surface-variant transition-all flex items-center hover-green" data-tip="Expand all sub-points" aria-label="Expand all sub-points">
+      <span class="material-symbols-outlined" style="font-size:1.25rem">unfold_more</span>
+    </button>
     <button onclick="downloadSummaryMd()" class="summary-dl-md py-2 rounded-full text-on-surface-variant transition-all flex items-center gap-1 hover-green text-sm font-semibold" data-tip="Download as Markdown">
       <span class="material-symbols-outlined" style="font-size:1.25rem">download</span>
       <span>.md</span>
@@ -5636,6 +5665,109 @@ function _hashStr(s) {
   return (h >>> 0).toString(36);
 }
 
+// ── Collapsible top-level bullets ────────────────────────────────────────────
+// Only a TOP-LEVEL bullet that actually owns a nested list becomes collapsible;
+// a childless bullet is left byte-identical, so no stray chevron and no
+// indentation shift. The pill carries no text of its own — the chevron and the
+// count are CSS `content` — so the highlighter's rendered-offset arithmetic and
+// the .md/.pdf downloads (which read the raw markdown) are unaffected.
+// Sticky across live reloads: the reconciler keeps unchanged blocks (and with
+// them their open/closed state), while a block the summariser just rewrote is
+// rebuilt in whatever state the reader last chose globally.
+var _summaryExpandAll = false;
+
+function _summaryChildCount(subLists) {
+  var n = 0;
+  subLists.forEach(function (list) {
+    n += Array.prototype.filter.call(list.children, function (c) { return c.tagName === 'LI'; }).length;
+  });
+  return n;
+}
+
+// Give every top-level <li> with children a toggle. `el` is one top-level
+// summary block (a <ul>/<ol>, or the rare multi-element wrapper <div>).
+function decorateSummaryCollapsibles(el) {
+  if (!el || el.nodeType !== 1) return;
+  var lists = [];
+  if (el.tagName === 'UL' || el.tagName === 'OL') lists.push(el);
+  else Array.prototype.forEach.call(el.children, function (c) {
+    if (c.tagName === 'UL' || c.tagName === 'OL') lists.push(c);
+  });
+  lists.forEach(function (list) {
+    Array.prototype.forEach.call(list.children, function (li) {
+      if (li.tagName !== 'LI') return;
+      if (li.classList.contains('sum-collapsed') || li.classList.contains('sum-expanded')) return; // already decorated
+      var subs = Array.prototype.filter.call(li.children, function (c) {
+        return c.tagName === 'UL' || c.tagName === 'OL';
+      });
+      if (!subs.length) return;                        // childless bullet: untouched
+      var n = _summaryChildCount(subs);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sum-toggle';
+      btn.setAttribute('data-count', n);
+      btn.setAttribute('aria-expanded', _summaryExpandAll ? 'true' : 'false');
+      btn.setAttribute('aria-label', n + (n === 1 ? ' sub-point' : ' sub-points'));
+      li.classList.add(_summaryExpandAll ? 'sum-expanded' : 'sum-collapsed');
+      li.insertBefore(btn, subs[0]);                   // end of the bullet's own text
+    });
+  });
+}
+
+function _summaryToggleOf(li) {
+  return Array.prototype.filter.call(li.children, function (c) {
+    return c.nodeType === 1 && c.classList.contains('sum-toggle');
+  })[0] || null;
+}
+
+function _setSummaryLiExpanded(li, open) {
+  li.classList.toggle('sum-expanded', !!open);
+  li.classList.toggle('sum-collapsed', !open);
+  var btn = _summaryToggleOf(li);
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function _summaryCollapsibles() {
+  var content = document.getElementById('summary-content');
+  return content ? content.querySelectorAll('li.sum-collapsed,li.sum-expanded') : [];
+}
+
+// The pill is the only click target, so a text drag for the 🖍️ highlighter can
+// never toggle a bullet by accident. Delegated on document so it also works
+// while #summary-view is the fullscreen root and across every re-render.
+document.addEventListener('click', function (e) {
+  var btn = e.target && e.target.closest ? e.target.closest('.sum-toggle') : null;
+  if (!btn || !btn.parentElement) return;
+  e.preventDefault();
+  e.stopPropagation();
+  var li = btn.parentElement;
+  _setSummaryLiExpanded(li, li.classList.contains('sum-collapsed'));
+  _syncSummaryExpandAllBtn();
+});
+
+// One control for reading the whole thing aloud. It always does the thing the
+// icon promises: expand while anything is still closed, collapse once all open.
+function toggleAllSummary() {
+  var items = _summaryCollapsibles();
+  var open = Array.prototype.some.call(items, function (li) { return li.classList.contains('sum-collapsed'); });
+  _summaryExpandAll = open;
+  Array.prototype.forEach.call(items, function (li) { _setSummaryLiExpanded(li, open); });
+  _syncSummaryExpandAllBtn();
+}
+
+function _syncSummaryExpandAllBtn() {
+  var btn = document.getElementById('summary-expand-btn');
+  if (!btn) return;
+  var items = _summaryCollapsibles();
+  btn.style.display = items.length ? '' : 'none';      // nothing nested: no control
+  var anyCollapsed = Array.prototype.some.call(items, function (li) { return li.classList.contains('sum-collapsed'); });
+  var tip = anyCollapsed ? 'Expand all sub-points' : 'Collapse all sub-points';
+  var icon = btn.querySelector('.material-symbols-outlined');
+  if (icon) icon.textContent = anyCollapsed ? 'unfold_more' : 'unfold_less';
+  btn.setAttribute('data-tip', tip);
+  btn.setAttribute('aria-label', tip);
+}
+
 // Split markdown into top-level blocks, each a DOM element tagged with
 // data-key/data-s/data-e. One block token -> one element (heading, list,
 // paragraph, hr…); a rare multi-element block is wrapped in a <div>.
@@ -5653,6 +5785,7 @@ function summaryBlocks(md) {
     var el;
     if (els.length === 1) { el = els[0]; }
     else { el = document.createElement('div'); el.className = 'summary-block-group'; while (tmpl.content.firstChild) el.appendChild(tmpl.content.firstChild); }
+    decorateSummaryCollapsibles(el);
     var base = _hashStr(raw);
     var key = base + '.' + (seen[base] = (seen[base] || 0) + 1);
     el.setAttribute('data-key', key);
@@ -5694,9 +5827,11 @@ function renderSummary(container, md) {
     container.dataset.rendered = '1';
   } catch (e) {
     container.innerHTML = marked.parse(md, { renderer: makeSummaryRenderer() });
+    Array.prototype.forEach.call(container.children, decorateSummaryCollapsibles);
     container.dataset.rendered = '1';
     if (window.console) console.warn('[summary] reconcile failed; full render', e);
   }
+  _syncSummaryExpandAllBtn();
 }
 
 async function loadSummary() {
@@ -5728,6 +5863,7 @@ async function loadSummary() {
     _summaryDirty = true;
   } finally {
     _suppressScrollSave.delete('summary');
+    _syncSummaryExpandAllBtn();   // also hides it on the 'no summary' / error paths
   }
 }
 
@@ -6043,8 +6179,12 @@ function downloadSummaryPdf() {
      `img{max-width:100%}` they run off the right edge and the printer cuts them.
      `max-height` keeps a tall portrait screenshot from taking a whole page (with
      break-inside:avoid that would leave the page before it half empty), and `pre`
-     wraps because a horizontal scrollbar is a clip once it is on paper. */
-  w.document.write('<!DOCTYPE html><html><head><title>Summary</title><style>body{font-family:system-ui,sans-serif;padding:1rem 2rem;max-width:800px;margin:0 auto;font-size:0.55rem;line-height:1.6}h1,h2,h3,h4{margin-top:1.5em;line-height:1.3}li{margin:.3em 0}code{background:#f0f0f0;padding:.1em .3em;border-radius:3px}pre{background:#f0f0f0;padding:1em;border-radius:6px;white-space:pre-wrap;word-wrap:break-word}img{max-width:100%;max-height:13cm;height:auto;display:block;margin:1em auto;break-inside:avoid;page-break-inside:avoid}.material-symbols-outlined{display:none}@page{margin:12mm}</style></head><body>' + content.innerHTML + '</body></html>');
+     wraps because a horizontal scrollbar is a clip once it is on paper.
+     Collapsing is a reading aid for the screen, never for the file you keep:
+     the print sheet carries no `.sum-collapsed` rule, so every sub-bullet is
+     on the paper, and `.sum-toggle` is dropped because the chevron and the
+     count are CSS `content` that does not exist in this document. */
+  w.document.write('<!DOCTYPE html><html><head><title>Summary</title><style>body{font-family:system-ui,sans-serif;padding:1rem 2rem;max-width:800px;margin:0 auto;font-size:0.55rem;line-height:1.6}h1,h2,h3,h4{margin-top:1.5em;line-height:1.3}li{margin:.3em 0}code{background:#f0f0f0;padding:.1em .3em;border-radius:3px}pre{background:#f0f0f0;padding:1em;border-radius:6px;white-space:pre-wrap;word-wrap:break-word}img{max-width:100%;max-height:13cm;height:auto;display:block;margin:1em auto;break-inside:avoid;page-break-inside:avoid}.material-symbols-outlined{display:none}.sum-toggle{display:none}@page{margin:12mm}</style></head><body>' + content.innerHTML + '</body></html>');
   w.document.close();
   w.focus();
   _printWhenImagesReady(w);
