@@ -404,6 +404,51 @@ function runHostMachinePoll({ cookie, activeSessionId, currentSessionId }) {
   return fn().then(() => ({ calls, removed, navigatedTo }));
 }
 
+// ---- updateLinkCount() --------------------------------------------------
+// The slides viewer's top-left badge counts the deck's clickable material.
+// Two things it must not do: count a footer link stamped on every slide once
+// per slide, and count internal jump-to-page annotations (href="#") at all.
+function runLinkCount(hrefs) {
+  const anchors = hrefs.map((h) => ({ getAttribute: () => h, href: h }));
+  const badge = { style: {}, dataset: {} };
+  const value = { textContent: null };
+  const sandbox = {
+    document: {
+      getElementById: (id) =>
+        id === 'slides-link-count' ? badge : id === 'slides-link-count-value' ? value : null,
+    },
+    Slides: { front: { el: { querySelectorAll: () => anchors } } },
+  };
+  const fn = new Function('document', 'Slides',
+    extractFunction(PARTICIPANT_HTML, 'updateLinkCount') + '; return updateLinkCount;'
+  )(sandbox.document, sandbox.Slides);
+  fn();
+  return { display: badge.style.display, tip: badge.dataset.tip, value: value.textContent };
+}
+
+console.log('updateLinkCount()');
+{
+  const repeated = runLinkCount(['https://a.example', 'https://a.example', 'https://b.example']);
+  assert('a link repeated across slides counts once',
+    repeated.value === '2' && repeated.display === 'flex');
+
+  const internal = runLinkCount(['#', '#']);
+  assert('internal jump-to-page annotations are not links',
+    internal.value === '0' && internal.display === 'none');
+
+  const none = runLinkCount([]);
+  assert('a deck without links shows no badge at all',
+    none.display === 'none' && none.value === '0');
+
+  const one = runLinkCount(['https://a.example']);
+  assert('the tooltip is singular for exactly one link',
+    /^1 link in these slides/.test(one.tip));
+
+  const many = runLinkCount(['https://a.example', 'https://b.example']);
+  assert('the tooltip repeats the number the badge shows',
+    /^2 links in these slides/.test(many.tip));
+}
+
 const hostMachineResults = [];
 Promise.all([
   runHostMachinePoll({ cookie: '', activeSessionId: 'newone', currentSessionId: 'oldone' })
