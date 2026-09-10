@@ -181,11 +181,11 @@ def test_save_session_state_logs_participant_subfield_change(capsys):
         capsys.readouterr()  # discard initial-write line
         _save_session_state(folder, {"participants": {"u1": {"name": "Alice", "score": 5}}})
         out = capsys.readouterr().out
-        assert "participants(score)" in out
+        assert "participants(Alice: score)" in out
 
 
 def test_save_session_state_logs_participant_added_and_field(capsys):
-    """Adding a participant and changing a field on another reports both signals."""
+    """Adding a participant and changing a field on another names both people."""
     with tempfile.TemporaryDirectory() as d:
         from daemon.session_state import save_session_state as _save_session_state
 
@@ -203,7 +203,7 @@ def test_save_session_state_logs_participant_added_and_field(capsys):
             },
         )
         out = capsys.readouterr().out
-        assert "participants(+1, location)" in out
+        assert "participants(+Bob; Alice: location)" in out
 
 
 def test_save_session_state_translates_engagement_into_activity(capsys):
@@ -220,7 +220,7 @@ def test_save_session_state_translates_engagement_into_activity(capsys):
             {"participants": {"u1": {"name": "Alice", "engagement": {"notes": {"seconds": 30, "visits": 1, "clicks": 2}}}}},
         )
         out = capsys.readouterr().out
-        assert "participants(viewed notes)" in out
+        assert "participants(Alice: viewed notes)" in out
         assert "engagement" not in out
 
 
@@ -241,7 +241,7 @@ def test_save_session_state_names_the_slide_participants_are_watching(capsys):
             },
         )
         out = capsys.readouterr().out
-        assert "participants(viewed slides spring:12)" in out
+        assert "participants(Alice: viewed slides spring:12)" in out
 
 
 def test_save_session_state_logs_current_slide_and_viewed_pages(capsys):
@@ -279,4 +279,21 @@ def test_save_session_state_engagement_falls_back_to_unknown(capsys):
             {"participants": {"u1": {"name": "Alice", "engagement": {"holodeck": {"seconds": 5}}}}},
         )
         out = capsys.readouterr().out
-        assert "participants(viewed unknown)" in out
+        assert "participants(Alice: viewed unknown)" in out
+
+
+def test_save_session_state_caps_the_number_of_people_it_names(capsys):
+    """A bulk change must not print a wall of names — past a handful it degrades to a count."""
+    with tempfile.TemporaryDirectory() as d:
+        from daemon.session_state import save_session_state as _save_session_state
+
+        folder = Path(d) / "session"
+        folder.mkdir(parents=True, exist_ok=True)
+        names = ["Alice", "Bob", "Carol", "Dan", "Eve", "Frank"]
+        _save_session_state(folder, {"participants": {n: {"name": n, "score": 0} for n in names}})
+        capsys.readouterr()
+        _save_session_state(folder, {"participants": {n: {"name": n, "score": 1} for n in names}})
+        out = capsys.readouterr().out
+        assert "Alice: score" in out
+        assert "+2 more" in out
+        assert "Frank" not in out

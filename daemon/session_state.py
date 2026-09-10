@@ -316,6 +316,9 @@ _VIEW_ACTIVITIES = {
 
 _MAX_SLIDE_REFS = 4
 
+# Beyond a handful of people a save line stops being readable; the rest become a count.
+_MAX_NAMED_ENTRIES = 4
+
 
 def _slide_ref(slug, page) -> str:
     """Render a slide as 'deck:page' (just 'deck' when the page is unknown)."""
@@ -375,12 +378,33 @@ def _describe_engagement(old_v, new_v, snapshot: dict) -> set[str]:
     return phrases
 
 
+def _entry_label(entry) -> str:
+    """A human handle for one nested entry — its name, when it carries one.
+
+    Participants do; Q&A questions and the like only know their author's uuid, which says
+    nothing in a log line, so they stay anonymous and are reported by field name alone.
+    """
+    if isinstance(entry, dict):
+        return str(entry.get("name") or "").strip()
+    return ""
+
+
+def _describe_membership(prefix: str, keys: set[str], source: dict) -> str | None:
+    """Render joins/leaves as names when they fit, falling back to a bare count."""
+    if not keys:
+        return None
+    labels = [_entry_label(source.get(k)) for k in keys]
+    if all(labels) and len(labels) <= _MAX_NAMED_ENTRIES:
+        return f"{prefix}{', '.join(sorted(labels))}"
+    return f"{prefix}{len(keys)}"
+
+
 def _describe_changed_value(key: str, old_v, new_v, snapshot: dict) -> str:
     """Return a parenthesised sub-field hint for a changed value, or '' if no detail to add.
 
-    For dict[str, dict] values (e.g. participants, qa_questions) this reports added/removed
-    entry counts and the union of changed inner field names — so a save log like
-    'participants(score)' tells us a score changed, not just that the collection moved.
+    For dict[str, dict] values (e.g. participants, qa_questions) this reports who joined or
+    left and, per entry, which inner fields changed — so a save log like
+    'participants(Alice: viewed notes)' names the person, not just the collection.
 
     Slide-shaped values are named as 'deck:page' instead of just reporting that they moved.
     """
@@ -399,25 +423,37 @@ def _describe_changed_value(key: str, old_v, new_v, snapshot: dict) -> str:
         return ""
     added = set(new_v.keys()) - set(old_v.keys())
     removed = set(old_v.keys()) - set(new_v.keys())
-    subfields: set[str] = set()
+    named: dict[str, set[str]] = {}
+    anonymous: set[str] = set()
     for k in set(old_v.keys()) & set(new_v.keys()):
         ov, nv = old_v.get(k), new_v.get(k)
+        changed: set[str] = set()
         if isinstance(ov, dict) and isinstance(nv, dict):
             for fk in set(ov.keys()) | set(nv.keys()):
                 if ov.get(fk) != nv.get(fk):
                     if fk == "engagement":
-                        subfields |= _describe_engagement(ov.get(fk), nv.get(fk), snapshot)
+                        changed |= _describe_engagement(ov.get(fk), nv.get(fk), snapshot)
                     else:
-                        subfields.add(fk)
+                        changed.add(fk)
         elif ov != nv:
-            subfields.add("<value>")
+            changed.add("<value>")
+        if not changed:
+            continue
+        label = _entry_label(nv) or _entry_label(ov)
+        if label:
+            named.setdefault(label, set()).update(changed)
+        else:
+            anonymous |= changed
     parts: list[str] = []
-    if added:
-        parts.append(f"+{len(added)}")
-    if removed:
-        parts.append(f"-{len(removed)}")
-    parts.extend(sorted(subfields))
-    return f"({', '.join(parts)})" if parts else ""
+    for phrase in (_describe_membership("+", added, new_v), _describe_membership("-", removed, old_v)):
+        if phrase:
+            parts.append(phrase)
+    per_person = [f"{label}: {', '.join(sorted(fields))}" for label, fields in sorted(named.items())]
+    if len(per_person) > _MAX_NAMED_ENTRIES:
+        per_person = per_person[:_MAX_NAMED_ENTRIES] + [f"+{len(per_person) - _MAX_NAMED_ENTRIES} more"]
+    parts.extend(per_person)
+    parts.extend(sorted(anonymous))
+    return f"({'; '.join(parts)})" if parts else ""
 
 
 def save_session_state(session_folder: Path, snapshot: dict) -> None:
