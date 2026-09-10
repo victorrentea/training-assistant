@@ -8,6 +8,7 @@ RUN pip install \
     prometheus-fastapi-instrumentator \
     websockets \
     anthropic \
+    httpx \
     pytest \
     pytest-bdd \
     pytest-playwright \

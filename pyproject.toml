@@ -24,6 +24,9 @@ dev = [
 ]
 daemon = [
     "anthropic>=0.85.0",
+    # The proxy imports httpx directly. It used to arrive for free under anthropic,
+    # which switched to httpx2 in 1.4.0 — declare it, do not inherit it.
+    "httpx>=0.28",
     "pypdf>=4.0",
 ]
 telemetry = [
