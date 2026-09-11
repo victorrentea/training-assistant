@@ -1222,8 +1222,12 @@ body{visibility:hidden}
   <div style="width:36px;height:36px;border:3px solid var(--color-outline-variant,#ccc);border-top-color:var(--color-primary,#4555ba);border-radius:50%;animation:spin 0.8s linear infinite"></div>
   <span style="font-size:0.9rem;color:var(--color-outline,#888)">Loading slides&hellip;</span>
 </div>
-<!-- Top-Left Cluster: refreshing spinner + link count, mirroring the download toolbar -->
-<div class="absolute top-6 left-6 z-20 flex items-center gap-2" style="pointer-events:none">
+<!-- Top-Left Cluster: refreshing spinner + link count, mirroring the download toolbar.
+     left is inline, not `left-6`: static/vendor/tailwind.css is a PREBUILT subset
+     (there is no build step) and ships only .left-0 / .left-1\/2, so `left-6` was
+     silently doing nothing and the cluster sat flush against the panel edge. The
+     1.5rem mirrors `right-6` on the download toolbar exactly. -->
+<div class="absolute top-6 z-20 flex items-center gap-2" style="left:1.5rem;pointer-events:none">
   <!-- Slide Refreshing Overlay -->
   <div id="slide-refresh-overlay" style="display:none" class="p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
     <span class="p-2 rounded-full flex"><div style="width:24px;height:24px;border:2px solid var(--color-outline-variant,#ccc);border-top-color:var(--color-primary,#4555ba);border-radius:50%;animation:spin 0.8s linear infinite"></div></span>
@@ -1632,8 +1636,20 @@ var PdfCache = (function() {
     badge.dataset.tip = n === 1
       ? '1 link in these slides — click it right on the slide'
       : n + ' links in these slides — click them right on the slides';
+    syncLinkCountScroll();
   }
   window.updateLinkCount = updateLinkCount;
+
+  // The badge announces the deck's clickable material — once the participant
+  // scrolls into the slides it has said its piece, so it rides the deck's own
+  // scroll offset up and out of the panel instead of covering every slide. The
+  // refreshing spinner beside it stays pinned: that one reports live state.
+  function syncLinkCountScroll() {
+    const badge = document.getElementById('slides-link-count');
+    if (!badge) return;
+    const scrolled = Slides.front.el ? Slides.front.el.scrollTop : 0;
+    badge.style.transform = scrolled ? 'translateY(' + -scrolled + 'px)' : '';
+  }
 
   // Both overlays are built at viewport pixel size and CSS-scaled onto the
   // canvas, so their scale has to follow the canvas when the layout changes.
@@ -1797,6 +1813,7 @@ var PdfCache = (function() {
     function onScroll() {
       if (this !== Slides.front.el) return;
       updatePageInfo();
+      syncLinkCountScroll();
       var page = _getCurrentSlidesPage();
       // Persist using Slides.front.slug (currently visible deck), NOT _activeSlideSlug
       // (which is updated immediately on click, before swap — would mis-attribute scroll

@@ -408,7 +408,7 @@ function runHostMachinePoll({ cookie, activeSessionId, currentSessionId }) {
 // The slides viewer's top-left badge counts the deck's clickable material.
 // Two things it must not do: count a footer link stamped on every slide once
 // per slide, and count internal jump-to-page annotations (href="#") at all.
-function runLinkCount(hrefs) {
+function runLinkCount(hrefs, scrollTop = 0) {
   const anchors = hrefs.map((h) => ({ getAttribute: () => h, href: h }));
   const badge = { style: {}, dataset: {} };
   const value = { textContent: null };
@@ -417,13 +417,21 @@ function runLinkCount(hrefs) {
       getElementById: (id) =>
         id === 'slides-link-count' ? badge : id === 'slides-link-count-value' ? value : null,
     },
-    Slides: { front: { el: { querySelectorAll: () => anchors } } },
+    Slides: { front: { el: { querySelectorAll: () => anchors, scrollTop } } },
   };
+  // syncLinkCountScroll() comes along because updateLinkCount() calls it: the
+  // badge rides the deck's scroll offset, and a sandbox without it would throw.
   const fn = new Function('document', 'Slides',
-    extractFunction(PARTICIPANT_HTML, 'updateLinkCount') + '; return updateLinkCount;'
+    extractFunction(PARTICIPANT_HTML, 'updateLinkCount') + '\n' +
+    extractFunction(PARTICIPANT_HTML, 'syncLinkCountScroll') + '; return updateLinkCount;'
   )(sandbox.document, sandbox.Slides);
   fn();
-  return { display: badge.style.display, tip: badge.dataset.tip, value: value.textContent };
+  return {
+    display: badge.style.display,
+    tip: badge.dataset.tip,
+    value: value.textContent,
+    transform: badge.style.transform,
+  };
 }
 
 console.log('updateLinkCount()');
@@ -447,6 +455,16 @@ console.log('updateLinkCount()');
   const many = runLinkCount(['https://a.example', 'https://b.example']);
   assert('the tooltip repeats the number the badge shows',
     /^2 links in these slides/.test(many.tip));
+
+  // The badge rides the deck's scroll: it has said its piece by the time the
+  // participant is reading, so it leaves with the first slide.
+  const top = runLinkCount(['https://a.example'], 0);
+  assert('an unscrolled deck leaves the badge where the CSS puts it',
+    top.transform === '');
+
+  const scrolled = runLinkCount(['https://a.example'], 240);
+  assert('scrolling the deck carries the badge up by the same amount',
+    scrolled.transform === 'translateY(-240px)');
 }
 
 const hostMachineResults = [];
