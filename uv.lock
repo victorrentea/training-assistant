@@ -1753,6 +1753,7 @@ dependencies = [
 [package.optional-dependencies]
 daemon = [
     { name = "anthropic" },
+    { name = "httpx" },
     { name = "pypdf" },
 ]
 dev = [
@@ -1780,6 +1781,7 @@ telemetry = [
 requires-dist = [
     { name = "anthropic", marker = "extra == 'daemon'", specifier = ">=0.85.0" },
     { name = "fastapi", specifier = ">=0.128.8" },
+    { name = "httpx", marker = "extra == 'daemon'", specifier = ">=0.28" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.5" },
     { name = "opentelemetry-api", marker = "extra == 'telemetry'", specifier = ">=1.20" },
