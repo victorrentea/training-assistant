@@ -23,6 +23,10 @@ class ParticipantPage:
         except Exception:
             return False
 
+    def gate_appeared(self, timeout: int = 4000) -> bool:
+        """Public form of the gate probe, for tests asserting the gate is skipped."""
+        return self._wait_for_gate(timeout)
+
     def enter_name_at_gate(self, name: str) -> None:
         """Type a name into the gate and click Enter (registers the typed name)."""
         self._page.locator("#name-gate-input").fill(name)

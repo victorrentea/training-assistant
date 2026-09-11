@@ -8,6 +8,7 @@ Covers every screen in the landing page join flow:
 4. Session mismatch (Case B): stale session_id, clear link
 5. Name entry: custom name, random name, duplicate name, disabled button
 6. Rejoin: returning participant auto-enters with stored UUID
+7. Next day: a name typed yesterday is reused in a brand-new session
 """
 
 import re
@@ -25,6 +26,8 @@ from session_utils import (
     DAEMON_BASE,
     _get_json,
     _req,
+    _wait_until,
+    daemon_has_participant,
     fresh_session,
 )
 
@@ -249,3 +252,54 @@ class TestRejoin:
             )
         finally:
             ctx2.close()
+
+
+# ── 6. TestNextDaySession ──────────────────────────────────────────────────
+
+class TestNextDaySession:
+    """Day 2 of a workshop is a NEW session, so the daemon has never heard of
+    yesterday's UUID and /rejoin 404s. The browser still remembers the name the
+    participant typed, and must reuse it instead of re-opening the name gate."""
+
+    def test_typed_name_is_reused_in_a_new_session(self, browser, session_id):
+        ctx = browser.new_context()
+        page = ctx.new_page()
+        try:
+            page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+            pax = ParticipantPage(page)
+            pax.join("Yesterday Human")
+
+            # Next day: brand-new session, same browser (same localStorage).
+            next_day_id = fresh_session("JoinFlowDay2")
+            page.goto(f"{BASE}/{next_day_id}", wait_until="networkidle")
+
+            assert not pax.gate_appeared(4000), (
+                "name gate re-opened in a new session even though the browser "
+                "remembers the name typed yesterday"
+            )
+            expect(page.locator("#display-name .display-name-text")).to_have_text(
+                "Yesterday Human", timeout=10000
+            )
+            _wait_until(
+                lambda: daemon_has_participant(next_day_id, "Yesterday Human"),
+                timeout_ms=10000,
+                msg="new session roster never got the remembered name",
+            )
+        finally:
+            ctx.close()
+
+    def test_anonymous_yesterday_still_gets_the_gate(self, browser, session_id):
+        """Nothing was ever typed, so there is no chosen name to honour — the
+        gate must still appear rather than silently reusing a fictional name."""
+        ctx = browser.new_context()
+        page = ctx.new_page()
+        try:
+            page.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+            pax = ParticipantPage(page)
+            pax.auto_join()
+
+            next_day_id = fresh_session("JoinFlowDay2Anon")
+            page.goto(f"{BASE}/{next_day_id}", wait_until="networkidle")
+            assert pax.gate_appeared(8000), "anonymous participant should be asked"
+        finally:
+            ctx.close()

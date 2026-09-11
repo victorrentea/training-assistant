@@ -3728,6 +3728,14 @@ function _hasCustomName() {
   return localStorage.getItem(LS_CUSTOM_NAME_KEY) === '1';
 }
 
+// The name this participant typed for themselves, sanitized and ready to send,
+// or '' when they never chose one. Sanitized on the way out because it has been
+// sitting in localStorage since another day and anyone can edit it there.
+function _rememberedName() {
+  if (!_hasCustomName()) return '';
+  return _sanitizeName(localStorage.getItem(LS_NAME_KEY) || '');
+}
+
 var _nameNudgeVisible = false;
 function _showNameNudge() {
   if (_hasCustomName()) return;
@@ -4409,6 +4417,11 @@ function _showNameGate() {
         var resp = await _registerRailway(name ? { name: name } : {});
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         var identity = await resp.json();
+        // Remember whether this name was CHOSEN or auto-assigned. Only a chosen
+        // one may be replayed into tomorrow's session (see _rememberedName), and
+        // only an auto-assigned one still deserves the "set your name" nudge.
+        if (name) localStorage.setItem(LS_CUSTOM_NAME_KEY, '1');
+        else localStorage.removeItem(LS_CUSTOM_NAME_KEY);
         gate.style.display = 'none';
         if (loading) loading.style.display = 'flex';
         resolve(identity);
@@ -4500,6 +4513,19 @@ function _setDuplicateIndicator(isDup) {
     } else if (!_isFirstVisit) {
       var rejoinResp = await _rejoinRailway();
       if (rejoinResp.status === 200) identity = await rejoinResp.json();
+      // Day 2 of a workshop is a NEW session: the daemon has never heard of this
+      // UUID, so /rejoin 404s. The browser still remembers the name this person
+      // typed, so replay it instead of asking for it again. Only a name they
+      // actually chose is replayed — an auto-assigned fictional one carries no
+      // intent worth preserving, and replaying it would silently strip the
+      // participant's anonymous flag server-side.
+      if (!identity) {
+        var remembered = _rememberedName();
+        if (remembered) {
+          var replayResp = await _registerRailway({ name: remembered });
+          if (replayResp.ok) identity = await replayResp.json();
+        }
+      }
     }
     if (!identity) {
       // No committed name for this UUID → show the single-field gate (Enter /
