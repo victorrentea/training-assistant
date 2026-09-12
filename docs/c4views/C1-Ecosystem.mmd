@@ -1,0 +1,85 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["System Landscape View"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    11["<div style='font-weight: bold'>Workshop Live Interaction Tool</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Self-hosted real-time<br />audience interaction<br />platform.</div>"]
+    style 11 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+    141["<div style='font-weight: bold'>victor-effects</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Desktop effects, sounds, whip<br />and the tile manifest. Menu<br />bar 🎆, port 55124. Public<br />repo.</div>"]
+    style 141 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    142["<div style='font-weight: bold'>victor-vibe-board</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LaunchBreak: the tablet<br />soundboard (Kotlin, Android).</div>"]
+    style 142 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    143["<div style='font-weight: bold'>victor-phone-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Minimal app on the S24U<br />phone; exists to be opened,<br />which fires the Samsung<br />hotspot routine.</div>"]
+    style 143 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    144["<div style='font-weight: bold'>victor-mac-kit</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Shared SwiftPM package (crop<br />selection overlay, geometry,<br />capture). No app of its own.</div>"]
+    style 144 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    145["<div style='font-weight: bold'>walkie-talkie</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>macOS overlay that relays<br />dictation, screenshots and<br />picked elements into a<br />running agent.</div>"]
+    style 145 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    146["<div style='font-weight: bold'>walkie-talkie Chrome extension</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Element picking (⌘⇧) and the<br />music bridge.</div>"]
+    style 146 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    147["<div style='font-weight: bold'>Victor Chrome Addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Chrome extension feeding<br />dictation and the feedback<br />form to the Mac.</div>"]
+    style 147 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    148["<div style='font-weight: bold'>live-coding</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>IntelliJ plugin: live-coding<br />visual effects and the IDE<br />end of the relay.</div>"]
+    style 148 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    149["<div style='font-weight: bold'>victor-vsc</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>VS Code extension holding<br />every customization (colors,<br />icons, keybindings, terminal<br />profiles).</div>"]
+    style 149 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    150["<div style='font-weight: bold'>victor-statusline</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Status line for Claude Code<br />and Copilot CLI.</div>"]
+    style 150 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    151["<div style='font-weight: bold'>gmail-victor-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Chrome extension + local<br />daemon: CSS injection and<br />smart search.</div>"]
+    style 151 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    152["<div style='font-weight: bold'>gmail-dark-css</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>gmail.user.css -- the source<br />of truth for Gmail dark mode.</div>"]
+    style 152 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    153["<div style='font-weight: bold'>Claude Code</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>The agent itself: hooks,<br />skills, plugins, MCP servers.</div>"]
+    style 153 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    154["<div style='font-weight: bold'>claude-usage</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Reads Claude Code transcripts<br />to report usage.</div>"]
+    style 154 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    155["<div style='font-weight: bold'>victor-skills / skills-private / human-review</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Skill and plugin<br />marketplaces.</div>"]
+    style 155 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    156["<div style='font-weight: bold'>Terminal.app / tmux</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Where dictated sessions land.</div>"]
+    style 156 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    157["<div style='font-weight: bold'>Whisper transcripts</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>~/Documents/transcriptions/<br />-- files on disk, written by<br />the Mac and read by the<br />daemon.</div>"]
+    style 157 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    158["<div style='font-weight: bold'>victor-carduri</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Loyalty cards on the phone.<br />Deliberately isolated from<br />the beacon app.</div>"]
+    style 158 fill:#8d99a6,stroke:#626b74,color:#ffffff
+    159["<div style='font-weight: bold'>code-city</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>3D city of classes, used as a<br />course demo.</div>"]
+    style 159 fill:#8d99a6,stroke:#626b74,color:#ffffff
+    160["<div style='font-weight: bold'>code-search</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Semantic duplicate detection<br />CLI (Ollama + Qdrant).</div>"]
+    style 160 fill:#8d99a6,stroke:#626b74,color:#ffffff
+    161["<div style='font-weight: bold'>agentic.how</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Workshop landing page on<br />cPanel.</div>"]
+    style 161 fill:#8d99a6,stroke:#626b74,color:#ffffff
+    162["<div style='font-weight: bold'>agentic-wiki</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM wiki published with<br />Quartz.</div>"]
+    style 162 fill:#8d99a6,stroke:#626b74,color:#ffffff
+    163["<div style='font-weight: bold'>victorrentea.ro</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Personal static site.</div>"]
+    style 163 fill:#8d99a6,stroke:#626b74,color:#ffffff
+    5["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Local Mac bridge that emits<br />slide and IDE file-open<br />events, and receives<br />emoji/session notifications.</div>"]
+    style 5 fill:#1d6f42,stroke:#144d2e,color:#ffffff
+
+    142-. "<div>HTTP :55123, over the first<br />transport that answers: adb<br />reverse (USB) -> LAN -> mDNS<br />Victor-Mac.local -> WSS relay</div><div style='font-size: 70%'></div>" .->5
+    5-. "<div>WSS<br />wss://interact.victorrentea.ro/ws/bridge/tablet<br />(last resort, when there is<br />no LAN)</div><div style='font-size: 70%'></div>" .->142
+    5-. "<div>HTTP proxy :55123 -> :55124<br />for /ping /sounds /sound<br />/effect /alarm<br />/bt-compensation /tiles<br />/state</div><div style='font-size: 70%'></div>" .->141
+    142-. "<div>GET /tiles through the proxy.<br />The Mac's manifest outranks<br />the tablet's bundled<br />tiles.json, which is<br />first-boot bootstrap only</div><div style='font-size: 70%'></div>" .->141
+    5-. "<div>Bluetooth RFCOMM/SPP channel<br />9, which trips the Samsung<br />hotspot routine</div><div style='font-size: 70%'></div>" .->143
+    147-. "<div>WebSocket ws://127.0.0.1:8766<br />(dictation)</div><div style='font-size: 70%'></div>" .->5
+    147-. "<div>HTTP :55123/feedback-form/*</div><div style='font-size: 70%'></div>" .->5
+    5-. "<div>POST<br />127.0.0.1:1234/feedback-form</div><div style='font-size: 70%'></div>" .->11
+    5-. "<div>Writes Whisper output to</div><div style='font-size: 70%'></div>" .->157
+    11-. "<div>Reads and tracks deltas of<br />normalized transcripts from</div><div style='font-size: 70%'></div>" .->157
+    149-. "<div>POST<br />:55123/intellij/file-opened</div><div style='font-size: 70%'></div>" .->5
+    148-. "<div>POST<br />:55123/intellij/file-opened</div><div style='font-size: 70%'></div>" .->5
+    5-. "<div>SwiftPM path dependency on<br />../victor-mac-kit</div><div style='font-size: 70%'></div>" .->144
+    145-. "<div>SwiftPM path dependency on<br />../victor-mac-kit</div><div style='font-size: 70%'></div>" .->144
+    145-. "<div>HTTP loopback :8917-8919<br />(/pick) and WebSocket :8920<br />(music bridge)</div><div style='font-size: 70%'></div>" .->146
+    145-. "<div>POST to 127.0.0.1 on an<br />ephemeral port published in<br />~/.walkie-talkie/ide/intellij-PID.json,<br />authenticated with<br />x-relay-token</div><div style='font-size: 70%'></div>" .->148
+    145-. "<div>POST to 127.0.0.1 on an<br />ephemeral port published in<br />~/.walkie-talkie/ide/vscode-PID.json</div><div style='font-size: 70%'></div>" .->149
+    145-. "<div>AppleScript `do script`, or<br />tmux send-keys addressed at a<br />pane</div><div style='font-size: 70%'></div>" .->156
+    156-. "<div>Runs interactive sessions</div><div style='font-size: 70%'></div>" .->153
+    151-. "<div>Reads<br />../gmail-dark-css/gmail.user.css<br />off disk, live, with no<br />extension reload</div><div style='font-size: 70%'></div>" .->152
+    151-. "<div>Subprocess `claude -p --model<br />claude-sonnet-5`, which<br />reaches Gmail over MCP</div><div style='font-size: 70%'></div>" .->153
+    153-. "<div>HTTP<br />:55123/hands-off/{start,end,state}<br />from the PreToolUse hook via<br />~/bin/hands-off</div><div style='font-size: 70%'></div>" .->5
+    150-. "<div>Symlinked in as<br />~/.claude/statusline-command.sh</div><div style='font-size: 70%'></div>" .->153
+    155-. "<div>Plugin marketplaces: one git<br />source, one local directory</div><div style='font-size: 70%'></div>" .->153
+    154-. "<div>Reads ~/.claude/projects/**<br />transcripts</div><div style='font-size: 70%'></div>" .->153
+    11-. "<div>WebSocket client to<br />ws://127.0.0.1:8765: receives<br />slide and IDE file-open<br />events, sends display_emoji /<br />session_started /<br />session_ended / bell_ring /<br />pdf_export_alarm</div><div style='font-size: 70%'></div>" .->5
+
+  end

@@ -30,7 +30,7 @@ System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interacti
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, WorkshopLiveInteractionTool.RailwayBackend, "Synchronizes active session, participant events, uploads, and generated static assets", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, AnthropicClaudeAPI, "Requests debate cleanup and code-review smart-paste extraction", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, GitHubAPI, "Resolves opened-file blob links against repo trees and blobs", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon, victormacosaddons, "Receives slide events and sends emoji/session notifications", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, victormacosaddons, "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / pdf_export_alarm", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, AgentMail, "Sends best-effort email notifications via AgentMail SDK", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, Hostsessionfiles, "Reads and writes session folders, transcripts, and summary files", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, LocalChromaDBstore, "Indexes local materials in the background", $techn="", $tags="", $link="")

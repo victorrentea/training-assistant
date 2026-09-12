@@ -1,0 +1,72 @@
+@startuml
+title <size:24>System Landscape View</size>\n<size:24>Every personal tool and the channel each integration actually runs over. Islands on the right are connected to nothing.</size>
+
+set separator none
+left to right direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+
+System(WorkshopLiveInteractionTool, "Workshop Live Interaction Tool", $descr="Self-hosted real-time audience interaction platform.", $tags="", $link="")
+System(victoreffects, "victor-effects", $descr="Desktop effects, sounds, whip and the tile manifest. Menu bar 🎆, port 55124. Public repo.", $tags="", $link="")
+System(victorvibeboard, "victor-vibe-board", $descr="LaunchBreak: the tablet soundboard (Kotlin, Android).", $tags="", $link="")
+System(victorphoneaddons, "victor-phone-addons", $descr="Minimal app on the S24U phone; exists to be opened, which fires the Samsung hotspot routine.", $tags="", $link="")
+System(victormackit, "victor-mac-kit", $descr="Shared SwiftPM package (crop selection overlay, geometry, capture). No app of its own.", $tags="", $link="")
+System(walkietalkie, "walkie-talkie", $descr="macOS overlay that relays dictation, screenshots and picked elements into a running agent.", $tags="", $link="")
+System(walkietalkieChromeextension, "walkie-talkie Chrome extension", $descr="Element picking (⌘⇧) and the music bridge.", $tags="", $link="")
+System(VictorChromeAddons, "Victor Chrome Addons", $descr="Chrome extension feeding dictation and the feedback form to the Mac.", $tags="", $link="")
+System(livecoding, "live-coding", $descr="IntelliJ plugin: live-coding visual effects and the IDE end of the relay.", $tags="", $link="")
+System(victorvsc, "victor-vsc", $descr="VS Code extension holding every customization (colors, icons, keybindings, terminal profiles).", $tags="", $link="")
+System(victorstatusline, "victor-statusline", $descr="Status line for Claude Code and Copilot CLI.", $tags="", $link="")
+System(gmailvictoraddons, "gmail-victor-addons", $descr="Chrome extension + local daemon: CSS injection and smart search.", $tags="", $link="")
+System(gmaildarkcss, "gmail-dark-css", $descr="gmail.user.css -- the source of truth for Gmail dark mode.", $tags="", $link="")
+System(ClaudeCode, "Claude Code", $descr="The agent itself: hooks, skills, plugins, MCP servers.", $tags="", $link="")
+System(claudeusage, "claude-usage", $descr="Reads Claude Code transcripts to report usage.", $tags="", $link="")
+System(victorskillsskillsprivatehumanreview, "victor-skills / skills-private / human-review", $descr="Skill and plugin marketplaces.", $tags="", $link="")
+System(Terminalapptmux, "Terminal.app / tmux", $descr="Where dictated sessions land.", $tags="", $link="")
+System(Whispertranscripts, "Whisper transcripts", $descr="~/Documents/transcriptions/ -- files on disk, written by the Mac and read by the daemon.", $tags="", $link="")
+System(victorcarduri, "victor-carduri", $descr="Loyalty cards on the phone. Deliberately isolated from the beacon app.", $tags="", $link="")
+System(codecity, "code-city", $descr="3D city of classes, used as a course demo.", $tags="", $link="")
+System(codesearch, "code-search", $descr="Semantic duplicate detection CLI (Ollama + Qdrant).", $tags="", $link="")
+System(agentichow, "agentic.how", $descr="Workshop landing page on cPanel.", $tags="", $link="")
+System(agenticwiki, "agentic-wiki", $descr="LLM wiki published with Quartz.", $tags="", $link="")
+System(victorrentearo, "victorrentea.ro", $descr="Personal static site.", $tags="", $link="")
+System(victormacosaddons, "victor-macos-addons", $descr="Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications.", $tags="", $link="")
+
+Rel(victorvibeboard, victormacosaddons, "HTTP :55123, over the first transport that answers: adb reverse (USB) -> LAN -> mDNS Victor-Mac.local -> WSS relay", $techn="", $tags="", $link="")
+Rel(victormacosaddons, victorvibeboard, "WSS wss://interact.victorrentea.ro/ws/bridge/tablet (last resort, when there is no LAN)", $techn="", $tags="", $link="")
+Rel(victormacosaddons, victoreffects, "HTTP proxy :55123 -> :55124 for /ping /sounds /sound /effect /alarm /bt-compensation /tiles /state", $techn="", $tags="", $link="")
+Rel(victorvibeboard, victoreffects, "GET /tiles through the proxy. The Mac's manifest outranks the tablet's bundled tiles.json, which is first-boot bootstrap only", $techn="", $tags="", $link="")
+Rel(victormacosaddons, victorphoneaddons, "Bluetooth RFCOMM/SPP channel 9, which trips the Samsung hotspot routine", $techn="", $tags="", $link="")
+Rel(VictorChromeAddons, victormacosaddons, "WebSocket ws://127.0.0.1:8766 (dictation)", $techn="", $tags="", $link="")
+Rel(VictorChromeAddons, victormacosaddons, "HTTP :55123/feedback-form/*", $techn="", $tags="", $link="")
+Rel(victormacosaddons, WorkshopLiveInteractionTool, "POST 127.0.0.1:1234/feedback-form", $techn="", $tags="", $link="")
+Rel(victormacosaddons, Whispertranscripts, "Writes Whisper output to", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool, Whispertranscripts, "Reads and tracks deltas of normalized transcripts from", $techn="", $tags="", $link="")
+Rel(victorvsc, victormacosaddons, "POST :55123/intellij/file-opened", $techn="", $tags="", $link="")
+Rel(livecoding, victormacosaddons, "POST :55123/intellij/file-opened", $techn="", $tags="", $link="")
+Rel(victormacosaddons, victormackit, "SwiftPM path dependency on ../victor-mac-kit", $techn="", $tags="", $link="")
+Rel(walkietalkie, victormackit, "SwiftPM path dependency on ../victor-mac-kit", $techn="", $tags="", $link="")
+Rel(walkietalkie, walkietalkieChromeextension, "HTTP loopback :8917-8919 (/pick) and WebSocket :8920 (music bridge)", $techn="", $tags="", $link="")
+Rel(walkietalkie, livecoding, "POST to 127.0.0.1 on an ephemeral port published in ~/.walkie-talkie/ide/intellij-PID.json, authenticated with x-relay-token", $techn="", $tags="", $link="")
+Rel(walkietalkie, victorvsc, "POST to 127.0.0.1 on an ephemeral port published in ~/.walkie-talkie/ide/vscode-PID.json", $techn="", $tags="", $link="")
+Rel(walkietalkie, Terminalapptmux, "AppleScript `do script`, or tmux send-keys addressed at a pane", $techn="", $tags="", $link="")
+Rel(Terminalapptmux, ClaudeCode, "Runs interactive sessions", $techn="", $tags="", $link="")
+Rel(gmailvictoraddons, gmaildarkcss, "Reads ../gmail-dark-css/gmail.user.css off disk, live, with no extension reload", $techn="", $tags="", $link="")
+Rel(gmailvictoraddons, ClaudeCode, "Subprocess `claude -p --model claude-sonnet-5`, which reaches Gmail over MCP", $techn="", $tags="", $link="")
+Rel(ClaudeCode, victormacosaddons, "HTTP :55123/hands-off/{start,end,state} from the PreToolUse hook via ~/bin/hands-off", $techn="", $tags="", $link="")
+Rel(victorstatusline, ClaudeCode, "Symlinked in as ~/.claude/statusline-command.sh", $techn="", $tags="", $link="")
+Rel(victorskillsskillsprivatehumanreview, ClaudeCode, "Plugin marketplaces: one git source, one local directory", $techn="", $tags="", $link="")
+Rel(claudeusage, ClaudeCode, "Reads ~/.claude/projects/** transcripts", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool, victormacosaddons, "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / pdf_export_alarm", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

@@ -37,7 +37,7 @@ graph LR
     24-. "<div>Synchronizes active session,<br />participant events, uploads,<br />and generated static assets</div><div style='font-size: 70%'></div>" .->14
     24-. "<div>Requests debate cleanup and<br />code-review smart-paste<br />extraction</div><div style='font-size: 70%'></div>" .->3
     24-. "<div>Resolves opened-file blob<br />links against repo trees and<br />blobs</div><div style='font-size: 70%'></div>" .->4
-    24-. "<div>Receives slide events and<br />sends emoji/session<br />notifications</div><div style='font-size: 70%'></div>" .->5
+    24-. "<div>WebSocket client to<br />ws://127.0.0.1:8765: receives<br />slide and IDE file-open<br />events, sends display_emoji /<br />session_started /<br />session_ended / bell_ring /<br />pdf_export_alarm</div><div style='font-size: 70%'></div>" .->5
     24-. "<div>Sends best-effort email<br />notifications via AgentMail<br />SDK</div><div style='font-size: 70%'></div>" .->8
     24-. "<div>Reads and writes session<br />folders, transcripts, and<br />summary files</div><div style='font-size: 70%'></div>" .->9
     24-. "<div>Indexes local materials in<br />the background</div><div style='font-size: 70%'></div>" .->10

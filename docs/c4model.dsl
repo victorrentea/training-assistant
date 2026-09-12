@@ -61,7 +61,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         trainingDaemon -> railwayBackend "Synchronizes active session, participant events, uploads, and generated static assets"
         trainingDaemon -> claudeApi "Requests debate cleanup and code-review smart-paste extraction"
         trainingDaemon -> githubApi "Resolves opened-file blob links against repo trees and blobs"
-        trainingDaemon -> macosAddons "Receives slide events and sends emoji/session notifications"
+        trainingDaemon -> macosAddons "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / pdf_export_alarm"
         trainingDaemon -> agentMail "Sends best-effort email notifications via AgentMail SDK"
         trainingDaemon -> hostFiles "Reads and writes session folders, transcripts, and summary files"
         trainingDaemon -> localRag "Indexes local materials in the background"
@@ -158,9 +158,98 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
 
         emailNotify -> agentMail "Sends notification emails via AgentMail SDK"
         participantApis -> emailNotify "Triggers paste/feedback notifications through"
+
+        # ------------------------------------------------------------------
+        # Victor's tooling ecosystem
+        #
+        # The workshop tool is one system among Victor's personal tools; this
+        # block models the others so the landscape shows what talks to what and
+        # OVER WHICH CHANNEL. Every relationship description carries the real
+        # transport and the real port or path -- never a bare verb -- because
+        # the channel is the thing that drifts and the thing nobody writes down.
+        #
+        # Derived from code, not from prose: ports come from the sources named
+        # in docs/c4views/README.md#ecosystem. Kept fresh by the weekly doc
+        # gardening pass (~/.claude/doc-gardening/prompt.md, Faza 1.5).
+        # ------------------------------------------------------------------
+
+        victorEffects   = softwareSystem "victor-effects" "Desktop effects, sounds, whip and the tile manifest. Menu bar 🎆, port 55124. Public repo." "Ecosystem"
+        vibeBoard       = softwareSystem "victor-vibe-board" "LaunchBreak: the tablet soundboard (Kotlin, Android)." "Ecosystem"
+        phoneAddons     = softwareSystem "victor-phone-addons" "Minimal app on the S24U phone; exists to be opened, which fires the Samsung hotspot routine." "Ecosystem"
+        macKit          = softwareSystem "victor-mac-kit" "Shared SwiftPM package (crop selection overlay, geometry, capture). No app of its own." "Ecosystem"
+        walkieTalkie    = softwareSystem "walkie-talkie" "macOS overlay that relays dictation, screenshots and picked elements into a running agent." "Ecosystem"
+        wtChromeExt     = softwareSystem "walkie-talkie Chrome extension" "Element picking (⌘⇧) and the music bridge." "Ecosystem"
+        addonsChromeExt = softwareSystem "Victor Chrome Addons" "Chrome extension feeding dictation and the feedback form to the Mac." "Ecosystem"
+        liveCoding      = softwareSystem "live-coding" "IntelliJ plugin: live-coding visual effects and the IDE end of the relay." "Ecosystem"
+        victorVsc       = softwareSystem "victor-vsc" "VS Code extension holding every customization (colors, icons, keybindings, terminal profiles)." "Ecosystem"
+        victorStatusline = softwareSystem "victor-statusline" "Status line for Claude Code and Copilot CLI." "Ecosystem"
+        gmailAddons     = softwareSystem "gmail-victor-addons" "Chrome extension + local daemon: CSS injection and smart search." "Ecosystem"
+        gmailDarkCss    = softwareSystem "gmail-dark-css" "gmail.user.css -- the source of truth for Gmail dark mode." "Ecosystem"
+        claudeCode      = softwareSystem "Claude Code" "The agent itself: hooks, skills, plugins, MCP servers." "Ecosystem"
+        claudeUsage     = softwareSystem "claude-usage" "Reads Claude Code transcripts to report usage." "Ecosystem"
+        victorSkills    = softwareSystem "victor-skills / skills-private / human-review" "Skill and plugin marketplaces." "Ecosystem"
+        terminalApp     = softwareSystem "Terminal.app / tmux" "Where dictated sessions land." "Ecosystem"
+        transcripts     = softwareSystem "Whisper transcripts" "~/Documents/transcriptions/ -- files on disk, written by the Mac and read by the daemon." "Ecosystem"
+
+        victorCarduri   = softwareSystem "victor-carduri" "Loyalty cards on the phone. Deliberately isolated from the beacon app." "Island"
+        codeCity        = softwareSystem "code-city" "3D city of classes, used as a course demo." "Island"
+        codeSearch      = softwareSystem "code-search" "Semantic duplicate detection CLI (Ollama + Qdrant)." "Island"
+        agenticHow      = softwareSystem "agentic.how" "Workshop landing page on cPanel." "Island"
+        agenticWiki     = softwareSystem "agentic-wiki" "LLM wiki published with Quartz." "Island"
+        personalSite    = softwareSystem "victorrentea.ro" "Personal static site." "Island"
+
+        # --- tablet <-> Mac ---
+        vibeBoard -> macosAddons "HTTP :55123, over the first transport that answers: adb reverse (USB) -> LAN -> mDNS Victor-Mac.local -> WSS relay"
+        macosAddons -> vibeBoard "WSS wss://interact.victorrentea.ro/ws/bridge/tablet (last resort, when there is no LAN)"
+        macosAddons -> victorEffects "HTTP proxy :55123 -> :55124 for /ping /sounds /sound /effect /alarm /bt-compensation /tiles /state"
+        vibeBoard -> victorEffects "GET /tiles through the proxy. The Mac's manifest outranks the tablet's bundled tiles.json, which is first-boot bootstrap only"
+        macosAddons -> phoneAddons "Bluetooth RFCOMM/SPP channel 9, which trips the Samsung hotspot routine"
+
+        # --- Mac desktop ---
+        addonsChromeExt -> macosAddons "WebSocket ws://127.0.0.1:8766 (dictation)"
+        addonsChromeExt -> macosAddons "HTTP :55123/feedback-form/*"
+        macosAddons -> workshop "POST 127.0.0.1:1234/feedback-form"
+        macosAddons -> transcripts "Writes Whisper output to"
+        trainingDaemon -> transcripts "Reads and tracks deltas of normalized transcripts from"
+        victorVsc -> macosAddons "POST :55123/intellij/file-opened"
+        liveCoding -> macosAddons "POST :55123/intellij/file-opened"
+        macosAddons -> macKit "SwiftPM path dependency on ../victor-mac-kit"
+        walkieTalkie -> macKit "SwiftPM path dependency on ../victor-mac-kit"
+
+        # --- dictation -> agent ---
+        walkieTalkie -> wtChromeExt "HTTP loopback :8917-8919 (/pick) and WebSocket :8920 (music bridge)"
+        walkieTalkie -> liveCoding "POST to 127.0.0.1 on an ephemeral port published in ~/.walkie-talkie/ide/intellij-PID.json, authenticated with x-relay-token"
+        walkieTalkie -> victorVsc "POST to 127.0.0.1 on an ephemeral port published in ~/.walkie-talkie/ide/vscode-PID.json"
+        walkieTalkie -> terminalApp "AppleScript `do script`, or tmux send-keys addressed at a pane"
+        terminalApp -> claudeCode "Runs interactive sessions"
+
+        # --- browser / Gmail ---
+        gmailAddons -> gmailDarkCss "Reads ../gmail-dark-css/gmail.user.css off disk, live, with no extension reload"
+        gmailAddons -> claudeCode "Subprocess `claude -p --model claude-sonnet-5`, which reaches Gmail over MCP"
+
+        # --- Claude Code as a participant, not just a tool ---
+        claudeCode -> macosAddons "HTTP :55123/hands-off/{start,end,state} from the PreToolUse hook via ~/bin/hands-off"
+        victorStatusline -> claudeCode "Symlinked in as ~/.claude/statusline-command.sh"
+        victorSkills -> claudeCode "Plugin marketplaces: one git source, one local directory"
+        claudeUsage -> claudeCode "Reads ~/.claude/projects/** transcripts"
     }
 
     views {
+        systemLandscape "C1Ecosystem" "Every personal tool and the channel each integration actually runs over. Islands on the right are connected to nothing." {
+            include workshop macosAddons victorEffects vibeBoard phoneAddons macKit
+            include walkieTalkie wtChromeExt addonsChromeExt liveCoding victorVsc
+            include victorStatusline gmailAddons gmailDarkCss claudeCode claudeUsage
+            include victorSkills terminalApp transcripts
+            include victorCarduri codeCity codeSearch agenticHow agenticWiki personalSite
+            autoLayout lr
+        }
+
+        systemLandscape "C2EcosystemMac" "The Mac cluster on its own, where the ports matter: addons is the switchboard every other piece dials." {
+            include macosAddons victorEffects vibeBoard phoneAddons macKit
+            include addonsChromeExt victorVsc liveCoding claudeCode workshop transcripts
+            autoLayout lr
+        }
+
         systemContext workshop "C1SystemContext" "Overall system context." {
             include *
             autoLayout lr
@@ -259,6 +348,14 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
             element "Component" {
                 background "#d6e8c8"
                 color "#10210f"
+            }
+            element "Ecosystem" {
+                background "#2c5f8a"
+                color "#ffffff"
+            }
+            element "Island" {
+                background "#8d99a6"
+                color "#ffffff"
             }
         }
     }

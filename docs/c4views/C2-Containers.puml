@@ -25,6 +25,7 @@ System(GoogleDrive, "Google Drive", $descr="Hosts exported slide PDFs consumed b
 System(AgentMail, "AgentMail", $descr="Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks.", $tags="", $link="")
 System(Hostsessionfiles, "Host session files", $descr="Session folders, normalized transcripts, ai-summary.md, uploaded files, and slide manifests on the trainer's Mac.", $tags="", $link="")
 System(LocalChromaDBstore, "Local ChromaDB store", $descr="~/.workshop-rag/chroma — background-indexed local materials.", $tags="", $link="")
+System(Whispertranscripts, "Whisper transcripts", $descr="~/Documents/transcriptions/ -- files on disk, written by the Mac and read by the daemon.", $tags="", $link="")
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
   Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from Railway session routes.", $tags="", $link="")
@@ -33,6 +34,8 @@ System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interacti
   Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI + embedded FastAPI", $descr="Local source of truth for host control, live state, persistence, and AI-assisted jobs.", $tags="", $link="")
 }
 
+Rel(victormacosaddons, Whispertranscripts, "Writes Whisper output to", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, Whispertranscripts, "Reads and tracks deltas of normalized transcripts from", $techn="", $tags="", $link="")
 Rel(Participant, WorkshopLiveInteractionTool.ParticipantSPA, "Uses in browser", $techn="", $tags="", $link="")
 Rel(Host, WorkshopLiveInteractionTool.HostSPA, "Uses in browser", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.ParticipantSPA, WorkshopLiveInteractionTool.RailwayBackend, "Calls session-scoped REST and WebSocket APIs", $techn="", $tags="", $link="")
@@ -41,7 +44,7 @@ Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.TrainingDae
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, WorkshopLiveInteractionTool.RailwayBackend, "Synchronizes active session, participant events, uploads, and generated static assets", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, AnthropicClaudeAPI, "Requests debate cleanup and code-review smart-paste extraction", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, GitHubAPI, "Resolves opened-file blob links against repo trees and blobs", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon, victormacosaddons, "Receives slide events and sends emoji/session notifications", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon, victormacosaddons, "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / pdf_export_alarm", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, AgentMail, "Sends best-effort email notifications via AgentMail SDK", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, Hostsessionfiles, "Reads and writes session folders, transcripts, and summary files", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon, LocalChromaDBstore, "Indexes local materials in the background", $techn="", $tags="", $link="")
