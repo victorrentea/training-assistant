@@ -57,9 +57,16 @@ Ports and transports were read out of code, not out of prose. The sources:
 | hands-off gate | `~/bin/hands-off`, `victor-macos-addons/docs/hands-off.md` |
 | hotspot over Bluetooth SPP, channel 9 | `victor-macos-addons/docs/hotspot-fallback.md`, `victor-phone-addons/CLAUDE.md` |
 
-**Known to be moving:** the tablet is being changed to adopt the Mac's tile manifest at
-reconnect, and usage counts are moving to the Mac. Those two edges will be wrong until the
-next pass re-derives them.
+**Landed 2026-09-12, and it corrected the model:** the tablet now adopts the Mac's tile
+manifest at reconnect, and the press counts moved to the Mac (`UsageCounts`,
+`~/.victor-effects/usage.json`). Both are tablet-initiated HTTP pulls on `:55123`, proxied
+verbatim to `:55124`, gated on hashes the tablet reads from a 5-second `GET /ping` —
+`soundsHash`, `tilesHash`, `effectsHash`, `usageHash`.
+
+The correction: the model carried a `victor-macos-addons -> victor-vibe-board` edge for the
+WSS relay, which implied the Mac dials the tablet. It never does. The relay is the last rung
+of the tablet's own transport ladder, not a direction of its own, so that edge is gone and
+the ladder carries it.
 
 The grey boxes on the right of `C1Ecosystem` are islands — tools that integrate with nothing
 else Victor runs. That is information, not an omission.

@@ -27,10 +27,11 @@ graph LR
     5["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Local Mac bridge that emits<br />slide and IDE file-open<br />events, and receives<br />emoji/session notifications.</div>"]
     style 5 fill:#1d6f42,stroke:#144d2e,color:#ffffff
 
-    142-. "<div>HTTP :55123, over the first<br />transport that answers: adb<br />reverse (USB) -> LAN -> mDNS<br />Victor-Mac.local -> WSS relay</div><div style='font-size: 70%'></div>" .->5
-    5-. "<div>WSS<br />wss://interact.victorrentea.ro/ws/bridge/tablet<br />(last resort, when there is<br />no LAN)</div><div style='font-size: 70%'></div>" .->142
-    5-. "<div>HTTP proxy :55123 -> :55124<br />for /ping /sounds /sound<br />/effect /alarm<br />/bt-compensation /tiles<br />/state</div><div style='font-size: 70%'></div>" .->141
-    142-. "<div>GET /tiles through the proxy.<br />The Mac's manifest outranks<br />the tablet's bundled<br />tiles.json, which is<br />first-boot bootstrap only</div><div style='font-size: 70%'></div>" .->141
+    142-. "<div>HTTP :55123. Tablet-initiated<br />in every case -- the Mac<br />never dials the tablet. First<br />transport that answers: adb<br />reverse (USB) -> LAN -> mDNS<br />Victor-Mac.local -> WSS relay<br />wss://interact.victorrentea.ro/ws/bridge/tablet</div><div style='font-size: 70%'></div>" .->5
+    142-. "<div>GET /ping every 5s carrying<br />soundsHash / tilesHash /<br />effectsHash / usageHash --<br />the change detector every<br />other pull hangs off</div><div style='font-size: 70%'></div>" .->5
+    5-. "<div>HTTP proxy :55123 -> :55124,<br />forwarded verbatim: /ping<br />/sounds /sound /effect /alarm<br />/bt-compensation /tiles<br />/state /usage</div><div style='font-size: 70%'></div>" .->141
+    142-. "<div>GET /tiles when tilesHash or<br />effectsHash moves: tiles.json<br />enriched with an effect name<br />per tile. Cached at<br />filesDir/tiles-from-mac.json<br />and preferred over the APK's<br />bundled assets/tiles.json at<br />launch. GET /tiles/IMAGE for<br />a picture the APK does not<br />ship</div><div style='font-size: 70%'></div>" .->141
+    142-. "<div>Press counts: reported by GET<br />/sound/pressed/FILE and<br />/alarm/start, read back by<br />GET /usage when usageHash<br />moves. The counter lives on<br />the Mac (UsageCounts,<br />~/.victor-effects/usage.json)<br />and also takes the Mac<br />panel's own presses. Seed<br />once with<br />/usage/import?counts=a:n<br />(max-merge), clear with<br />/usage/reset</div><div style='font-size: 70%'></div>" .->141
     5-. "<div>Bluetooth RFCOMM/SPP channel<br />9, which trips the Samsung<br />hotspot routine</div><div style='font-size: 70%'></div>" .->143
     147-. "<div>WebSocket ws://127.0.0.1:8766<br />(dictation)</div><div style='font-size: 70%'></div>" .->5
     147-. "<div>HTTP :55123/feedback-form/*</div><div style='font-size: 70%'></div>" .->5

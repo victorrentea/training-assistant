@@ -199,10 +199,11 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         personalSite    = softwareSystem "victorrentea.ro" "Personal static site." "Island"
 
         # --- tablet <-> Mac ---
-        vibeBoard -> macosAddons "HTTP :55123, over the first transport that answers: adb reverse (USB) -> LAN -> mDNS Victor-Mac.local -> WSS relay"
-        macosAddons -> vibeBoard "WSS wss://interact.victorrentea.ro/ws/bridge/tablet (last resort, when there is no LAN)"
-        macosAddons -> victorEffects "HTTP proxy :55123 -> :55124 for /ping /sounds /sound /effect /alarm /bt-compensation /tiles /state"
-        vibeBoard -> victorEffects "GET /tiles through the proxy. The Mac's manifest outranks the tablet's bundled tiles.json, which is first-boot bootstrap only"
+        vibeBoard -> macosAddons "HTTP :55123. Tablet-initiated in every case -- the Mac never dials the tablet. First transport that answers: adb reverse (USB) -> LAN -> mDNS Victor-Mac.local -> WSS relay wss://interact.victorrentea.ro/ws/bridge/tablet"
+        vibeBoard -> macosAddons "GET /ping every 5s carrying soundsHash / tilesHash / effectsHash / usageHash -- the change detector every other pull hangs off"
+        macosAddons -> victorEffects "HTTP proxy :55123 -> :55124, forwarded verbatim: /ping /sounds /sound /effect /alarm /bt-compensation /tiles /state /usage"
+        vibeBoard -> victorEffects "GET /tiles when tilesHash or effectsHash moves: tiles.json enriched with an effect name per tile. Cached at filesDir/tiles-from-mac.json and preferred over the APK's bundled assets/tiles.json at launch. GET /tiles/IMAGE for a picture the APK does not ship"
+        vibeBoard -> victorEffects "Press counts: reported by GET /sound/pressed/FILE and /alarm/start, read back by GET /usage when usageHash moves. The counter lives on the Mac (UsageCounts, ~/.victor-effects/usage.json) and also takes the Mac panel's own presses. Seed once with /usage/import?counts=a:n (max-merge), clear with /usage/reset"
         macosAddons -> phoneAddons "Bluetooth RFCOMM/SPP channel 9, which trips the Samsung hotspot routine"
 
         # --- Mac desktop ---
