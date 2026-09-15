@@ -81,23 +81,36 @@ function buildFolderList(folders, today) {
     </div>`;
 }
 
+// Folder names start with a date prefix, then the topic:
+//   2026-09-15 T | 2026-09-14..15 T | 2026-08-31..1 T (rolls into next month)
+//   2026-09-4+9 T (two separate days) | 2026-08-31..09-01 T | 2026-12-31..2027-01-02 T
+// Days may have one or two digits. Mirrors daemon/config.py::parse_session_folder_dates.
+const FOLDER_DATE_RE = /^((\d{4})-(\d{2})-(\d{1,2})(?:(\.\.|\+)(?:(\d{4})-(\d{2})-(\d{1,2})|(\d{2})-(\d{1,2})|(\d{1,2})))?)(?:\s+(.+))?$/;
+
 function parseFolderDates(f) {
-  // Range: YYYY-MM-DD..DD topic (same month)
-  let m = f.match(/^((\d{4}-\d{2})-(\d{2})\.\.(\d{2}))\s+(.+)$/);
-  if (m) return {dateStr: m[1], dates: [m[2] + '-' + m[3], m[2] + '-' + m[4]], topic: m[5]};
-  // Two days: YYYY-MM-DD+DD topic (same month, non-consecutive)
-  m = f.match(/^((\d{4}-\d{2})-(\d{2})\+(\d{2}))\s+(.+)$/);
-  if (m) return {dateStr: m[1], dates: [m[2] + '-' + m[3], m[2] + '-' + m[4]], topic: m[5]};
-  // Range: YYYY-MM-DD..YYYY-MM-DD topic
-  m = f.match(/^((\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2}))\s+(.+)$/);
-  if (m) return {dateStr: m[1], dates: [m[2], m[3]], topic: m[4]};
-  // Single date: YYYY-MM-DD topic
-  m = f.match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);
-  if (m) return {dateStr: m[1], dates: [m[1]], topic: m[2]};
-  // Single date only (no topic)
-  m = f.match(/^(\d{4}-\d{2}-\d{2})$/);
-  if (m) return {dateStr: m[1], dates: [m[1]], topic: ''};
-  return {dateStr: '', dates: [], topic: f};
+  const m = f.match(FOLDER_DATE_RE);
+  if (!m) return {dateStr: '', dates: [], topic: f};
+  const [, dateStr, y, mo, d, sep, ey, em, ed, em2, ed2, ed3, topic] = m;
+  const start = Date.UTC(+y, +mo - 1, +d);
+  let end = start;
+  if (ey) {
+    end = Date.UTC(+ey, +em - 1, +ed);
+  } else if (em2) {
+    end = Date.UTC(+y, +em2 - 1, +ed2);
+    if (end < start) end = Date.UTC(+y + 1, +em2 - 1, +ed2);
+  } else if (ed3) {
+    end = Date.UTC(+y, +mo - 1, +ed3);
+    if (end <= start) end = Date.UTC(+y, +mo, +ed3);  // bare day ≤ start day: next month
+  }
+  const DAY = 86400000;
+  const iso = t => new Date(t).toISOString().slice(0, 10);
+  const dates = [];
+  if (sep === '+' || end < start) {
+    dates.push(iso(start), iso(end));
+  } else {
+    for (let t = start; t <= end && dates.length < 62; t += DAY) dates.push(iso(t));
+  }
+  return {dateStr, dates, topic: topic || ''};
 }
 
 function _esc(str) {

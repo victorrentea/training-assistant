@@ -6,7 +6,7 @@ is fully regenerated from the canonical participant enumerator
 or hand-edit-preservation logic.
 
 Header is derived from the session folder name + the date(s) parsed by
-`_SESSION_FOLDER_RE` (there is no structured session metadata) plus an optional
+`parse_session_folder_dates` (there is no structured session metadata) plus an optional
 Google Drive URL.
 
 Anonymous / auto-assigned fictional names (LOTR + conference character pools)
@@ -92,18 +92,13 @@ def _parse_header(folder: Path | None) -> tuple[str, str | None]:
     if folder is None:
         return "Session", None
     name = folder.name
-    from daemon.config import _SESSION_FOLDER_RE
+    from daemon.config import parse_session_folder_dates
 
-    m = _SESSION_FOLDER_RE.match(name)
-    date_line: str | None = None
-    if m:
-        start = m.group(1)
-        end = m.group(2)
-        if end:
-            # end may be a bare day ("25") or month-day ("06-25"); render as a range.
-            date_line = f"{start} .. {end}"
-        else:
-            date_line = start
+    try:
+        dates = parse_session_folder_dates(name)
+    except ValueError:
+        dates = None
+    date_line = dates.label() if dates else None
     return name, date_line
 
 

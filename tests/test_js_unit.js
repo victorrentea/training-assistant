@@ -296,6 +296,55 @@ assert(
   hostJsSource.includes('host-top-title-at')
 );
 
+
+// --- from host-landing.js ---
+const FOLDER_DATE_RE = /^((\d{4})-(\d{2})-(\d{1,2})(?:(\.\.|\+)(?:(\d{4})-(\d{2})-(\d{1,2})|(\d{2})-(\d{1,2})|(\d{1,2})))?)(?:\s+(.+))?$/;
+
+function parseFolderDates(f) {
+  const m = f.match(FOLDER_DATE_RE);
+  if (!m) return {dateStr: '', dates: [], topic: f};
+  const [, dateStr, y, mo, d, sep, ey, em, ed, em2, ed2, ed3, topic] = m;
+  const start = Date.UTC(+y, +mo - 1, +d);
+  let end = start;
+  if (ey) {
+    end = Date.UTC(+ey, +em - 1, +ed);
+  } else if (em2) {
+    end = Date.UTC(+y, +em2 - 1, +ed2);
+    if (end < start) end = Date.UTC(+y + 1, +em2 - 1, +ed2);
+  } else if (ed3) {
+    end = Date.UTC(+y, +mo - 1, +ed3);
+    if (end <= start) end = Date.UTC(+y, +mo, +ed3);  // bare day ≤ start day: next month
+  }
+  const DAY = 86400000;
+  const iso = t => new Date(t).toISOString().slice(0, 10);
+  const dates = [];
+  if (sep === '+' || end < start) {
+    dates.push(iso(start), iso(end));
+  } else {
+    for (let t = start; t <= end && dates.length < 62; t += DAY) dates.push(iso(t));
+  }
+  return {dateStr, dates, topic: topic || ''};
+}
+
+// ═══ parseFolderDates ═══
+suite('parseFolderDates (host-landing.js)');
+assertEq('single day', parseFolderDates('2026-09-15 AI@Acme'),
+  {dateStr: '2026-09-15', dates: ['2026-09-15'], topic: 'AI@Acme'});
+assertEq('consecutive days, bare end day', parseFolderDates('2026-09-14..15 AI@Konecranes'),
+  {dateStr: '2026-09-14..15', dates: ['2026-09-14', '2026-09-15'], topic: 'AI@Konecranes'});
+assertEq('two separate single-digit days', parseFolderDates('2026-09-4+9 AI@Nice'),
+  {dateStr: '2026-09-4+9', dates: ['2026-09-04', '2026-09-09'], topic: 'AI@Nice'});
+assertEq('range rolling into next month', parseFolderDates('2026-08-31..1 AI@Adobe'),
+  {dateStr: '2026-08-31..1', dates: ['2026-08-31', '2026-09-01'], topic: 'AI@Adobe'});
+assertEq('three-day range lists the middle day', parseFolderDates('2026-09-10..12 X').dates,
+  ['2026-09-10', '2026-09-11', '2026-09-12']);
+assertEq('MM-DD end', parseFolderDates('2026-08-31..09-01 X').dates, ['2026-08-31', '2026-09-01']);
+assertEq('full end date across year', parseFolderDates('2026-12-31..2027-01-01 X').dates,
+  ['2026-12-31', '2027-01-01']);
+assertEq('date only, no topic', parseFolderDates('2026-09-15'),
+  {dateStr: '2026-09-15', dates: ['2026-09-15'], topic: ''});
+assertEq('no date prefix', parseFolderDates('Random'), {dateStr: '', dates: [], topic: 'Random'});
+
 // ── host-landing regressions (source-level guards) ───────────────────
 suite('host-landing regressions');
 

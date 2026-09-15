@@ -6,7 +6,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -86,9 +86,71 @@ def config_from_env(minutes: int = DEFAULT_MINUTES) -> "Config":
     )
 
 
+# Session folder names start with a date prefix, then a space/underscore and the topic:
+#   2026-09-15 Topic            one day
+#   2026-09-14..15 Topic        consecutive days (bare end day, same month)
+#   2026-08-31..1 Topic         consecutive days rolling into the next month
+#   2026-09-4+9 Topic           two separate, non-consecutive days
+#   2026-08-31..09-01 Topic     end given as MM-DD
+#   2026-12-31..2027-01-02 T    end given as a full date
+# Days may be written with one or two digits.
 _SESSION_FOLDER_RE = re.compile(
-    r"^[^0-9]*(\d{4}-\d{2}-\d{2})(?:\.\.(\d{2}(?:-\d{2})?))?[\s_]"
+    r"^[^0-9]*(\d{4})-(\d{2})-(\d{1,2})"
+    r"(?:(\.\.|\+)(?:(\d{4})-(\d{2})-(\d{1,2})|(\d{2})-(\d{1,2})|(\d{1,2})))?"
+    r"(?=[\s_]|$)"
 )
+
+
+@dataclass(frozen=True)
+class SessionFolderDates:
+    """The day(s) a session folder name says the session runs on."""
+
+    start: date
+    end: date
+    consecutive: bool  # ".." = every day from start to end; "+" = only the two days
+
+    def covers(self, day: date) -> bool:
+        if self.consecutive:
+            return self.start <= day <= self.end
+        return day in (self.start, self.end)
+
+    def label(self) -> str:
+        if self.start == self.end:
+            return self.start.isoformat()
+        sep = " .. " if self.consecutive else " + "
+        return f"{self.start.isoformat()}{sep}{self.end.isoformat()}"
+
+
+def parse_session_folder_dates(name: str) -> Optional[SessionFolderDates]:
+    """Parse the date prefix of a session folder name; None if it has none.
+
+    A bare end day at or before the start day rolls into the next month
+    ("2026-08-31..1" is Aug 31 to Sep 1); a MM-DD end before the start month
+    rolls into the next year. Raises ValueError for a non-existent date or an
+    end before the start.
+    """
+    m = _SESSION_FOLDER_RE.match(name)
+    if not m:
+        return None
+    y, mo, d, sep, ey, em, ed, em2, ed2, ed3 = m.groups()
+    start = date(int(y), int(mo), int(d))
+    if sep is None:
+        return SessionFolderDates(start, start, True)
+    if ey:
+        end = date(int(ey), int(em), int(ed))
+    elif em2:
+        end = date(start.year, int(em2), int(ed2))
+        if end < start:
+            end = end.replace(year=start.year + 1)
+    else:
+        end_day = int(ed3)
+        if end_day > start.day:
+            end = date(start.year, start.month, end_day)
+        else:
+            end = (start.replace(day=1) + timedelta(days=32)).replace(day=end_day)
+    if end < start:
+        raise ValueError(f"end {end} < start {start}")
+    return SessionFolderDates(start, end, sep == "..")
 
 MAX_SESSION_NOTES_CHARS = 20_000
 
@@ -108,30 +170,13 @@ def find_session_folder(today: date) -> tuple[Optional[Path], Optional[Path]]:
     for entry in sessions_root.iterdir():
         if not entry.is_dir():
             continue
-        m = _SESSION_FOLDER_RE.match(entry.name)
-        if not m:
-            continue
         try:
-            start = date.fromisoformat(m.group(1))
-        except ValueError:
+            dates = parse_session_folder_dates(entry.name)
+        except ValueError as e:
+            log.error("session", f"Invalid dates in folder name {entry.name!r}: {e}")
             continue
-        g2 = m.group(2)
-        try:
-            if g2 is None:
-                end = start
-            elif "-" in g2:
-                mm, dd = g2.split("-")
-                end = date(start.year, int(mm), int(dd))
-            else:
-                end = date(start.year, start.month, int(g2))
-        except ValueError:
-            log.error("session", f"Invalid end date in: {entry.name}")
-            continue
-        if end < start:
-            log.error("session", f"End < start in: {entry.name}")
-            continue
-        if start <= today <= end:
-            matches.append((start, entry.name, entry))
+        if dates is not None and dates.covers(today):
+            matches.append((dates.start, entry.name, entry))
 
     if not matches:
         return None, None

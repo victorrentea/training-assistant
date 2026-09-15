@@ -4058,7 +4058,7 @@ function formatSessionTitle(name) {
 }
 
 function formatHostTopTitleHtml(name) {
-  const cleaned = String(name || '').replace(/^\d{4}-\d{2}-\d{2}[^\s]*\s*/, '');
+  const cleaned = String(name || '').replace(/^\d{4}-\d{2}-\d{1,2}[^\s]*\s*/, '');
   if (!cleaned.includes('@')) return _esc(cleaned);
   return _esc(cleaned).replace(/@/g, '<span class="host-top-title-at"> @ </span>');
 }

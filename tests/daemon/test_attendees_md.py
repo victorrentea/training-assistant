@@ -22,7 +22,7 @@ class TestRender:
         folder = tmp_path / "2026-07-24..25 AcmeCorp Workshop"
         folder.mkdir()
         out = attendees_md.render_attendees_md(folder, [_p("Bob")], None)
-        assert "2026-07-24 .. 25" in out
+        assert "2026-07-24 .. 2026-07-25" in out
 
     def test_gdrive_url_in_header(self, tmp_path):
         folder = tmp_path / "2026-07-24 Session"
