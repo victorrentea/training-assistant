@@ -1,37 +1,25 @@
-"""Tests for auto-created session notes file (create_notes_file)."""
+from pathlib import Path
 
-from daemon.session_state import create_notes_file, find_notes_in_folder
+from daemon.session_state import TRANSCRIPTION_DISCLOSURE, create_notes_file
 
 
-def test_create_notes_file_uses_folder_name(tmp_path):
-    folder = tmp_path / "2026-06-05 AI@Acme#1"
+def test_new_notes_file_starts_with_transcription_disclosure(tmp_path: Path):
+    folder = tmp_path / "2026-09-15 Clean Code"
     folder.mkdir()
 
     notes = create_notes_file(folder)
 
-    assert notes.name == "2026-06-05 AI@Acme#1 - notes.txt"
-    assert notes.exists()
-    # First line is the file's own name (self-labelling header).
-    assert notes.read_text(encoding="utf-8") == "2026-06-05 AI@Acme#1 - notes.txt\n"
+    lines = notes.read_text(encoding="utf-8").splitlines()
+    assert lines[0] == TRANSCRIPTION_DISCLOSURE
+    assert "transcribed" in lines[0]
+    assert lines[1] == "2026-09-15 Clean Code - notes.txt"
 
 
-def test_created_notes_file_is_discovered(tmp_path):
-    folder = tmp_path / "2026-06-05 AI@Acme#1"
+def test_existing_notes_file_is_not_clobbered(tmp_path: Path):
+    folder = tmp_path / "s"
     folder.mkdir()
-    assert find_notes_in_folder(folder) is None
+    existing = folder / "s - notes.txt"
+    existing.write_text("my notes\n", encoding="utf-8")
 
-    notes = create_notes_file(folder)
-
-    assert find_notes_in_folder(folder) == notes
-
-
-def test_create_notes_file_never_clobbers_existing(tmp_path):
-    folder = tmp_path / "2026-06-05 AI@Acme#1"
-    folder.mkdir()
-    notes = create_notes_file(folder)
-    notes.write_text("trainer typed this", encoding="utf-8")
-
-    again = create_notes_file(folder)
-
-    assert again == notes
-    assert again.read_text(encoding="utf-8") == "trainer typed this"
+    assert create_notes_file(folder) == existing
+    assert existing.read_text(encoding="utf-8") == "my notes\n"

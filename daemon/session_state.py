@@ -501,16 +501,25 @@ def find_notes_in_folder(folder: Path) -> Path | None:
     return txt_files[-1] if txt_files else None
 
 
+TRANSCRIPTION_DISCLOSURE = (
+    "This meeting is being transcribed in order to generate a summary of it at the end."
+)
+
+
 def create_notes_file(folder: Path) -> Path:
     """Create a notes file named '<folder name> - notes.txt' and return it.
 
-    The file's first line is its own filename, so the notes are self-labelling when
-    opened or exported. Called at session start when no .txt notes file exists yet, so
-    the trainer always has a notes file to write into. Never clobbers an existing file.
+    The first line is a recording disclosure: the file is auto-opened on the trainer's
+    screen (shared with the room), so participants are told up front that the meeting is
+    transcribed. The second line is the file's own name, so the notes are self-labelling
+    when opened or exported. Called at session start when no .txt notes file exists yet,
+    so the trainer always has a notes file to write into. Never clobbers an existing file.
     """
     notes_file = folder / f"{folder.name} - notes.txt"
     if not notes_file.exists():
-        notes_file.write_text(f"{notes_file.name}\n", encoding="utf-8")
+        notes_file.write_text(
+            f"{TRANSCRIPTION_DISCLOSURE}\n{notes_file.name}\n", encoding="utf-8"
+        )
     return notes_file
 
 
