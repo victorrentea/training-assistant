@@ -64,10 +64,10 @@ def tile_label(tile: dict) -> str:
     return (rest or stem).replace("_", " ")
 
 
-def find_tile(n: int) -> dict | None:
+async def find_tile(n: int) -> dict | None:
     """The catalog row for tile ``n``, or None when the apps are down or the
     number is not in the manifest."""
-    for tile in effects_client.fetch_tiles() or []:
+    for tile in await effects_client.fetch_tiles() or []:
         if tile.get("n") == n:
             return tile
     return None
@@ -99,7 +99,7 @@ def _check_token(token: str) -> None:
         raise HTTPException(status_code=404)
 
 
-def _effects_reachable() -> bool:
+async def _effects_reachable() -> bool:
     """Whether the next press is expected to work — not just whether the apps
     answer a ping.
 
@@ -111,7 +111,7 @@ def _effects_reachable() -> bool:
     later attempt succeeds again — so /info never tells the page a press would
     work when the last one just proved otherwise.
     """
-    if not effects_client.is_up():
+    if not await effects_client.is_up():
         return False
     return participant_state.fx_last_press_ok is not False
 
@@ -152,7 +152,7 @@ async def fx_info(token: str):
     toggle reaches it without a reload."""
     _check_token(token)
     n = participant_state.fx_tile_n
-    tile = find_tile(n) or {}
+    tile = await find_tile(n) or {}
     return FxInfoResponse(
         tile_n=n,
         label=tile_label(tile) if tile else f"tile {n}",
@@ -160,7 +160,7 @@ async def fx_info(token: str):
         enabled=participant_state.fx_enabled,
         cooldown_seconds=participant_state.fx_cooldown_seconds,
         ready_in_seconds=cooldown_remaining(),
-        effects_up=_effects_reachable(),
+        effects_up=await _effects_reachable(),
         tile_available=bool(tile),
     )
 
@@ -180,11 +180,11 @@ async def fx_fire(token: str):
         return FxFireResponse(fired=False, reason="cooling", ready_in_seconds=remaining)
 
     n = participant_state.fx_tile_n
-    tile = find_tile(n)
+    tile = await find_tile(n)
     if tile is None:
         return FxFireResponse(fired=False, reason="no-tile", ready_in_seconds=0)
 
-    if not effects_client.press_tile(n):
+    if not await effects_client.press_tile(n):
         # A press that did not happen must not start a cooldown — otherwise a
         # closed soundboard locks the button for ten seconds per attempt.
         # It does, however, update what /info believes: see _effects_reachable().
@@ -262,10 +262,10 @@ def _ensure_token() -> str:
     return participant_state.fx_token
 
 
-def _state_response() -> FxStateResponse:
+async def _state_response() -> FxStateResponse:
     token = _ensure_token()
     n = participant_state.fx_tile_n
-    tile = find_tile(n) or {}
+    tile = await find_tile(n) or {}
     return FxStateResponse(
         enabled=participant_state.fx_enabled,
         token=token,
@@ -275,14 +275,14 @@ def _state_response() -> FxStateResponse:
         effect=tile.get("effect"),
         cooldown_seconds=participant_state.fx_cooldown_seconds,
         last_fired_at=participant_state.fx_last_fired_at,
-        effects_up=_effects_reachable(),
+        effects_up=await _effects_reachable(),
     )
 
 
 @host_router.get("/state", response_model=FxStateResponse)
 async def fx_state():
     """Everything the footer badge and its popover render."""
-    return _state_response()
+    return await _state_response()
 
 
 @host_router.get("/catalog", response_model=FxCatalogResponse)
@@ -294,7 +294,7 @@ async def fx_catalog():
     be wrong by the next workshop. A closed soundboard is an empty catalog, not
     an error — the popover says so itself.
     """
-    tiles = effects_client.fetch_tiles() or []
+    tiles = await effects_client.fetch_tiles() or []
     return FxCatalogResponse(tiles=[
         FxTile(
             n=int(t.get("n", 0)),
@@ -313,18 +313,18 @@ async def fx_toggle():
     participant_state.fx_enabled = not participant_state.fx_enabled
     participant_state.persist()
     daemon_log.info("host", f"🎛️ fx link {'armed' if participant_state.fx_enabled else 'disarmed'}")
-    return _state_response()
+    return await _state_response()
 
 
 @host_router.post("/tile", response_model=FxStateResponse)
 async def fx_set_tile(body: FxTileRequest):
     """Bind the link to a different tile."""
-    if find_tile(body.n) is None:
+    if await find_tile(body.n) is None:
         raise HTTPException(status_code=404, detail="Unknown tile")
     participant_state.fx_tile_n = body.n
     participant_state.persist()
     daemon_log.info("host", f"🎛️ fx link now fires tile {body.n}")
-    return _state_response()
+    return await _state_response()
 
 
 @host_router.post("/cooldown", response_model=FxStateResponse)
@@ -332,7 +332,7 @@ async def fx_set_cooldown(body: FxCooldownRequest):
     """Change how often the room may pull the lever."""
     participant_state.fx_cooldown_seconds = body.seconds
     participant_state.persist()
-    return _state_response()
+    return await _state_response()
 
 
 @host_router.post("/rotate", response_model=FxStateResponse)
@@ -342,7 +342,7 @@ async def fx_rotate():
     participant_state.fx_last_fired_mono = None
     participant_state.persist()
     daemon_log.info("host", "🎛️ fx link rotated — the old URL is dead")
-    return _state_response()
+    return await _state_response()
 
 
 @host_router.post("/test", response_model=FxFireResponse)
@@ -359,10 +359,10 @@ async def fx_test():
     _effects_reachable()), so after a failure the participant button stays
     disabled until a Test from here proves the wiring works again.
     """
-    tile = find_tile(participant_state.fx_tile_n)
+    tile = await find_tile(participant_state.fx_tile_n)
     if tile is None:
         return FxFireResponse(fired=False, reason="no-tile", ready_in_seconds=0)
-    if not effects_client.press_tile(participant_state.fx_tile_n):
+    if not await effects_client.press_tile(participant_state.fx_tile_n):
         participant_state.fx_last_press_ok = False
         return FxFireResponse(fired=False, reason="effects-down", ready_in_seconds=0)
     participant_state.fx_last_press_ok = True
