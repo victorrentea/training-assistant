@@ -68,27 +68,37 @@ duration. The Swift source documents the ordering as a scar from a real bug
 where a stop landed after the effect and wiped it. Re-implementing that in
 Python would duplicate the scar and drift.
 
-The one existing route that presses *by number*,
-`/test/thumbnail-panel/press/<n>`, answers `503 no-panel` unless the panel is
-open, so it cannot be used.
+That sequence already exists behind one route:
+`/test/thumbnail-panel/press/<n>` → `ThumbnailPanelController.pressTile`. It was
+verified on 2026-09-16 to work with **no panel open** —
+`GET :55124/test/thumbnail-panel/press/999` answers
+`{"ok":false,"n":999,"reason":"unknown-tile"}` — because `claimRouterHooks()`
+runs at launch and `pressTile` never consults the panel. The `no-panel` 503 is
+unreachable in the shipped app.
 
-Therefore victor-effects gains a panel-independent `GET /press/<n>`, and the
-daemon says only "press 69".
+Two things still make it unusable as-is: it lives under `/test/`, a name no
+production caller should depend on, and it is **not** in the addons proxy table,
+so it cannot be reached on `:55123`.
+
+Therefore victor-effects gains `GET /press/<n>` as a stable alias onto the same
+hook, addons proxies it, and the daemon says only "press 69". No refactor of
+`SoundboardPress` ownership is needed — the panel controller keeps the one
+instance, which is what makes the panel and the link agree about what is
+playing.
 
 ## Repository changes
 
 ### victor-effects
 
-- `EffectsRouter`: new case `GET /press/<n>` → look `n` up in `TilesManifest`;
-  404 `{"ok":false,"reason":"unknown-tile"}` on a miss; otherwise call the
-  shared `SoundboardPress.press(tile)` and return its JSON verbatim.
-- The press instance must be panel-independent (today it is owned by
-  `ThumbnailPanelController`). Hoist it so both the panel and the route share
-  one instance — two `SoundboardPress` objects would each keep their own
-  `playing`/`generation` and fight over stop-all.
-- Test through the existing `SoundboardDispatcher` protocol: assert the route
-  emits the four calls in order for a tile with a paired visual, and that an
-  unknown `n` dispatches nothing.
+- `EffectsRouter.route(forPath:)`: new prefix `/press/<n>` returning the
+  existing `.panelPress(n, .effects)`. Two lines, no new handler, no new case.
+  A comment records that `onPanelPress` is a historical name — the hook has
+  never needed a panel.
+- Unknown `n` keeps the current answer, `{"ok":false,"n":<n>,"reason":"unknown-tile"}`
+  at status 200. The daemon treats a body with `"ok":false` as a failure, since
+  this route reports misses in the body rather than the status line.
+- Test in `EffectsRouterTests`: `/press/69` parses to `.panelPress(69, .effects)`,
+  `/press/` and `/press/abc` parse to `.unknown`.
 
 ### victor-macos-addons
 
@@ -102,7 +112,8 @@ daemon says only "press 69".
 `addon_bridge_client`'s best-effort style — short timeouts, never raises,
 returns `bool`/`None`:
 
-- `press_tile(n: int) -> bool`
+- `press_tile(n: int) -> bool` — `GET /press/<n>`; False on a transport error
+  **or** on a 200 whose body carries `"ok": false`
 - `fetch_tiles() -> FxCatalog | None` — `GET /tiles`, cached on `effectsHash`
 - `fetch_tile_image(path: str) -> bytes | None`
 - `is_up() -> bool` — `GET /ping`, reads `effectsUp`
