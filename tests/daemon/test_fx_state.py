@@ -8,8 +8,9 @@ from daemon.participant.state import ParticipantState
 
 
 class TestDefaults:
-    def test_master_switch_starts_off(self):
-        assert ParticipantState().fx_enabled is False
+    def test_master_switch_starts_armed(self):
+        """The host wanted the link live the moment he copies it."""
+        assert ParticipantState().fx_enabled is True
 
     def test_default_tile_is_69(self):
         assert ParticipantState().fx_tile_n == 69
@@ -28,11 +29,11 @@ class TestDefaults:
 
 
 class TestReset:
-    def test_reset_forces_the_switch_back_off(self):
+    def test_reset_returns_the_switch_to_armed(self):
         ps = ParticipantState()
-        ps.fx_enabled = True
+        ps.fx_enabled = False
         ps.reset()
-        assert ps.fx_enabled is False
+        assert ps.fx_enabled is True
 
     def test_reset_drops_the_token_so_a_new_session_gets_a_new_link(self):
         ps = ParticipantState()
@@ -95,8 +96,9 @@ class TestRoundTrip:
         ps.fx_last_press_ok = False
         assert "fx_last_press_ok" not in ps.snapshot()
 
-    def test_a_snapshot_that_omits_the_switch_leaves_it_off(self):
-        """A legacy session-state.json must not accidentally arm the link."""
+    def test_a_snapshot_that_omits_the_switch_leaves_it_at_the_default(self):
+        """A legacy session-state.json predates the flag, so it inherits the
+        default rather than silently disarming a link the host expects to work."""
         restored = ParticipantState()
         restored.sync_from_restore({"mode": "workshop"})
-        assert restored.fx_enabled is False
+        assert restored.fx_enabled is True

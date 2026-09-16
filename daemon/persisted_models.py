@@ -202,7 +202,7 @@ class PersistedSessionState(PersistedModel):
     # ── Secret FX link ────────────────────────────────────────────────────
     # Declared explicitly (rather than relying on PersistedModel's extra="allow")
     # so the fields survive model_dump(exclude_unset=True) in save_session_state.
-    fx_enabled: bool = Field(default=False, description="Master switch for the secret FX link; resets OFF each session")
+    fx_enabled: bool = Field(default=True, description="Master switch for the secret FX link; armed by default each session")
     fx_token: str | None = Field(default=None, description="Secret FX link token (CSPRNG, 12 chars)")
     fx_tile_n: int = Field(default=69, description="Soundboard tile the FX link fires")
     fx_cooldown_seconds: int = Field(default=10, description="Minimum seconds between two FX triggers")

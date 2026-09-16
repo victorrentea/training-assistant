@@ -65,9 +65,12 @@ class ParticipantState:
         # ── Secret FX link ────────────────────────────────────────────────
         # A URL the host hands to two or three trusted people; opening it gives
         # them one button that presses a soundboard tile on this Mac.
-        # Like the attention switch this DEFAULTS OFF and resets OFF every
-        # session — a link from yesterday must not fire into this morning.
-        self.fx_enabled: bool = False
+        # DEFAULTS ON, unlike the attention switch next door: the host asked
+        # for the link to work the moment he copies it, without a second click.
+        # The trade he accepted: because this flag persists, a session that
+        # spans two days starts day two already armed with day one's link.
+        # The cooldown, not this switch, is what keeps the room in check.
+        self.fx_enabled: bool = True
         # Minted lazily the first time the host asks for the link, so a session
         # that never uses the feature never carries a credential. Persisted.
         self.fx_token: str | None = None
@@ -269,8 +272,8 @@ class ParticipantState:
             # Attention always starts OFF — every session is explicit opt-in.
             self.attention_enabled = False
             # The FX link is per session: a fresh token, the default tile, and
-            # the switch off until the host arms it.
-            self.fx_enabled = False
+            # the switch armed — the host disarms it if the room gets silly.
+            self.fx_enabled = True
             self.fx_token = None
             self.fx_tile_n = 69
             self.fx_cooldown_seconds = 10
