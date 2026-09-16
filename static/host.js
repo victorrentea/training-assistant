@@ -1063,11 +1063,27 @@
 
   async function rotateFxLink() {
     try {
-      applyFxState(await (await fetch(API('/fx/rotate'), { method: 'POST' })).json());
+      const r = await fetch(API('/fx/rotate'), { method: 'POST' });
+      if (!r.ok) throw new Error(r.status);
+      applyFxState(await r.json());
       const el = document.getElementById('fx-url');
       if (el) _showFooterCopiedTooltip(el, 'New link — the old one is dead');
     } catch (e) {
       console.error('fx rotate failed', e);
+      loadFxState();   // a failed rotate must not leave a dead link on screen
+    }
+  }
+
+  // /fx/test bypasses both the master switch and the cooldown, so 'disabled'
+  // and 'cooling' should never come back from it. If one does, that's a real
+  // divergence worth showing as-is rather than mislabeling it as "No tile".
+  function _fxTestFailLabel(reason) {
+    switch (reason) {
+      case 'effects-down': return 'No Mac';
+      case 'no-tile': return 'No tile';
+      case 'disabled': return 'Off?!';
+      case 'cooling': return 'Cooling?!';
+      default: return '? ' + (reason || 'unknown');
     }
   }
 
@@ -1076,7 +1092,7 @@
     if (btn) btn.disabled = true;
     try {
       const res = await (await fetch(API('/fx/test'), { method: 'POST' })).json();
-      if (!res.fired && btn) btn.textContent = res.reason === 'effects-down' ? 'No Mac' : 'No tile';
+      if (!res.fired && btn) btn.textContent = _fxTestFailLabel(res.reason);
       setTimeout(() => { if (btn) btn.textContent = 'Test'; }, 2000);
     } catch (e) {
       console.error('fx test failed', e);
@@ -1091,7 +1107,12 @@
     badge.style.transition = 'transform .18s ease';
     badge.style.transform = 'scale(1.35)';
     setTimeout(() => { badge.style.transform = ''; }, 200);
-    badge.title = 'FX link armed · #' + msg.tile_n + ' ' + msg.label + ' · last fired just now';
+    // Don't assert "armed" unconditionally — read it off the badge's own
+    // class list, which applyFxState() keeps in sync with the server, so a
+    // fire landing right as the host disarms the link doesn't lie about it.
+    const armed = badge.classList.contains('connected');
+    badge.title = (armed ? 'FX link armed' : 'FX link off')
+      + ' · #' + msg.tile_n + ' ' + msg.label + ' · last fired just now';
   }
 
   function renderLogLevelBadge() {
