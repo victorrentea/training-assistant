@@ -508,6 +508,25 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 
 ## Feature: Fx
 
+### Participant REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Fx Page, the trigger page; one button, and an honest account of why it is grey.<br>`GET /api/participant/fx/{token}` | - | `text/html: string` |
+| Fx Fire, press the selected tile, if all the brakes are off.<br>`POST /api/participant/fx/{token}/fire` | - | `fired: bool`<br>`reason: string`<br>`ready_in_seconds: int` |
+| Fx Image, artwork for the selected tile; the path handed to the effects app comes from the manifest that app served, never from the request — the token in the URL selects nothing but access.<br>`GET /api/participant/fx/{token}/image` | - | `any` |
+| Fx Info, what the page renders, and what an already-open tab polls for so a host toggle reaches it without a reload.<br>`GET /api/participant/fx/{token}/info` | - | `tile_n: int`<br>`label: string`<br>`effect?: string`<br>`enabled: bool`<br>`cooldown_seconds: int`<br>`ready_in_seconds: int`<br>`effects_up: bool` |
+
+### Host REST
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| Fx Catalog, the 91 tiles, read live from the Mac; built at request time rather than kept in a list here: adding a tile is a JSON entry plus an image in another repo, and a hand-maintained copy would be wrong by the next workshop; A closed soundboard is an empty catalog, not an error — the popover says so itself.<br>`GET /api/{session_id}/host/fx/catalog` | - | `tiles: list[FxTile{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`n:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`label:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`effect?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`image:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`has_effect:bool`<br>`}]` |
+| Fx Set Cooldown, change how often the room may pull the lever.<br>`POST /api/{session_id}/host/fx/cooldown` | `seconds: int` | `enabled: bool`<br>`token: string`<br>`url: string`<br>`tile_n: int`<br>`tile_label: string`<br>`effect?: string`<br>`cooldown_seconds: int`<br>`last_fired_at?: number`<br>`effects_up: bool` |
+| Fx Rotate, mint a new token, killing the current link immediately.<br>`POST /api/{session_id}/host/fx/rotate` | - | `enabled: bool`<br>`token: string`<br>`url: string`<br>`tile_n: int`<br>`tile_label: string`<br>`effect?: string`<br>`cooldown_seconds: int`<br>`last_fired_at?: number`<br>`effects_up: bool` |
+| Fx State, everything the footer badge and its popover render.<br>`GET /api/{session_id}/host/fx/state` | - | `enabled: bool`<br>`token: string`<br>`url: string`<br>`tile_n: int`<br>`tile_label: string`<br>`effect?: string`<br>`cooldown_seconds: int`<br>`last_fired_at?: number`<br>`effects_up: bool` |
+| Fx Test, fire the selected tile from the host page; deliberately ignores both brakes: you check the wiring precisely when the link is disarmed, and a cooldown meant for the room should not make the trainer wait; it does not start a cooldown either — testing must not take the lever away from someone holding the link.<br>`POST /api/{session_id}/host/fx/test` | - | `fired: bool`<br>`reason: string`<br>`ready_in_seconds: int` |
+| Fx Set Tile, bind the link to a different tile.<br>`POST /api/{session_id}/host/fx/tile` | `n: int` | `enabled: bool`<br>`token: string`<br>`url: string`<br>`tile_n: int`<br>`tile_label: string`<br>`effect?: string`<br>`cooldown_seconds: int`<br>`last_fired_at?: number`<br>`effects_up: bool` |
+| Fx Toggle, arm or disarm the link; off at the start of every session.<br>`POST /api/{session_id}/host/fx/toggle` | - | `enabled: bool`<br>`token: string`<br>`url: string`<br>`tile_n: int`<br>`tile_label: string`<br>`effect?: string`<br>`cooldown_seconds: int`<br>`last_fired_at?: number`<br>`effects_up: bool` |
+
 ### Host WS
 | Message | Payload |
 | --- | --- |

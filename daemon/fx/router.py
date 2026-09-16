@@ -16,10 +16,11 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from daemon import effects_client
 from daemon import log as daemon_log
+from daemon.fx.token import generate_fx_token
 from daemon.participant.state import participant_state
 
 logger = logging.getLogger(__name__)
@@ -186,3 +187,158 @@ async def fx_image(token: str):
     body, content_type = fetched
     return Response(content=body, media_type=content_type,
                     headers={"Cache-Control": "no-store"})
+
+
+# ── Host router (called directly on daemon loopback, like the attention host router) ──
+
+class FxTile(BaseModel):
+    n: int
+    label: str
+    effect: str | None
+    image: str
+    has_effect: bool
+
+
+class FxCatalogResponse(BaseModel):
+    tiles: list[FxTile]
+
+
+class FxStateResponse(BaseModel):
+    enabled: bool
+    token: str
+    url: str
+    tile_n: int
+    tile_label: str
+    effect: str | None
+    cooldown_seconds: int
+    last_fired_at: float | None
+    effects_up: bool
+
+
+class FxTileRequest(BaseModel):
+    n: int
+
+
+class FxCooldownRequest(BaseModel):
+    # Five minutes is already absurd for a party trick; the cap keeps a typo
+    # from parking the button for the rest of the workshop.
+    seconds: int = Field(ge=0, le=300)
+
+
+host_router = APIRouter(prefix="/api/{session_id}/host/fx", tags=["fx"])
+
+
+def _public_base_url() -> str:
+    """Where participants reach this workshop. Same source as the join link."""
+    return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
+
+
+def _ensure_token() -> str:
+    """This session's link token, minted on first use.
+
+    Lazy so a session that never opens the popover never carries a credential.
+    """
+    if not participant_state.fx_token:
+        participant_state.fx_token = generate_fx_token()
+        participant_state.persist()
+    return participant_state.fx_token
+
+
+def _state_response() -> FxStateResponse:
+    token = _ensure_token()
+    n = participant_state.fx_tile_n
+    tile = find_tile(n) or {}
+    return FxStateResponse(
+        enabled=participant_state.fx_enabled,
+        token=token,
+        url=f"{_public_base_url()}/fx/{token}",
+        tile_n=n,
+        tile_label=tile_label(tile) if tile else f"tile {n}",
+        effect=tile.get("effect"),
+        cooldown_seconds=participant_state.fx_cooldown_seconds,
+        last_fired_at=participant_state.fx_last_fired_at,
+        effects_up=effects_client.is_up(),
+    )
+
+
+@host_router.get("/state", response_model=FxStateResponse)
+async def fx_state():
+    """Everything the footer badge and its popover render."""
+    return _state_response()
+
+
+@host_router.get("/catalog", response_model=FxCatalogResponse)
+async def fx_catalog():
+    """The 91 tiles, read live from the Mac.
+
+    Built at request time rather than kept in a list here: adding a tile is a
+    JSON entry plus an image in another repo, and a hand-maintained copy would
+    be wrong by the next workshop. A closed soundboard is an empty catalog, not
+    an error — the popover says so itself.
+    """
+    tiles = effects_client.fetch_tiles() or []
+    return FxCatalogResponse(tiles=[
+        FxTile(
+            n=int(t.get("n", 0)),
+            label=tile_label(t),
+            effect=t.get("effect"),
+            image=str(t.get("image", "")),
+            has_effect=bool(t.get("effect")),
+        )
+        for t in tiles if isinstance(t.get("n"), int)
+    ])
+
+
+@host_router.post("/toggle", response_model=FxStateResponse)
+async def fx_toggle():
+    """Arm or disarm the link. Off at the start of every session."""
+    participant_state.fx_enabled = not participant_state.fx_enabled
+    participant_state.persist()
+    daemon_log.info("host", f"🎛️ fx link {'armed' if participant_state.fx_enabled else 'disarmed'}")
+    return _state_response()
+
+
+@host_router.post("/tile", response_model=FxStateResponse)
+async def fx_set_tile(body: FxTileRequest):
+    """Bind the link to a different tile."""
+    if find_tile(body.n) is None:
+        raise HTTPException(status_code=404, detail="Unknown tile")
+    participant_state.fx_tile_n = body.n
+    participant_state.persist()
+    daemon_log.info("host", f"🎛️ fx link now fires tile {body.n}")
+    return _state_response()
+
+
+@host_router.post("/cooldown", response_model=FxStateResponse)
+async def fx_set_cooldown(body: FxCooldownRequest):
+    """Change how often the room may pull the lever."""
+    participant_state.fx_cooldown_seconds = body.seconds
+    participant_state.persist()
+    return _state_response()
+
+
+@host_router.post("/rotate", response_model=FxStateResponse)
+async def fx_rotate():
+    """Mint a new token, killing the current link immediately."""
+    participant_state.fx_token = generate_fx_token()
+    participant_state.fx_last_fired_mono = None
+    participant_state.persist()
+    daemon_log.info("host", "🎛️ fx link rotated — the old URL is dead")
+    return _state_response()
+
+
+@host_router.post("/test", response_model=FxFireResponse)
+async def fx_test():
+    """Fire the selected tile from the host page.
+
+    Deliberately ignores both brakes: you check the wiring precisely when the
+    link is disarmed, and a cooldown meant for the room should not make the
+    trainer wait. It does not start a cooldown either — testing must not take
+    the lever away from someone holding the link.
+    """
+    tile = find_tile(participant_state.fx_tile_n)
+    if tile is None:
+        return FxFireResponse(fired=False, reason="no-tile", ready_in_seconds=0)
+    if not effects_client.press_tile(participant_state.fx_tile_n):
+        return FxFireResponse(fired=False, reason="effects-down", ready_in_seconds=0)
+    return FxFireResponse(fired=True, reason="ok", ready_in_seconds=0)

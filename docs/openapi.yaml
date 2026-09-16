@@ -474,6 +474,237 @@ paths:
         '204':
           description: Successful Response
       x-feature: attention
+  /api/participant/fx/{token}:
+    get:
+      tags:
+      - fx
+      summary: Fx Page
+      description: The trigger page. One button, and an honest account of why it is
+        grey.
+      operationId: fx_page_api_participant_fx__token__get
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+      x-feature: fx
+  /api/participant/fx/{token}/info:
+    get:
+      tags:
+      - fx
+      summary: Fx Info
+      description: 'What the page renders, and what an already-open tab polls for
+        so a host
+
+        toggle reaches it without a reload.'
+      operationId: fx_info_api_participant_fx__token__info_get
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxInfoResponse'
+      x-feature: fx
+  /api/participant/fx/{token}/fire:
+    post:
+      tags:
+      - fx
+      summary: Fx Fire
+      description: Press the selected tile, if all the brakes are off.
+      operationId: fx_fire_api_participant_fx__token__fire_post
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxFireResponse'
+      x-feature: fx
+  /api/participant/fx/{token}/image:
+    get:
+      tags:
+      - fx
+      summary: Fx Image
+      description: 'Artwork for the selected tile.
+
+
+        The path handed to the effects app comes from the manifest that app served,
+
+        never from the request — the token in the URL selects nothing but access.'
+      operationId: fx_image_api_participant_fx__token__image_get
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+      x-feature: fx
+  /api/{session_id}/host/fx/state:
+    get:
+      tags:
+      - fx
+      summary: Fx State
+      description: Everything the footer badge and its popover render.
+      operationId: fx_state_api__session_id__host_fx_state_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxStateResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/catalog:
+    get:
+      tags:
+      - fx
+      summary: Fx Catalog
+      description: 'The 91 tiles, read live from the Mac.
+
+
+        Built at request time rather than kept in a list here: adding a tile is a
+
+        JSON entry plus an image in another repo, and a hand-maintained copy would
+
+        be wrong by the next workshop. A closed soundboard is an empty catalog, not
+
+        an error — the popover says so itself.'
+      operationId: fx_catalog_api__session_id__host_fx_catalog_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxCatalogResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/toggle:
+    post:
+      tags:
+      - fx
+      summary: Fx Toggle
+      description: Arm or disarm the link. Off at the start of every session.
+      operationId: fx_toggle_api__session_id__host_fx_toggle_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxStateResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/tile:
+    post:
+      tags:
+      - fx
+      summary: Fx Set Tile
+      description: Bind the link to a different tile.
+      operationId: fx_set_tile_api__session_id__host_fx_tile_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FxTileRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxStateResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/cooldown:
+    post:
+      tags:
+      - fx
+      summary: Fx Set Cooldown
+      description: Change how often the room may pull the lever.
+      operationId: fx_set_cooldown_api__session_id__host_fx_cooldown_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FxCooldownRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxStateResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/rotate:
+    post:
+      tags:
+      - fx
+      summary: Fx Rotate
+      description: Mint a new token, killing the current link immediately.
+      operationId: fx_rotate_api__session_id__host_fx_rotate_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxStateResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/test:
+    post:
+      tags:
+      - fx
+      summary: Fx Test
+      description: 'Fire the selected tile from the host page.
+
+
+        Deliberately ignores both brakes: you check the wiring precisely when the
+
+        link is disarmed, and a cooldown meant for the room should not make the
+
+        trainer wait. It does not start a cooldown either — testing must not take
+
+        the lever away from someone holding the link.'
+      operationId: fx_test_api__session_id__host_fx_test_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxFireResponse'
+      x-feature: fx
   /api/participant/quiz/vote:
     post:
       tags:
@@ -2306,6 +2537,161 @@ components:
       required:
       - name
       title: FolderInfo
+    FxCatalogResponse:
+      properties:
+        tiles:
+          items:
+            $ref: '#/components/schemas/FxTile'
+          type: array
+          title: Tiles
+      type: object
+      required:
+      - tiles
+      title: FxCatalogResponse
+    FxCooldownRequest:
+      properties:
+        seconds:
+          type: integer
+          maximum: 300.0
+          minimum: 0.0
+          title: Seconds
+      type: object
+      required:
+      - seconds
+      title: FxCooldownRequest
+    FxFireResponse:
+      properties:
+        fired:
+          type: boolean
+          title: Fired
+        reason:
+          type: string
+          title: Reason
+        ready_in_seconds:
+          type: integer
+          title: Ready In Seconds
+      type: object
+      required:
+      - fired
+      - reason
+      - ready_in_seconds
+      title: FxFireResponse
+    FxInfoResponse:
+      properties:
+        tile_n:
+          type: integer
+          title: Tile N
+        label:
+          type: string
+          title: Label
+        effect:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Effect
+        enabled:
+          type: boolean
+          title: Enabled
+        cooldown_seconds:
+          type: integer
+          title: Cooldown Seconds
+        ready_in_seconds:
+          type: integer
+          title: Ready In Seconds
+        effects_up:
+          type: boolean
+          title: Effects Up
+      type: object
+      required:
+      - tile_n
+      - label
+      - effect
+      - enabled
+      - cooldown_seconds
+      - ready_in_seconds
+      - effects_up
+      title: FxInfoResponse
+    FxStateResponse:
+      properties:
+        enabled:
+          type: boolean
+          title: Enabled
+        token:
+          type: string
+          title: Token
+        url:
+          type: string
+          title: Url
+        tile_n:
+          type: integer
+          title: Tile N
+        tile_label:
+          type: string
+          title: Tile Label
+        effect:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Effect
+        cooldown_seconds:
+          type: integer
+          title: Cooldown Seconds
+        last_fired_at:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Last Fired At
+        effects_up:
+          type: boolean
+          title: Effects Up
+      type: object
+      required:
+      - enabled
+      - token
+      - url
+      - tile_n
+      - tile_label
+      - effect
+      - cooldown_seconds
+      - last_fired_at
+      - effects_up
+      title: FxStateResponse
+    FxTile:
+      properties:
+        n:
+          type: integer
+          title: N
+        label:
+          type: string
+          title: Label
+        effect:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Effect
+        image:
+          type: string
+          title: Image
+        has_effect:
+          type: boolean
+          title: Has Effect
+      type: object
+      required:
+      - n
+      - label
+      - effect
+      - image
+      - has_effect
+      title: FxTile
+    FxTileRequest:
+      properties:
+        n:
+          type: integer
+          title: N
+      type: object
+      required:
+      - n
+      title: FxTileRequest
     GDriveUnavailableResponse:
       properties:
         error:
