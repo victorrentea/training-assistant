@@ -159,6 +159,36 @@ class TestPage:
         assert r.headers["content-type"].startswith("text/html")
 
 
+class TestImage:
+    def test_a_wrong_token_is_a_flat_404_and_fetches_nothing(self, client):
+        with patch("daemon.fx.router.effects_client.fetch_tile_image") as fetch:
+            r = client.get("/api/participant/fx/wrongtoken12/image")
+        assert r.status_code == 404
+        fetch.assert_not_called()
+
+    def test_a_tile_without_an_image_key_is_a_404(self, client):
+        tile_no_image = {"n": 69, "asset": "69_scream_ghost.mp3", "effect": "wazzup"}
+        with patch("daemon.fx.router.effects_client.fetch_tiles", return_value=[tile_no_image]):
+            with patch("daemon.fx.router.effects_client.fetch_tile_image") as fetch:
+                r = client.get(f"/api/participant/fx/{TOKEN}/image")
+        assert r.status_code == 404
+        fetch.assert_not_called()
+
+    def test_missing_artwork_on_the_mac_is_a_404(self, client):
+        with patch("daemon.fx.router.effects_client.fetch_tile_image", return_value=None):
+            r = client.get(f"/api/participant/fx/{TOKEN}/image")
+        assert r.status_code == 404
+
+    def test_the_happy_path_returns_the_artwork_bytes_and_content_type(self, client):
+        with patch("daemon.fx.router.effects_client.fetch_tile_image",
+                   return_value=(b"fake-jpeg-bytes", "image/jpeg")) as fetch:
+            r = client.get(f"/api/participant/fx/{TOKEN}/image")
+        assert r.status_code == 200
+        assert r.content == b"fake-jpeg-bytes"
+        assert r.headers["content-type"] == "image/jpeg"
+        fetch.assert_called_once_with(TILE_69["image"])
+
+
 class TestLabels:
     def test_a_label_is_derived_from_the_asset_filename(self):
         from daemon.fx.router import tile_label
