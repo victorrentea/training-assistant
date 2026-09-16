@@ -16,10 +16,14 @@ from railway.features.ws.proxy_bridge import proxy_to_daemon
 
 fx_router = APIRouter()
 
-# The FX token's alphabet plus the two subpaths that hang off it. Anything
-# else — uppercase, dots, percent-escapes, slashes beyond one level — is not a
-# link this feature ever minted.
-_FX_PATH = re.compile(r"^[a-z0-9]{1,24}(/(info|fire|image))?$")
+# The FX token's alphabet plus the two subpaths that hang off it — exactly the
+# participant endpoints the daemon actually serves (page, info, fire; see
+# daemon/fx/router.py's participant_router). Anything else — uppercase, dots,
+# percent-escapes, slashes beyond one level, a trailing newline — is not a
+# link this feature ever minted. The end is anchored with `\Z`, not `$`: `$`
+# also matches right before a trailing "\n", so "abc123\n" would otherwise
+# slip through this guard.
+_FX_PATH = re.compile(r"^[a-z0-9]{1,24}(/(info|fire))?\Z")
 
 
 @fx_router.api_route("/fx/{path:path}", methods=["GET", "POST"], include_in_schema=False)

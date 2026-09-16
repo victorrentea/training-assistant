@@ -11,6 +11,7 @@ from starlette.testclient import TestClient
 from urllib.parse import unquote
 
 from railway.app import app
+from railway.features.fx.router import _FX_PATH
 
 client = TestClient(app)
 
@@ -80,6 +81,9 @@ class TestPathConstraint:
         "/fx/abc-123",
         "/fx/abc.123",
         "/fx/" + "a" * 41,
+        "/fx/abc123def456/image",  # deleted daemon endpoint — no artwork to serve
+        "/fx/abc123def456/",  # bare trailing slash
+        "/fx/abc123def456/info/extra",  # double subpath
     ])
     def test_a_path_outside_the_alphabet_never_reaches_the_daemon(self, proxy, bad):
         r = client.get(bad)
@@ -101,6 +105,21 @@ class TestPathConstraint:
         status = await _send_raw_path(bad)
         assert status == 404
         proxy.assert_not_awaited()
+
+    def test_a_trailing_newline_does_not_slip_past_the_end_anchor(self):
+        """Python's `$` matches just before a trailing "\\n", not only at the
+        true end of the string, so a `$`-anchored guard would treat
+        "abc123\\n" as a valid token even though this feature never minted
+        one. Neither `TestClient` nor the raw-ASGI `_send_raw_path` helper can
+        exercise this end-to-end: httpx raises `InvalidURL` on an embedded
+        control character before the request leaves the client, and — more
+        subtly — Starlette's own compiled route regex for `/fx/{path:path}`
+        is itself `$`-anchored, so it silently strips the trailing "\\n"
+        before our handler ever sees it, regardless of how this guard is
+        written. So the only place that can actually pin this property is a
+        direct call to the compiled guard, exactly as it was found: a
+        `$`-anchored `_FX_PATH.match("abc123\\n")` used to return a match."""
+        assert _FX_PATH.match("abc123\n") is None
 
     def test_an_empty_token_is_refused(self, proxy):
         assert client.get("/fx/").status_code == 404
