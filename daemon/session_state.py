@@ -457,33 +457,60 @@ def _describe_changed_value(key: str, old_v, new_v, snapshot: dict) -> str:
 
 
 def save_session_state(session_folder: Path, snapshot: dict) -> None:
-    """Atomically writes session-state.json to the session folder."""
+    """Atomically writes session-state.json to the session folder.
+
+    Merges the incoming snapshot onto whatever is already on disk instead of
+    replacing the file wholesale. Two independent producers call this with
+    disjoint top-level key sets — participant_state.persist() (roster, scores,
+    fx_*/emoji_*/attention_enabled, anonymous/trainer pids) and the daemon's
+    periodic runtime-activity flush (quiz/poll/debate/qa_questions/wordcloud/
+    codereview/slide tracking) — and neither knows about the other's fields.
+    A whole-file replace meant every write from one producer silently deleted
+    the other's most recent data; in particular, POST /api/participant/fx/*
+    (reachable from the public internet) could wipe the live quiz/debate/Q&A/
+    slide history until the next periodic flush restored it.
+
+    Both known producers always write the *full* value of every key they own
+    on every call (an inactive quiz is still an explicit `{"active": False,
+    ...}` dict, a cleared token is an explicit `fx_token: None`) — they never
+    rely on omitting a key to mean "clear this". So a shallow top-level merge
+    is safe: a key a caller doesn't mention simply survives untouched, and a
+    key it does mention is replaced wholesale with the value it supplied.
+    """
     session_folder.mkdir(parents=True, exist_ok=True)
-    payload = dict(snapshot) if isinstance(snapshot, dict) else {}
-    # Preserve session metadata fields that may have been written separately.
+    incoming = dict(snapshot) if isinstance(snapshot, dict) else {}
     existing = load_session_state(session_folder)
-    if isinstance(existing, dict):
-        existing_session_id = existing.get("session_id")
-        # Session ID is immutable per folder once assigned.
-        if isinstance(existing_session_id, str) and existing_session_id.strip():
-            payload["session_id"] = existing_session_id.strip()
-        for key in _SESSION_META_KEYS:
-            if key in existing and key not in payload:
-                payload[key] = existing[key]
-    payload = PersistedSessionState.model_validate(payload).model_dump(mode="json", exclude_unset=True)
+    if not isinstance(existing, dict):
+        existing = {}
+    existing_session_id = existing.get("session_id")
+    # Session ID is immutable per folder once assigned — force it even if this
+    # producer doesn't carry it, or (legacy callers) explicitly nulls it out.
+    if isinstance(existing_session_id, str) and existing_session_id.strip():
+        incoming["session_id"] = existing_session_id.strip()
+    # Validate/normalize only the keys THIS call actually supplied (legacy flat
+    # fields promoted to their nested shape, unknown types coerced). Keys the
+    # caller omitted are excluded here (exclude_unset=True) rather than
+    # reappearing as model defaults — they survive instead via the merge
+    # below. This is what keeps the merge safe for the model's exclude=True
+    # legacy fields too: an omitted key never gets a chance to leak back into
+    # what's written, whether it comes from this call's defaults or from
+    # `existing` (which was itself already filtered the same way on load).
+    incoming = PersistedSessionState.model_validate(incoming).model_dump(mode="json", exclude_unset=True)
+    merged = {**existing, **incoming}
     # Detect changed top-level keys for logging, with sub-field hints for dict-of-dict values.
+    # Diffing `existing` against the final `merged` result (not just the incoming keys) means
+    # keys this call left untouched compare equal and never show up as "changed".
     changed_descriptors: list[str] = []
-    all_keys = set(existing.keys()) | set(payload.keys()) if isinstance(existing, dict) else set(payload.keys())
-    for k in sorted(all_keys):
-        old_v = existing.get(k) if isinstance(existing, dict) else None
-        new_v = payload.get(k)
+    for k in sorted(set(existing.keys()) | set(merged.keys())):
+        old_v = existing.get(k)
+        new_v = merged.get(k)
         if old_v != new_v:
-            changed_descriptors.append(f"{k}{_describe_changed_value(k, old_v, new_v, payload)}")
+            changed_descriptors.append(f"{k}{_describe_changed_value(k, old_v, new_v, merged)}")
     if not changed_descriptors:
         return
     path = session_state_path(session_folder)
     tmp = path.with_name(f"{SESSION_STATE_FILENAME}.tmp")
-    tmp.write_text(json.dumps(payload, default=str, indent=2), encoding="utf-8")
+    tmp.write_text(json.dumps(merged, default=str, indent=2), encoding="utf-8")
     tmp.replace(path)
     log.info("session", f"💾 {', '.join(changed_descriptors)}")
 

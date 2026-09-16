@@ -297,3 +297,278 @@ def test_save_session_state_caps_the_number_of_people_it_names(capsys):
         assert "Alice: score" in out
         assert "+2 more" in out
         assert "Frank" not in out
+
+
+# ── Two-producer merge regression ───────────────────────────────────────────
+#
+# save_session_state() is called by two independent producers with disjoint
+# top-level key sets:
+#   - participant_state.persist() (daemon/participant/state.py::snapshot()):
+#     roster/scores/locations, fx_*, attention_enabled, emoji_*, anonymous/
+#     trainer pids.
+#   - the daemon's periodic runtime-activity flush
+#     (daemon/__main__.py::_build_runtime_session_snapshot()): quiz, poll,
+#     debate, qa_questions, wordcloud, codereview, slide tracking.
+# A whole-file replace made either call silently delete the other producer's
+# most recent data. These fixtures mirror the real shapes (not toy dicts) so
+# the tests exercise the actual disjoint key sets.
+
+def _participant_state_snapshot(**overrides) -> dict:
+    """Shape of daemon/participant/state.py::ParticipantState.snapshot()."""
+    base = {
+        "participant_names": {"u1": "Alice"},
+        "participant_avatars": {"u1": "alice.png"},
+        "online_participants": ["u1"],
+        "scores": {"u1": 10},
+        "locations": {"u1": "Bucharest"},
+        "location_timezones": {"u1": "Europe/Bucharest"},
+        "location_countries": {"u1": "RO"},
+        "mode": "workshop",
+        "current_activity": "none",
+        "emoji_counters": {"🎉": 3},
+        "emoji_global_enabled": True,
+        "attention_enabled": True,
+        "fx_enabled": True,
+        "fx_token": "abc123def456",
+        "fx_tile_n": 69,
+        "fx_cooldown_seconds": 10,
+        "fx_last_fired_at": 1000.0,
+        "engagement": {"u1": {"notes": {"seconds": 30, "visits": 1, "clicks": 0}}},
+        "anonymous_pids": [],
+        "trainer_pids": ["u1"],
+    }
+    base.update(overrides)
+    return base
+
+
+def _runtime_session_snapshot(**overrides) -> dict:
+    """Shape of daemon/__main__.py::_build_runtime_session_snapshot()."""
+    base = {
+        "session_name": "2026-09-16 Test",
+        "mode": "workshop",
+        "current_activity": "quiz",
+        "participants": {"u1": {"name": "Alice", "score": 10}},
+        "quiz": {
+            "definition": {"question": "2+2?", "options": ["3", "4"]},
+            "active": True,
+            "correct_indices": [1],
+            "opened_at": "2026-09-16T10:00:00",
+            "timer_seconds": 30,
+            "timer_started_at": "2026-09-16T10:00:00",
+            "votes": {"u1": 1},
+            "awarded_points": {"u1": 5},
+        },
+        "poll": None,
+        "qa_questions": {
+            "q1": {"id": "q1", "text": "Why?", "author": "u1", "upvoters": [], "answered": False},
+        },
+        "wordcloud": {"words": {"python": 2}, "word_order": ["python"], "topic": "Languages"},
+        "codereview": {
+            "snippet": "print(1)",
+            "language": "python",
+            "phase": "reviewing",
+            "selections": {},
+            "confirmed": [],
+        },
+        "debate": {
+            "statement": "Tabs vs spaces",
+            "phase": "arguments",
+            "sides": {},
+            "arguments": [],
+            "champions": {},
+            "auto_assigned": [],
+            "first_side": None,
+            "round_index": None,
+            "round_timer_seconds": None,
+            "round_timer_started_at": None,
+        },
+        "current_slide": {"slug": "spring", "page": 3},
+        "slides_viewed": [{"slug": "spring", "page": 3, "seconds": 12}],
+        "slide_timeline": [{"slug": "spring", "page": 3, "seconds": 12, "at": "2026-09-16T10:05:00"}],
+        "talk_presentation_name": None,
+        "talk_presentation_url": None,
+        "talk_presentation_slug": None,
+    }
+    base.update(overrides)
+    return base
+
+
+def test_producer_a_and_producer_b_fields_coexist_across_alternating_writes():
+    """Write A's shape, then B's, then A's again — both sets of keys must
+    survive every write, with the latest value each producer wrote."""
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        from daemon.session_state import save_session_state as _save_session_state
+
+        _save_session_state(folder, _participant_state_snapshot())
+        written = json.loads((folder / "session-state.json").read_text())
+        assert written["fx_token"] == "abc123def456"
+        assert written["attention_enabled"] is True
+
+        _save_session_state(folder, _runtime_session_snapshot())
+        written = json.loads((folder / "session-state.json").read_text())
+        # B's own fields landed...
+        assert written["quiz"]["active"] is True
+        assert written["qa_questions"]["q1"]["text"] == "Why?"
+        assert written["debate"]["statement"] == "Tabs vs spaces"
+        # ...and A's fields from the previous write were NOT clobbered.
+        assert written["fx_token"] == "abc123def456"
+        assert written["fx_enabled"] is True
+        assert written["attention_enabled"] is True
+        assert written["emoji_counters"] == {"🎉": 3}
+        assert written["trainer_pids"] == ["u1"]
+
+        _save_session_state(folder, _participant_state_snapshot(fx_token="newtoken1234", fx_enabled=False))
+        written = json.loads((folder / "session-state.json").read_text())
+        # A's updated fields landed...
+        assert written["fx_token"] == "newtoken1234"
+        assert written["fx_enabled"] is False
+        # ...and B's activity state from the previous write is still intact.
+        assert written["quiz"]["active"] is True
+        assert written["qa_questions"]["q1"]["text"] == "Why?"
+        assert written["wordcloud"]["words"] == {"python": 2}
+        assert written["current_slide"] == {"slug": "spring", "page": 3}
+
+
+def test_fx_fields_survive_a_subsequent_activity_flush():
+    """The FX-specific regression: participant_state.persist() writes
+    fx_token/fx_enabled, then the runtime flush (which knows nothing about
+    FX) must not wipe them."""
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        from daemon.session_state import save_session_state as _save_session_state
+
+        _save_session_state(folder, _participant_state_snapshot(fx_enabled=True, fx_token="secretlink1"))
+        _save_session_state(folder, _runtime_session_snapshot())
+
+        written = json.loads((folder / "session-state.json").read_text())
+        assert written["fx_enabled"] is True
+        assert written["fx_token"] == "secretlink1"
+
+
+def test_quiz_and_qa_questions_survive_a_subsequent_participant_persist():
+    """The data-loss regression: the runtime flush writes quiz/qa_questions,
+    then a participant_state.persist() call (e.g. from the public FX fire
+    endpoint) must not wipe the live activity state."""
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        from daemon.session_state import save_session_state as _save_session_state
+
+        _save_session_state(folder, _runtime_session_snapshot())
+        _save_session_state(folder, _participant_state_snapshot())
+
+        written = json.loads((folder / "session-state.json").read_text())
+        assert written["quiz"]["active"] is True
+        assert written["quiz"]["definition"]["question"] == "2+2?"
+        assert written["qa_questions"]["q1"]["text"] == "Why?"
+        assert written["debate"]["statement"] == "Tabs vs spaces"
+
+
+def test_fx_fields_round_trip_through_a_restart_via_the_real_state_objects():
+    """Real round-trip through a restart: save via the actual ParticipantState
+    object, let a runtime flush happen afterwards (as it would every 3s in
+    production), then load via the normal restore path (load_session_state +
+    sync_from_restore) and confirm the FX fields come back.
+
+    Unlike TestRoundTrip in test_fx_state.py (which only exercises
+    snapshot()/sync_from_restore() against in-memory dicts), this goes
+    through the actual session-state.json file on disk — the file I/O path
+    that the whole-file-replace bug lived in.
+    """
+    from daemon.participant.state import ParticipantState
+    from daemon.session_state import load_session_state as _load_session_state
+    from daemon.session_state import save_session_state as _save_session_state
+
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+
+        armed = ParticipantState()
+        armed.fx_enabled = True
+        armed.fx_token = "abc123def456"
+        armed.fx_tile_n = 3
+        armed.fx_cooldown_seconds = 30
+        armed.fx_last_fired_at = 1789554996.0
+        _save_session_state(folder, armed.snapshot())
+
+        # A runtime-activity flush happens after the FX link was armed, exactly
+        # as it does every ~3s in production.
+        _save_session_state(folder, _runtime_session_snapshot())
+
+        restored = ParticipantState()
+        restored.sync_from_restore(_load_session_state(folder))
+
+        assert restored.fx_enabled is True
+        assert restored.fx_token == "abc123def456"
+        assert restored.fx_tile_n == 3
+        assert restored.fx_cooldown_seconds == 30
+        assert restored.fx_last_fired_at == 1789554996.0
+
+
+def test_fx_token_can_still_be_explicitly_cleared():
+    """Deletion semantics: a merge can no longer clear a field by omitting it,
+    but both real producers always write an explicit value for every field
+    they own (an inactive quiz is still `{"active": False, ...}`, a cleared
+    token is an explicit `fx_token: None`) — they never rely on omission.
+    Confirm an explicit clear still takes effect through the merge."""
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        from daemon.session_state import save_session_state as _save_session_state
+
+        _save_session_state(folder, _participant_state_snapshot(fx_token="abc123def456", fx_enabled=True))
+        written = json.loads((folder / "session-state.json").read_text())
+        assert written["fx_token"] == "abc123def456"
+
+        # A fresh session reset: fx_token goes back to None, fx_enabled to False —
+        # both explicit values, as ParticipantState.reset() produces via snapshot().
+        _save_session_state(folder, _participant_state_snapshot(fx_token=None, fx_enabled=False))
+        written = json.loads((folder / "session-state.json").read_text())
+        assert written["fx_token"] is None
+        assert written["fx_enabled"] is False
+
+
+def test_legacy_flat_fields_do_not_leak_back_in_after_a_merge():
+    """exclude_unset pitfall: a merged dict's keys are all "explicitly set",
+    which could make a legacy/exclude=True field (e.g. quiz_active, promoted
+    to the nested `quiz` shape) reappear in the output once it is folded into
+    `existing` and re-validated. It must not — legacy fields stay gone once
+    normalized, on every subsequent write."""
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        from daemon.session_state import save_session_state as _save_session_state
+
+        _save_session_state(folder, {"quiz_active": True, "quiz_correct_indices": [1]})
+        written = json.loads((folder / "session-state.json").read_text())
+        assert "quiz_active" not in written
+        assert "quiz_correct_indices" not in written
+        assert written["quiz"]["active"] is True
+
+        # A second, unrelated write must not resurrect the legacy flat keys.
+        _save_session_state(folder, _participant_state_snapshot())
+        written = json.loads((folder / "session-state.json").read_text())
+        assert "quiz_active" not in written
+        assert "quiz_correct_indices" not in written
+        assert written["quiz"]["active"] is True
+
+
+def test_save_session_state_log_line_reports_only_genuinely_changed_keys(capsys):
+    """After the merge fix, the 💾 log line must not list every key in the
+    file just because it merged unrelated producer data in — only keys whose
+    value actually changed on this call."""
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        from daemon.session_state import save_session_state as _save_session_state
+
+        _save_session_state(folder, _participant_state_snapshot())
+        capsys.readouterr()  # discard the initial-write line
+
+        _save_session_state(folder, _runtime_session_snapshot())
+        out = capsys.readouterr().out
+        # B's own keys changed (this is a first write of activity state)...
+        assert "quiz" in out
+        assert "qa_questions" in out
+        # ...but A's untouched keys from the previous write must NOT be
+        # reported as "changed" just because they were merged into the file.
+        assert "fx_token" not in out
+        assert "fx_enabled" not in out
+        assert "attention_enabled" not in out
+        assert "trainer_pids" not in out
