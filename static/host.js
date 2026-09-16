@@ -263,6 +263,7 @@
   _setupStopSessionHover();
   _setupActivityLogHovers();
   refreshLogLevelBadge();
+  loadFxState();
 
   // ── WebSocket (host monitors state too) ──
   function connectWS() {
@@ -532,6 +533,8 @@
         // toast() uses textContent, so this stays inert regardless.
         const _bellWho = (msg.anonymous === true) ? 'Someone (anonymous)' : (msg.caller || 'Someone');
         toast(`🔔 ${_bellWho} is calling you`);
+      } else if (msg.type === 'fx_fired') {
+        flashFxBadge(msg);
       } else if (msg.type === 'paste_received') {
         const pid = msg.uuid;
         if (pid) {
@@ -929,6 +932,166 @@
     } catch (e) {
       console.error('host notification send failed', e);
     }
+  }
+
+  // ── Secret FX link ────────────────────────────────────────────────────────
+  // The badge is the switch, like 🔔 next door; the popover is where the link
+  // and the tile live. Its state always comes from the daemon's answer, never
+  // from what the click assumed.
+
+  let _fxCatalogLoaded = false;
+
+  function applyFxState(s) {
+    const badge = document.getElementById('fx-badge');
+    if (badge) {
+      badge.classList.toggle('connected', !!s.enabled);
+      badge.classList.toggle('disabled', !s.enabled);
+      const fired = s.last_fired_at
+        ? ' · last fired ' + _fxAgo(s.last_fired_at)
+        : '';
+      badge.title = (s.enabled ? 'FX link armed' : 'FX link off')
+        + ' · #' + s.tile_n + ' ' + s.tile_label + fired;
+    }
+    const cb = document.getElementById('fx-enabled');
+    if (cb) cb.checked = !!s.enabled;
+    const url = document.getElementById('fx-url');
+    if (url) url.value = s.url || '';
+    const cd = document.getElementById('fx-cooldown');
+    if (cd && document.activeElement !== cd) cd.value = s.cooldown_seconds;
+    const sel = document.getElementById('fx-tile');
+    if (sel && sel.options.length) sel.value = String(s.tile_n);
+  }
+
+  function _fxAgo(epochSeconds) {
+    const secs = Math.max(0, Math.round(Date.now() / 1000 - epochSeconds));
+    if (secs < 60) return secs + 's ago';
+    if (secs < 3600) return Math.round(secs / 60) + 'm ago';
+    return Math.round(secs / 3600) + 'h ago';
+  }
+
+  async function loadFxState() {
+    try {
+      applyFxState(await (await fetch(API('/fx/state'))).json());
+    } catch (e) {
+      console.error('fx state load failed', e);
+    }
+  }
+
+  async function loadFxCatalog() {
+    if (_fxCatalogLoaded) return;
+    const sel = document.getElementById('fx-tile');
+    if (!sel) return;
+    try {
+      const { tiles } = await (await fetch(API('/fx/catalog'))).json();
+      sel.innerHTML = '';
+      if (!tiles.length) {
+        sel.innerHTML = '<option>— soundboard not reachable —</option>';
+        return;
+      }
+      for (const t of tiles) {
+        const o = document.createElement('option');
+        o.value = String(t.n);
+        o.textContent = t.n + ' — ' + t.label + (t.effect ? ' · ' + t.effect : ' · sound only');
+        sel.appendChild(o);
+      }
+      _fxCatalogLoaded = true;
+      await loadFxState();   // re-select the current tile now that options exist
+    } catch (e) {
+      console.error('fx catalog load failed', e);
+    }
+  }
+
+  function toggleFxPopover(ev) {
+    if (ev) ev.stopPropagation();
+    const pop = document.getElementById('fx-popover');
+    if (!pop) return;
+    const showing = pop.style.display !== 'none';
+    pop.style.display = showing ? 'none' : 'block';
+    if (!showing) { loadFxCatalog(); loadFxState(); }
+  }
+
+  async function toggleFxEnabled() {
+    try {
+      applyFxState(await (await fetch(API('/fx/toggle'), { method: 'POST' })).json());
+    } catch (e) {
+      console.error('fx toggle failed', e);
+      loadFxState();
+    }
+  }
+
+  async function setFxTile() {
+    const sel = document.getElementById('fx-tile');
+    if (!sel) return;
+    try {
+      const r = await fetch(API('/fx/tile'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ n: Number(sel.value) })
+      });
+      if (!r.ok) throw new Error(r.status);
+      applyFxState(await r.json());
+    } catch (e) {
+      console.error('fx tile set failed', e);
+      loadFxState();
+    }
+  }
+
+  async function setFxCooldown() {
+    const inp = document.getElementById('fx-cooldown');
+    if (!inp) return;
+    const seconds = Math.max(0, Math.min(300, Number(inp.value) || 0));
+    try {
+      const r = await fetch(API('/fx/cooldown'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seconds })
+      });
+      if (!r.ok) throw new Error(r.status);
+      applyFxState(await r.json());
+    } catch (e) {
+      console.error('fx cooldown set failed', e);
+      loadFxState();
+    }
+  }
+
+  function copyFxLink(el) {
+    if (!el || !el.value) return;
+    navigator.clipboard.writeText(el.value)
+      .then(() => _showFooterCopiedTooltip(el, 'Link copied'))
+      .catch((e) => console.error('fx link copy failed', e));
+  }
+
+  async function rotateFxLink() {
+    try {
+      applyFxState(await (await fetch(API('/fx/rotate'), { method: 'POST' })).json());
+      const el = document.getElementById('fx-url');
+      if (el) _showFooterCopiedTooltip(el, 'New link — the old one is dead');
+    } catch (e) {
+      console.error('fx rotate failed', e);
+    }
+  }
+
+  async function testFx() {
+    const btn = document.getElementById('fx-test-btn');
+    if (btn) btn.disabled = true;
+    try {
+      const res = await (await fetch(API('/fx/test'), { method: 'POST' })).json();
+      if (!res.fired && btn) btn.textContent = res.reason === 'effects-down' ? 'No Mac' : 'No tile';
+      setTimeout(() => { if (btn) btn.textContent = 'Test'; }, 2000);
+    } catch (e) {
+      console.error('fx test failed', e);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function flashFxBadge(msg) {
+    const badge = document.getElementById('fx-badge');
+    if (!badge) return;
+    badge.style.transition = 'transform .18s ease';
+    badge.style.transform = 'scale(1.35)';
+    setTimeout(() => { badge.style.transform = ''; }, 200);
+    badge.title = 'FX link armed · #' + msg.tile_n + ' ' + msg.label + ' · last fired just now';
   }
 
   function renderLogLevelBadge() {
