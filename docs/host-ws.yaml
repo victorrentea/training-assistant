@@ -37,6 +37,7 @@ channels:
           - $ref: '#/components/messages/summary_updated'
           - $ref: '#/components/messages/talk_pdf_ready'
           - $ref: '#/components/messages/talk_pdf_failed'
+          - $ref: '#/components/messages/fx_fired'
           - $ref: '#/components/messages/reload'
 
 components:
@@ -354,6 +355,28 @@ components:
           type:
             type: string
             enum: [talk_pdf_failed]
+
+    # ── Secret FX link ───────────────────────────────────────────────────────
+
+    fx_fired:
+      summary: Someone holding the secret FX link pressed the button
+      x-feature: fx
+      x-doc-notes:
+        - "SECURITY: no token, no UUID — the link is anonymous by design; the host badge only needs to know that it moved."
+      payload:
+        type: object
+        required: [type, tile_n, label, at]
+        properties:
+          type:
+            type: string
+            enum: [fx_fired]
+          tile_n:
+            type: integer
+          label:
+            type: string
+          at:
+            type: number
+            description: Unix timestamp (time.time()) when the tile was pressed
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 

@@ -302,6 +302,21 @@ class BellRungMsg(BaseModel):
     anonymous: bool = False
 
 
+# ── Secret FX link ────────────────────────────────────────────────────────────
+
+class FxFiredMsg(BaseModel):
+    """Host-only: someone holding the secret FX link pressed the button.
+
+    SECURITY: carries the tile number, its display name and a timestamp — no
+    token, no UUID, nothing that identifies the holder. The link is anonymous
+    by design, and the host badge only needs to know that it moved.
+    """
+    type: Literal["fx_fired"] = "fx_fired"
+    tile_n: int
+    label: str
+    at: float
+
+
 # ── Host-only: Addon bridge status ────────────────────────────────────────────
 
 class OverlayConnectedMsg(BaseModel):
@@ -498,6 +513,8 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Talk presentation
     "talk_pdf_ready": TalkPdfReadyMsg,
     "talk_pdf_failed": TalkPdfFailedMsg,
+    # Secret FX link
+    "fx_fired": FxFiredMsg,
     # Cross-cutting
     "reload": ReloadMsg,
 }
@@ -587,6 +604,8 @@ HOST_MESSAGE_FEATURES: dict[str, str] = {
     # Talk presentation
     "talk_pdf_ready": "slides",
     "talk_pdf_failed": "slides",
+    # Secret FX link
+    "fx_fired": "fx",
     # Cross-cutting
     "reload": "reload",
 }

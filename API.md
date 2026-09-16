@@ -26,6 +26,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Attendees](#feature-attendees)
 - [Attention](#feature-attention)
 - [Files](#feature-files)
+- [Fx](#feature-fx)
 - [Host-Machine](#feature-host-machine)
 - [Intellij](#feature-intellij)
 - [Materials Zip](#feature-materials-zip)
@@ -504,6 +505,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Number of files opened this session changed<br>`files_count_updated` | `count: int` |
+
+## Feature: Fx
+
+### Host WS
+| Message | Payload |
+| --- | --- |
+| Someone holding the secret FX link pressed the button<br>SECURITY: no token, no UUID — the link is anonymous by design; the host badge only needs to know that it moved.<br>`fx_fired` | `tile_n: int`<br>`label: string`<br>`at: number  # Unix timestamp (time.time()) when the tile was pressed` |
 
 ## Feature: Host-Machine
 
