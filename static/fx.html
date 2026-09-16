@@ -81,7 +81,7 @@
     if (!effectsUp) {
       btn.disabled = true;
       btn.textContent = 'OFF';
-      say('The soundboard on the trainer's Mac is not reachable.', true);
+      say("The soundboard on the trainer's Mac is not reachable.", true);
       return;
     }
     if (ready > 0) {
@@ -139,6 +139,9 @@
         enabled = false; render();
       } else if (res.reason === 'effects-down') {
         effectsUp = false; render();
+      } else if (res.reason === 'no-tile') {
+        btn.disabled = true;
+        say('That effect is not available right now. The host needs to pick another one.', true);
       } else {
         render();
       }
