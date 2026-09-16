@@ -76,6 +76,49 @@ class TestWrongToken:
         assert client.post(f"/api/participant/fx/{TOKEN}/fire").status_code == 404
 
 
+class TestHostileTokens:
+    """A wrong token must be a flat 404 regardless of what the URL contains —
+    never a 500. This is not merely defensive: a second, pre-existing Railway
+    route (`/{session_id}/api/participant/fx/...`) relays whatever bytes a
+    caller sends straight through to `_check_token`, unfiltered by the
+    token-alphabet-anchored `/fx/{token}` regex that guards the first route.
+    A 500 here is worse than an unhelpful 404 — it tells a prober their input
+    broke something, which is the one thing this feature promises never to say.
+
+    NUL and newline are sent percent-encoded (%00, %0A): those are the bytes
+    a real client puts on the wire, and Starlette decodes them into the
+    literal characters before routing ever runs. Handing the raw control
+    character to the test client itself would just be rejected by httpx's
+    own URL parser — that would test httpx, not this endpoint.
+    """
+
+    HOSTILE_TOKENS = [
+        pytest.param("ĂÎȘ", id="non-ascii"),
+        pytest.param("🎉🎉🎉", id="emoji"),
+        pytest.param("", id="empty"),
+        pytest.param("   ", id="whitespace"),
+        pytest.param("a" * 10_000, id="very-long"),
+        pytest.param("abc%00def", id="nul-byte"),
+        pytest.param("abc%0Adef", id="newline"),
+        pytest.param("z" * len(TOKEN), id="correct-length-but-wrong"),
+    ]
+
+    @pytest.mark.parametrize("token", HOSTILE_TOKENS)
+    def test_the_page_is_never_a_5xx_and_always_a_404(self, client, token):
+        assert client.get(f"/api/participant/fx/{token}").status_code == 404
+
+    @pytest.mark.parametrize("token", HOSTILE_TOKENS)
+    def test_info_is_never_a_5xx_and_always_a_404(self, client, token):
+        assert client.get(f"/api/participant/fx/{token}/info").status_code == 404
+
+    @pytest.mark.parametrize("token", HOSTILE_TOKENS)
+    def test_fire_is_never_a_5xx_and_presses_nothing(self, client, token):
+        with patch("daemon.fx.router.effects_client.press_tile") as press:
+            r = client.post(f"/api/participant/fx/{token}/fire")
+        assert r.status_code == 404
+        press.assert_not_called()
+
+
 class TestFire:
     def test_the_happy_path_presses_the_selected_tile_once(self, client):
         with patch("daemon.fx.router.effects_client.press_tile", return_value=True) as press:

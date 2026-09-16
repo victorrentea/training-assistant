@@ -76,11 +76,26 @@ def find_tile(n: int) -> dict | None:
 def _check_token(token: str) -> None:
     """404 unless ``token`` is this session's link token.
 
-    `compare_digest` so the answer's timing says nothing about how much of the
-    token was right.
+    Compares UTF-8 *bytes*, not the two `str` objects directly: `compare_digest`
+    raises TypeError on a non-ASCII `str` operand, and this endpoint is reached
+    by more than the token-alphabet-anchored Railway relay — a second, pre-existing
+    route (`/{session_id}/api/participant/fx/...`) forwards whatever the URL
+    contains, unfiltered. A raise here becomes a 500, and a 500 is worse than an
+    unhelpful 404: it tells a prober their input broke something, and it is the
+    one answer this whole feature is built never to give — every other input,
+    right or wrong, gets the same flat refusal.
+
+    `errors="surrogatepass"` on the encode keeps this from raising too — plain
+    `str.encode("utf-8")` itself raises on a lone surrogate, which a malformed
+    percent-encoded path can produce. Comparing bytes still runs `compare_digest`
+    in constant time for equal-length input, exactly as the `str` form did.
     """
     current = participant_state.fx_token
-    if not current or not secrets.compare_digest(token, current):
+    if not current:
+        raise HTTPException(status_code=404)
+    token_bytes = token.encode("utf-8", errors="surrogatepass")
+    current_bytes = current.encode("utf-8")
+    if not secrets.compare_digest(token_bytes, current_bytes):
         raise HTTPException(status_code=404)
 
 
