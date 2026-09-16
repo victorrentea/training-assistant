@@ -50,6 +50,7 @@ LAYOUT_WITH_LEGEND()
 
 Person(host, "Host", "Runs the workshop and controls the live session.")
 Person(participant, "Participant", "Joins from a browser and interacts live.")
+Person(fx_holder, "Trusted Person", "Holds a secret FX link the host handed out; not a joined workshop participant.")
 
 System(workshop, "Workshop Live Interaction Tool", "Session-aware audience interaction tool for workshops and talks.")
 
@@ -60,9 +61,11 @@ System_Ext(google_drive, "Google Drive", "Source of slide PDF exports that Railw
 
 Rel(host, workshop, "Controls sessions, activities, slides, and participant state", "Browser + localhost daemon")
 Rel(participant, workshop, "Votes, reacts, uploads, follows slides, reads notes/key points", "HTTPS / WSS")
+Rel(fx_holder, workshop, "Opens the secret /fx/<token> link and fires a soundboard tile", "HTTPS")
 
 Rel(workshop, claude_api, "Quiz generation/refinement and debate AI cleanup", "HTTPS")
 Rel(workshop, macos_addons, "Receives slide events; sends emoji and session notifications", "Local WSS")
+Rel(workshop, macos_addons, "Presses soundboard tiles for the FX link", "Local HTTP")
 Rel(participant, nominatim, "Shares optional location", "HTTPS")
 Rel(workshop, google_drive, "Downloads slide PDFs into Railway cache", "HTTPS")
 @enduml
@@ -81,6 +84,7 @@ LAYOUT_LEFT_RIGHT()
 
 Person(host, "Host")
 Person(participant, "Participant")
+Person(fx_holder, "Trusted Person", "Holds a secret FX link; not a joined participant.")
 
 System_Boundary(workshop, "Workshop Tool") {
     Container(participant_spa, "Participant SPA", "Vanilla HTML/CSS/JS served by Railway", "Join flow, participant UI, slides dock, notes/key points, uploads, emoji, live updates.")
@@ -103,9 +107,12 @@ Rel(participant_spa, nominatim, "Reverse geocodes GPS to city/country", "HTTPS")
 Rel(host, host_spa, "Uses", "Browser")
 Rel(host_spa, training_daemon, "Host REST + proxied WebSocket", "HTTP / WSS on 127.0.0.1:1234")
 
+Rel(fx_holder, railway_backend, "Opens /fx/<token>, session-independent, unauthenticated at Railway", "HTTPS")
+
 Rel(training_daemon, railway_backend, "Daemon WS, host-auth REST, static sync, upload handoff", "WSS /ws/daemon + HTTPS")
 Rel(training_daemon, claude_api, "Quiz generation/refinement and debate cleanup", "HTTPS")
 Rel(training_daemon, macos_addons, "Receives slide events; sends emoji/session notifications", "Local WSS")
+Rel(training_daemon, macos_addons, "Presses FX soundboard tiles; reads the live tile catalog", "Local HTTP :55123")
 Rel(training_daemon, host_files, "Reads and writes session files", "Local filesystem")
 Rel(training_daemon, local_rag, "Indexes and queries local materials", "Local filesystem")
 
@@ -136,6 +143,7 @@ LAYOUT_WITH_LEGEND()
 Container_Ext(participant_spa, "Participant SPA", "Vanilla JS in participant browser")
 Container_Ext(host_spa, "Host SPA", "Vanilla JS in host browser")
 Container_Ext(training_daemon, "Training Daemon", "Local Python daemon")
+Container_Ext(fx_holder_browser, "Trusted Person's browser", "Opens the secret /fx/<token> link")
 System_Ext(google_drive, "Google Drive", "Slide PDF source")
 
 Container_Boundary(railway, "Railway Backend") {
@@ -148,6 +156,7 @@ Container_Boundary(railway, "Railway Backend") {
     Component(uploads, "railway/features/upload/router.py", "Temporary file upload bridge", "Streams uploads into `.server-data/uploads`, lets the daemon fetch and ack them.")
     Component(proxy, "railway/features/ws/proxy_bridge.py", "Participant REST proxy", "Forwards `/{session_id}/api/participant/*` calls to the daemon over `/ws/daemon`.")
     Component(internal, "railway/features/internal/router.py", "Static sync endpoints", "Allows the daemon to upload/delete files under `static/`.")
+    Component(fx, "railway/features/fx/router.py", "Public FX relay", "Regex-guarded, session-independent relay of `/fx/<token>[/info|/fire]` to the daemon's `/api/participant/fx/*`. No token check and no state here — the daemon owns both.")
 }
 
 Rel(participant_spa, pages, "Loads participant pages", "HTTPS")
@@ -158,6 +167,8 @@ Rel(participant_spa, slides, "Reads slide catalog/check/download endpoints", "HT
 Rel(participant_spa, uploads, "Uploads participant files", "HTTPS")
 
 Rel(host_spa, pages, "Same host static files also mounted remotely", "HTTPS")
+
+Rel(fx_holder_browser, fx, "Loads the FX page, polls /info, posts /fire", "HTTPS")
 
 Rel(training_daemon, ws, "Connects as `/ws/daemon`", "WSS")
 Rel(training_daemon, uploads, "Downloads temp files and acks them", "HTTPS")
@@ -170,6 +181,7 @@ Rel(notes, core, "Reads in-memory notes and summary state")
 Rel(slides, core, "Reads slides list/current slide/cache status")
 Rel(uploads, core, "Associates uploads with connected participants")
 Rel(proxy, ws, "Uses daemon WS for request/response correlation")
+Rel(fx, proxy, "Reuses the same proxy_to_daemon() call, with no session_id in the path")
 
 Rel(slides, google_drive, "Downloads PDF exports on cache miss", "HTTPS")
 @enduml
@@ -180,6 +192,7 @@ Rel(slides, google_drive, "Downloads PDF exports on cache miss", "HTTPS")
 - [`railway/app.py`](railway/app.py) is intentionally small. It mounts only the page routers, the daemon/browser WebSocket routers, slides, uploads, internal static-sync routes, public notes/key-points routes, and status/session helpers.
 - Browser WebSockets are session-scoped: `"/ws/{session_id}/{participant_id}"` for participants and host, plus `"/ws/daemon"` for the daemon.
 - Participant REST commands do not execute business logic inside Railway. They are forwarded by [`railway/features/ws/proxy_bridge.py`](railway/features/ws/proxy_bridge.py) to the daemon over the daemon WebSocket and resolved by a correlation-id response path.
+- [`railway/features/fx/router.py`](railway/features/fx/router.py) is a second public entry point, reusing that same `proxy_to_daemon()` plumbing but registered outside `require_active_session`: `/fx/{path}` (path pinned by regex to a token plus an optional `/info` or `/fire`) relays straight to the daemon's `/api/participant/fx/*`, with no `session_id` in the URL and no daemon-active check — the link must keep working even when no session is running. Railway checks no token itself; a bad or unknown token still reaches the daemon, which answers with a flat 404 (`secrets.compare_digest`).
 - Railway state is in-memory only. [`railway/shared/state.py`](railway/shared/state.py) tracks connections, session metadata, slide cache status, temporary uploads, and a few mirrored UI fields.
 - Current Railway runtime files are:
   - `.server-data/uploads` for temporary participant uploads waiting for daemon pickup
@@ -208,7 +221,7 @@ ContainerDb_Ext(local_rag, "Local ChromaDB store", "~/.workshop-rag/chroma")
 Container_Boundary(daemon_pkg, "Training Daemon") {
     Component(main, "daemon/__main__.py", "Orchestrator", "Starts lock/heartbeat, local host server, daemon WS client, slides runner, addons bridge, and the 1-second main loop.")
     Component(host_server, "daemon/host_server.py", "Embedded host FastAPI", "Serves `/host`, mounts local feature routers, and proxies remaining HTTP/WS traffic to Railway.")
-    Component(feature_routes, "participant|quiz|wordcloud|qa|codereview|debate|activity|misc|slides|session|leaderboard routers", "Local application API", "Authoritative feature mutations for host actions and participant REST commands.")
+    Component(feature_routes, "participant|quiz|wordcloud|qa|codereview|debate|activity|misc|slides|session|leaderboard|fx routers", "Local application API", "Authoritative feature mutations for host actions and participant REST commands.")
     Component(host_state, "daemon/host_state_router.py", "Host snapshot builder", "Builds the full host `state` payload from local state singletons and session files.")
     Component(state_singletons, "*state.py modules", "Runtime state", "participant_state, quiz_state, qa_state, wordcloud_state, codereview_state, debate_state, misc_state, leaderboard_state, session stack.")
     Component(railway_bridge, "daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py", "Railway bridge", "Persistent `/ws/daemon` client, write-back event transport, typed broadcasts/send_to_host, static sync triggers.")
@@ -218,6 +231,7 @@ Container_Boundary(daemon_pkg, "Training Daemon") {
     Component(summary, "daemon/summary/loop.py", "Summary sync", "Reads `ai-summary.md`, rewrites key points, and republishes them.")
     Component(slides, "daemon/slides/* + daemon/upload.py", "Slides and upload pipeline", "Catalog loading, Railway cache checks, PDF invalidation, participant upload handoff.")
     Component(addons_bridge, "daemon/addon_bridge_client.py", "Local addons bridge", "Receives slide events and forwards emoji/session_started/session_ended messages.")
+    Component(effects_client, "daemon/effects_client.py", "Soundboard HTTP client", "A second, HTTP-shaped edge to the Mac apps: presses tiles, fetches the live 91-tile catalog, and pings liveness on `http://127.0.0.1:55123` (Victor Addons, which itself proxies to Victor Effects on `:55124`). Best-effort; never raises into a request handler.")
     Component(static_sync, "daemon/static_sync.py", "Static sync", "Diffs local `static/` against Railway and uploads/deletes changed files.")
 }
 
@@ -238,6 +252,7 @@ Rel(host_server, host_state, "Serves `/api/{session_id}/host/state`")
 Rel(feature_routes, state_singletons, "Mutates daemon-owned live state")
 Rel(host_state, state_singletons, "Reads current feature state")
 Rel(feature_routes, railway_bridge, "Emits broadcast/send_to_host write-back events")
+Rel(feature_routes, effects_client, "Presses FX tiles and reads the live catalog")
 
 Rel(session_state, host_files, "Reads and writes persisted session files", "Local filesystem")
 Rel(summary, host_files, "Reads `ai-summary.md` and writes key points", "Local filesystem")
@@ -249,6 +264,7 @@ Rel(railway_bridge, railway_backend, "Daemon WS, static sync, upload handoff, sl
 Rel(quiz, claude_api, "Quiz generation/refinement", "HTTPS")
 Rel(debate_ai, claude_api, "Debate cleanup", "HTTPS")
 Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS")
+Rel(effects_client, macos_addons, "Press tile / fetch catalog / ping", "Local HTTP :55123")
 @enduml
 ```
 
@@ -266,6 +282,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
   - participant identity and personalised snapshots from [`daemon/participant/router.py`](daemon/participant/router.py)
   - quiz state from [`daemon/quiz/router.py`](daemon/quiz/router.py) and [`daemon/quiz/state.py`](daemon/quiz/state.py)
   - word cloud, Q&A, code review, debate, activity switching, misc, leaderboard, slides, and session lifecycle from the matching `daemon/*/router.py` and `daemon/*/state.py` modules
+  - the secret FX link from [`daemon/fx/router.py`](daemon/fx/router.py): a `host_router` under `/api/{session_id}/host/fx/*` for the footer popover's state/catalog/toggle/tile/cooldown/rotate/test controls, and a `participant_router` under `/api/participant/fx/{token}[/info|/fire]` reached anonymously through Railway's `/fx/*` relay. Two brakes are enforced here, both server-side: a master switch (`participant_state.fx_enabled`, off at the start of every session) and a monotonic-clock cooldown. A successful fire notifies the host over `daemon/ws_publish.py` with `fx_fired {tile_n, label, at}` — no token, no participant identity, by design.
 - The host page loads its full snapshot from [`daemon/host_state_router.py`](daemon/host_state_router.py), which aggregates local state plus file-backed notes, key points, slide logs, and session metadata.
 - Participant REST traffic forwarded by Railway lands on the same daemon routers. The daemon's write-back middleware stores semantic events in `X-Write-Back-Events`, and [`daemon/proxy_handler.py`](daemon/proxy_handler.py) converts those into daemon-WS `broadcast` or `send_to_host` messages so Railway can fan out updates.
 - Persistent daemon files are managed by [`daemon/session_state.py`](daemon/session_state.py):
@@ -279,6 +296,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 - The daemon also performs two infrastructure jobs that are easy to miss:
   - static asset sync via [`daemon/static_sync.py`](daemon/static_sync.py), driven by Railway's `sync_files` message on daemon WS connect
   - participant upload handoff via [`daemon/upload.py`](daemon/upload.py), which downloads temp files from Railway into the current session folder and then acks Railway to delete them
+- The daemon has a second, HTTP-shaped edge to the Mac apps, alongside the existing `ws://127.0.0.1:8765` bridge in [`daemon/addon_bridge_client.py`](daemon/addon_bridge_client.py). [`daemon/effects_client.py`](daemon/effects_client.py) calls `http://127.0.0.1:55123` (Victor Addons, which forwards to Victor Effects on `:55124` — the daemon never talks to that port directly) to press a soundboard tile, fetch the live tile catalog, or check whether the effects app is up. It never raises into a request handler and never lets a caller-supplied string reach those URLs as a path segment — `press_tile()` takes an `int` — because the effects ports have no authentication of their own.
 - Files the trainer opens in IntelliJ are turned into GitHub links, not just logged. [`daemon/addon_bridge_client.py`](daemon/addon_bridge_client.py) hands each `git_file_opened` event `(url, branch, path)` to [`daemon/files_md.py`](daemon/files_md.py), which resolves a blob URL against the branch captured at open time (falling back to the repo's default branch) via [`daemon/github_client.py`](daemon/github_client.py), and upserts the entry by `(repo, path)` into `opened-files.md` in the session folder — the same file is both the persisted state and the markdown participants receive (HTML comments stripped) from [`daemon/misc/router.py`](daemon/misc/router.py). Because files opened during live coding are frequently not pushed yet, `python3 -m daemon.relink_open_files [--session-folder PATH]` re-resolves every link from scratch; the training summarizer runs it before writing a summary so it can cite files by URL.
 
 ---
@@ -292,6 +310,7 @@ Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS"
 | Host landing | Local daemon host server (same files also mounted on Railway) | [`static/host-landing.html`](static/host-landing.html), [`static/host-landing.js`](static/host-landing.js) | Creates or resumes sessions via local `/api/session/*` routes and redirects to `/host/{session_id}`. |
 | Host app | Local daemon host server (same files also mounted on Railway) | [`static/host.html`](static/host.html), [`static/host.js`](static/host.js) | Connects to `/ws/{session_id}/__host__` through the daemon proxy, loads `/api/{session_id}/host/state`, and performs host-only actions against local daemon APIs. |
 | Shared browser helpers | Both | [`static/utils.js`](static/utils.js), [`static/version-age.js`](static/version-age.js), [`static/version-reload.js`](static/version-reload.js) | Common REST/WS helpers, modal utilities, deploy-age rendering, and forced reload when static sync changes assets. |
+| FX page | Served dynamically by the daemon, not by Railway's static pages router | [`static/fx.html`](static/fx.html) | Reached anonymously at `https://interact.victorrentea.ro/fx/<token>`, relayed by Railway straight to [`daemon/fx/router.py`](daemon/fx/router.py)'s `GET /api/participant/fx/{token}`, which reads the file off disk and returns it as `text/html`. One button; polls `/info` and posts `/fire`. No session, no UUID, no join flow. |
 
 ### Browser behavior worth remembering
 
