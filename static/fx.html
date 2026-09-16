@@ -17,11 +17,14 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     text-align: center; overflow-x: hidden;
   }
-  #label { font-size: 1.4rem; font-weight: 700; letter-spacing: .01em; }
   #num { font-size: .8rem; color: #9a90b4; letter-spacing: .14em; text-transform: uppercase; }
   #fire {
     width: min(78vw, 300px); height: min(78vw, 300px); border-radius: 50%; border: none;
-    font-size: 1.5rem; font-weight: 800; letter-spacing: .02em; color: #fff; cursor: pointer;
+    /* The effect's own name rides in the button, so it has to survive a long
+       one ("guess whos back") inside a circle: smaller, wrapping, and padded
+       off the curve rather than clipped by it. */
+    font-size: 1.2rem; font-weight: 800; letter-spacing: .01em; line-height: 1.25;
+    padding: 0 2.2rem; color: #fff; cursor: pointer;
     background: radial-gradient(circle at 32% 28%, #ff6b5e, #c62f4a 62%, #8d1030);
     box-shadow: 0 16px 40px rgba(198,47,74,.42), inset 0 -8px 20px rgba(0,0,0,.35);
     transition: transform .08s ease, filter .15s ease;
@@ -38,10 +41,7 @@
 </style>
 </head>
 <body>
-  <div>
-    <div id="num"></div>
-    <div id="label">…</div>
-  </div>
+  <div id="num"></div>
   <button id="fire" disabled>…</button>
   <div id="status">Loading…</div>
 
@@ -51,7 +51,6 @@
   // the token never has to be parsed out or stored anywhere.
   const BASE = location.pathname.replace(/\/+$/, '');
   const btn = document.getElementById('fire');
-  const label = document.getElementById('label');
   const num = document.getElementById('num');
   const status = document.getElementById('status');
 
@@ -60,6 +59,9 @@
   let effectsUp = true;
   let tileAvailable = true;
   let firing = false;
+  // What the button says when it is ready: the effect's own name, straight
+  // from the server, so the holder presses "scream ghost" rather than a verb.
+  let tileName = '…';
 
   function say(text, bad) {
     status.textContent = text;
@@ -92,8 +94,8 @@
       return;
     }
     btn.disabled = firing;
-    btn.textContent = firing ? '…' : 'FIRE';
-    if (!firing) say('Press it when the room needs waking up.');
+    btn.textContent = firing ? '…' : tileName;
+    if (!firing) say('');
   }
 
   function applyInfo(info) {
@@ -101,9 +103,9 @@
     effectsUp = !!info.effects_up;
     tileAvailable = !!info.tile_available;
     ready = info.ready_in_seconds || 0;
-    label.textContent = info.label || ('tile ' + info.tile_n);
+    tileName = info.label || ('tile ' + info.tile_n);
     num.textContent = '#' + info.tile_n + (info.effect ? ' · ' + info.effect : '');
-    document.title = label.textContent;
+    document.title = tileName;
     render();
   }
 

@@ -368,20 +368,28 @@
       <div id="fx-popover" style="display:none; position:absolute; bottom:calc(100% + 8px); left:0;
            background:var(--surface2); border:1px solid var(--color-primary,#6750a4); border-radius:8px;
            padding:.6rem .7rem; white-space:nowrap; z-index:300; box-shadow:0 4px 14px rgba(0,0,0,.45);">
-        <label style="display:flex; gap:.45rem; align-items:center; font-size:.85rem; cursor:pointer; margin-bottom:.5rem;">
-          <input id="fx-enabled" type="checkbox" onchange="toggleFxEnabled()" style="cursor:pointer;">
-          Let the link fire effects
-        </label>
-        <div style="display:flex; gap:.4rem; align-items:center; margin-bottom:.5rem;">
-          <select id="fx-tile" onchange="setFxTile()"
-                  style="width:17rem; padding:.35rem .5rem; border-radius:5px; border:1px solid var(--outline,#555);
-                         background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.85rem;"></select>
-          <input id="fx-cooldown" type="number" min="0" max="300" data-tip="Seconds between triggers"
-                 onchange="setFxCooldown()"
-                 style="width:4.2rem; padding:.35rem .4rem; border-radius:5px; border:1px solid var(--outline,#555);
-                        background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.85rem;">
+        <div style="display:flex; gap:.4rem; align-items:flex-end; margin-bottom:.5rem;">
+          <label style="display:flex; flex-direction:column; gap:.2rem; font-size:.72rem; color:var(--text-muted,#9a90b4);">
+            Effect
+            <select id="fx-tile" onchange="setFxTile()"
+                    style="width:17rem; padding:.35rem .5rem; border-radius:5px; border:1px solid var(--outline,#555);
+                           background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.85rem;"></select>
+          </label>
+          <label data-tip="Seconds a holder must wait before the link fires again"
+                 style="display:flex; flex-direction:column; gap:.2rem; font-size:.72rem; color:var(--text-muted,#9a90b4);">
+            Cooldown (s):
+            <input id="fx-cooldown" type="number" min="0" max="300"
+                   onchange="setFxCooldown()"
+                   style="width:4.2rem; padding:.35rem .4rem; border-radius:5px; border:1px solid var(--outline,#555);
+                          background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.85rem;">
+          </label>
         </div>
         <div style="display:flex; gap:.4rem; align-items:center;">
+          <label data-tip="Master switch — when off, the link loads but refuses to fire"
+                 style="display:flex; gap:.35rem; align-items:center; font-size:.85rem; cursor:pointer;">
+            <input id="fx-enabled" type="checkbox" onchange="toggleFxEnabled()" style="cursor:pointer;">
+            Enabled
+          </label>
           <button id="fx-copy-btn" onclick="copyFxLink(this)" data-tip="Copy the secret link (never shown on screen — paste it into chat yourself)"
                   style="padding:.35rem .7rem; border:1px solid var(--outline,#555); border-radius:5px;
                          background:transparent; color:var(--text,#fff); cursor:pointer; font-size:.85rem;">Copy link</button>

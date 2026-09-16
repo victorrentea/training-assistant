@@ -248,7 +248,9 @@ class TestPage:
         body = client.get(f"/api/participant/fx/{TOKEN}").text
         assert 'id="fire"' in body
         assert 'id="status"' in body
-        assert 'id="label"' in body
+        # The effect's name is rendered inside the button itself, not in a
+        # separate heading — the button is the only place it appears.
+        assert 'id="num"' in body
         assert "getElementById('fire')" in body
         assert "/info" in body
         assert "/fire" in body
