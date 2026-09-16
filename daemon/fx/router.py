@@ -99,6 +99,23 @@ def _check_token(token: str) -> None:
         raise HTTPException(status_code=404)
 
 
+def _effects_reachable() -> bool:
+    """Whether the next press is expected to work — not just whether the apps
+    answer a ping.
+
+    A ping and a press are different calls: `/ping` can succeed while the apps
+    lack the `/press/<n>` route a press actually needs (exactly the case while
+    the running Mac apps predate that route), and `is_up()` alone can't see
+    that. Once a real press has been attempted this session (a participant
+    fire or the host's Test button), its outcome overrides the ping — until a
+    later attempt succeeds again — so /info never tells the page a press would
+    work when the last one just proved otherwise.
+    """
+    if not effects_client.is_up():
+        return False
+    return participant_state.fx_last_press_ok is not False
+
+
 def cooldown_remaining() -> int:
     """Whole seconds left before the button works again.
 
@@ -143,7 +160,7 @@ async def fx_info(token: str):
         enabled=participant_state.fx_enabled,
         cooldown_seconds=participant_state.fx_cooldown_seconds,
         ready_in_seconds=cooldown_remaining(),
-        effects_up=effects_client.is_up(),
+        effects_up=_effects_reachable(),
         tile_available=bool(tile),
     )
 
@@ -170,8 +187,11 @@ async def fx_fire(token: str):
     if not effects_client.press_tile(n):
         # A press that did not happen must not start a cooldown — otherwise a
         # closed soundboard locks the button for ten seconds per attempt.
+        # It does, however, update what /info believes: see _effects_reachable().
+        participant_state.fx_last_press_ok = False
         return FxFireResponse(fired=False, reason="effects-down", ready_in_seconds=0)
 
+    participant_state.fx_last_press_ok = True
     participant_state.fx_last_fired_mono = time.monotonic()
     participant_state.fx_last_fired_at = time.time()
     participant_state.persist()
@@ -255,7 +275,7 @@ def _state_response() -> FxStateResponse:
         effect=tile.get("effect"),
         cooldown_seconds=participant_state.fx_cooldown_seconds,
         last_fired_at=participant_state.fx_last_fired_at,
-        effects_up=effects_client.is_up(),
+        effects_up=_effects_reachable(),
     )
 
 
@@ -333,10 +353,17 @@ async def fx_test():
     link is disarmed, and a cooldown meant for the room should not make the
     trainer wait. It does not start a cooldown either — testing must not take
     the lever away from someone holding the link.
+
+    This is also the room's only recovery path once a real press has failed:
+    /info trusts the last actual attempt over the ping (see
+    _effects_reachable()), so after a failure the participant button stays
+    disabled until a Test from here proves the wiring works again.
     """
     tile = find_tile(participant_state.fx_tile_n)
     if tile is None:
         return FxFireResponse(fired=False, reason="no-tile", ready_in_seconds=0)
     if not effects_client.press_tile(participant_state.fx_tile_n):
+        participant_state.fx_last_press_ok = False
         return FxFireResponse(fired=False, reason="effects-down", ready_in_seconds=0)
+    participant_state.fx_last_press_ok = True
     return FxFireResponse(fired=True, reason="ok", ready_in_seconds=0)

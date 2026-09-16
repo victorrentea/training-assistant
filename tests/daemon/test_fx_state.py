@@ -23,6 +23,9 @@ class TestDefaults:
     def test_nothing_has_fired_yet(self):
         assert ParticipantState().fx_last_fired_at is None
 
+    def test_no_press_outcome_is_known_yet(self):
+        assert ParticipantState().fx_last_press_ok is None
+
 
 class TestReset:
     def test_reset_forces_the_switch_back_off(self):
@@ -51,6 +54,13 @@ class TestReset:
         assert ps.fx_last_fired_at is None
         assert ps.fx_last_fired_mono is None
 
+    def test_reset_forgets_the_last_press_outcome(self):
+        """Yesterday's soundboard failure must not disarm this morning's link."""
+        ps = ParticipantState()
+        ps.fx_last_press_ok = False
+        ps.reset()
+        assert ps.fx_last_press_ok is None
+
 
 class TestRoundTrip:
     def test_the_fields_survive_snapshot_and_restore(self):
@@ -76,6 +86,14 @@ class TestRoundTrip:
         ps = ParticipantState()
         ps.fx_last_fired_mono = 42.0
         assert "fx_last_fired_mono" not in ps.snapshot()
+
+    def test_the_press_outcome_is_never_persisted(self):
+        """Like the monotonic stamp, this is a live health signal about the
+        current process's connection to the Mac — meaningless, and possibly
+        wrong, after a daemon restart."""
+        ps = ParticipantState()
+        ps.fx_last_press_ok = False
+        assert "fx_last_press_ok" not in ps.snapshot()
 
     def test_a_snapshot_that_omits_the_switch_leaves_it_off(self):
         """A legacy session-state.json must not accidentally arm the link."""

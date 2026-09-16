@@ -25,9 +25,11 @@ def fx_state():
     participant_state.fx_cooldown_seconds = 10
     participant_state.fx_last_fired_at = None
     participant_state.fx_last_fired_mono = None
+    participant_state.fx_last_press_ok = None
     yield
     participant_state.fx_enabled = False
     participant_state.fx_token = None
+    participant_state.fx_last_press_ok = None
 
 
 @pytest.fixture(autouse=True)
@@ -158,3 +160,19 @@ class TestHostTestButton:
     def test_it_still_reports_a_closed_soundboard(self, client):
         with patch("daemon.fx.router.effects_client.press_tile", return_value=False):
             assert client.post("/api/cur/host/fx/test").json()["reason"] == "effects-down"
+
+    def test_a_failed_test_marks_the_link_not_reachable_in_state(self, client):
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=False):
+            client.post("/api/cur/host/fx/test")
+        assert client.get("/api/cur/host/fx/state").json()["effects_up"] is False
+
+    def test_a_later_successful_test_is_the_recovery_path(self, client):
+        """Once a press has failed, /info won't trust the ping again on its own
+        — a later real press (here, the host's Test button) is what clears it,
+        which is how the trainer confirms the wiring before re-arming the room."""
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=False):
+            client.post("/api/cur/host/fx/test")
+        assert client.get("/api/cur/host/fx/state").json()["effects_up"] is False
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=True):
+            client.post("/api/cur/host/fx/test")
+        assert client.get("/api/cur/host/fx/state").json()["effects_up"] is True

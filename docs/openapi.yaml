@@ -669,7 +669,16 @@ paths:
 
         trainer wait. It does not start a cooldown either — testing must not take
 
-        the lever away from someone holding the link.'
+        the lever away from someone holding the link.
+
+
+        This is also the room''s only recovery path once a real press has failed:
+
+        /info trusts the last actual attempt over the ping (see
+
+        _effects_reachable()), so after a failure the participant button stays
+
+        disabled until a Test from here proves the wiring works again.'
       operationId: fx_test_api__session_id__host_fx_test_post
       responses:
         '200':

@@ -26,10 +26,12 @@ def fx_state():
     participant_state.fx_cooldown_seconds = 10
     participant_state.fx_last_fired_at = None
     participant_state.fx_last_fired_mono = None
+    participant_state.fx_last_press_ok = None
     yield
     participant_state.fx_enabled = False
     participant_state.fx_token = None
     participant_state.fx_last_fired_mono = None
+    participant_state.fx_last_press_ok = None
 
 
 @pytest.fixture
@@ -175,8 +177,28 @@ class TestFire:
         assert r.json()["reason"] == "effects-down"
         assert participant_state.fx_last_fired_mono is None
 
+    def test_a_failed_press_marks_the_next_info_read_as_not_reachable_even_if_the_ping_is_up(self, client):
+        """The bug this guards: a ping can succeed while the Mac apps lack the
+        /press/<n> route a press needs. /info must not tell the page a press
+        would work right after one just proved it wouldn't."""
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=False):
+            client.post(f"/api/participant/fx/{TOKEN}/fire")
+        with patch("daemon.fx.router.effects_client.is_up", return_value=True):
+            r = client.get(f"/api/participant/fx/{TOKEN}/info")
+        assert r.json()["effects_up"] is False
+
 
 class TestInfo:
+    def test_effects_up_is_true_by_default_when_the_ping_is_up_and_no_press_has_failed(self, client):
+        with patch("daemon.fx.router.effects_client.is_up", return_value=True):
+            r = client.get(f"/api/participant/fx/{TOKEN}/info")
+        assert r.json()["effects_up"] is True
+
+    def test_effects_up_is_false_when_the_ping_itself_is_down_regardless_of_press_history(self, client):
+        with patch("daemon.fx.router.effects_client.is_up", return_value=False):
+            r = client.get(f"/api/participant/fx/{TOKEN}/info")
+        assert r.json()["effects_up"] is False
+
     def test_it_describes_the_selected_tile(self, client):
         with patch("daemon.fx.router.effects_client.is_up", return_value=True):
             r = client.get(f"/api/participant/fx/{TOKEN}/info")

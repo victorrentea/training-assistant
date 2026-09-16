@@ -81,6 +81,13 @@ class ParticipantState:
         # process — deliberately absent from snapshot() so a restart cannot
         # resurrect a cooldown measured against a different epoch.
         self.fx_last_fired_mono: float | None = None
+        # Outcome of the most recent *actual* press attempt (participant fire
+        # or host test), as opposed to a ping. A ping can succeed while the
+        # apps lack the /press/<n> route a press needs, so /info trusts this
+        # over effects_client.is_up() once it has a real answer. Ephemeral —
+        # meaningless across a daemon restart, so deliberately absent from
+        # snapshot() — and cleared back to "no answer yet" every session.
+        self.fx_last_press_ok: bool | None = None
         # Engagement: uuid -> {view -> {seconds, visits, clicks}} (cumulative, persisted)
         self.engagement: dict[str, dict] = {}
         # Liveness (ephemeral, NOT persisted): host derives "active now" from these
@@ -269,6 +276,7 @@ class ParticipantState:
             self.fx_cooldown_seconds = 10
             self.fx_last_fired_at = None
             self.fx_last_fired_mono = None
+            self.fx_last_press_ok = None
             self.engagement.clear()
             self.last_active_at.clear()
             self.last_view.clear()

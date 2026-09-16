@@ -136,12 +136,13 @@
         say('Fired 💥');
       } else if (res.reason === 'disabled') {
         enabled = false; render();
-      } else if (res.reason === 'effects-down') {
-        effectsUp = false; render();
-      } else if (res.reason === 'no-tile') {
-        // The server reports tile availability in /info, so this branch just renders the
-        // current state. The next poll will fetch fresh info and reflect the true condition.
-        render();
+      } else if (res.reason === 'effects-down' || res.reason === 'no-tile') {
+        // Never latch a local guess about the Mac (that's what caused the old
+        // oscillation: a ping-based belief silently overriding an actual press
+        // failure until the next poll). Instead resync immediately from /info,
+        // same as tileAvailable already does — the page only ever shows what
+        // the server just told it, not what this tab remembers.
+        loadInfo();
       } else {
         render();
       }
