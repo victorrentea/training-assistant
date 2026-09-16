@@ -275,6 +275,14 @@ async def get_session_status(session_id: str):
     }
 
 
+# The room's secret FX link. Two segments (/fx/<token>), so it MUST be
+# registered before /{session_id}/{tab} below or that catch-all reads it as
+# session "fx", tab "<token>". Public and session-independent by design: the
+# link is handed out ahead of time and must not die between sessions.
+from railway.features.fx.router import fx_router
+app.include_router(fx_router, dependencies=[Depends(rate_limit_probe)])
+
+
 # ── Catch-all participant routes — registered ABSOLUTELY LAST ──
 # /{session_id}/{tab} matches any two-segment path, so it must come after every
 # explicit root route and the /static mount above; otherwise it shadows them
