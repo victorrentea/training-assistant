@@ -329,7 +329,7 @@ def _participant_state_snapshot(**overrides) -> dict:
         "emoji_global_enabled": True,
         "attention_enabled": True,
         "fx_enabled": True,
-        "fx_token": "abc123def456",
+        "fx_token": "test-fx-token-01",
         "fx_tile_n": 69,
         "fx_cooldown_seconds": 10,
         "fx_last_fired_at": 1000.0,
@@ -402,7 +402,7 @@ def test_producer_a_and_producer_b_fields_coexist_across_alternating_writes():
 
         _save_session_state(folder, _participant_state_snapshot())
         written = json.loads((folder / "session-state.json").read_text())
-        assert written["fx_token"] == "abc123def456"
+        assert written["fx_token"] == "test-fx-token-01"
         assert written["attention_enabled"] is True
 
         _save_session_state(folder, _runtime_session_snapshot())
@@ -412,16 +412,16 @@ def test_producer_a_and_producer_b_fields_coexist_across_alternating_writes():
         assert written["qa_questions"]["q1"]["text"] == "Why?"
         assert written["debate"]["statement"] == "Tabs vs spaces"
         # ...and A's fields from the previous write were NOT clobbered.
-        assert written["fx_token"] == "abc123def456"
+        assert written["fx_token"] == "test-fx-token-01"
         assert written["fx_enabled"] is True
         assert written["attention_enabled"] is True
         assert written["emoji_counters"] == {"🎉": 3}
         assert written["trainer_pids"] == ["u1"]
 
-        _save_session_state(folder, _participant_state_snapshot(fx_token="newtoken1234", fx_enabled=False))
+        _save_session_state(folder, _participant_state_snapshot(fx_token="test-fx-token-02", fx_enabled=False))
         written = json.loads((folder / "session-state.json").read_text())
         # A's updated fields landed...
-        assert written["fx_token"] == "newtoken1234"
+        assert written["fx_token"] == "test-fx-token-02"
         assert written["fx_enabled"] is False
         # ...and B's activity state from the previous write is still intact.
         assert written["quiz"]["active"] is True
@@ -438,12 +438,12 @@ def test_fx_fields_survive_a_subsequent_activity_flush():
         folder = Path(d)
         from daemon.session_state import save_session_state as _save_session_state
 
-        _save_session_state(folder, _participant_state_snapshot(fx_enabled=True, fx_token="secretlink1"))
+        _save_session_state(folder, _participant_state_snapshot(fx_enabled=True, fx_token="test-fx-token-03"))
         _save_session_state(folder, _runtime_session_snapshot())
 
         written = json.loads((folder / "session-state.json").read_text())
         assert written["fx_enabled"] is True
-        assert written["fx_token"] == "secretlink1"
+        assert written["fx_token"] == "test-fx-token-03"
 
 
 def test_quiz_and_qa_questions_survive_a_subsequent_participant_persist():
@@ -484,7 +484,7 @@ def test_fx_fields_round_trip_through_a_restart_via_the_real_state_objects():
 
         armed = ParticipantState()
         armed.fx_enabled = True
-        armed.fx_token = "abc123def456"
+        armed.fx_token = "test-fx-token-01"
         armed.fx_tile_n = 3
         armed.fx_cooldown_seconds = 30
         armed.fx_last_fired_at = 1789554996.0
@@ -498,7 +498,7 @@ def test_fx_fields_round_trip_through_a_restart_via_the_real_state_objects():
         restored.sync_from_restore(_load_session_state(folder))
 
         assert restored.fx_enabled is True
-        assert restored.fx_token == "abc123def456"
+        assert restored.fx_token == "test-fx-token-01"
         assert restored.fx_tile_n == 3
         assert restored.fx_cooldown_seconds == 30
         assert restored.fx_last_fired_at == 1789554996.0
@@ -514,9 +514,9 @@ def test_fx_token_can_still_be_explicitly_cleared():
         folder = Path(d)
         from daemon.session_state import save_session_state as _save_session_state
 
-        _save_session_state(folder, _participant_state_snapshot(fx_token="abc123def456", fx_enabled=True))
+        _save_session_state(folder, _participant_state_snapshot(fx_token="test-fx-token-01", fx_enabled=True))
         written = json.loads((folder / "session-state.json").read_text())
-        assert written["fx_token"] == "abc123def456"
+        assert written["fx_token"] == "test-fx-token-01"
 
         # A fresh session reset: fx_token goes back to None, fx_enabled to False —
         # both explicit values, as ParticipantState.reset() produces via snapshot().
