@@ -382,9 +382,9 @@
                         background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.85rem;">
         </div>
         <div style="display:flex; gap:.4rem; align-items:center;">
-          <input id="fx-url" type="text" readonly onclick="copyFxLink(this)" data-tip="Click to copy"
-                 style="width:17rem; padding:.35rem .55rem; border-radius:5px; border:1px solid var(--outline,#555);
-                        background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.8rem; cursor:pointer;">
+          <button id="fx-copy-btn" onclick="copyFxLink(this)" data-tip="Copy the secret link (never shown on screen — paste it into chat yourself)"
+                  style="padding:.35rem .7rem; border:1px solid var(--outline,#555); border-radius:5px;
+                         background:transparent; color:var(--text,#fff); cursor:pointer; font-size:.85rem;">Copy link</button>
           <button id="fx-test-btn" onclick="testFx()"
                   style="padding:.35rem .7rem; border:none; border-radius:5px; background:var(--color-primary,#6750a4);
                          color:#fff; cursor:pointer; font-size:.85rem; font-weight:600;">Test</button>

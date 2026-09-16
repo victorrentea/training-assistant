@@ -940,6 +940,10 @@
   // from what the click assumed.
 
   let _fxCatalogLoaded = false;
+  // The secret URL itself, held only in memory and never painted anywhere —
+  // the host page is projected on a screen, so the token must never be
+  // readable or photographable in it. Copy-to-clipboard is the only way out.
+  let _fxUrl = '';
 
   function applyFxState(s) {
     const badge = document.getElementById('fx-badge');
@@ -954,8 +958,7 @@
     }
     const cb = document.getElementById('fx-enabled');
     if (cb) cb.checked = !!s.enabled;
-    const url = document.getElementById('fx-url');
-    if (url) url.value = s.url || '';
+    _fxUrl = s.url || '';
     const cd = document.getElementById('fx-cooldown');
     if (cd && document.activeElement !== cd) cd.value = s.cooldown_seconds;
     const sel = document.getElementById('fx-tile');
@@ -1001,13 +1004,36 @@
     }
   }
 
+  // Same outside-click pattern as toggleSlidesCompileConfirm(): a document-level
+  // listener added only while the popover is open, and always cleaned up before
+  // the next toggle. The footer is projected on screen with the secret link's
+  // copy button in it, so this popover must not be left open once the host's
+  // attention moves elsewhere — unlike toggleAttentionNotifyPopover, whose
+  // stopPropagation() has no such listener to stop and was cargo-culted here
+  // without one.
+  let _fxPopoverCloseHandler = null;
+
   function toggleFxPopover(ev) {
     if (ev) ev.stopPropagation();
     const pop = document.getElementById('fx-popover');
     if (!pop) return;
     const showing = pop.style.display !== 'none';
-    pop.style.display = showing ? 'none' : 'block';
-    if (!showing) { loadFxCatalog(); loadFxState(); }
+    if (showing) { closeFxPopover(); return; }
+    pop.style.display = 'block';
+    loadFxCatalog(); loadFxState();
+    _fxPopoverCloseHandler = function (e) {
+      if (!pop.contains(e.target)) closeFxPopover();
+    };
+    setTimeout(() => document.addEventListener('click', _fxPopoverCloseHandler), 0);
+  }
+
+  function closeFxPopover() {
+    const pop = document.getElementById('fx-popover');
+    if (pop) pop.style.display = 'none';
+    if (_fxPopoverCloseHandler) {
+      document.removeEventListener('click', _fxPopoverCloseHandler);
+      _fxPopoverCloseHandler = null;
+    }
   }
 
   async function toggleFxEnabled() {
@@ -1055,8 +1081,10 @@
   }
 
   function copyFxLink(el) {
-    if (!el || !el.value) return;
-    navigator.clipboard.writeText(el.value)
+    // The URL never sits in the DOM (see _fxUrl above) — copy it straight
+    // from memory, so there is nothing on screen to leak even for an instant.
+    if (!_fxUrl) return;
+    navigator.clipboard.writeText(_fxUrl)
       .then(() => _showFooterCopiedTooltip(el, 'Link copied'))
       .catch((e) => console.error('fx link copy failed', e));
   }
@@ -1066,7 +1094,7 @@
       const r = await fetch(API('/fx/rotate'), { method: 'POST' });
       if (!r.ok) throw new Error(r.status);
       applyFxState(await r.json());
-      const el = document.getElementById('fx-url');
+      const el = document.getElementById('fx-copy-btn');
       if (el) _showFooterCopiedTooltip(el, 'New link — the old one is dead');
     } catch (e) {
       console.error('fx rotate failed', e);
@@ -1759,6 +1787,7 @@ function _renderEngagementPopover() {
       closeMap();
       closeQR();
       closeSummaryModal();
+      closeFxPopover();
     }
   });
 
