@@ -13,6 +13,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 import railway.shared.metrics as metrics  # noqa: F401 - import for Prometheus metric registration side effects
 from railway.features.bridge.router import router as bridge_router
+from railway.features.fx.router import fx_router
 from railway.features.inbox.router import router as inbox_router
 from railway.features.internal.router import router as internal_router
 from railway.features.materials import router as materials
@@ -279,7 +280,6 @@ async def get_session_status(session_id: str):
 # registered before /{session_id}/{tab} below or that catch-all reads it as
 # session "fx", tab "<token>". Public and session-independent by design: the
 # link is handed out ahead of time and must not die between sessions.
-from railway.features.fx.router import fx_router
 app.include_router(fx_router, dependencies=[Depends(rate_limit_probe)])
 
 
