@@ -12,10 +12,32 @@
 body{visibility:hidden}
 :root{--participant-zoom:1}
 #notes-content{font-size:calc(1rem * var(--participant-zoom))}
-/* Notes render as blank-line-delimited paragraphs; single newlines inside a
-   paragraph stay tight (sub-items), a small gap separates paragraphs. */
-#notes-content .notes-para{white-space:pre-wrap}
-#notes-content .notes-para:not(:last-child){margin-bottom:0.6em}
+/* Notes render one keyed <div> per source line, so a live edit is reconciled --
+   and flashed -- line by line; a blank line in the source becomes the gap after
+   the last line of a paragraph. The padding/negative-margin pair reserves room
+   for the "just changed" highlight, so nothing shifts when it appears. */
+#notes-content .notes-line{white-space:pre-wrap;padding:0 .45em;margin:0 -.45em;border-radius:5px}
+#notes-content .notes-line[data-para-end]{margin-bottom:0.6em}
+/* A line that changed while it was off-screen waits, statically marked, until it
+   is scrolled into view -- only then does the 5s blink-and-fade run, so the
+   reader always catches the flash instead of missing it above the fold. */
+#notes-content .notes-fresh-pending{background:rgba(139,92,246,.38);box-shadow:inset 3px 0 0 rgba(139,92,246,.95)}
+@keyframes notes-fresh-fade{
+  0%{background-color:rgba(139,92,246,.55);box-shadow:inset 3px 0 0 rgba(139,92,246,1)}
+  7%{background-color:rgba(139,92,246,.06);box-shadow:inset 3px 0 0 rgba(139,92,246,.18)}
+  14%{background-color:rgba(139,92,246,.55);box-shadow:inset 3px 0 0 rgba(139,92,246,1)}
+  21%{background-color:rgba(139,92,246,.06);box-shadow:inset 3px 0 0 rgba(139,92,246,.18)}
+  28%{background-color:rgba(139,92,246,.55);box-shadow:inset 3px 0 0 rgba(139,92,246,1)}
+  100%{background-color:rgba(139,92,246,0);box-shadow:inset 3px 0 0 rgba(139,92,246,0)}
+}
+#notes-content .notes-fresh{animation:notes-fresh-fade 5s ease-out forwards}
+/* Off-screen cue: "3 new above/below" -- click jumps to the nearest pending line. */
+.notes-cue{position:absolute;left:50%;transform:translateX(-50%);z-index:25;display:none;align-items:center;gap:.3em;padding:.35rem .9rem;border-radius:999px;border:none;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:700;letter-spacing:.02em;color:#fff;background:#8b5cf6;animation:notes-cue-pulse 1.6s ease-in-out infinite}
+.notes-cue.show{display:flex}
+.notes-cue .material-symbols-outlined{font-size:1.1rem}
+#notes-cue-up{top:1.5rem}
+#notes-cue-down{bottom:140px}
+@keyframes notes-cue-pulse{0%,100%{box-shadow:0 4px 14px rgba(139,92,246,.45)}50%{box-shadow:0 4px 22px rgba(139,92,246,.9)}}
 #summary-content{font-size:calc(1rem * var(--participant-zoom))}
 #files-content{font-size:calc(1rem * var(--participant-zoom))}
 /* Opened Files renders like an IDE project view: each folder owns a nested
@@ -1024,7 +1046,13 @@ body{visibility:hidden}
       <span class="material-symbols-outlined">download</span>
     </button>
   </div>
-  <div id="notes-scroll" class="flex-grow overflow-y-auto px-16 pt-12" style="padding-bottom:125px" onscroll="saveScroll('notes',this)">
+  <button id="notes-cue-up" class="notes-cue" onclick="jumpToFreshNote('up')" data-tip="Jump to what just changed above">
+    <span class="material-symbols-outlined">arrow_upward</span><span class="notes-cue-label"></span>
+  </button>
+  <button id="notes-cue-down" class="notes-cue" onclick="jumpToFreshNote('down')" data-tip="Jump to what just changed below">
+    <span class="material-symbols-outlined">arrow_downward</span><span class="notes-cue-label"></span>
+  </button>
+  <div id="notes-scroll" class="flex-grow overflow-y-auto px-16 pt-12" style="padding-bottom:125px" onscroll="saveScroll('notes',this);updateNotesCues()">
     <div id="notes-content" class="text-on-surface leading-relaxed">Loading…</div>
   </div>
 </div>
@@ -5651,12 +5679,135 @@ function linkifyText(text) {
   return escaped.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" class="underline text-primary">$1</a>');
 }
 
-// Render notes as blank-line-delimited paragraphs so each gets a small gap;
-// single newlines inside a paragraph stay tight (they are sub-items).
-function renderNotesHtml(text) {
-  return text.split(/\n[ \t]*\n+/)
-    .map(function (block) { return '<div class="notes-para">' + linkifyText(block) + '</div>'; })
-    .join('');
+// ── Live notes: reconcile line by line, flash what just changed ─────────────
+// The trainer types into the notes file during the workshop, so a participant
+// parked on this tab must SEE which line moved instead of hunting for it.
+// Each source line becomes its own keyed node (key = hash of the line text +
+// occurrence index), so an edit replaces exactly that node: everything else
+// keeps its DOM, its selection and its highlight state.
+// Blank lines are not nodes — they become the bottom gap of the line they follow.
+function notesLineBlocks(text) {
+  var out = [], seen = {};
+  var blocks = text.split(/\n[ \t]*\n+/).filter(function(b) { return b.length; });
+  blocks.forEach(function(block, bi) {
+    var lines = block.split('\n');
+    lines.forEach(function(line, li) {
+      var base = _hashStr(line);
+      var key = base + '.' + (seen[base] = (seen[base] || 0) + 1);
+      out.push({ key: key, text: line, paraEnd: li === lines.length - 1 && bi < blocks.length - 1 });
+    });
+  });
+  return out;
+}
+
+// One observer for the whole tab: a changed line stays statically marked until
+// it actually enters the viewport, and only then starts its 5s blink-and-fade.
+// A line changed far above/below the fold therefore still gets its moment when
+// the reader scrolls to it — and until then it is what the cue pills count.
+var _notesFreshObs = null;
+function _notesFreshObserver() {
+  if (_notesFreshObs || typeof IntersectionObserver === 'undefined') return _notesFreshObs;
+  _notesFreshObs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (!entry.isIntersecting) return;
+      var el = entry.target;
+      _notesFreshObs.unobserve(el);
+      el.classList.remove('notes-fresh-pending');
+      el.classList.add('notes-fresh');
+      var done = function() {
+        el.classList.remove('notes-fresh');
+        el.removeEventListener('animationend', done);
+      };
+      el.addEventListener('animationend', done);
+    });
+    updateNotesCues();
+  }, { root: document.getElementById('notes-scroll'), threshold: 0 });
+  return _notesFreshObs;
+}
+
+function _markNoteLineFresh(el) {
+  el.classList.remove('notes-fresh');
+  el.classList.add('notes-fresh-pending');
+  var obs = _notesFreshObserver();
+  if (obs) obs.observe(el);
+  else el.classList.add('notes-fresh');   // no IntersectionObserver: just flash it
+}
+
+// Pending (= not yet seen) lines, split by where they sit relative to the viewport.
+function _pendingNoteLines() {
+  var viewEl = document.getElementById('notes-scroll');
+  var above = [], below = [];
+  if (!viewEl || !viewEl.clientHeight) return { above: above, below: below };   // tab hidden: no geometry
+  var top = viewEl.scrollTop, bottom = top + viewEl.clientHeight;
+  document.querySelectorAll('#notes-content .notes-fresh-pending').forEach(function(el) {
+    if (el.offsetTop + el.offsetHeight <= top) above.push(el);
+    else if (el.offsetTop >= bottom) below.push(el);
+  });
+  return { above: above, below: below };
+}
+
+function updateNotesCues() {
+  var pending = _pendingNoteLines();
+  [['notes-cue-up', pending.above], ['notes-cue-down', pending.below]].forEach(function(pair) {
+    var btn = document.getElementById(pair[0]);
+    if (!btn) return;
+    var n = pair[1].length;
+    btn.classList.toggle('show', n > 0);
+    var label = btn.querySelector('.notes-cue-label');
+    if (label) label.textContent = n > 1 ? n + ' new' : 'new';
+  });
+}
+
+function jumpToFreshNote(dir) {
+  var pending = _pendingNoteLines();
+  var list = dir === 'up' ? pending.above : pending.below;
+  if (!list.length) return;
+  // Nearest one in that direction: the last above, the first below.
+  var target = dir === 'up' ? list[list.length - 1] : list[0];
+  var viewEl = document.getElementById('notes-scroll');
+  viewEl.scrollTo({ top: Math.max(0, target.offsetTop - viewEl.clientHeight / 3), behavior: 'smooth' });
+}
+
+// Reconcile #notes-content's children to the line list: reuse unchanged nodes,
+// insert+flash new ones, drop the gone. Nothing flashes on the first render —
+// the whole file is "new" then, and a wall of purple says nothing.
+function renderNotes(container, text) {
+  var lines = notesLineBlocks(text);
+  var firstRender = !container.dataset.rendered;
+  var existing = {}, fresh = [];
+  Array.prototype.forEach.call(container.children, function(ch) {
+    var k = ch.getAttribute('data-key');
+    if (k) existing[k] = ch;
+  });
+  var desired = lines.map(function(l) {
+    var node = existing[l.key];
+    if (node) {
+      delete existing[l.key];                      // unchanged -> keep DOM node
+    } else {
+      node = document.createElement('div');
+      node.className = 'notes-line';
+      node.setAttribute('data-key', l.key);
+      node.innerHTML = linkifyText(l.text);
+      if (!firstRender) fresh.push(node);
+    }
+    if (l.paraEnd) node.setAttribute('data-para-end', '');
+    else node.removeAttribute('data-para-end');
+    return node;
+  });
+  Object.keys(existing).forEach(function(k) {
+    var gone = existing[k];
+    if (_notesFreshObs) _notesFreshObs.unobserve(gone);
+    gone.remove();
+  });
+  Array.prototype.slice.call(container.childNodes).forEach(function(n) {   // stray / 'Loading…'
+    if (n.nodeType !== 1 || !n.getAttribute('data-key')) container.removeChild(n);
+  });
+  desired.forEach(function(node, i) {                                      // reorder + insert
+    if (container.children[i] !== node) container.insertBefore(node, container.children[i] || null);
+  });
+  container.dataset.rendered = '1';
+  fresh.forEach(_markNoteLineFresh);
+  updateNotesCues();
 }
 
 async function loadNotes() {
@@ -5671,20 +5822,23 @@ async function loadNotes() {
   // end; otherwise restore exactly where they were.
   const stickToBottom = LS.getScrollAtBottom('notes');
   _suppressScrollSave.add('notes');
-  el.textContent = 'Loading…';
+  if (!el.dataset.rendered) el.textContent = 'Loading…';
   try {
     const data = await fetch(`/${_sessionId}/api/participant/notes`).then(r => r.ok ? r.json() : Promise.reject('not found'));
     if (data && data.notes_content) {
       _notesRawText = data.notes_content;
-      el.innerHTML = renderNotesHtml(data.notes_content);
+      renderNotes(el, data.notes_content);
     } else {
       el.textContent = 'No notes yet.';
+      delete el.dataset.rendered;          // next real content is a first render: no flash
     }
     if (stickToBottom) viewEl.scrollTop = viewEl.scrollHeight;
     else if (priorScroll) viewEl.scrollTop = priorScroll;
     LS.setScroll('notes', viewEl.scrollTop);
+    updateNotesCues();
   } catch (e) {
     el.textContent = 'Failed to load notes.';
+    delete el.dataset.rendered;
     _notesDirty = true;
   } finally {
     _suppressScrollSave.delete('notes');

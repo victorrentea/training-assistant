@@ -467,6 +467,46 @@ console.log('updateLinkCount()');
     scrolled.transform === 'translateY(-240px)');
 }
 
+// ── notesLineBlocks(): one keyed node per source line ────────────────────────
+// The notes tab reconciles line by line so a live edit only replaces the line
+// that changed (and flashes it). These assertions pin the two things that
+// makes possible: a stable key per line, and paragraph gaps without gap nodes.
+{
+  const notesLineBlocks = new Function(
+    extractFunction(PARTICIPANT_HTML, '_hashStr') + '\n'
+    + extractFunction(PARTICIPANT_HTML, 'notesLineBlocks')
+    + '; return notesLineBlocks;'
+  )();
+
+  console.log('\nnotesLineBlocks()');
+
+  const simple = notesLineBlocks('alpha\nbeta\n\ngamma');
+  assert('every source line becomes its own node',
+    simple.map((l) => l.text).join('|') === 'alpha|beta|gamma');
+  assert('a blank line is a gap on the preceding line, not a node of its own',
+    simple[1].paraEnd === true && simple[0].paraEnd === false);
+  assert('the last line never carries a trailing gap',
+    simple[2].paraEnd === false);
+
+  assert('trailing newlines do not produce empty nodes',
+    notesLineBlocks('alpha\n\n\n').length === 1);
+
+  const before = notesLineBlocks('alpha\nbeta\ngamma');
+  const after = notesLineBlocks('alpha\nBETA edited\ngamma');
+  assert('editing one line leaves the other keys untouched',
+    before[0].key === after[0].key && before[2].key === after[2].key);
+  assert('the edited line gets a new key, so it re-renders and flashes',
+    before[1].key !== after[1].key);
+
+  const dupes = notesLineBlocks('- todo\n- todo\n- todo');
+  assert('identical lines still get distinct keys (occurrence-numbered)',
+    new Set(dupes.map((l) => l.key)).size === 3);
+
+  const appended = notesLineBlocks('- todo\n- todo\n- todo\n- new one');
+  assert('appending after duplicates does not renumber the existing ones',
+    dupes.every((l, i) => l.key === appended[i].key));
+}
+
 const hostMachineResults = [];
 Promise.all([
   runHostMachinePoll({ cookie: '', activeSessionId: 'newone', currentSessionId: 'oldone' })
