@@ -38,6 +38,7 @@ class FxInfoResponse(BaseModel):
     cooldown_seconds: int
     ready_in_seconds: int
     effects_up: bool
+    tile_available: bool
 
 
 class FxFireResponse(BaseModel):
@@ -128,6 +129,7 @@ async def fx_info(token: str):
         cooldown_seconds=participant_state.fx_cooldown_seconds,
         ready_in_seconds=cooldown_remaining(),
         effects_up=effects_client.is_up(),
+        tile_available=bool(tile),
     )
 
 

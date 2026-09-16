@@ -151,6 +151,20 @@ class TestInfo:
             r = client.get(f"/api/participant/fx/{TOKEN}/info")
         assert r.json()["enabled"] is False
 
+    def test_tile_available_is_true_when_the_tile_is_in_the_catalog(self, client):
+        with patch("daemon.fx.router.effects_client.is_up", return_value=True):
+            r = client.get(f"/api/participant/fx/{TOKEN}/info")
+        assert r.json()["tile_available"] is True
+
+    def test_tile_available_is_false_when_the_tile_is_not_in_the_catalog(self, client):
+        participant_state.fx_tile_n = 999  # A tile that does not exist
+        with patch("daemon.fx.router.effects_client.is_up", return_value=True):
+            r = client.get(f"/api/participant/fx/{TOKEN}/info")
+        body = r.json()
+        assert body["tile_available"] is False
+        assert body["tile_n"] == 999
+        assert body["label"] == "tile 999"  # Fallback label when tile not found
+
 
 class TestPage:
     def test_the_page_is_html(self, client):

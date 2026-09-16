@@ -513,7 +513,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- | --- |
 | Fx Page, the trigger page; one button, and an honest account of why it is grey.<br>`GET /api/participant/fx/{token}` | - | `text/html: string` |
 | Fx Fire, press the selected tile, if all the brakes are off.<br>`POST /api/participant/fx/{token}/fire` | - | `fired: bool`<br>`reason: string`<br>`ready_in_seconds: int` |
-| Fx Info, what the page renders, and what an already-open tab polls for so a host toggle reaches it without a reload.<br>`GET /api/participant/fx/{token}/info` | - | `tile_n: int`<br>`label: string`<br>`effect?: string`<br>`enabled: bool`<br>`cooldown_seconds: int`<br>`ready_in_seconds: int`<br>`effects_up: bool` |
+| Fx Info, what the page renders, and what an already-open tab polls for so a host toggle reaches it without a reload.<br>`GET /api/participant/fx/{token}/info` | - | `tile_n: int`<br>`label: string`<br>`effect?: string`<br>`enabled: bool`<br>`cooldown_seconds: int`<br>`ready_in_seconds: int`<br>`effects_up: bool`<br>`tile_available: bool` |
 
 ### Host REST
 | Endpoint | Request | Response |

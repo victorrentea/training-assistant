@@ -2575,6 +2575,9 @@ components:
         effects_up:
           type: boolean
           title: Effects Up
+        tile_available:
+          type: boolean
+          title: Tile Available
       type: object
       required:
       - tile_n
@@ -2584,6 +2587,7 @@ components:
       - cooldown_seconds
       - ready_in_seconds
       - effects_up
+      - tile_available
       title: FxInfoResponse
     FxStateResponse:
       properties:

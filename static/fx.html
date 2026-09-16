@@ -99,7 +99,7 @@
   function applyInfo(info) {
     enabled = !!info.enabled;
     effectsUp = !!info.effects_up;
-    tileAvailable = true;
+    tileAvailable = !!info.tile_available;
     ready = info.ready_in_seconds || 0;
     label.textContent = info.label || ('tile ' + info.tile_n);
     num.textContent = '#' + info.tile_n + (info.effect ? ' · ' + info.effect : '');
@@ -139,9 +139,9 @@
       } else if (res.reason === 'effects-down') {
         effectsUp = false; render();
       } else if (res.reason === 'no-tile') {
-        // The selected tile no longer exists in the catalog. Stay disabled until the host
-        // picks a different tile, which will trigger the next /info poll and set tileAvailable = true.
-        tileAvailable = false; render();
+        // The server reports tile availability in /info, so this branch just renders the
+        // current state. The next poll will fetch fresh info and reflect the true condition.
+        render();
       } else {
         render();
       }
