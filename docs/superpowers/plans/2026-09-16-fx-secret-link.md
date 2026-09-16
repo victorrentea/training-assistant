@@ -940,8 +940,8 @@ who holds down F5 is answered with a countdown instead of a soundboard.
 The press itself takes an **integer** the daemon looked up in the catalog. No
 string from a request ever becomes part of a URL on the effects port.
 """
-import html
 import logging
+import os
 import secrets
 import time
 from pathlib import Path
@@ -1119,8 +1119,6 @@ async def fx_image(token: str):
     return Response(content=body, media_type=content_type,
                     headers={"Cache-Control": "no-store"})
 ```
-
-Note: `FxFiredMsg` is added in Task 6; until then this import fails only when a fire succeeds. Add the message now if running tests standalone — Step 5 covers it.
 
 - [ ] **Step 5: Add `FxFiredMsg` so the happy-path test can pass**
 
@@ -1390,13 +1388,7 @@ Expected: FAIL — `ImportError: cannot import name 'host_router' from 'daemon.f
 
 - [ ] **Step 3: Append the host router**
 
-Add to the top of `daemon/fx/router.py`:
-
-```python
-import os
-```
-
-and append at the end of the file:
+Append at the end of `daemon/fx/router.py`:
 
 ```python
 # ── Host router (called directly on daemon loopback, like the attention host router) ──
