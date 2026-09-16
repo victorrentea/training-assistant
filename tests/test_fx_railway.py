@@ -73,10 +73,6 @@ class TestRelay:
         assert proxy.await_args.kwargs["path"] == "/api/participant/fx/abc123def456/fire"
         assert proxy.await_args.kwargs["method"] == "POST"
 
-    def test_the_image_subpath_is_relayed(self, proxy):
-        client.get("/fx/abc123def456/image")
-        assert proxy.await_args.kwargs["path"] == "/api/participant/fx/abc123def456/image"
-
 
 class TestPathConstraint:
     @pytest.mark.parametrize("bad", [

@@ -68,14 +68,3 @@ class TestIsUp:
     def test_unreachable_is_not_up(self):
         with patch("httpx.get", side_effect=OSError("connection refused")):
             assert effects_client.is_up() is False
-
-
-class TestFetchTileImage:
-    def test_returns_body_and_content_type(self):
-        r = _response(content=b"\xff\xd8jpeg", content_type="image/jpeg")
-        with patch("httpx.get", return_value=r):
-            assert effects_client.fetch_tile_image("tiles/sfx_69.jpg") == (b"\xff\xd8jpeg", "image/jpeg")
-
-    def test_returns_none_when_missing(self):
-        with patch("httpx.get", return_value=_response(status=404)):
-            assert effects_client.fetch_tile_image("tiles/nope.jpg") is None

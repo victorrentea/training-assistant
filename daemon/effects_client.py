@@ -71,21 +71,6 @@ def fetch_tiles() -> list[dict] | None:
     return tiles
 
 
-def fetch_tile_image(rel_path: str) -> tuple[bytes, str] | None:
-    """Artwork for one tile, addressed by its manifest-relative path.
-
-    The path comes from the manifest the Effects app itself served, never from
-    a request, so it is not a caller-controlled segment.
-    """
-    try:
-        r = httpx.get(f"{EFFECTS_BASE_URL}/tiles/{rel_path}", timeout=_IMAGE_TIMEOUT)
-        if r.status_code != 200:
-            return None
-        return r.content, r.headers.get("content-type", "application/octet-stream")
-    except Exception:
-        return None
-
-
 def is_up() -> bool:
     """Is the effects app reachable and running?
 

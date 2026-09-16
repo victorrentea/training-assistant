@@ -170,25 +170,6 @@ async def fx_fire(token: str):
                           ready_in_seconds=participant_state.fx_cooldown_seconds)
 
 
-@participant_router.get("/{token}/image")
-async def fx_image(token: str):
-    """Artwork for the selected tile.
-
-    The path handed to the effects app comes from the manifest that app served,
-    never from the request — the token in the URL selects nothing but access.
-    """
-    _check_token(token)
-    tile = find_tile(participant_state.fx_tile_n)
-    if not tile or not tile.get("image"):
-        raise HTTPException(status_code=404)
-    fetched = effects_client.fetch_tile_image(str(tile["image"]))
-    if fetched is None:
-        raise HTTPException(status_code=404)
-    body, content_type = fetched
-    return Response(content=body, media_type=content_type,
-                    headers={"Cache-Control": "no-store"})
-
-
 # ── Host router (called directly on daemon loopback, like the attention host router) ──
 
 class FxTile(BaseModel):
