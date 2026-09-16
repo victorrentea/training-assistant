@@ -62,6 +62,25 @@ class ParticipantState:
         # Unlike the emoji switch it DEFAULTS OFF and resets OFF every session —
         # the host must explicitly opt in from the host UI. Persisted.
         self.attention_enabled: bool = False
+        # ── Secret FX link ────────────────────────────────────────────────
+        # A URL the host hands to two or three trusted people; opening it gives
+        # them one button that presses a soundboard tile on this Mac.
+        # Like the attention switch this DEFAULTS OFF and resets OFF every
+        # session — a link from yesterday must not fire into this morning.
+        self.fx_enabled: bool = False
+        # Minted lazily the first time the host asks for the link, so a session
+        # that never uses the feature never carries a credential. Persisted.
+        self.fx_token: str | None = None
+        # Tile 69 is the Scary Movie ghost ("wazzup"): self-terminating, loud,
+        # and the one the room always asks for.
+        self.fx_tile_n: int = 69
+        self.fx_cooldown_seconds: int = 10
+        # Wall clock, for the host's "last fired 12s ago" tooltip only.
+        self.fx_last_fired_at: float | None = None
+        # The cooldown's own clock. Monotonic, therefore meaningless in another
+        # process — deliberately absent from snapshot() so a restart cannot
+        # resurrect a cooldown measured against a different epoch.
+        self.fx_last_fired_mono: float | None = None
         # Engagement: uuid -> {view -> {seconds, visits, clicks}} (cumulative, persisted)
         self.engagement: dict[str, dict] = {}
         # Liveness (ephemeral, NOT persisted): host derives "active now" from these
@@ -167,6 +186,17 @@ class ParticipantState:
             # A restore that omits the flag leaves it at its safe default (OFF).
             if isinstance(data.get("attention_enabled"), bool):
                 self.attention_enabled = data["attention_enabled"]
+            # A restore that omits the switch leaves it at its safe default (OFF).
+            if isinstance(data.get("fx_enabled"), bool):
+                self.fx_enabled = data["fx_enabled"]
+            if isinstance(data.get("fx_token"), str) and data["fx_token"]:
+                self.fx_token = data["fx_token"]
+            if isinstance(data.get("fx_tile_n"), int):
+                self.fx_tile_n = data["fx_tile_n"]
+            if isinstance(data.get("fx_cooldown_seconds"), int):
+                self.fx_cooldown_seconds = data["fx_cooldown_seconds"]
+            if isinstance(data.get("fx_last_fired_at"), (int, float)):
+                self.fx_last_fired_at = float(data["fx_last_fired_at"])
 
     def snapshot(self) -> dict:
         """Return a copy of all state (for testing/debugging)."""
@@ -184,6 +214,11 @@ class ParticipantState:
                 "emoji_counters": dict(self.emoji_counters),
                 "emoji_global_enabled": self.emoji_global_enabled,
                 "attention_enabled": self.attention_enabled,
+                "fx_enabled": self.fx_enabled,
+                "fx_token": self.fx_token,
+                "fx_tile_n": self.fx_tile_n,
+                "fx_cooldown_seconds": self.fx_cooldown_seconds,
+                "fx_last_fired_at": self.fx_last_fired_at,
                 "engagement": {pid: dict(views) for pid, views in self.engagement.items()},
                 # Explicit anonymity signal — persisted so the "(anonymous)" tag
                 # and the bell's anonymous flag survive a daemon restart.
@@ -226,6 +261,14 @@ class ParticipantState:
             self.emoji_global_enabled = True
             # Attention always starts OFF — every session is explicit opt-in.
             self.attention_enabled = False
+            # The FX link is per session: a fresh token, the default tile, and
+            # the switch off until the host arms it.
+            self.fx_enabled = False
+            self.fx_token = None
+            self.fx_tile_n = 69
+            self.fx_cooldown_seconds = 10
+            self.fx_last_fired_at = None
+            self.fx_last_fired_mono = None
             self.engagement.clear()
             self.last_active_at.clear()
             self.last_view.clear()

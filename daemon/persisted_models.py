@@ -199,6 +199,14 @@ class PersistedSessionState(PersistedModel):
     talk_presentation_name: str | None = Field(default=None, description="Display name of the last PPTX dropped in talk mode (stem, no extension)")
     talk_presentation_url: str | None = Field(default=None, description="PDF export URL for talk PPTX (docs.google.com/presentation/d/.../export/pdf)")
     talk_presentation_slug: str | None = Field(default=None, description="Railway slug under which the talk PPTX PDF is cached")
+    # ── Secret FX link ────────────────────────────────────────────────────
+    # Declared explicitly (rather than relying on PersistedModel's extra="allow")
+    # so the fields survive model_dump(exclude_unset=True) in save_session_state.
+    fx_enabled: bool = Field(default=False, description="Master switch for the secret FX link; resets OFF each session")
+    fx_token: str | None = Field(default=None, description="Secret FX link token (CSPRNG, 12 chars)")
+    fx_tile_n: int = Field(default=69, description="Soundboard tile the FX link fires")
+    fx_cooldown_seconds: int = Field(default=10, description="Minimum seconds between two FX triggers")
+    fx_last_fired_at: float | None = Field(default=None, description="Epoch seconds of the last FX trigger (host tooltip only)")
     current_slide: dict[str, Any] | None = Field(default=None, description="{slug, page}")
     slides_viewed: list[ViewedSlide] = Field(default_factory=list, description="Accumulated per-slide viewing durations from addons")
     slide_timeline: list[SlideMoment] = Field(default_factory=list, description="Append-only log of when each slide held the screen, for tying summary sections to slide numbers")
