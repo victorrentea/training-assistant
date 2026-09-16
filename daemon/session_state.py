@@ -505,20 +505,31 @@ TRANSCRIPTION_DISCLOSURE = (
     "This meeting is being transcribed in order to generate a summary of it at the end."
 )
 
+# The disclosure alone reads like a warning; this line is what actually puts the room at
+# ease, so it is spelled out on screen rather than left to be asked about in the break.
+TRANSCRIPTION_REASSURANCE = (
+    "No reason to worry: the transcription runs on a local model on this laptop — "
+    "your voice never leaves it and is never sent to Claude. "
+    "It is there only to give you a summary at the end of the course."
+)
+
 
 def create_notes_file(folder: Path) -> Path:
     """Create a notes file named '<folder name> - notes.txt' and return it.
 
-    The first line is a recording disclosure: the file is auto-opened on the trainer's
-    screen (shared with the room), so participants are told up front that the meeting is
-    transcribed. The second line is the file's own name, so the notes are self-labelling
-    when opened or exported. Called at session start when no .txt notes file exists yet,
-    so the trainer always has a notes file to write into. Never clobbers an existing file.
+    The first line is a recording disclosure and the second one reassures the room that
+    the audio stays on this machine: the file is auto-opened on the trainer's screen
+    (shared with the room), so participants are told up front both that the meeting is
+    transcribed and why that is harmless. The third line is the file's own name, so the
+    notes are self-labelling when opened or exported. Called at session start when no
+    .txt notes file exists yet, so the trainer always has a notes file to write into.
+    Never clobbers an existing file.
     """
     notes_file = folder / f"{folder.name} - notes.txt"
     if not notes_file.exists():
         notes_file.write_text(
-            f"{TRANSCRIPTION_DISCLOSURE}\n{notes_file.name}\n", encoding="utf-8"
+            f"{TRANSCRIPTION_DISCLOSURE}\n{TRANSCRIPTION_REASSURANCE}\n{notes_file.name}\n",
+            encoding="utf-8",
         )
     return notes_file
 

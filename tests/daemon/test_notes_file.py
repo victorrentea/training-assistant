@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from daemon.session_state import TRANSCRIPTION_DISCLOSURE, create_notes_file
+from daemon.session_state import (
+    TRANSCRIPTION_DISCLOSURE,
+    TRANSCRIPTION_REASSURANCE,
+    create_notes_file,
+)
 
 
 def test_new_notes_file_starts_with_transcription_disclosure(tmp_path: Path):
@@ -12,7 +16,10 @@ def test_new_notes_file_starts_with_transcription_disclosure(tmp_path: Path):
     lines = notes.read_text(encoding="utf-8").splitlines()
     assert lines[0] == TRANSCRIPTION_DISCLOSURE
     assert "transcribed" in lines[0]
-    assert lines[1] == "2026-09-15 Clean Code - notes.txt"
+    assert lines[1] == TRANSCRIPTION_REASSURANCE
+    assert "local model" in lines[1]
+    assert "never sent to Claude" in lines[1]
+    assert lines[2] == "2026-09-15 Clean Code - notes.txt"
 
 
 def test_existing_notes_file_is_not_clobbered(tmp_path: Path):
