@@ -949,8 +949,8 @@
       const fired = s.last_fired_at
         ? ' · last fired ' + _fxAgo(s.last_fired_at)
         : '';
-      badge.title = (s.enabled ? 'FX link armed' : 'FX link off')
-        + ' · #' + s.tile_n + ' ' + s.tile_label + fired;
+      _setFooterBadgeTooltip(badge, (s.enabled ? 'FX link armed' : 'FX link off')
+        + ' · #' + s.tile_n + ' ' + s.tile_label + fired);
     }
     const cb = document.getElementById('fx-enabled');
     if (cb) cb.checked = !!s.enabled;
@@ -1111,8 +1111,8 @@
     // class list, which applyFxState() keeps in sync with the server, so a
     // fire landing right as the host disarms the link doesn't lie about it.
     const armed = badge.classList.contains('connected');
-    badge.title = (armed ? 'FX link armed' : 'FX link off')
-      + ' · #' + msg.tile_n + ' ' + msg.label + ' · last fired just now';
+    _setFooterBadgeTooltip(badge, (armed ? 'FX link armed' : 'FX link off')
+      + ' · #' + msg.tile_n + ' ' + msg.label + ' · last fired just now');
   }
 
   function renderLogLevelBadge() {

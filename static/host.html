@@ -376,19 +376,19 @@
           <select id="fx-tile" onchange="setFxTile()"
                   style="width:17rem; padding:.35rem .5rem; border-radius:5px; border:1px solid var(--outline,#555);
                          background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.85rem;"></select>
-          <input id="fx-cooldown" type="number" min="0" max="300" title="Seconds between triggers"
+          <input id="fx-cooldown" type="number" min="0" max="300" data-tip="Seconds between triggers"
                  onchange="setFxCooldown()"
                  style="width:4.2rem; padding:.35rem .4rem; border-radius:5px; border:1px solid var(--outline,#555);
                         background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.85rem;">
         </div>
         <div style="display:flex; gap:.4rem; align-items:center;">
-          <input id="fx-url" type="text" readonly onclick="copyFxLink(this)" title="Click to copy"
+          <input id="fx-url" type="text" readonly onclick="copyFxLink(this)" data-tip="Click to copy"
                  style="width:17rem; padding:.35rem .55rem; border-radius:5px; border:1px solid var(--outline,#555);
                         background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.8rem; cursor:pointer;">
           <button id="fx-test-btn" onclick="testFx()"
                   style="padding:.35rem .7rem; border:none; border-radius:5px; background:var(--color-primary,#6750a4);
                          color:#fff; cursor:pointer; font-size:.85rem; font-weight:600;">Test</button>
-          <button id="fx-rotate-btn" onclick="rotateFxLink()" title="Kill this link and mint a new one"
+          <button id="fx-rotate-btn" onclick="rotateFxLink()" data-tip="Kill this link and mint a new one"
                   style="padding:.35rem .7rem; border:1px solid var(--outline,#555); border-radius:5px;
                          background:transparent; color:var(--text,#fff); cursor:pointer; font-size:.85rem;">Rotate</button>
         </div>
