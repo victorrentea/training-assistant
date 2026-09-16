@@ -237,6 +237,22 @@ class TestPage:
         assert r.status_code == 200
         assert r.headers["content-type"].startswith("text/html")
 
+    def test_the_body_has_the_elements_the_page_cannot_work_without(self, client):
+        """200 + text/html is not proof the page works: fx.html once shipped
+        with a JS syntax error that killed its whole script and still passed
+        exactly this envelope check (see tests/frontend/test_inline_script_
+        syntax.py for the guard that now catches the script itself). This
+        asserts on the markup and wiring the script depends on, so a change
+        that drops the button, its id, or the script that drives it fails
+        here too."""
+        body = client.get(f"/api/participant/fx/{TOKEN}").text
+        assert 'id="fire"' in body
+        assert 'id="status"' in body
+        assert 'id="label"' in body
+        assert "getElementById('fire')" in body
+        assert "/info" in body
+        assert "/fire" in body
+
 
 class TestLabels:
     def test_a_label_is_derived_from_the_asset_filename(self):
