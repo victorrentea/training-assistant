@@ -41,6 +41,8 @@ Runs on the trainer's Mac (`python3 -m daemon`). Entry point: `daemon/__main__.p
 
 Key capabilities: quiz generation, debate AI cleanup, live summary, transcript reading, slides management, RAG — all via Claude API. Auto-update: exit code 42 signals wrapper to git pull + restart.
 
+On startup the daemon opens the host panel (`http://127.0.0.1:1234/host`) in the default browser, once the local server accepts connections. `start.sh` does this **only on the first launch** (`DAEMON_OPEN_BROWSER=0` on every auto-update restart) so a push to master does not spawn a tab each time. Set `DAEMON_OPEN_BROWSER=0` to suppress it entirely.
+
 Transcription (Whisper, audio capture) is in [`victor-macos-addons`](https://github.com/victorrentea/victor-macos-addons) — this daemon only reads normalized transcript files.
 
 Transcript query: `python3 -m daemon.transcript_query <from_iso> <to_iso>`

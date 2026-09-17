@@ -63,10 +63,15 @@ trap cleanup INT TERM
 
 # ── Process launcher ──
 
+# 1 only for the first launch: the daemon opens the host panel in the browser.
+# Auto-update restarts (every push to master) must not pop a new tab each time.
+OPEN_BROWSER=1
+
 start_daemon() {
   mkdir -p "$(dirname "$DAEMON_LOG_FILE")"
-  python3 -m daemon > >(tee -a "$DAEMON_LOG_FILE") 2>&1 &
+  DAEMON_OPEN_BROWSER="$OPEN_BROWSER" python3 -m daemon > >(tee -a "$DAEMON_LOG_FILE") 2>&1 &
   DAEMON_PID=$!
+  OPEN_BROWSER=0
 }
 
 # ── Git auto-update ──

@@ -23,6 +23,9 @@ DEFAULT_TRANSCRIPT_MINUTES = 30  # default lookback window for transcript stats 
 MAX_CHARS_TO_CLAUDE = 60_000
 DAEMON_POLL_INTERVAL = 1  # seconds
 DAEMON_HOST_PORT = int(os.environ.get("DAEMON_HOST_PORT", "1234"))
+# Open the host panel in the browser at startup. start.sh sets it to 0 on
+# auto-update restarts so a push to master does not spawn a tab each time.
+DAEMON_OPEN_BROWSER = os.environ.get("DAEMON_OPEN_BROWSER", "1").strip().lower() not in ("0", "false", "no", "")
 
 
 # ---------------------------------------------------------------------------

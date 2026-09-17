@@ -1123,10 +1123,12 @@ def run() -> None:
     ws_client.start()
 
     # ── Start local host panel server ──
-    from daemon.config import DAEMON_HOST_PORT
-    from daemon.host_server import start_host_server
+    from daemon.config import DAEMON_HOST_PORT, DAEMON_OPEN_BROWSER
+    from daemon.host_server import open_host_panel_when_ready, start_host_server
     start_host_server(config.server_url, port=DAEMON_HOST_PORT)
     log.info("daemon", f"Host panel: http://127.0.0.1:{DAEMON_HOST_PORT}/host")
+    if DAEMON_OPEN_BROWSER:
+        open_host_panel_when_ready(port=DAEMON_HOST_PORT)
 
     try:
         while True:

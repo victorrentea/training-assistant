@@ -1,7 +1,10 @@
 # daemon/host_server.py
 """Local FastAPI server for the host panel — serves static files and proxies API calls to Railway."""
 import logging
+import socket
 import threading
+import time
+import webbrowser
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -358,6 +361,37 @@ def create_app(backend_url: str) -> FastAPI:
         app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
     return app
+
+
+def open_host_panel_when_ready(port: int = 1234, timeout: float = 15.0) -> threading.Thread:
+    """Open the host panel in the default browser once the local server accepts connections.
+
+    Runs in a background daemon thread so daemon startup is never blocked. The wrapper
+    (start.sh) sets DAEMON_OPEN_BROWSER=0 on auto-update restarts, so only a hand-started
+    daemon pops a tab — a restart on every push to master must not spam tabs.
+    """
+    url = f"http://127.0.0.1:{port}/host"
+
+    def _wait_and_open():
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                    break
+            except OSError:
+                time.sleep(0.1)
+        else:
+            daemon_log.error("daemon", f"Host panel not listening after {timeout:.0f}s — not opening browser")
+            return
+        try:
+            webbrowser.open(url)
+            daemon_log.info("daemon", f"Opened host panel in browser: {url}")
+        except Exception as e:
+            daemon_log.error("daemon", f"Could not open browser for {url}: {e}")
+
+    thread = threading.Thread(target=_wait_and_open, daemon=True, name="host-panel-opener")
+    thread.start()
+    return thread
 
 
 def start_host_server(backend_url: str, port: int = 1234) -> threading.Thread:
