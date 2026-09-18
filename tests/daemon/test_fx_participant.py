@@ -18,6 +18,20 @@ TILE_69 = {"n": 69, "asset": "69_scream_ghost.mp3",
            "image": "tiles/sfx_69_scream_ghost.jpg", "effect": "wazzup"}
 
 
+PID = "11111111-2222-3333-4444-555555555555"
+
+
+@pytest.fixture(autouse=True)
+def roster():
+    """Empty roster per test — `participant_state` is a module-level singleton,
+    so a name left behind would silently name the next test's presser."""
+    participant_state.participant_names.pop(PID, None)
+    participant_state.anonymous_pids.discard(PID)
+    yield
+    participant_state.participant_names.pop(PID, None)
+    participant_state.anonymous_pids.discard(PID)
+
+
 @pytest.fixture(autouse=True)
 def fx_state():
     participant_state.fx_enabled = True
@@ -197,11 +211,50 @@ class TestDesktopAnnouncement:
     silent when it doesn't, and never be able to fail the press.
     """
 
-    def test_a_successful_press_announces_the_tile_on_the_desktop(self, client):
+    def test_a_successful_press_announces_who_fired_what(self, client):
+        participant_state.participant_names[PID] = "Ana Pop"
         with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
              patch("daemon.addon_bridge_client.send_fx_fired") as announce:
-            client.post(f"/api/participant/fx/{TOKEN}/fire")
-        announce.assert_called_once_with(69, "scream ghost")
+            client.post(f"/api/participant/fx/{TOKEN}/fire",
+                        headers={"X-Participant-ID": PID})
+        announce.assert_called_once_with(69, "scream ghost", "Ana Pop", False)
+
+    def test_an_anonymous_participant_is_flagged_not_hidden(self, client):
+        participant_state.participant_names[PID] = "Grumpy Otter"
+        participant_state.anonymous_pids.add(PID)
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
+             patch("daemon.addon_bridge_client.send_fx_fired") as announce:
+            client.post(f"/api/participant/fx/{TOKEN}/fire",
+                        headers={"X-Participant-ID": PID})
+        announce.assert_called_once_with(69, "scream ghost", "Grumpy Otter", True)
+
+    def test_a_press_with_no_participant_header_announces_someone(self, client):
+        """The link opened on a phone that never joined the workshop. It still
+        fires, and the tab still announces it — just without a name."""
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
+             patch("daemon.addon_bridge_client.send_fx_fired") as announce:
+            r = client.post(f"/api/participant/fx/{TOKEN}/fire")
+        assert r.json()["fired"] is True
+        announce.assert_called_once_with(69, "scream ghost", "Someone", False)
+
+    def test_an_unknown_participant_id_never_leaks_onto_the_screen(self, client):
+        """The regression this guards: a raw UUID on the trainer's banner, in a
+        room where that banner is on the projector."""
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
+             patch("daemon.addon_bridge_client.send_fx_fired") as announce:
+            client.post(f"/api/participant/fx/{TOKEN}/fire",
+                        headers={"X-Participant-ID": PID})
+        caller = announce.call_args.args[2]
+        assert caller == "Someone"
+        assert PID not in caller
+
+    def test_a_blank_name_resolves_to_someone(self, client):
+        participant_state.participant_names[PID] = "   "
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
+             patch("daemon.addon_bridge_client.send_fx_fired") as announce:
+            client.post(f"/api/participant/fx/{TOKEN}/fire",
+                        headers={"X-Participant-ID": PID})
+        assert announce.call_args.args[2] == "Someone"
 
     def test_a_refused_press_announces_nothing(self, client):
         """Disabled, cooling, no-tile and effects-down all mean the room heard

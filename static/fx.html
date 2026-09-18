@@ -63,6 +63,19 @@
   // from the server, so the holder presses "scream ghost" rather than a verb.
   let tileName = '…';
 
+  // Who is holding the link. The FX page is served from the same origin as the
+  // participant page (both `interact.victorrentea.ro`), so the UUID that page
+  // minted on join is already in this tab's localStorage — nothing is asked of
+  // the holder and nothing new is stored here. The daemon turns it into a
+  // display name; a UUID never leaves the daemon (see `fx_fire`).
+  //
+  // Read once, defensively, and never let it stop a press: a link opened on a
+  // phone that never joined has no UUID, and a private window can make the
+  // accessor itself throw. Both cases fire as "Someone", exactly as every
+  // press did before this existed.
+  let myUUID = '';
+  try { myUUID = localStorage.getItem('workshop_participant_uuid') || ''; } catch (e) { myUUID = ''; }
+
   function say(text, bad) {
     status.textContent = text;
     status.classList.toggle('bad', !!bad);
@@ -125,7 +138,12 @@
     if (btn.disabled || firing) return;
     firing = true; render();
     try {
-      const r = await fetch(BASE + '/fire', { method: 'POST' });
+      const r = await fetch(BASE + '/fire', {
+        method: 'POST',
+        // Same header the bell uses. Same-origin, so no CORS preflight; and
+        // omitted entirely when unknown, rather than sent empty.
+        headers: myUUID ? { 'X-Participant-ID': myUUID } : {},
+      });
       if (!r.ok) throw new Error(r.status);
       const res = await r.json();
       firing = false;

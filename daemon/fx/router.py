@@ -14,7 +14,7 @@ import secrets
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
@@ -165,8 +165,27 @@ async def fx_info(token: str):
     )
 
 
+def resolve_caller(pid: str | None) -> tuple[str, bool]:
+    """The holder's display name and whether they joined anonymously.
+
+    Same rule as the attention bell (`daemon/attention/router.py`), and for the
+    same reason: NEVER fall back to the raw pid. A UUID on the trainer's screen
+    once already made it onto a projector, and this banner is shown in exactly
+    the same room. An unknown, unnamed or absent holder is "Someone".
+
+    The pid itself is self-asserted by the browser, as it is on every other
+    participant route — with a secret link handed to one trusted person and a
+    name on a banner as the only consequence, that is the existing trust model,
+    not a new hole in it.
+    """
+    if not pid:
+        return "Someone", False
+    name = (participant_state.participant_names.get(pid) or "").strip() or "Someone"
+    return name, pid in participant_state.anonymous_pids
+
+
 @participant_router.post("/{token}/fire", response_model=FxFireResponse)
-async def fx_fire(token: str):
+async def fx_fire(request: Request, token: str):
     """Press the selected tile, if all the brakes are off."""
     _check_token(token)
 
@@ -197,11 +216,14 @@ async def fx_fire(token: str):
     participant_state.persist()
 
     label = tile_label(tile)
-    daemon_log.info("host", f"← 🎛️ fx link fired tile {n} ({label})")
+    # Resolved only after the press landed: a refused press names nobody.
+    caller, anonymous = resolve_caller(request.headers.get("x-participant-id"))
+    daemon_log.info("host", f"← 🎛️ {caller!r} fired tile {n} ({label})")
 
     from daemon.ws_messages import FxFiredMsg
     from daemon.ws_publish import notify_host
-    await notify_host(FxFiredMsg(tile_n=n, label=label, at=participant_state.fx_last_fired_at))
+    await notify_host(FxFiredMsg(tile_n=n, label=label, at=participant_state.fx_last_fired_at,
+                                 caller=caller, anonymous=anonymous))
 
     # Dual-render, as the attention bell does: the host page flashes its badge,
     # and the trainer's desktop gets a bottom-center tab. The badge is the one
@@ -210,7 +232,7 @@ async def fx_fire(token: str):
     # tablet misfiring. Best-effort: the overlay is allowed to be closed, and a
     # missing announcement must never turn a successful press into a failure.
     from daemon import addon_bridge_client
-    addon_bridge_client.send_fx_fired(n, label)
+    addon_bridge_client.send_fx_fired(n, label, caller, anonymous)
 
     return FxFireResponse(fired=True, reason="ok",
                           ready_in_seconds=participant_state.fx_cooldown_seconds)

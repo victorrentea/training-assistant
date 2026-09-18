@@ -1139,8 +1139,13 @@
     // class list, which applyFxState() keeps in sync with the server, so a
     // fire landing right as the host disarms the link doesn't lie about it.
     const armed = badge.classList.contains('connected');
+    // Same inert-marker treatment as the bell: render "(anonymous)" rather than
+    // the fallback identifier the daemon would otherwise have resolved.
+    const who = (msg.anonymous === true)
+      ? (msg.caller || 'Someone') + ' (anonymous)'
+      : (msg.caller || 'Someone');
     _setFooterBadgeTooltip(badge, (armed ? 'FX link armed' : 'FX link off')
-      + ' · #' + msg.tile_n + ' ' + msg.label + ' · last fired just now');
+      + ' · #' + msg.tile_n + ' ' + msg.label + ' · last fired by ' + who + ' just now');
   }
 
   function renderLogLevelBadge() {

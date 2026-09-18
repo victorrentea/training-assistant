@@ -92,7 +92,7 @@ components:
             description: Resolved display name of the ringing participant (never the raw UUID when a name is known)
 
     fx_fired:
-      summary: Someone pulled the secret FX link — overlay announces the tile to the trainer
+      summary: Someone pulled the secret FX link — overlay announces who fired what
       x-feature: fx
       x-doc-notes:
         - Fire-and-forget, best-effort. A closed overlay never fails the press —
@@ -100,15 +100,17 @@ components:
         - Sent only after the press itself succeeded, on the *other* edge to the Mac
           (HTTP `GET :55123/press/<n>`). A refused press (disabled / cooling /
           unknown tile / effects down) sends nothing.
-        - Carries no identity by design — the link is anonymous, so the tab says
-          which tile fired, not who fired it.
         - >-
-          On receipt the overlay shows a red bottom-center tab reading "🔴 [label]"
-          that rises, holds 3s and falls away. No chime: the tile's own sound is
-          already playing.
+          `caller` is a display name resolved by the daemon from the UUID the FX
+          page reads out of its own localStorage. Never a raw UUID: an unknown,
+          unnamed or absent holder is "Someone".
+        - >-
+          On receipt the overlay shows a red bottom-center tab reading
+          "🔴 [caller] · [label]" that rises, holds 3s and falls away. No chime:
+          the tile's own sound is already playing.
       payload:
         type: object
-        required: [type, tile_n, label]
+        required: [type, tile_n, label, caller]
         properties:
           type:
             type: string
@@ -119,6 +121,12 @@ components:
           label:
             type: string
             description: Human-readable tile name (falls back to the asset filename stem)
+          caller:
+            type: string
+            description: Resolved display name of whoever pressed the button ("Someone" when unknown)
+          anonymous:
+            type: boolean
+            description: Whether that participant joined anonymously
 
     session_started:
       summary: Notify addons that a workshop session has started

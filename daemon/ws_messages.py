@@ -307,14 +307,20 @@ class BellRungMsg(BaseModel):
 class FxFiredMsg(BaseModel):
     """Host-only: someone holding the secret FX link pressed the button.
 
-    SECURITY: carries the tile number, its display name and a timestamp — no
-    token, no UUID, nothing that identifies the holder. The link is anonymous
-    by design, and the host badge only needs to know that it moved.
+    Carries `caller`, the holder's **resolved display name** — never the raw
+    UUID the browser asserted, and never a fallback that reveals one. An
+    unknown or unnamed holder is "Someone", the same word the bell uses.
+
+    SECURITY: no token, ever. The link's secret is the one thing that must not
+    travel, and a name is not it — this message is host-only, and the host
+    already sees every participant's name in the roster.
     """
     type: Literal["fx_fired"] = "fx_fired"
     tile_n: int
     label: str
     at: float
+    caller: str = "Someone"
+    anonymous: bool = False
 
 
 # ── Host-only: Addon bridge status ────────────────────────────────────────────

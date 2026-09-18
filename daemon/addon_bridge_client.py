@@ -3,10 +3,11 @@
 The addons server runs at ws://127.0.0.1:<WS_SERVER_PORT> (default 8765).
 
 Protocol:
-  Daemon → Addons: {"type": "fx_fired", "tile_n": <n>, "label": "<tile name>"}
+  Daemon → Addons: {"type": "fx_fired", "tile_n": <n>, "label": "<tile name>",
+                    "caller": "<display name>", "anonymous": <bool>}
               — someone holding the secret FX link pressed it; the overlay announces
-                the tile on a bottom-center tab. Carries no identity: the link is
-                anonymous by design (see FxFiredMsg in ws_messages.py).
+                who fired what on a bottom-center tab. "caller" is a resolved
+                display name, never a UUID (see FxFiredMsg in ws_messages.py).
   Daemon → Addons: {"type": "display_emoji", "emoji": "<char>", "count": 1, "glow": "#rrggbb"?}
               — relayed by addons to the desktop overlay for animation. "glow" is
               an optional per-participant halo colour (omitted → no halo).
@@ -104,16 +105,20 @@ class AddonBridgeClient:
             log.info(_NAME, "→ ended session")
         return sent
 
-    def send_fx_fired(self, tile_n: int, label: str) -> bool:
+    def send_fx_fired(self, tile_n: int, label: str,
+                      caller: str = "Someone", anonymous: bool = False) -> bool:
         """Announce a press of the secret FX link on the trainer's desktop.
 
-        Best-effort and identity-free by design — see the class docstring. The
-        press itself already fires the tile's sound and paired visual through
-        the *other* edge to the Mac (`effects_client`, HTTP on :55123); this
-        message exists only so the trainer can tell a press from the room apart
-        from one of his own.
+        Best-effort, like everything else here. The press itself already fires
+        the tile's sound and paired visual through the *other* edge to the Mac
+        (`effects_client`, HTTP on :55123); this message exists to say who
+        pressed it, which is the one thing the room cannot tell the trainer.
+
+        `caller` is a resolved display name — the daemon never puts a UUID on
+        this wire (see `fx_fire`).
         """
-        msg = {"type": "fx_fired", "tile_n": int(tile_n), "label": label}
+        msg = {"type": "fx_fired", "tile_n": int(tile_n), "label": label,
+               "caller": caller, "anonymous": anonymous}
         return self._send(msg)
 
     def send_pdf_export_alarm(self, deck: str, slug: str, failing: bool, detail: str = "") -> bool:
@@ -302,6 +307,7 @@ def send_pdf_export_alarm(deck: str, slug: str, failing: bool, detail: str = "")
     return _client is not None and _client.send_pdf_export_alarm(deck, slug, failing, detail)
 
 
-def send_fx_fired(tile_n: int, label: str) -> bool:
+def send_fx_fired(tile_n: int, label: str,
+                  caller: str = "Someone", anonymous: bool = False) -> bool:
     """Best-effort fx_fired message to addons. Returns True if sent."""
-    return _client is not None and _client.send_fx_fired(tile_n, label)
+    return _client is not None and _client.send_fx_fired(tile_n, label, caller, anonymous)

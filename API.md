@@ -529,12 +529,12 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Host WS
 | Message | Payload |
 | --- | --- |
-| Someone holding the secret FX link pressed the button<br>SECURITY: no token, no UUID — the link is anonymous by design; the host badge only needs to know that it moved.<br>`fx_fired` | `tile_n: int`<br>`label: string`<br>`at: number  # Unix timestamp (time.time()) when the tile was pressed` |
+| Someone holding the secret FX link pressed the button<br>SECURITY: no token, ever — the link's secret is the one thing that must not travel.<br>`caller` is a resolved display name, never the raw UUID the browser asserted; an unknown or unnamed holder is "Someone".<br>`fx_fired` | `tile_n: int`<br>`label: string`<br>`at: number  # Unix timestamp (time.time()) when the tile was pressed`<br>`caller?: string  # Resolved display name of whoever pressed the button ("Someone" when unknown)`<br>`anonymous?: bool  # Whether that participant joined anonymously` |
 
 ### Addons WS
 | Message | Payload |
 | --- | --- |
-| Someone pulled the secret FX link — overlay announces the tile to the trainer<br>Fire-and-forget, best-effort. A closed overlay never fails the press — the participant is still told it fired.<br>Sent only after the press itself succeeded, on the *other* edge to the Mac (HTTP `GET :55123/press/<n>`). A refused press (disabled / cooling / unknown tile / effects down) sends nothing.<br>Carries no identity by design — the link is anonymous, so the tab says which tile fired, not who fired it.<br>On receipt the overlay shows a red bottom-center tab reading "🔴 [label]" that rises, holds 3s and falls away. No chime: the tile's own sound is already playing.<br>`fx_fired` | `tile_n: int  # Soundboard tile number that was pressed`<br>`label: string  # Human-readable tile name (falls back to the asset filename stem)` |
+| Someone pulled the secret FX link — overlay announces who fired what<br>Fire-and-forget, best-effort. A closed overlay never fails the press — the participant is still told it fired.<br>Sent only after the press itself succeeded, on the *other* edge to the Mac (HTTP `GET :55123/press/<n>`). A refused press (disabled / cooling / unknown tile / effects down) sends nothing.<br>`caller` is a display name resolved by the daemon from the UUID the FX page reads out of its own localStorage. Never a raw UUID: an unknown, unnamed or absent holder is "Someone".<br>On receipt the overlay shows a red bottom-center tab reading "🔴 [caller] · [label]" that rises, holds 3s and falls away. No chime: the tile's own sound is already playing.<br>`fx_fired` | `tile_n: int  # Soundboard tile number that was pressed`<br>`label: string  # Human-readable tile name (falls back to the asset filename stem)`<br>`caller: string  # Resolved display name of whoever pressed the button ("Someone" when unknown)`<br>`anonymous?: bool  # Whether that participant joined anonymously` |
 
 ## Feature: Host-Machine
 

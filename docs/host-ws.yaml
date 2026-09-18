@@ -362,7 +362,8 @@ components:
       summary: Someone holding the secret FX link pressed the button
       x-feature: fx
       x-doc-notes:
-        - "SECURITY: no token, no UUID — the link is anonymous by design; the host badge only needs to know that it moved."
+        - "SECURITY: no token, ever — the link's secret is the one thing that must not travel."
+        - "`caller` is a resolved display name, never the raw UUID the browser asserted; an unknown or unnamed holder is \"Someone\"."
       payload:
         type: object
         required: [type, tile_n, label, at]
@@ -377,6 +378,12 @@ components:
           at:
             type: number
             description: Unix timestamp (time.time()) when the tile was pressed
+          caller:
+            type: string
+            description: Resolved display name of whoever pressed the button ("Someone" when unknown)
+          anonymous:
+            type: boolean
+            description: Whether that participant joined anonymously
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 
