@@ -1706,9 +1706,12 @@ function _renderEngagementPopover() {
       // FX grant: one click per row, and the press count beside it. Dimmed
       // rather than hidden when not granted, because the toggle IS the
       // affordance — an invisible control cannot be clicked to grant.
+      // Rendered LAST in the row, after the score and the location, so the
+      // bells line up in one column down the right edge instead of drifting
+      // left and right with whatever else that row happens to carry.
       const fxHeld = _fxGranted.has(pid);
       const fxPresses = _fxCounts[pid] || 0;
-      const fxTag = `<span class="pax-fx${fxHeld ? ' granted' : ''}" data-uuid="${escAttr(pid)}" data-tip="${fxHeld ? 'Holds the FX button — click to revoke' : 'Click to grant the FX button'}">🔴${fxPresses ? ' ' + fxPresses : ''}</span>`;
+      const fxTag = `<span class="pax-fx${fxHeld ? ' granted' : ''}" data-uuid="${escAttr(pid)}" data-tip="${fxHeld ? 'Holds the bell — click to revoke' : 'Click to grant the bell'}">🛎️${fxPresses ? ' ' + fxPresses : ''}</span>`;
       const locLabel = _formatParticipantLocation(participant) || null;
       const tzForColor = String(participant?.location_tz || _extractTimezone(loc) || '').trim();
       const hhmmForColor = tzForColor ? _rawHhmmForTimezone(tzForColor) : '';
@@ -1740,7 +1743,7 @@ function _renderEngagementPopover() {
         const copiedClass = (entry.copied || entry.seen_by_host) ? ' downloaded' : '';
         return `<span class="upload-icon${copiedClass}" data-tip="${escAttr(entry.disk_path)}" data-uuid="${escAttr(pid)}" data-file-id="${escAttr(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
-      return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" data-tip="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${fxTag}${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}</li>`;
+      return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" data-tip="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}${fxTag}</li>`;
     }).join('');
 
     if (flashPids && flashPids.size > 0) {

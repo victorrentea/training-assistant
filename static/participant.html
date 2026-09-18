@@ -277,6 +277,23 @@ body{visibility:hidden}
         .avatar-changed{animation:avatar-changed .4s ease-in-out}
         @keyframes avatar-swap{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
         .avatar-swap{animation:avatar-swap .3s ease-out}
+        /* The FX bell. It sits in the sidebar rather than in the reaction bar
+           because it is not a reaction: pressing it makes a noise in the room,
+           and among ten emoji it read as an eleventh emoji. Above the profile
+           card is where the eye already goes for "me" things. */
+        #fx-fire-row{width:100%;text-align:left;background:none;border:none;font:inherit;color:inherit}
+        #fx-fire-row:disabled{cursor:not-allowed;opacity:.45}
+        #fx-fire-row .fx-glyph{font-size:22px;line-height:1;flex-shrink:0;display:inline-block;transform-origin:50% 12%}
+        /* A desk bell rocks about its handle and throws rings outward; both
+           halves fire together so a press feels like a press even to someone
+           who cannot hear the room. */
+        @keyframes fx-ring-swing{0%,100%{transform:rotate(0)}12%{transform:rotate(19deg)}26%{transform:rotate(-15deg)}40%{transform:rotate(11deg)}54%{transform:rotate(-8deg)}68%{transform:rotate(5deg)}82%{transform:rotate(-2deg)}}
+        #fx-fire-row.ringing .fx-glyph{animation:fx-ring-swing .75s ease-in-out}
+        @keyframes fx-ring-wave{0%{opacity:.55;transform:scale(.55)}100%{opacity:0;transform:scale(2.1)}}
+        #fx-fire-row .fx-wave{position:absolute;left:.35rem;top:50%;width:1.6rem;height:1.6rem;margin-top:-.8rem;
+          border-radius:50%;border:2px solid var(--color-primary,#8b5cf6);opacity:0;pointer-events:none}
+        #fx-fire-row.ringing .fx-wave{animation:fx-ring-wave .75s ease-out}
+        #fx-fire-row.ringing .fx-wave:nth-child(2){animation-delay:.12s}
         /* Name-reminder nudge bubble (shown above the profile card while the
            activity tab is open, until the participant sets a custom name).
            Shares the bubble/arrow look with the break reminder below. No
@@ -957,6 +974,14 @@ body{visibility:hidden}
 </a>
 </div>
 </nav>
+<!-- Granted-only: the host hands this out per person, so most participants
+     never see this row at all (see _applyFx). -->
+<button id="fx-fire-row" onclick="fireFx(this)" style="display:none; position:relative"
+        class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
+  <span class="fx-wave"></span><span class="fx-wave"></span>
+  <span class="fx-glyph">🛎️</span>
+  <span id="fx-fire-label" class="text-base flex-1">Ring the bell</span>
+</button>
 <hr class="-mx-4 border-outline-variant"/>
 <div id="profile-card" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer group" style="margin-bottom:0.5rem">
   <div class="w-6 h-6 rounded-full bg-primary-container flex-shrink-0 overflow-hidden" style="width:1.5rem;height:1.5rem">
@@ -2651,41 +2676,36 @@ function _refreshFx() {
 }
 
 function _applyFx() {
-  // Ungranted is indistinguishable from "feature doesn't exist": no button, no
-  // greyed-out tease, nothing to ask the trainer about.
-  if (!_fx.granted) { _removeFxButton(); return; }
-  var btn = _renderFxButton();
+  var btn = document.getElementById('fx-fire-row');
   if (!btn) return;
+  // Ungranted is indistinguishable from "feature doesn't exist": no row, no
+  // greyed-out tease, nothing to ask the trainer about.
+  if (!_fx.granted) { btn.style.display = 'none'; return; }
+  btn.style.display = 'flex';
+  var label = document.getElementById('fx-fire-label');
   var blocked = !_fx.enabled || !_fx.effectsUp || !_fx.tileAvailable;
   btn.disabled = blocked || _fx.ready > 0 || _fx.firing;
-  btn.style.opacity = btn.disabled ? '.4' : '';
-  btn.textContent = (_fx.ready > 0 && !blocked) ? String(_fx.ready) : '🔴';
-  btn.style.fontSize = (_fx.ready > 0 && !blocked) ? '1.1rem' : '';
-  if (typeof applyEmojiTip === 'function') {
-    applyEmojiTip(btn, blocked ? 'The trainer has switched the effects off'
-      : _fx.ready > 0 ? 'Cooling down — everyone shares one button'
-      : ('Fire ' + (_fx.label || 'the effect')));
+  if (label) {
+    // The countdown replaces the words rather than sitting beside them: the
+    // row is narrow, and a number where the verb was reads as "not yet".
+    label.textContent = blocked ? 'Bell is off'
+      : _fx.ready > 0 ? ('Ring again in ' + _fx.ready + 's')
+      : 'Ring the bell';
   }
+  btn.dataset.tip = blocked ? 'The trainer has switched the bell off'
+    : _fx.ready > 0 ? 'Everyone shares one bell — it is cooling down'
+    : ('Rings ' + (_fx.label || 'the bell') + ' out loud in the room');
 }
 
-function _renderFxButton() {
-  var existing = document.getElementById('fx-fire-btn');
-  if (existing) return existing;
-  var bar = document.getElementById('emoji-main-bar');
-  if (!bar) return null;
-  var btn = document.createElement('button');
-  btn.id = 'fx-fire-btn';
-  btn.className = EMOJI_BTN_CLASS;
-  btn.setAttribute('onclick', 'fireFx(this)');
-  btn.textContent = '🔴';
-  // Front of the bar, ahead of the bell: it is the loudest thing here.
-  bar.insertBefore(btn, bar.firstChild);
-  return btn;
-}
-
-function _removeFxButton() {
-  var b = document.getElementById('fx-fire-btn');
-  if (b && b.parentNode) b.parentNode.removeChild(b);
+// The bell rocks and throws two rings. Restarted from zero each press, so a
+// second press inside the animation still looks like a second press.
+function _playFxRing() {
+  var btn = document.getElementById('fx-fire-row');
+  if (!btn) return;
+  btn.classList.remove('ringing');
+  void btn.offsetWidth;
+  btn.classList.add('ringing');
+  setTimeout(function() { btn.classList.remove('ringing'); }, 800);
 }
 
 function fireFx(btn) {
@@ -2700,7 +2720,7 @@ function fireFx(btn) {
       _fx.firing = false;
       if (!res) { _refreshFx(); return; }
       _fx.ready = res.ready_in_seconds || 0;
-      if (res.fired) { _applyFx(); return; }
+      if (res.fired) { _playFxRing(); _applyFx(); return; }
       // Every refusal means this page's picture of the world is stale — a
       // revoke, a disarm, a Mac that went away. Ask, don't guess.
       _refreshFx();
