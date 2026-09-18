@@ -13,7 +13,6 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 import railway.shared.metrics as metrics  # noqa: F401 - import for Prometheus metric registration side effects
 from railway.features.bridge.router import router as bridge_router
-from railway.features.fx.router import fx_router
 from railway.features.inbox.router import router as inbox_router
 from railway.features.internal.router import router as internal_router
 from railway.features.materials import router as materials
@@ -274,13 +273,6 @@ async def get_session_status(session_id: str):
         "session_active": is_active,
         "session_id": session_id,
     }
-
-
-# The room's secret FX link. Two segments (/fx/<token>), so it MUST be
-# registered before /{session_id}/{tab} below or that catch-all reads it as
-# session "fx", tab "<token>". Public and session-independent by design: the
-# link is handed out ahead of time and must not die between sessions.
-app.include_router(fx_router, dependencies=[Depends(rate_limit_probe)])
 
 
 # ── Catch-all participant routes — registered ABSOLUTELY LAST ──
