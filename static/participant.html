@@ -2592,20 +2592,21 @@ function _showEmojiThrottleToast() {
 }
 
 // ── Attention: bell (Direction B) + host notifications (Direction A) ─────────
-// The whole capability is gated behind the host master switch. `attention_enabled`
-// arrives on page-load state, on WS reconnect, and live via the `attention_enabled`
-// broadcast — driving show/hide of the bell button and the permission indicator.
+// The BELL is gated behind the host master switch. `attention_enabled` arrives on
+// page-load state, on WS reconnect, and live via the `attention_enabled` broadcast.
+// The PERMISSION pill is NOT bound to that switch: prompt notifications fire on
+// permission alone, so the pill must be reachable with attention off (see
+// `_refreshAttentionPermissionBar`).
 var _attentionEnabled = false;
 
 function _applyAttentionEnabled(enabled) {
   _attentionEnabled = !!enabled;
   if (_attentionEnabled) {
     _renderBellButton();
-    _showAttentionPermissionBar();
   } else {
     _removeBellButton();
-    _hideAttentionPermissionBar();
   }
+  _refreshAttentionPermissionBar();
 }
 
 function _renderBellButton() {
@@ -2744,6 +2745,15 @@ function _notificationPermission() {
   try { return (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported'; }
   catch (e) { return 'unsupported'; }
 }
+// Two independent reasons to offer the pill, so it stays off a fresh page: the
+// host switched attention on, or a 🤖 prompt has landed (the teachable instant —
+// "one just arrived; tap here to be pinged for the next"). Neither reason can
+// hide the pill while the other still holds.
+var _promptNotificationSeen = false;
+function _refreshAttentionPermissionBar() {
+  if (_attentionEnabled || _promptNotificationSeen) _showAttentionPermissionBar();
+  else _hideAttentionPermissionBar();
+}
 function _showAttentionPermissionBar() {
   var bar = document.getElementById('attention-permission-bar');
   if (!bar) return;
@@ -2833,6 +2843,39 @@ function _handleHostNotification(msg) {
     _pulseAttentionPermissionBar();
   }
 }
+
+// ── Prompt landed → OS notification ────────────────────────────────────────
+// A 🤖 snippet is a prompt the trainer expects everyone to COPY, and the people
+// who need telling are exactly the ones already in their IDE with this tab
+// behind it. Unlike the host notification above this is NOT gated by the
+// attention switch — permission is the only gate.
+var _PROMPT_NOTIFICATION_BODY_MAX = 180;
+function _maybeNotifyPrompt(text) {
+  var parsed = _splitNotesMarker(text);
+  if (parsed.mark !== '\u{1F916}') return;   // 📋 hand-sent lines stay silent
+  _promptNotificationSeen = true;
+  _refreshAttentionPermissionBar();
+  if (_notificationPermission() !== 'granted') return;
+  // `document.hasFocus()`, NOT `visibilityState`: a browser window sitting
+  // behind the IDE still reports "visible", which is precisely the case this
+  // feature exists for. Focused means the copy toaster is already in their
+  // face, so an OS ping would only be noise.
+  if (typeof document.hasFocus === 'function' && document.hasFocus()) return;
+  var body = parsed.body.trim();
+  if (body.length > _PROMPT_NOTIFICATION_BODY_MAX) {
+    body = body.slice(0, _PROMPT_NOTIFICATION_BODY_MAX - 1).trimEnd() + '…';
+  }
+  try {
+    // `tag` makes a burst of prompts replace one another instead of stacking a
+    // tower of notifications no one will dismiss.
+    var n = new Notification('\u{1F916} New prompt to copy', { body: body, tag: 'prompt' });
+    n.onclick = function() {
+      try { window.focus(); } catch (e) { /* best-effort */ }
+      n.close();
+    };
+  } catch (e) { /* the copy toaster already carries the snippet */ }
+}
+
 var REPORT_BUG_MAX_CHARS = 5000;
 var _viewBeforeBugReport = '';
 var _BTN_ON = 'flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-semibold rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 cursor-pointer';
@@ -5331,7 +5374,10 @@ function _handleWsMessage(msg) {
       break;
     }
     case 'notes_appended': {
-      if (msg.text) _showNotesToast(msg.text, msg.at);
+      if (msg.text) {
+        _showNotesToast(msg.text, msg.at);
+        _maybeNotifyPrompt(msg.text);
+      }
       break;
     }
     case 'summary_updated': {
