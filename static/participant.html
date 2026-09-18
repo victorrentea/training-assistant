@@ -980,7 +980,7 @@ body{visibility:hidden}
         class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
   <span class="fx-wave"></span><span class="fx-wave"></span>
   <span class="fx-glyph">🛎️</span>
-  <span id="fx-fire-label" class="text-base flex-1">Ring the bell</span>
+  <span id="fx-fire-label" class="text-base flex-1">Ring</span>
 </button>
 <hr class="-mx-4 border-outline-variant"/>
 <div id="profile-card" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer group" style="margin-bottom:0.5rem">
@@ -2686,11 +2686,13 @@ function _applyFx() {
   var blocked = !_fx.enabled || !_fx.effectsUp || !_fx.tileAvailable;
   btn.disabled = blocked || _fx.ready > 0 || _fx.firing;
   if (label) {
-    // The countdown replaces the words rather than sitting beside them: the
-    // row is narrow, and a number where the verb was reads as "not yet".
-    label.textContent = blocked ? 'Bell is off'
-      : _fx.ready > 0 ? ('Ring again in ' + _fx.ready + 's')
-      : 'Ring the bell';
+    // One word, and the state swaps that one word out. The row is narrow and
+    // sits under twelve nav labels — a sentence here would be the longest
+    // thing in the sidebar for the least-used control. The tooltip carries the
+    // explanation; the label carries the verb, or the reason it isn't one.
+    label.textContent = blocked ? 'Off'
+      : _fx.ready > 0 ? (_fx.ready + 's')
+      : 'Ring';
   }
   btn.dataset.tip = blocked ? 'The trainer has switched the bell off'
     : _fx.ready > 0 ? 'Everyone shares one bell — it is cooling down'
