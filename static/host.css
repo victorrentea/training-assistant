@@ -1262,6 +1262,22 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   cursor: pointer;
 }
 .pax-score:hover { color: var(--danger); }
+/* FX grant toggle + press count. Always rendered so the ungranted row still
+   has something to click; opacity — not display — is what says "not granted",
+   and the count sits inside the same chip so a busy presser reads as one
+   object rather than two. */
+.pax-fx {
+  font-size: .78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  opacity: .22;
+  filter: grayscale(1);
+  transition: opacity .12s ease, filter .12s ease;
+}
+.pax-fx:hover { opacity: .65; filter: grayscale(.4); }
+.pax-fx.granted { opacity: 1; filter: none; color: var(--text); }
+.pax-fx.granted:hover { opacity: .75; }
 .pax-location {
   color: var(--muted);
   font-size: .78rem;

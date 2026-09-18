@@ -2620,6 +2620,103 @@ function ringBell(btn) {
   }).catch(function(e) { console.error('bell send failed', e); });
 }
 
+// ── FX button (host-granted) ────────────────────────────────────────────────
+// Not a master switch like the bell next door: this one is granted per person,
+// so the page cannot learn whether it has the button from a broadcast — a
+// broadcast naming UUIDs would break the invariant the whole feature leans on.
+// Instead the daemon broadcasts a contentless `fx_changed`, and each page asks
+// about ITSELF over its own authenticated /info call. Same call on load and on
+// reconnect, so a grant made while this tab was asleep still lands.
+var _fx = { granted: false, enabled: false, effectsUp: true, tileAvailable: true,
+            label: '', ready: 0, firing: false };
+
+function _refreshFx() {
+  if (!_sessionId) return;
+  fetch('/' + _sessionId + '/api/participant/fx/info', {
+    headers: { 'X-Participant-ID': _myUUID },
+    cache: 'no-store'
+  }).then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(info) {
+      if (!info) return;
+      _fx.granted = !!info.granted;
+      _fx.enabled = !!info.enabled;
+      _fx.effectsUp = !!info.effects_up;
+      _fx.tileAvailable = !!info.tile_available;
+      _fx.label = info.label || '';
+      // Trust the server's countdown over ours: this tab may have been asleep
+      // through someone else's press, or through the whole cooldown.
+      _fx.ready = info.ready_in_seconds || 0;
+      _applyFx();
+    }).catch(function(e) { console.error('fx info failed', e); });
+}
+
+function _applyFx() {
+  // Ungranted is indistinguishable from "feature doesn't exist": no button, no
+  // greyed-out tease, nothing to ask the trainer about.
+  if (!_fx.granted) { _removeFxButton(); return; }
+  var btn = _renderFxButton();
+  if (!btn) return;
+  var blocked = !_fx.enabled || !_fx.effectsUp || !_fx.tileAvailable;
+  btn.disabled = blocked || _fx.ready > 0 || _fx.firing;
+  btn.style.opacity = btn.disabled ? '.4' : '';
+  btn.textContent = (_fx.ready > 0 && !blocked) ? String(_fx.ready) : '🔴';
+  btn.style.fontSize = (_fx.ready > 0 && !blocked) ? '1.1rem' : '';
+  if (typeof applyEmojiTip === 'function') {
+    applyEmojiTip(btn, blocked ? 'The trainer has switched the effects off'
+      : _fx.ready > 0 ? 'Cooling down — everyone shares one button'
+      : ('Fire ' + (_fx.label || 'the effect')));
+  }
+}
+
+function _renderFxButton() {
+  var existing = document.getElementById('fx-fire-btn');
+  if (existing) return existing;
+  var bar = document.getElementById('emoji-main-bar');
+  if (!bar) return null;
+  var btn = document.createElement('button');
+  btn.id = 'fx-fire-btn';
+  btn.className = EMOJI_BTN_CLASS;
+  btn.setAttribute('onclick', 'fireFx(this)');
+  btn.textContent = '🔴';
+  // Front of the bar, ahead of the bell: it is the loudest thing here.
+  bar.insertBefore(btn, bar.firstChild);
+  return btn;
+}
+
+function _removeFxButton() {
+  var b = document.getElementById('fx-fire-btn');
+  if (b && b.parentNode) b.parentNode.removeChild(b);
+}
+
+function fireFx(btn) {
+  if (!_fx.granted || _fx.firing || _fx.ready > 0) return;
+  if (!_sessionId) return;
+  _fx.firing = true; _applyFx();
+  fetch('/' + _sessionId + '/api/participant/fx/fire', {
+    method: 'POST',
+    headers: { 'X-Participant-ID': _myUUID }   // no body — the daemon knows the tile
+  }).then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(res) {
+      _fx.firing = false;
+      if (!res) { _refreshFx(); return; }
+      _fx.ready = res.ready_in_seconds || 0;
+      if (res.fired) { _applyFx(); return; }
+      // Every refusal means this page's picture of the world is stale — a
+      // revoke, a disarm, a Mac that went away. Ask, don't guess.
+      _refreshFx();
+    }).catch(function(e) {
+      _fx.firing = false; _applyFx();
+      console.error('fx fire failed', e);
+    });
+}
+
+// One ticker for the shared countdown, started once. It runs whether or not a
+// button exists — cheap, and it means a grant arriving mid-cooldown shows the
+// right number immediately instead of a live button that refuses.
+setInterval(function() {
+  if (_fx.ready > 0) { _fx.ready -= 1; if (_fx.granted) _applyFx(); }
+}, 1000);
+
 // ── Notification-permission affordance (pinned, gesture-only request) ──────
 function _notificationPermission() {
   try { return (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported'; }
@@ -4723,6 +4820,8 @@ function _applyState(msg) {
   if (msg.emoji_catalog) renderEmojiBar(msg.emoji_catalog);
   // Attention master switch — render/remove the bell + permission affordance.
   if (msg.attention_enabled !== undefined) _applyAttentionEnabled(msg.attention_enabled);
+  // FX is per-participant, so it is never in this broadcast snapshot — ask.
+  _refreshFx();
   if (msg.session_name != null) {
     var sn = msg.session_name;
     var spaceIdx = sn.indexOf(' ');
@@ -5186,6 +5285,10 @@ function _handleWsMessage(msg) {
     case 'redirect': _redirecting = true; window.location.href = msg.url || '/'; break;
     case 'state': _applyState(msg); break;
     case 'attention_enabled': _applyAttentionEnabled(msg.enabled); break;
+    // Contentless by design — ask about ourselves rather than being told about others.
+    case 'fx_changed': _refreshFx(); break;
+    // Someone else pulled the shared lever: grey out, without a round trip.
+    case 'fx_cooling': _fx.ready = msg.ready_in_seconds || 0; _applyFx(); break;
     case 'host_notification': _handleHostNotification(msg); break;
     case 'notes_updated': {
       document.querySelector('[data-nav="notes"]').style.display = msg.updated_at ? '' : 'none';

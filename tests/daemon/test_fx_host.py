@@ -1,8 +1,8 @@
 """Tests for the host's FX controls.
 
 The host page is served over loopback, so there is no auth here — the tests are
-about behaviour: the link is minted lazily, rotation invalidates the old one,
-and the host's own Test button works precisely when the link is disarmed.
+about behaviour: who the grants reach, what survives a revoke, and the fact that
+the host's own Test button works precisely when everything else is switched off.
 """
 import pytest
 from unittest.mock import patch
@@ -16,26 +16,42 @@ TILE_69 = {"n": 69, "asset": "69_scream_ghost.mp3",
            "image": "tiles/sfx_69_scream_ghost.jpg", "effect": "wazzup"}
 TILE_1 = {"n": 1, "asset": "01_baby.mp3", "image": "tiles/sfx_01_baby.jpg"}
 
+ANA = "aaaaaaaa-0000-0000-0000-000000000001"
+DAN = "dddddddd-0000-0000-0000-000000000002"
+
 
 @pytest.fixture(autouse=True)
 def fx_state():
     participant_state.fx_enabled = False
-    participant_state.fx_token = None
+    participant_state.fx_granted_pids = set()
+    participant_state.fx_press_counts = {}
     participant_state.fx_tile_n = 69
     participant_state.fx_cooldown_seconds = 10
     participant_state.fx_last_fired_at = None
     participant_state.fx_last_fired_mono = None
     participant_state.fx_last_press_ok = None
+    participant_state.participant_names.update({ANA: "Ana Pop", DAN: "Dan"})
     yield
     participant_state.fx_enabled = False
-    participant_state.fx_token = None
+    participant_state.fx_granted_pids.clear()
+    participant_state.fx_press_counts.clear()
     participant_state.fx_last_press_ok = None
+    for pid in (ANA, DAN):
+        participant_state.participant_names.pop(pid, None)
 
 
 @pytest.fixture(autouse=True)
 def no_persist():
     with patch("daemon.participant.state.ParticipantState.persist"):
         yield
+
+
+@pytest.fixture(autouse=True)
+def quiet_broadcast():
+    """Every host control that changes access broadcasts `fx_changed`; there is
+    no WS client in a unit test, so patch it where the assertions can see it."""
+    with patch("daemon.ws_publish.broadcast") as b:
+        yield b
 
 
 @pytest.fixture(autouse=True)
@@ -54,20 +70,24 @@ def client():
 
 
 class TestState:
-    def test_the_first_read_mints_a_token(self, client):
-        assert participant_state.fx_token is None
+    def test_a_fresh_session_has_nobody_holding_it(self, client):
         body = client.get("/api/cur/host/fx/state").json()
-        assert len(body["token"]) == 12
-        assert participant_state.fx_token == body["token"]
+        assert body["granted"] == []
+        assert body["press_counts"] == {}
 
-    def test_a_second_read_keeps_the_same_token(self, client):
-        first = client.get("/api/cur/host/fx/state").json()["token"]
-        assert client.get("/api/cur/host/fx/state").json()["token"] == first
+    def test_it_reports_the_grants_and_the_counters(self, client):
+        """Host-only, so UUIDs belong here: the roster draws one toggle and one
+        counter per row and needs a key for each."""
+        participant_state.fx_granted_pids = {ANA}
+        participant_state.fx_press_counts = {ANA: 3}
+        body = client.get("/api/cur/host/fx/state").json()
+        assert body["granted"] == [ANA]
+        assert body["press_counts"] == {ANA: 3}
 
-    def test_the_url_is_the_short_public_form(self, client):
-        with patch.dict("os.environ", {"WORKSHOP_SERVER_URL": "https://interact.victorrentea.ro"}):
-            body = client.get("/api/cur/host/fx/state").json()
-        assert body["url"] == f"https://interact.victorrentea.ro/fx/{body['token']}"
+    def test_it_no_longer_carries_a_link(self, client):
+        """The secret link is gone; nothing here should hand one back."""
+        body = client.get("/api/cur/host/fx/state").json()
+        assert "token" not in body and "url" not in body
 
     def test_it_names_the_selected_tile(self, client):
         body = client.get("/api/cur/host/fx/state").json()
@@ -123,22 +143,87 @@ class TestCooldown:
         assert client.post("/api/cur/host/fx/cooldown", json={"seconds": 3600}).status_code == 422
 
 
-class TestRotate:
-    def test_rotation_changes_the_token(self, client):
-        old = client.get("/api/cur/host/fx/state").json()["token"]
-        new = client.post("/api/cur/host/fx/rotate").json()["token"]
-        assert new != old
+class TestGrants:
+    def test_granting_one_person_lets_exactly_that_person_press(self, client):
+        client.post("/api/cur/host/fx/grant", json={"participant_id": ANA})
+        assert participant_state.fx_granted_pids == {ANA}
+        assert client.get("/api/participant/fx/info",
+                          headers={"X-Participant-ID": ANA}).json()["granted"] is True
+        assert client.get("/api/participant/fx/info",
+                          headers={"X-Participant-ID": DAN}).json()["granted"] is False
 
-    def test_the_old_link_stops_working_immediately(self, client):
-        old = client.get("/api/cur/host/fx/state").json()["token"]
-        client.post("/api/cur/host/fx/rotate")
-        assert client.post(f"/api/participant/fx/{old}/fire").status_code == 404
+    def test_granting_twice_is_not_two_grants(self, client):
+        client.post("/api/cur/host/fx/grant", json={"participant_id": ANA})
+        body = client.post("/api/cur/host/fx/grant", json={"participant_id": ANA}).json()
+        assert body["granted"] == [ANA]
+
+    def test_revoking_takes_the_button_away_immediately(self, client):
+        client.post("/api/cur/host/fx/grant", json={"participant_id": ANA})
+        client.post("/api/cur/host/fx/revoke", json={"participant_id": ANA})
+        assert participant_state.fx_granted_pids == set()
+        assert client.post("/api/participant/fx/fire",
+                           headers={"X-Participant-ID": ANA}).json()["reason"] == "not-granted"
+
+    def test_revoking_keeps_the_press_count(self, client):
+        """The count is the session's record of what happened, not a property
+        of the grant — re-granting someone must not wipe their history."""
+        participant_state.fx_press_counts = {ANA: 4}
+        client.post("/api/cur/host/fx/revoke", json={"participant_id": ANA})
+        assert client.get("/api/cur/host/fx/state").json()["press_counts"] == {ANA: 4}
+
+    def test_revoking_someone_who_never_held_it_is_not_an_error(self, client):
+        assert client.post("/api/cur/host/fx/revoke", json={"participant_id": DAN}).status_code == 200
+
+    def test_grant_all_reaches_the_whole_roster_not_just_who_is_online(self, client):
+        """Someone who steps out and comes back would otherwise find their
+        button gone for reasons nobody could explain."""
+        body = client.post("/api/cur/host/fx/grant-all").json()
+        assert set(body["granted"]) == {ANA, DAN}
+
+    def test_revoke_all_is_the_panic_button(self, client):
+        client.post("/api/cur/host/fx/grant-all")
+        assert client.post("/api/cur/host/fx/revoke-all").json()["granted"] == []
+        assert client.post("/api/participant/fx/fire",
+                           headers={"X-Participant-ID": ANA}).json()["reason"] == "not-granted"
+
+    def test_revoke_all_keeps_the_counters(self, client):
+        participant_state.fx_press_counts = {ANA: 2, DAN: 7}
+        client.post("/api/cur/host/fx/revoke-all")
+        assert client.get("/api/cur/host/fx/state").json()["press_counts"] == {ANA: 2, DAN: 7}
+
+
+class TestParticipantsAreToldToRecheck:
+    """Every control that can change who holds the button has to wake the
+    pages, or a grant is invisible until the holder reloads."""
+
+    @pytest.mark.parametrize("call", [
+        lambda c: c.post("/api/cur/host/fx/grant", json={"participant_id": ANA}),
+        lambda c: c.post("/api/cur/host/fx/revoke", json={"participant_id": ANA}),
+        lambda c: c.post("/api/cur/host/fx/grant-all"),
+        lambda c: c.post("/api/cur/host/fx/revoke-all"),
+        lambda c: c.post("/api/cur/host/fx/toggle"),
+        lambda c: c.post("/api/cur/host/fx/tile", json={"n": 1}),
+        lambda c: c.post("/api/cur/host/fx/cooldown", json={"seconds": 5}),
+    ])
+    def test_it_broadcasts_fx_changed(self, client, quiet_broadcast, call):
+        call(client)
+        types = [c.args[0].type for c in quiet_broadcast.call_args_list]
+        assert "fx_changed" in types
+
+    def test_that_broadcast_names_nobody(self, client, quiet_broadcast):
+        """It reaches the whole room, so it cannot say who was granted — each
+        page asks about itself instead."""
+        client.post("/api/cur/host/fx/grant", json={"participant_id": ANA})
+        for msg in [c.args[0] for c in quiet_broadcast.call_args_list]:
+            blob = msg.model_dump_json()
+            assert ANA not in blob and "Ana Pop" not in blob
 
 
 class TestHostTestButton:
-    def test_it_fires_even_while_the_link_is_disarmed(self, client):
-        """You test the wiring precisely when the link is not live."""
+    def test_it_fires_even_while_disarmed_and_ungranted(self, client):
+        """You test the wiring precisely when nothing else is live."""
         assert participant_state.fx_enabled is False
+        assert participant_state.fx_granted_pids == set()
         with patch("daemon.fx.router.effects_client.press_tile", return_value=True) as press:
             r = client.post("/api/cur/host/fx/test")
         assert r.json()["fired"] is True
@@ -161,7 +246,13 @@ class TestHostTestButton:
         with patch("daemon.fx.router.effects_client.press_tile", return_value=False):
             assert client.post("/api/cur/host/fx/test").json()["reason"] == "effects-down"
 
-    def test_a_failed_test_marks_the_link_not_reachable_in_state(self, client):
+    def test_the_host_test_is_counted_against_nobody(self, client):
+        """The counters answer "who is leaning on this", and the trainer
+        checking his own soundboard is not an answer to that."""
+        client.post("/api/cur/host/fx/test")
+        assert participant_state.fx_press_counts == {}
+
+    def test_a_failed_test_marks_it_not_reachable_in_state(self, client):
         with patch("daemon.fx.router.effects_client.press_tile", return_value=False):
             client.post("/api/cur/host/fx/test")
         assert client.get("/api/cur/host/fx/state").json()["effects_up"] is False

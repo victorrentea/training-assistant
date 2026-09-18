@@ -375,7 +375,7 @@
                     style="width:17rem; padding:.35rem .5rem; border-radius:5px; border:1px solid var(--outline,#555);
                            background:var(--surface,#1e1e1e); color:var(--text,#fff); font-size:.85rem;"></select>
           </label>
-          <label data-tip="Seconds a holder must wait before the link fires again"
+          <label data-tip="Seconds the whole room waits before it can fire again"
                  style="display:flex; flex-direction:column; gap:.2rem; font-size:.72rem; color:var(--text-muted,#9a90b4);">
             Cooldown (s):
             <input id="fx-cooldown" type="number" min="0" max="300"
@@ -385,17 +385,17 @@
           </label>
         </div>
         <div style="display:flex; gap:.4rem; align-items:center;">
-          <label data-tip="Master switch — when off, the link loads but refuses to fire"
+          <label data-tip="Master switch — when off, every granted button refuses to fire"
                  style="display:flex; gap:.35rem; align-items:center; font-size:.85rem; cursor:pointer;">
             <input id="fx-enabled" type="checkbox" onchange="toggleFxEnabled()" style="cursor:pointer;">
             Enabled
           </label>
-          <button id="fx-copy-btn" onclick="copyFxLink(this)" data-tip="Copy the secret link (never shown on screen — paste it into chat yourself)"
+          <button id="fx-grant-all-btn" onclick="grantFxAll()" data-tip="Give the button to everyone in the roster"
                   style="padding:.35rem .7rem; border:1px solid var(--outline,#555); border-radius:5px;
-                         background:transparent; color:var(--text,#fff); cursor:pointer; font-size:.85rem;">Copy link</button>
-          <button id="fx-rotate-btn" onclick="rotateFxLink()" data-tip="Kill this link and mint a new one"
+                         background:transparent; color:var(--text,#fff); cursor:pointer; font-size:.85rem;">Grant all</button>
+          <button id="fx-revoke-all-btn" onclick="revokeFxAll()" data-tip="Take it back from everyone at once"
                   style="padding:.35rem .7rem; border:1px solid var(--outline,#555); border-radius:5px;
-                         background:transparent; color:var(--text,#fff); cursor:pointer; font-size:.85rem;">Rotate link</button>
+                         background:transparent; color:var(--text,#fff); cursor:pointer; font-size:.85rem;">Revoke all</button>
           <button id="fx-test-btn" onclick="testFx()"
                   style="padding:.35rem .7rem; border:none; border-radius:5px; background:var(--color-primary,#6750a4);
                          color:#fff; cursor:pointer; font-size:.85rem; font-weight:600;">Test</button>

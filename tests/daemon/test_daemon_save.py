@@ -329,7 +329,7 @@ def _participant_state_snapshot(**overrides) -> dict:
         "emoji_global_enabled": True,
         "attention_enabled": True,
         "fx_enabled": True,
-        "fx_token": "test-fx-token-01",
+        "fx_granted_pids": ["u1"],
         "fx_tile_n": 69,
         "fx_cooldown_seconds": 10,
         "fx_last_fired_at": 1000.0,
@@ -402,7 +402,7 @@ def test_producer_a_and_producer_b_fields_coexist_across_alternating_writes():
 
         _save_session_state(folder, _participant_state_snapshot())
         written = json.loads((folder / "session-state.json").read_text())
-        assert written["fx_token"] == "test-fx-token-01"
+        assert written["fx_granted_pids"] == ["u1"]
         assert written["attention_enabled"] is True
 
         _save_session_state(folder, _runtime_session_snapshot())
@@ -412,16 +412,16 @@ def test_producer_a_and_producer_b_fields_coexist_across_alternating_writes():
         assert written["qa_questions"]["q1"]["text"] == "Why?"
         assert written["debate"]["statement"] == "Tabs vs spaces"
         # ...and A's fields from the previous write were NOT clobbered.
-        assert written["fx_token"] == "test-fx-token-01"
+        assert written["fx_granted_pids"] == ["u1"]
         assert written["fx_enabled"] is True
         assert written["attention_enabled"] is True
         assert written["emoji_counters"] == {"🎉": 3}
         assert written["trainer_pids"] == ["u1"]
 
-        _save_session_state(folder, _participant_state_snapshot(fx_token="test-fx-token-02", fx_enabled=False))
+        _save_session_state(folder, _participant_state_snapshot(fx_granted_pids=["u2"], fx_enabled=False))
         written = json.loads((folder / "session-state.json").read_text())
         # A's updated fields landed...
-        assert written["fx_token"] == "test-fx-token-02"
+        assert written["fx_granted_pids"] == ["u2"]
         assert written["fx_enabled"] is False
         # ...and B's activity state from the previous write is still intact.
         assert written["quiz"]["active"] is True
@@ -432,18 +432,19 @@ def test_producer_a_and_producer_b_fields_coexist_across_alternating_writes():
 
 def test_fx_fields_survive_a_subsequent_activity_flush():
     """The FX-specific regression: participant_state.persist() writes
-    fx_token/fx_enabled, then the runtime flush (which knows nothing about
-    FX) must not wipe them."""
+    fx_granted_pids/fx_enabled, then the runtime flush (which knows nothing
+    about FX) must not wipe them — a grant silently vanishing mid-session is
+    exactly the bug nobody would think to look for."""
     with tempfile.TemporaryDirectory() as d:
         folder = Path(d)
         from daemon.session_state import save_session_state as _save_session_state
 
-        _save_session_state(folder, _participant_state_snapshot(fx_enabled=True, fx_token="test-fx-token-03"))
+        _save_session_state(folder, _participant_state_snapshot(fx_enabled=True, fx_granted_pids=["u3"]))
         _save_session_state(folder, _runtime_session_snapshot())
 
         written = json.loads((folder / "session-state.json").read_text())
         assert written["fx_enabled"] is True
-        assert written["fx_token"] == "test-fx-token-03"
+        assert written["fx_granted_pids"] == ["u3"]
 
 
 def test_quiz_and_qa_questions_survive_a_subsequent_participant_persist():
@@ -484,7 +485,7 @@ def test_fx_fields_round_trip_through_a_restart_via_the_real_state_objects():
 
         armed = ParticipantState()
         armed.fx_enabled = True
-        armed.fx_token = "test-fx-token-01"
+        armed.fx_granted_pids = {"u1"}
         armed.fx_tile_n = 3
         armed.fx_cooldown_seconds = 30
         armed.fx_last_fired_at = 1789554996.0
@@ -498,31 +499,32 @@ def test_fx_fields_round_trip_through_a_restart_via_the_real_state_objects():
         restored.sync_from_restore(_load_session_state(folder))
 
         assert restored.fx_enabled is True
-        assert restored.fx_token == "test-fx-token-01"
+        assert restored.fx_granted_pids == {"u1"}
         assert restored.fx_tile_n == 3
         assert restored.fx_cooldown_seconds == 30
         assert restored.fx_last_fired_at == 1789554996.0
 
 
-def test_fx_token_can_still_be_explicitly_cleared():
+def test_fx_grants_can_still_be_explicitly_cleared():
     """Deletion semantics: a merge can no longer clear a field by omitting it,
     but both real producers always write an explicit value for every field
-    they own (an inactive quiz is still `{"active": False, ...}`, a cleared
-    token is an explicit `fx_token: None`) — they never rely on omission.
-    Confirm an explicit clear still takes effect through the merge."""
+    they own (an inactive quiz is still `{"active": False, ...}`, an empty
+    grant list is an explicit `fx_granted_pids: []`) — they never rely on
+    omission. Confirm an explicit clear still takes effect through the merge,
+    because "revoke all" IS that clear."""
     with tempfile.TemporaryDirectory() as d:
         folder = Path(d)
         from daemon.session_state import save_session_state as _save_session_state
 
-        _save_session_state(folder, _participant_state_snapshot(fx_token="test-fx-token-01", fx_enabled=True))
+        _save_session_state(folder, _participant_state_snapshot(fx_granted_pids=["u1"], fx_enabled=True))
         written = json.loads((folder / "session-state.json").read_text())
-        assert written["fx_token"] == "test-fx-token-01"
+        assert written["fx_granted_pids"] == ["u1"]
 
-        # A fresh session reset: fx_token goes back to None, fx_enabled to False —
-        # both explicit values, as ParticipantState.reset() produces via snapshot().
-        _save_session_state(folder, _participant_state_snapshot(fx_token=None, fx_enabled=False))
+        # A revoke-all / fresh session: the list goes back to [], fx_enabled to
+        # False — both explicit values, as ParticipantState produces via snapshot().
+        _save_session_state(folder, _participant_state_snapshot(fx_granted_pids=[], fx_enabled=False))
         written = json.loads((folder / "session-state.json").read_text())
-        assert written["fx_token"] is None
+        assert written["fx_granted_pids"] == []
         assert written["fx_enabled"] is False
 
 
@@ -568,7 +570,7 @@ def test_save_session_state_log_line_reports_only_genuinely_changed_keys(capsys)
         assert "qa_questions" in out
         # ...but A's untouched keys from the previous write must NOT be
         # reported as "changed" just because they were merged into the file.
-        assert "fx_token" not in out
+        assert "fx_granted_pids" not in out
         assert "fx_enabled" not in out
         assert "attention_enabled" not in out
         assert "trainer_pids" not in out

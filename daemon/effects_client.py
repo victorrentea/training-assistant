@@ -49,10 +49,11 @@ _TIMEOUT = 2.0
 # Artwork is bigger than JSON and worth a little more patience.
 _IMAGE_TIMEOUT = 5.0
 
-# Participant `/info` polls every ~5s per open tab (see static/fx.html); a
-# cache well under that keeps every poll effectively live while still
-# absorbing a burst of tabs refreshing at once (e.g. right after a host
-# toggle broadcast).
+# Every participant page re-reads `/info` when the daemon broadcasts
+# `fx_changed` (see static/participant.html), so a single host click — a
+# grant-all above all — turns into one `/info` per tab at the same instant.
+# A cache of a couple of seconds collapses that whole burst into one outbound
+# request per TTL window, which is the case this cache exists for.
 _READ_CACHE_TTL = 2.0
 
 _tiles_cache_at: float | None = None

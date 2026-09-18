@@ -78,9 +78,10 @@ debate?: PersistedDebateState{
 talk_presentation_name?: string  # Display name of the last PPTX dropped in talk mode (stem, no extension)
 talk_presentation_url?: string  # PDF export URL for talk PPTX (docs.google.com/presentation/d/.../export/pdf)
 talk_presentation_slug?: string  # Railway slug under which the talk PPTX PDF is cached
-fx_enabled?: bool  # Master switch for the secret FX link; armed by default each session
-fx_token?: string  # Secret FX link token (CSPRNG, 12 chars)
-fx_tile_n?: int  # Soundboard tile the FX link fires
+fx_enabled?: bool  # Master switch for the FX button; armed by default each session
+fx_granted_pids?: list[string]  # Participant UUIDs the host has granted the FX button to
+fx_press_counts?: dict[str, int]  # Per-participant count of successful FX presses this session
+fx_tile_n?: int  # Soundboard tile the FX button fires
 fx_cooldown_seconds?: int  # Minimum seconds between two FX triggers
 fx_last_fired_at?: number  # Epoch seconds of the last FX trigger (host tooltip only)
 current_slide?: dict[str, any]  # {slug, page}

@@ -65,15 +65,20 @@ class ParticipantState:
         # ── Secret FX link ────────────────────────────────────────────────
         # A URL the host hands to two or three trusted people; opening it gives
         # them one button that presses a soundboard tile on this Mac.
-        # DEFAULTS ON, unlike the attention switch next door: the host asked
-        # for the link to work the moment he copies it, without a second click.
-        # The trade he accepted: because this flag persists, a session that
-        # spans two days starts day two already armed with day one's link.
-        # The cooldown, not this switch, is what keeps the room in check.
+        # DEFAULTS ON, unlike the attention switch next door: a grant should
+        # work the moment the host makes it, without a second click. It is not
+        # a risk the way an armed *link* was — with nobody granted, an armed
+        # switch does nothing at all.
         self.fx_enabled: bool = True
-        # Minted lazily the first time the host asks for the link, so a session
-        # that never uses the feature never carries a credential. Persisted.
-        self.fx_token: str | None = None
+        # Who may press the button. The whole access model: a participant UUID
+        # in here may fire, one not in here may not, and the check happens on
+        # the fire endpoint rather than by hiding a button. Persisted, so a
+        # grant survives the daemon restart that a push triggers mid-session.
+        self.fx_granted_pids: set[str] = set()
+        # uuid -> how many times they have pressed it this session. Persisted,
+        # because "who is leaning on it" is exactly the question a restart
+        # must not erase. Counted on successful presses only.
+        self.fx_press_counts: dict[str, int] = {}
         # Tile 69 is the Scary Movie ghost ("wazzup"): self-terminating, loud,
         # and the one the room always asks for.
         self.fx_tile_n: int = 69
@@ -199,8 +204,13 @@ class ParticipantState:
             # A restore that omits the switch leaves it at its safe default (OFF).
             if isinstance(data.get("fx_enabled"), bool):
                 self.fx_enabled = data["fx_enabled"]
-            if isinstance(data.get("fx_token"), str) and data["fx_token"]:
-                self.fx_token = data["fx_token"]
+            granted = data.get("fx_granted_pids")
+            if isinstance(granted, list):
+                self.fx_granted_pids = {p for p in granted if isinstance(p, str) and p}
+            counts = data.get("fx_press_counts")
+            if isinstance(counts, dict):
+                self.fx_press_counts = {k: int(v) for k, v in counts.items()
+                                        if isinstance(k, str) and isinstance(v, int)}
             if isinstance(data.get("fx_tile_n"), int):
                 self.fx_tile_n = data["fx_tile_n"]
             if isinstance(data.get("fx_cooldown_seconds"), int):
@@ -225,7 +235,8 @@ class ParticipantState:
                 "emoji_global_enabled": self.emoji_global_enabled,
                 "attention_enabled": self.attention_enabled,
                 "fx_enabled": self.fx_enabled,
-                "fx_token": self.fx_token,
+                "fx_granted_pids": sorted(self.fx_granted_pids),
+                "fx_press_counts": dict(self.fx_press_counts),
                 "fx_tile_n": self.fx_tile_n,
                 "fx_cooldown_seconds": self.fx_cooldown_seconds,
                 "fx_last_fired_at": self.fx_last_fired_at,
@@ -271,10 +282,12 @@ class ParticipantState:
             self.emoji_global_enabled = True
             # Attention always starts OFF — every session is explicit opt-in.
             self.attention_enabled = False
-            # The FX link is per session: a fresh token, the default tile, and
-            # the switch armed — the host disarms it if the room gets silly.
+            # FX is per session: nobody granted, the default tile, and the
+            # switch armed — an armed switch with an empty grant list is inert,
+            # so every session starts with the button in nobody's hands.
             self.fx_enabled = True
-            self.fx_token = None
+            self.fx_granted_pids.clear()
+            self.fx_press_counts.clear()
             self.fx_tile_n = 69
             self.fx_cooldown_seconds = 10
             self.fx_last_fired_at = None

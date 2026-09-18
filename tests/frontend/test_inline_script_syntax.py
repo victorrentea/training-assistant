@@ -90,13 +90,19 @@ def _node_check(source: str, is_module: bool) -> str | None:
 
 def test_html_files_with_inline_scripts_are_discovered():
     """Guard the guard: a bad glob silently finding nothing would be worse
-    than useless — this is exactly the case (fx.html) the guard exists for."""
+    than useless.
+
+    Pinned to participant.html — the page every attendee loads, and by far the
+    most inline JS in the repo. (It used to be pinned to fx.html, which was the
+    original case for this guard; that page died with the secret FX link, and a
+    guard anchored to a deleted file is a guard that checks nothing.)
+    """
     found = {p.name for p in _html_files()}
-    assert "fx.html" in found, sorted(found)
+    assert "participant.html" in found, sorted(found)
     scripted = {p.name for p in _html_files() if list(_inline_scripts(p))}
-    assert "fx.html" in scripted, (
-        "fx.html has no discovered inline <script> — the extraction regex "
-        "regressed, and the syntax check below would silently check nothing."
+    assert "participant.html" in scripted, (
+        "participant.html has no discovered inline <script> — the extraction "
+        "regex regressed, and the syntax check below would silently check nothing."
     )
 
 

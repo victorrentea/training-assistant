@@ -359,11 +359,11 @@ components:
     # ── Secret FX link ───────────────────────────────────────────────────────
 
     fx_fired:
-      summary: Someone holding the secret FX link pressed the button
+      summary: A granted participant pressed the FX button
       x-feature: fx
       x-doc-notes:
-        - "SECURITY: no token, ever — the link's secret is the one thing that must not travel."
-        - "`caller` is a resolved display name, never the raw UUID the browser asserted; an unknown or unnamed holder is \"Someone\"."
+        - "`caller` is a resolved display name, never the raw UUID rendered as a name; an unknown or unnamed presser is \"Someone\"."
+        - "`uuid` rides alongside it because this is a HOST frame, where UUIDs are expected — the roster needs a key to bump the right row's counter."
       payload:
         type: object
         required: [type, tile_n, label, at]
@@ -384,6 +384,12 @@ components:
           anonymous:
             type: boolean
             description: Whether that participant joined anonymously
+          uuid:
+            type: string
+            description: The presser's participant UUID (host channel only — keys the roster row)
+          count:
+            type: integer
+            description: How many times that participant has pressed it this session
 
     # ── Cross-cutting ────────────────────────────────────────────────────────
 

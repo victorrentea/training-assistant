@@ -474,46 +474,16 @@ paths:
         '204':
           description: Successful Response
       x-feature: attention
-  /api/participant/fx/{token}:
-    get:
-      tags:
-      - fx
-      summary: Fx Page
-      description: The trigger page. One button, and an honest account of why it is
-        grey.
-      operationId: fx_page_api_participant_fx__token__get
-      parameters:
-      - name: token
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Token
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            text/html:
-              schema:
-                type: string
-      x-feature: fx
-  /api/participant/fx/{token}/info:
+  /api/participant/fx/info:
     get:
       tags:
       - fx
       summary: Fx Info
-      description: 'What the page renders, and what an already-open tab polls for
-        so a host
+      description: 'What one participant''s page renders: whether they hold the button,
+        and
 
-        toggle reaches it without a reload.'
-      operationId: fx_info_api_participant_fx__token__info_get
-      parameters:
-      - name: token
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Token
+        what shape it is in.'
+      operationId: fx_info_api_participant_fx_info_get
       responses:
         '200':
           description: Successful Response
@@ -522,20 +492,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/FxInfoResponse'
       x-feature: fx
-  /api/participant/fx/{token}/fire:
+  /api/participant/fx/fire:
     post:
       tags:
       - fx
       summary: Fx Fire
-      description: Press the selected tile, if all the brakes are off.
-      operationId: fx_fire_api_participant_fx__token__fire_post
-      parameters:
-      - name: token
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Token
+      description: 'Press the selected tile, if the presser holds the button and all
+        the
+
+        brakes are off.'
+      operationId: fx_fire_api_participant_fx_fire_post
       responses:
         '200':
           description: Successful Response
@@ -549,7 +515,8 @@ paths:
       tags:
       - fx
       summary: Fx State
-      description: Everything the footer badge and its popover render.
+      description: Everything the footer badge, its popover and the roster's toggles
+        render.
       operationId: fx_state_api__session_id__host_fx_state_get
       responses:
         '200':
@@ -588,8 +555,97 @@ paths:
       tags:
       - fx
       summary: Fx Toggle
-      description: Arm or disarm the link. Off at the start of every session.
+      description: Arm or disarm every grant at once, without touching who holds one.
       operationId: fx_toggle_api__session_id__host_fx_toggle_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxStateResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/grant:
+    post:
+      tags:
+      - fx
+      summary: Fx Grant
+      description: Hand the button to one participant.
+      operationId: fx_grant_api__session_id__host_fx_grant_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FxGrantRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxStateResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/revoke:
+    post:
+      tags:
+      - fx
+      summary: Fx Revoke
+      description: 'Take it back from one participant.
+
+
+        Their press count survives: it is the session''s record of what happened,
+
+        not a property of the grant, and re-granting someone must not silently
+
+        reset how many times they have already leaned on it.'
+      operationId: fx_revoke_api__session_id__host_fx_revoke_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FxGrantRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxStateResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/grant-all:
+    post:
+      tags:
+      - fx
+      summary: Fx Grant All
+      description: 'Hand the button to the whole roster.
+
+
+        The roster, not just whoever is online this second: someone who steps out
+
+        and comes back would otherwise find their button gone for reasons nobody
+
+        could explain. The cooldown is what keeps this survivable — see
+
+        `cooldown_remaining`.'
+      operationId: fx_grant_all_api__session_id__host_fx_grant_all_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxStateResponse'
+      x-feature: fx
+  /api/{session_id}/host/fx/revoke-all:
+    post:
+      tags:
+      - fx
+      summary: Fx Revoke All
+      description: Take the button away from everyone — the panic button for the panic
+        button.
+      operationId: fx_revoke_all_api__session_id__host_fx_revoke_all_post
       responses:
         '200':
           description: Successful Response
@@ -603,7 +659,7 @@ paths:
       tags:
       - fx
       summary: Fx Set Tile
-      description: Bind the link to a different tile.
+      description: Bind the button to a different tile.
       operationId: fx_set_tile_api__session_id__host_fx_tile_post
       requestBody:
         content:
@@ -640,21 +696,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/FxStateResponse'
       x-feature: fx
-  /api/{session_id}/host/fx/rotate:
-    post:
-      tags:
-      - fx
-      summary: Fx Rotate
-      description: Mint a new token, killing the current link immediately.
-      operationId: fx_rotate_api__session_id__host_fx_rotate_post
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FxStateResponse'
-      x-feature: fx
   /api/{session_id}/host/fx/test:
     post:
       tags:
@@ -663,20 +704,24 @@ paths:
       description: 'Fire the selected tile from the host page.
 
 
-        Deliberately ignores both brakes: you check the wiring precisely when the
+        Deliberately ignores every brake: you check the wiring precisely when the
 
-        link is disarmed, and a cooldown meant for the room should not make the
+        switch is off and nobody is granted, and a cooldown meant for the room
 
-        trainer wait. It does not start a cooldown either — testing must not take
+        should not make the trainer wait. It does not start a cooldown either —
 
-        the lever away from someone holding the link.
+        testing must not take the lever away from the room. It is also not counted
+
+        against anybody: the counters answer "who is leaning on this", and the
+
+        trainer testing his own soundboard is not an answer to that.
 
 
         This is also the room''s only recovery path once a real press has failed:
 
         /info trusts the last actual attempt over the ping (see
 
-        _effects_reachable()), so after a failure the participant button stays
+        _effects_reachable()), so after a failure the participants'' buttons stay
 
         disabled until a Test from here proves the wiring works again.'
       operationId: fx_test_api__session_id__host_fx_test_post
@@ -2559,8 +2604,20 @@ components:
       - reason
       - ready_in_seconds
       title: FxFireResponse
+    FxGrantRequest:
+      properties:
+        participant_id:
+          type: string
+          title: Participant Id
+      type: object
+      required:
+      - participant_id
+      title: FxGrantRequest
     FxInfoResponse:
       properties:
+        granted:
+          type: boolean
+          title: Granted
         tile_n:
           type: integer
           title: Tile N
@@ -2589,6 +2646,7 @@ components:
           title: Tile Available
       type: object
       required:
+      - granted
       - tile_n
       - label
       - effect
@@ -2603,12 +2661,6 @@ components:
         enabled:
           type: boolean
           title: Enabled
-        token:
-          type: string
-          title: Token
-        url:
-          type: string
-          title: Url
         tile_n:
           type: integer
           title: Tile N
@@ -2631,17 +2683,27 @@ components:
         effects_up:
           type: boolean
           title: Effects Up
+        granted:
+          items:
+            type: string
+          type: array
+          title: Granted
+        press_counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Press Counts
       type: object
       required:
       - enabled
-      - token
-      - url
       - tile_n
       - tile_label
       - effect
       - cooldown_seconds
       - last_fired_at
       - effects_up
+      - granted
+      - press_counts
       title: FxStateResponse
     FxTile:
       properties:

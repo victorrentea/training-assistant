@@ -472,7 +472,7 @@ def save_session_state(session_folder: Path, snapshot: dict) -> None:
 
     Both known producers always write the *full* value of every key they own
     on every call (an inactive quiz is still an explicit `{"active": False,
-    ...}` dict, a cleared token is an explicit `fx_token: None`) — they never
+    ...}` dict, an empty grant list is an explicit `fx_granted_pids: []`) — they never
     rely on omitting a key to mean "clear this". So a shallow top-level merge
     is safe: a key a caller doesn't mention simply survives untouched, and a
     key it does mention is replaced wholesale with the value it supplied.

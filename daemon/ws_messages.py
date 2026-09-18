@@ -305,15 +305,13 @@ class BellRungMsg(BaseModel):
 # ── Secret FX link ────────────────────────────────────────────────────────────
 
 class FxFiredMsg(BaseModel):
-    """Host-only: someone holding the secret FX link pressed the button.
+    """Host-only: a granted participant pressed the FX button.
 
-    Carries `caller`, the holder's **resolved display name** — never the raw
-    UUID the browser asserted, and never a fallback that reveals one. An
-    unknown or unnamed holder is "Someone", the same word the bell uses.
-
-    SECURITY: no token, ever. The link's secret is the one thing that must not
-    travel, and a name is not it — this message is host-only, and the host
-    already sees every participant's name in the roster.
+    Carries `caller`, the presser's **resolved display name** — never the raw
+    UUID as a name, and never a fallback that reveals one. `uuid` rides
+    alongside it on purpose: this is a host frame, where UUIDs are expected
+    (see test_broadcast_uuid_strip.py::test_host_frames_still_carry_uuid), and
+    the roster needs a key to bump the right row's counter.
     """
     type: Literal["fx_fired"] = "fx_fired"
     tile_n: int
@@ -321,6 +319,30 @@ class FxFiredMsg(BaseModel):
     at: float
     caller: str = "Someone"
     anonymous: bool = False
+    uuid: str | None = None
+    count: int = 0
+
+
+class FxChangedMsg(BaseModel):
+    """Participant-facing: something about FX moved — re-read your own /info.
+
+    Deliberately empty. It is broadcast to the whole room, so it cannot name
+    who was granted or revoked without breaking the no-UUID-to-participants
+    invariant; each page asks about itself over its own authenticated call.
+    """
+    type: Literal["fx_changed"] = "fx_changed"
+
+
+class FxCoolingMsg(BaseModel):
+    """Participant-facing: the shared lever just fired, so everyone waits.
+
+    One cooldown for the room (see `cooldown_remaining`), which means a press
+    by one grantee has to grey out every other grantee's button — otherwise
+    they discover the cooldown only by pressing into it. UUID-free: it says how
+    long, not who.
+    """
+    type: Literal["fx_cooling"] = "fx_cooling"
+    ready_in_seconds: int
 
 
 # ── Host-only: Addon bridge status ────────────────────────────────────────────
@@ -486,6 +508,9 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Attention (bell + host notifications)
     "attention_enabled": AttentionEnabledMsg,
     "host_notification": HostNotificationMsg,
+    # FX button (host-granted)
+    "fx_changed": FxChangedMsg,
+    "fx_cooling": FxCoolingMsg,
     # Cross-cutting
     "reload": ReloadMsg,
 }
@@ -519,7 +544,7 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     # Talk presentation
     "talk_pdf_ready": TalkPdfReadyMsg,
     "talk_pdf_failed": TalkPdfFailedMsg,
-    # Secret FX link
+    # FX button (host-granted)
     "fx_fired": FxFiredMsg,
     # Cross-cutting
     "reload": ReloadMsg,
@@ -577,6 +602,9 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Attention (bell + host notifications)
     "attention_enabled": "attention",
     "host_notification": "attention",
+    # FX button (host-granted)
+    "fx_changed": "fx",
+    "fx_cooling": "fx",
     # Cross-cutting
     "reload": "reload",
 }
@@ -610,7 +638,7 @@ HOST_MESSAGE_FEATURES: dict[str, str] = {
     # Talk presentation
     "talk_pdf_ready": "slides",
     "talk_pdf_failed": "slides",
-    # Secret FX link
+    # FX button (host-granted)
     "fx_fired": "fx",
     # Cross-cutting
     "reload": "reload",

@@ -53,6 +53,8 @@ channels:
           - $ref: '#/components/messages/emoji_counters_updated'
           - $ref: '#/components/messages/attention_enabled'
           - $ref: '#/components/messages/host_notification'
+          - $ref: '#/components/messages/fx_changed'
+          - $ref: '#/components/messages/fx_cooling'
 
 components:
   messages:
@@ -671,6 +673,45 @@ components:
           at:
             type: string
             description: ISO-8601 timestamp when the daemon broadcast it
+
+    fx_changed:
+      summary: Something about the FX button moved — re-read your own /info
+      x-feature: fx
+      x-doc-notes:
+        - >-
+          Deliberately empty. Broadcast to the whole room, so it cannot name who
+          was granted or revoked without breaking the no-UUID-to-participants
+          invariant; each page asks about itself via
+          `GET /api/participant/fx/info` with its own X-Participant-ID.
+        - Sent on grant, revoke, grant-all, revoke-all, master toggle, tile change
+          and cooldown change.
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [fx_changed]
+
+    fx_cooling:
+      summary: The shared FX lever just fired — every granted button greys out
+      x-feature: fx
+      x-doc-notes:
+        - >-
+          There is one cooldown for the whole room, not one per grantee, so a
+          press by anyone has to grey out everyone else's button — otherwise the
+          other grantees discover the cooldown only by pressing into it.
+        - Says how long, never who. No UUIDs.
+      payload:
+        type: object
+        required: [type, ready_in_seconds]
+        properties:
+          type:
+            type: string
+            enum: [fx_cooling]
+          ready_in_seconds:
+            type: integer
+            description: Seconds until the button works again, for anyone
 
   schemas:
 

@@ -940,10 +940,12 @@
   // from what the click assumed.
 
   let _fxCatalogLoaded = false;
-  // The secret URL itself, held only in memory and never painted anywhere —
-  // the host page is projected on a screen, so the token must never be
-  // readable or photographable in it. Copy-to-clipboard is the only way out.
-  let _fxUrl = '';
+  // Who currently holds the button, and how hard each of them has leaned on
+  // it. Mirrors of the daemon's answer — never assumed from a click, because
+  // the roster redraws from these and a wrong guess would show the wrong
+  // person armed.
+  let _fxGranted = new Set();
+  let _fxCounts = {};
 
   function applyFxState(s) {
     const badge = document.getElementById('fx-badge');
@@ -953,12 +955,20 @@
       const fired = s.last_fired_at
         ? ' · last fired ' + _fxAgo(s.last_fired_at)
         : '';
-      _setFooterBadgeTooltip(badge, (s.enabled ? 'FX link armed' : 'FX link off')
+      const held = (s.granted || []).length;
+      _setFooterBadgeTooltip(badge, (s.enabled ? 'FX armed' : 'FX off')
+        + ' · ' + held + (held === 1 ? ' person holds it' : ' people hold it')
         + ' · #' + s.tile_n + ' ' + s.tile_label + fired);
     }
     const cb = document.getElementById('fx-enabled');
     if (cb) cb.checked = !!s.enabled;
-    _fxUrl = s.url || '';
+    _fxGranted = new Set(s.granted || []);
+    _fxCounts = s.press_counts || {};
+    // The roster is where the grants are actually operated, so it must redraw
+    // whenever they change — including after a grant-all from the popover.
+    if (cachedParticipantIds && cachedParticipantIds.length) {
+      renderParticipantList(cachedParticipantIds);
+    }
     const cd = document.getElementById('fx-cooldown');
     if (cd && document.activeElement !== cd) cd.value = s.cooldown_seconds;
     const sel = document.getElementById('fx-tile');
@@ -1080,25 +1090,37 @@
     }
   }
 
-  function copyFxLink(el) {
-    // The URL never sits in the DOM (see _fxUrl above) — copy it straight
-    // from memory, so there is nothing on screen to leak even for an instant.
-    if (!_fxUrl) return;
-    navigator.clipboard.writeText(_fxUrl)
-      .then(() => _showFooterCopiedTooltip(el, 'Link copied'))
-      .catch((e) => console.error('fx link copy failed', e));
-  }
-
-  async function rotateFxLink() {
+  // Grants are made one row at a time in the roster; these two are the bulk
+  // verbs that would otherwise be twenty clicks. Both answer with the full
+  // state, so the roster and the badge resync from the daemon, not from here.
+  async function _fxPost(path, onFail) {
     try {
-      const r = await fetch(API('/fx/rotate'), { method: 'POST' });
+      const r = await fetch(API(path), { method: 'POST' });
       if (!r.ok) throw new Error(r.status);
       applyFxState(await r.json());
-      const el = document.getElementById('fx-copy-btn');
-      if (el) _showFooterCopiedTooltip(el, 'New link — the old one is dead');
     } catch (e) {
-      console.error('fx rotate failed', e);
-      loadFxState();   // a failed rotate must not leave a dead link on screen
+      console.error(onFail, e);
+      loadFxState();
+    }
+  }
+
+  function grantFxAll() { _fxPost('/fx/grant-all', 'fx grant-all failed'); }
+  function revokeFxAll() { _fxPost('/fx/revoke-all', 'fx revoke-all failed'); }
+
+  async function toggleFxGrant(pid) {
+    if (!pid) return;
+    const path = _fxGranted.has(pid) ? '/fx/revoke' : '/fx/grant';
+    try {
+      const r = await fetch(API(path), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant_id: pid })
+      });
+      if (!r.ok) throw new Error(r.status);
+      applyFxState(await r.json());
+    } catch (e) {
+      console.error('fx grant toggle failed', e);
+      loadFxState();
     }
   }
 
@@ -1144,8 +1166,16 @@
     const who = (msg.anonymous === true)
       ? (msg.caller || 'Someone') + ' (anonymous)'
       : (msg.caller || 'Someone');
-    _setFooterBadgeTooltip(badge, (armed ? 'FX link armed' : 'FX link off')
+    _setFooterBadgeTooltip(badge, (armed ? 'FX armed' : 'FX off')
       + ' · #' + msg.tile_n + ' ' + msg.label + ' · last fired by ' + who + ' just now');
+    // Bump the presser's roster counter without a round trip. The daemon sent
+    // the authoritative count with the press, so this is a render, not a guess.
+    if (msg.uuid && msg.count) {
+      _fxCounts[msg.uuid] = msg.count;
+      if (cachedParticipantIds && cachedParticipantIds.includes(msg.uuid)) {
+        renderParticipantList(cachedParticipantIds, new Set([msg.uuid]));
+      }
+    }
   }
 
   function renderLogLevelBadge() {
@@ -1642,6 +1672,8 @@ function _renderEngagementPopover() {
     if (_paxScoreDelegated || !ul) return;
     _paxScoreDelegated = true;
     ul.addEventListener('click', (e) => {
+      const fxEl = e.target.closest && e.target.closest('.pax-fx');
+      if (fxEl && ul.contains(fxEl)) { toggleFxGrant(fxEl.dataset.uuid); return; }
       const el = e.target.closest && e.target.closest('.pax-score');
       if (!el || !ul.contains(el)) return;
       resetOneScore(el.dataset.uuid, el.dataset.name || 'Unknown', Number(el.dataset.pts) || 0);
@@ -1671,6 +1703,12 @@ function _renderEngagementPopover() {
       // _ensurePaxScoreDelegation). NEVER interpolate the name into an inline
       // onclick JS string — a name with ' or " would break out and inject.
       const scoreTag = pts > 0 ? `<span class="pax-score" data-tip="Click to reset score" data-uuid="${escAttr(pid)}" data-name="${escAttr(name)}" data-pts="${pts}">⭐ ${pts} pts</span>` : '';
+      // FX grant: one click per row, and the press count beside it. Dimmed
+      // rather than hidden when not granted, because the toggle IS the
+      // affordance — an invisible control cannot be clicked to grant.
+      const fxHeld = _fxGranted.has(pid);
+      const fxPresses = _fxCounts[pid] || 0;
+      const fxTag = `<span class="pax-fx${fxHeld ? ' granted' : ''}" data-uuid="${escAttr(pid)}" data-tip="${fxHeld ? 'Holds the FX button — click to revoke' : 'Click to grant the FX button'}">🔴${fxPresses ? ' ' + fxPresses : ''}</span>`;
       const locLabel = _formatParticipantLocation(participant) || null;
       const tzForColor = String(participant?.location_tz || _extractTimezone(loc) || '').trim();
       const hhmmForColor = tzForColor ? _rawHhmmForTimezone(tzForColor) : '';
@@ -1702,7 +1740,7 @@ function _renderEngagementPopover() {
         const copiedClass = (entry.copied || entry.seen_by_host) ? ' downloaded' : '';
         return `<span class="upload-icon${copiedClass}" data-tip="${escAttr(entry.disk_path)}" data-uuid="${escAttr(pid)}" data-file-id="${escAttr(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
-      return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" data-tip="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}</li>`;
+      return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" data-tip="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${fxTag}${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}</li>`;
     }).join('');
 
     if (flashPids && flashPids.size > 0) {

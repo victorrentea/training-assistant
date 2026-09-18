@@ -1,36 +1,50 @@
-"""Daemon FX router — the public half.
+"""Daemon FX router — the button the host hands out.
 
-Everything here is reachable from the internet through Railway's `/fx/*` relay,
-so it is written as a series of refusals: a wrong token is a flat 404 with no
-hint which part failed, a closed master switch presses nothing, and a caller
-who holds down F5 is answered with a countdown instead of a soundboard.
+Access is a **grant**, not a secret. The host ticks a participant in the roster;
+that participant's UUID goes in `fx_granted_pids`, and their page grows a red
+button. Everyone else's page has no button and, more to the point, their POST to
+`/fire` is refused — the check lives on the endpoint, because a hidden button is
+not a control.
 
-The press itself takes an **integer** the daemon looked up in the catalog. No
-string from a request ever becomes part of a URL on the effects port.
+**Why this replaced a secret link.** The old model was a bearer URL: forwardable
+by screenshot or chat, firing from anywhere on the internet, and — since the
+holder's browser often wasn't the one that joined — frequently unattributable,
+which is how "Someone fired the doorbell" ended up in the log twice in a row. A
+grant cannot be forwarded by accident (you would have to dig your own UUID out
+of localStorage and hand it over deliberately), it is revocable per person, and
+every press carries a name by construction.
+
+**What the UUID is worth.** It is 122 bits of `crypto.randomUUID()`, and no
+participant-facing frame or endpoint ever carries another participant's — an
+invariant the whole product is swept for in
+`tests/daemon/test_broadcast_uuid_strip.py::test_no_uuid_in_any_participant_frame`.
+It remains a *bearer* credential: whoever can read a grantee's localStorage can
+press as them. That is not new — the same UUID already casts their quiz votes —
+and the answer is the same as for any other misuse: revoke.
+
+The press itself still takes an **integer** the daemon looked up in the catalog.
+No string from a request ever becomes part of a URL on the effects port.
 """
 import logging
 import os
-import secrets
 import time
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from daemon import effects_client
 from daemon import log as daemon_log
-from daemon.fx.token import generate_fx_token
 from daemon.participant.state import participant_state
 
 logger = logging.getLogger(__name__)
-
-_PAGE_PATH = Path(__file__).resolve().parents[2] / "static" / "fx.html"
 
 
 # ── Pydantic models ──
 
 class FxInfoResponse(BaseModel):
+    granted: bool
     tile_n: int
     label: str
     effect: str | None
@@ -43,7 +57,7 @@ class FxInfoResponse(BaseModel):
 
 class FxFireResponse(BaseModel):
     fired: bool
-    # ok | disabled | cooling | effects-down | no-tile
+    # ok | not-granted | disabled | cooling | effects-down | no-tile
     reason: str
     ready_in_seconds: int
 
@@ -73,30 +87,25 @@ async def find_tile(n: int) -> dict | None:
     return None
 
 
-def _check_token(token: str) -> None:
-    """404 unless ``token`` is this session's link token.
+def is_granted(pid: str | None) -> bool:
+    """Whether this participant may press the button. The whole access check."""
+    return bool(pid) and pid in participant_state.fx_granted_pids
 
-    Compares UTF-8 *bytes*, not the two `str` objects directly: `compare_digest`
-    raises TypeError on a non-ASCII `str` operand, and this endpoint is reached
-    by more than the token-alphabet-anchored Railway relay — a second, pre-existing
-    route (`/{session_id}/api/participant/fx/...`) forwards whatever the URL
-    contains, unfiltered. A raise here becomes a 500, and a 500 is worse than an
-    unhelpful 404: it tells a prober their input broke something, and it is the
-    one answer this whole feature is built never to give — every other input,
-    right or wrong, gets the same flat refusal.
 
-    `errors="surrogatepass"` on the encode keeps this from raising too — plain
-    `str.encode("utf-8")` itself raises on a lone surrogate, which a malformed
-    percent-encoded path can produce. Comparing bytes still runs `compare_digest`
-    in constant time for equal-length input, exactly as the `str` form did.
+def resolve_caller(pid: str | None) -> tuple[str, bool]:
+    """The presser's display name and whether they joined anonymously.
+
+    Same rule as the attention bell (`daemon/attention/router.py`), and for the
+    same reason: NEVER fall back to the raw pid. A UUID on the trainer's screen
+    once already made it onto a projector, and the FX banner is shown in exactly
+    the same room. An unknown or unnamed presser is "Someone" — which, now that
+    only granted participants can press, should be vanishingly rare rather than
+    the norm it was under the anonymous link.
     """
-    current = participant_state.fx_token
-    if not current:
-        raise HTTPException(status_code=404)
-    token_bytes = token.encode("utf-8", errors="surrogatepass")
-    current_bytes = current.encode("utf-8")
-    if not secrets.compare_digest(token_bytes, current_bytes):
-        raise HTTPException(status_code=404)
+    if not pid:
+        return "Someone", False
+    name = (participant_state.participant_names.get(pid) or "").strip() or "Someone"
+    return name, pid in participant_state.anonymous_pids
 
 
 async def _effects_reachable() -> bool:
@@ -104,12 +113,11 @@ async def _effects_reachable() -> bool:
     answer a ping.
 
     A ping and a press are different calls: `/ping` can succeed while the apps
-    lack the `/press/<n>` route a press actually needs (exactly the case while
-    the running Mac apps predate that route), and `is_up()` alone can't see
-    that. Once a real press has been attempted this session (a participant
-    fire or the host's Test button), its outcome overrides the ping — until a
-    later attempt succeeds again — so /info never tells the page a press would
-    work when the last one just proved otherwise.
+    lack the `/press/<n>` route a press actually needs, and `is_up()` alone
+    can't see that. Once a real press has been attempted this session (a
+    participant fire or the host's Test button), its outcome overrides the ping
+    — until a later attempt succeeds again — so /info never tells a page a
+    press would work when the last one just proved otherwise.
     """
     if not await effects_client.is_up():
         return False
@@ -117,7 +125,12 @@ async def _effects_reachable() -> bool:
 
 
 def cooldown_remaining() -> int:
-    """Whole seconds left before the button works again.
+    """Whole seconds left before the button works again, for anyone.
+
+    Deliberately ONE lever for the whole room rather than a timer per grantee:
+    with "grant everyone" a click away, a per-person cooldown would let twenty
+    people fire twenty sounds inside one cooldown window. The point of the
+    brake is how often the *room* hears it, not how often each person presses.
 
     Measured on a monotonic clock: a system clock that jumps must not unlock
     the button early or lock it until tomorrow.
@@ -130,30 +143,34 @@ def cooldown_remaining() -> int:
     return max(0, int(remaining + 0.999)) if remaining > 0 else 0
 
 
+def _notify_participants_changed() -> None:
+    """Tell every participant page that something about FX moved, so it re-reads
+    its own `/info`.
+
+    Carries no detail — not who was granted, not who was revoked. It cannot: a
+    participant frame that named a UUID would break the invariant this feature's
+    whole safety argument rests on. Each page asks about *itself*, over its own
+    authenticated call, and learns nothing about anyone else.
+    """
+    from daemon.ws_messages import FxChangedMsg
+    from daemon.ws_publish import broadcast
+    broadcast(FxChangedMsg())
+
+
 # ── Participant router ──
 
 participant_router = APIRouter(prefix="/api/participant/fx", tags=["fx"])
 
 
-@participant_router.get("/{token}", response_class=HTMLResponse)
-async def fx_page(token: str):
-    """The trigger page. One button, and an honest account of why it is grey."""
-    _check_token(token)
-    try:
-        return HTMLResponse(_PAGE_PATH.read_text(encoding="utf-8"))
-    except OSError:
-        logger.error("fx page missing at %s", _PAGE_PATH)
-        return HTMLResponse("<h1>FX page unavailable</h1>", status_code=500)
-
-
-@participant_router.get("/{token}/info", response_model=FxInfoResponse)
-async def fx_info(token: str):
-    """What the page renders, and what an already-open tab polls for so a host
-    toggle reaches it without a reload."""
-    _check_token(token)
+@participant_router.get("/info", response_model=FxInfoResponse)
+async def fx_info(request: Request):
+    """What one participant's page renders: whether they hold the button, and
+    what shape it is in."""
+    pid = request.headers.get("x-participant-id")
     n = participant_state.fx_tile_n
     tile = await find_tile(n) or {}
     return FxInfoResponse(
+        granted=is_granted(pid),
         tile_n=n,
         label=tile_label(tile) if tile else f"tile {n}",
         effect=tile.get("effect"),
@@ -165,32 +182,20 @@ async def fx_info(token: str):
     )
 
 
-def resolve_caller(pid: str | None) -> tuple[str, bool]:
-    """The holder's display name and whether they joined anonymously.
-
-    Same rule as the attention bell (`daemon/attention/router.py`), and for the
-    same reason: NEVER fall back to the raw pid. A UUID on the trainer's screen
-    once already made it onto a projector, and this banner is shown in exactly
-    the same room. An unknown, unnamed or absent holder is "Someone".
-
-    The pid itself is self-asserted by the browser, as it is on every other
-    participant route — with a secret link handed to one trusted person and a
-    name on a banner as the only consequence, that is the existing trust model,
-    not a new hole in it.
-    """
+@participant_router.post("/fire", response_model=FxFireResponse)
+async def fx_fire(request: Request):
+    """Press the selected tile, if the presser holds the button and all the
+    brakes are off."""
+    pid = request.headers.get("x-participant-id")
     if not pid:
-        return "Someone", False
-    name = (participant_state.participant_names.get(pid) or "").strip() or "Someone"
-    return name, pid in participant_state.anonymous_pids
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
 
+    # The grant first, before the master switch and before any lookup: someone
+    # who was never granted must not be able to tell an armed session from a
+    # disarmed one, nor cost the daemon a catalog read by asking.
+    if not is_granted(pid):
+        return FxFireResponse(fired=False, reason="not-granted", ready_in_seconds=0)
 
-@participant_router.post("/{token}/fire", response_model=FxFireResponse)
-async def fx_fire(request: Request, token: str):
-    """Press the selected tile, if all the brakes are off."""
-    _check_token(token)
-
-    # Master switch first: a hand-crafted POST achieves nothing while closed,
-    # and nothing below this line runs — no lookup, no log, no press.
     if not participant_state.fx_enabled:
         return FxFireResponse(fired=False, reason="disabled", ready_in_seconds=0)
 
@@ -213,17 +218,22 @@ async def fx_fire(request: Request, token: str):
     participant_state.fx_last_press_ok = True
     participant_state.fx_last_fired_mono = time.monotonic()
     participant_state.fx_last_fired_at = time.time()
+    count = participant_state.fx_press_counts.get(pid, 0) + 1
+    participant_state.fx_press_counts[pid] = count
     participant_state.persist()
 
     label = tile_label(tile)
-    # Resolved only after the press landed: a refused press names nobody.
-    caller, anonymous = resolve_caller(request.headers.get("x-participant-id"))
-    daemon_log.info("host", f"← 🎛️ {caller!r} fired tile {n} ({label})")
+    caller, anonymous = resolve_caller(pid)
+    daemon_log.info("host", f"← 🎛️ {caller!r} fired tile {n} ({label}), press #{count}")
 
-    from daemon.ws_messages import FxFiredMsg
-    from daemon.ws_publish import notify_host
+    from daemon.ws_messages import FxCoolingMsg, FxFiredMsg
+    from daemon.ws_publish import broadcast, notify_host
     await notify_host(FxFiredMsg(tile_n=n, label=label, at=participant_state.fx_last_fired_at,
-                                 caller=caller, anonymous=anonymous))
+                                 caller=caller, anonymous=anonymous, uuid=pid, count=count))
+
+    # One lever, so everyone else's button has to grey out too — otherwise the
+    # other grantees learn about the cooldown only by pressing into it.
+    broadcast(FxCoolingMsg(ready_in_seconds=participant_state.fx_cooldown_seconds))
 
     # Dual-render, as the attention bell does: the host page flashes its badge,
     # and the trainer's desktop gets a bottom-center tab naming the presser. The
@@ -255,14 +265,16 @@ class FxCatalogResponse(BaseModel):
 
 class FxStateResponse(BaseModel):
     enabled: bool
-    token: str
-    url: str
     tile_n: int
     tile_label: str
     effect: str | None
     cooldown_seconds: int
     last_fired_at: float | None
     effects_up: bool
+    # Host-only, so UUIDs are allowed and necessary: the roster draws one
+    # toggle and one counter per row, keyed by exactly these.
+    granted: list[str]
+    press_counts: dict[str, int]
 
 
 class FxTileRequest(BaseModel):
@@ -275,45 +287,32 @@ class FxCooldownRequest(BaseModel):
     seconds: int = Field(ge=0, le=300)
 
 
+class FxGrantRequest(BaseModel):
+    participant_id: str
+
+
 host_router = APIRouter(prefix="/api/{session_id}/host/fx", tags=["fx"])
 
 
-def _public_base_url() -> str:
-    """Where participants reach this workshop. Same source as the join link."""
-    return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/")
-
-
-def _ensure_token() -> str:
-    """This session's link token, minted on first use.
-
-    Lazy so a session that never opens the popover never carries a credential.
-    """
-    if not participant_state.fx_token:
-        participant_state.fx_token = generate_fx_token()
-        participant_state.persist()
-    return participant_state.fx_token
-
-
 async def _state_response() -> FxStateResponse:
-    token = _ensure_token()
     n = participant_state.fx_tile_n
     tile = await find_tile(n) or {}
     return FxStateResponse(
         enabled=participant_state.fx_enabled,
-        token=token,
-        url=f"{_public_base_url()}/fx/{token}",
         tile_n=n,
         tile_label=tile_label(tile) if tile else f"tile {n}",
         effect=tile.get("effect"),
         cooldown_seconds=participant_state.fx_cooldown_seconds,
         last_fired_at=participant_state.fx_last_fired_at,
         effects_up=await _effects_reachable(),
+        granted=sorted(participant_state.fx_granted_pids),
+        press_counts=dict(participant_state.fx_press_counts),
     )
 
 
 @host_router.get("/state", response_model=FxStateResponse)
 async def fx_state():
-    """Everything the footer badge and its popover render."""
+    """Everything the footer badge, its popover and the roster's toggles render."""
     return await _state_response()
 
 
@@ -341,21 +340,76 @@ async def fx_catalog():
 
 @host_router.post("/toggle", response_model=FxStateResponse)
 async def fx_toggle():
-    """Arm or disarm the link. Off at the start of every session."""
+    """Arm or disarm every grant at once, without touching who holds one."""
     participant_state.fx_enabled = not participant_state.fx_enabled
     participant_state.persist()
-    daemon_log.info("host", f"🎛️ fx link {'armed' if participant_state.fx_enabled else 'disarmed'}")
+    daemon_log.info("host", f"🎛️ fx {'armed' if participant_state.fx_enabled else 'disarmed'}")
+    _notify_participants_changed()
+    return await _state_response()
+
+
+@host_router.post("/grant", response_model=FxStateResponse)
+async def fx_grant(body: FxGrantRequest):
+    """Hand the button to one participant."""
+    participant_state.fx_granted_pids.add(body.participant_id)
+    participant_state.persist()
+    name, _ = resolve_caller(body.participant_id)
+    daemon_log.info("host", f"🎛️ fx granted to {name!r}")
+    _notify_participants_changed()
+    return await _state_response()
+
+
+@host_router.post("/revoke", response_model=FxStateResponse)
+async def fx_revoke(body: FxGrantRequest):
+    """Take it back from one participant.
+
+    Their press count survives: it is the session's record of what happened,
+    not a property of the grant, and re-granting someone must not silently
+    reset how many times they have already leaned on it.
+    """
+    participant_state.fx_granted_pids.discard(body.participant_id)
+    participant_state.persist()
+    name, _ = resolve_caller(body.participant_id)
+    daemon_log.info("host", f"🎛️ fx revoked from {name!r}")
+    _notify_participants_changed()
+    return await _state_response()
+
+
+@host_router.post("/grant-all", response_model=FxStateResponse)
+async def fx_grant_all():
+    """Hand the button to the whole roster.
+
+    The roster, not just whoever is online this second: someone who steps out
+    and comes back would otherwise find their button gone for reasons nobody
+    could explain. The cooldown is what keeps this survivable — see
+    `cooldown_remaining`.
+    """
+    participant_state.fx_granted_pids.update(participant_state.participant_names.keys())
+    participant_state.persist()
+    daemon_log.info("host", f"🎛️ fx granted to all {len(participant_state.fx_granted_pids)}")
+    _notify_participants_changed()
+    return await _state_response()
+
+
+@host_router.post("/revoke-all", response_model=FxStateResponse)
+async def fx_revoke_all():
+    """Take the button away from everyone — the panic button for the panic button."""
+    participant_state.fx_granted_pids.clear()
+    participant_state.persist()
+    daemon_log.info("host", "🎛️ fx revoked from everyone")
+    _notify_participants_changed()
     return await _state_response()
 
 
 @host_router.post("/tile", response_model=FxStateResponse)
 async def fx_set_tile(body: FxTileRequest):
-    """Bind the link to a different tile."""
+    """Bind the button to a different tile."""
     if await find_tile(body.n) is None:
         raise HTTPException(status_code=404, detail="Unknown tile")
     participant_state.fx_tile_n = body.n
     participant_state.persist()
-    daemon_log.info("host", f"🎛️ fx link now fires tile {body.n}")
+    daemon_log.info("host", f"🎛️ fx now fires tile {body.n}")
+    _notify_participants_changed()
     return await _state_response()
 
 
@@ -364,16 +418,7 @@ async def fx_set_cooldown(body: FxCooldownRequest):
     """Change how often the room may pull the lever."""
     participant_state.fx_cooldown_seconds = body.seconds
     participant_state.persist()
-    return await _state_response()
-
-
-@host_router.post("/rotate", response_model=FxStateResponse)
-async def fx_rotate():
-    """Mint a new token, killing the current link immediately."""
-    participant_state.fx_token = generate_fx_token()
-    participant_state.fx_last_fired_mono = None
-    participant_state.persist()
-    daemon_log.info("host", "🎛️ fx link rotated — the old URL is dead")
+    _notify_participants_changed()
     return await _state_response()
 
 
@@ -381,14 +426,16 @@ async def fx_rotate():
 async def fx_test():
     """Fire the selected tile from the host page.
 
-    Deliberately ignores both brakes: you check the wiring precisely when the
-    link is disarmed, and a cooldown meant for the room should not make the
-    trainer wait. It does not start a cooldown either — testing must not take
-    the lever away from someone holding the link.
+    Deliberately ignores every brake: you check the wiring precisely when the
+    switch is off and nobody is granted, and a cooldown meant for the room
+    should not make the trainer wait. It does not start a cooldown either —
+    testing must not take the lever away from the room. It is also not counted
+    against anybody: the counters answer "who is leaning on this", and the
+    trainer testing his own soundboard is not an answer to that.
 
     This is also the room's only recovery path once a real press has failed:
     /info trusts the last actual attempt over the ping (see
-    _effects_reachable()), so after a failure the participant button stays
+    _effects_reachable()), so after a failure the participants' buttons stay
     disabled until a Test from here proves the wiring works again.
     """
     tile = await find_tile(participant_state.fx_tile_n)
