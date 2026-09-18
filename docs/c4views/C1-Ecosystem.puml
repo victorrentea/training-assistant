@@ -66,7 +66,7 @@ Rel(ClaudeCode, victormacosaddons, "HTTP :55123/hands-off/{start,end,state} from
 Rel(victorstatusline, ClaudeCode, "Symlinked in as ~/.claude/statusline-command.sh", $techn="", $tags="", $link="")
 Rel(victorskillsskillsprivatehumanreview, ClaudeCode, "Plugin marketplaces: one git source, one local directory", $techn="", $tags="", $link="")
 Rel(claudeusage, ClaudeCode, "Reads ~/.claude/projects/** transcripts", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool, victormacosaddons, "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / pdf_export_alarm", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool, victormacosaddons, "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / fx_fired / pdf_export_alarm", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

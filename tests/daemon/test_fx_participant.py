@@ -188,6 +188,44 @@ class TestFire:
         assert r.json()["effects_up"] is False
 
 
+class TestDesktopAnnouncement:
+    """The trainer's desktop tab (`fx_fired` over the addons WS bridge).
+
+    The host badge already flashes, but during a workshop the host panel is
+    behind the slides — the tab is the only surface the trainer actually sees,
+    so it has to follow the press exactly: fire when the press lands, stay
+    silent when it doesn't, and never be able to fail the press.
+    """
+
+    def test_a_successful_press_announces_the_tile_on_the_desktop(self, client):
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
+             patch("daemon.addon_bridge_client.send_fx_fired") as announce:
+            client.post(f"/api/participant/fx/{TOKEN}/fire")
+        announce.assert_called_once_with(69, "scream ghost")
+
+    def test_a_refused_press_announces_nothing(self, client):
+        """Disabled, cooling, no-tile and effects-down all mean the room heard
+        nothing — so the trainer must be told nothing."""
+        participant_state.fx_enabled = False
+        with patch("daemon.addon_bridge_client.send_fx_fired") as announce:
+            client.post(f"/api/participant/fx/{TOKEN}/fire")
+        assert announce.call_count == 0
+
+        participant_state.fx_enabled = True
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=False), \
+             patch("daemon.addon_bridge_client.send_fx_fired") as announce:
+            client.post(f"/api/participant/fx/{TOKEN}/fire")
+        assert announce.call_count == 0
+
+    def test_a_closed_overlay_does_not_fail_the_press(self, client):
+        """`send_fx_fired` returns False when the overlay isn't connected — the
+        participant must still be told the press worked."""
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
+             patch("daemon.addon_bridge_client.send_fx_fired", return_value=False):
+            r = client.post(f"/api/participant/fx/{TOKEN}/fire")
+        assert r.json()["fired"] is True
+
+
 class TestInfo:
     def test_effects_up_is_true_by_default_when_the_ping_is_up_and_no_press_has_failed(self, client):
         with patch("daemon.fx.router.effects_client.is_up", return_value=True):

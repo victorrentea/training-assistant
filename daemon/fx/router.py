@@ -203,6 +203,15 @@ async def fx_fire(token: str):
     from daemon.ws_publish import notify_host
     await notify_host(FxFiredMsg(tile_n=n, label=label, at=participant_state.fx_last_fired_at))
 
+    # Dual-render, as the attention bell does: the host page flashes its badge,
+    # and the trainer's desktop gets a bottom-center tab. The badge is the one
+    # nobody sees — during a workshop the host panel is behind the slides — and
+    # a press the trainer cannot attribute is indistinguishable from his own
+    # tablet misfiring. Best-effort: the overlay is allowed to be closed, and a
+    # missing announcement must never turn a successful press into a failure.
+    from daemon import addon_bridge_client
+    addon_bridge_client.send_fx_fired(n, label)
+
     return FxFireResponse(fired=True, reason="ok",
                           ready_in_seconds=participant_state.fx_cooldown_seconds)
 

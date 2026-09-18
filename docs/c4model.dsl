@@ -61,7 +61,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         trainingDaemon -> railwayBackend "Synchronizes active session, participant events, uploads, and generated static assets"
         trainingDaemon -> claudeApi "Requests debate cleanup and code-review smart-paste extraction"
         trainingDaemon -> githubApi "Resolves opened-file blob links against repo trees and blobs"
-        trainingDaemon -> macosAddons "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / pdf_export_alarm"
+        trainingDaemon -> macosAddons "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / fx_fired / pdf_export_alarm"
         trainingDaemon -> agentMail "Sends best-effort email notifications via AgentMail SDK"
         trainingDaemon -> hostFiles "Reads and writes session folders, transcripts, and summary files"
         trainingDaemon -> localRag "Indexes local materials in the background"

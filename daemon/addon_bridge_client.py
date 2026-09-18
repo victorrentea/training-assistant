@@ -3,6 +3,10 @@
 The addons server runs at ws://127.0.0.1:<WS_SERVER_PORT> (default 8765).
 
 Protocol:
+  Daemon → Addons: {"type": "fx_fired", "tile_n": <n>, "label": "<tile name>"}
+              — someone holding the secret FX link pressed it; the overlay announces
+                the tile on a bottom-center tab. Carries no identity: the link is
+                anonymous by design (see FxFiredMsg in ws_messages.py).
   Daemon → Addons: {"type": "display_emoji", "emoji": "<char>", "count": 1, "glow": "#rrggbb"?}
               — relayed by addons to the desktop overlay for animation. "glow" is
               an optional per-participant halo colour (omitted → no halo).
@@ -99,6 +103,18 @@ class AddonBridgeClient:
         if sent:
             log.info(_NAME, "→ ended session")
         return sent
+
+    def send_fx_fired(self, tile_n: int, label: str) -> bool:
+        """Announce a press of the secret FX link on the trainer's desktop.
+
+        Best-effort and identity-free by design — see the class docstring. The
+        press itself already fires the tile's sound and paired visual through
+        the *other* edge to the Mac (`effects_client`, HTTP on :55123); this
+        message exists only so the trainer can tell a press from the room apart
+        from one of his own.
+        """
+        msg = {"type": "fx_fired", "tile_n": int(tile_n), "label": label}
+        return self._send(msg)
 
     def send_pdf_export_alarm(self, deck: str, slug: str, failing: bool, detail: str = "") -> bool:
         """Raise (failing=True) or clear (failing=False) the macOS 'PDF export
@@ -284,3 +300,8 @@ def send_session_ended() -> bool:
 def send_pdf_export_alarm(deck: str, slug: str, failing: bool, detail: str = "") -> bool:
     """Best-effort pdf_export_alarm message to addons. Returns True if sent."""
     return _client is not None and _client.send_pdf_export_alarm(deck, slug, failing, detail)
+
+
+def send_fx_fired(tile_n: int, label: str) -> bool:
+    """Best-effort fx_fired message to addons. Returns True if sent."""
+    return _client is not None and _client.send_fx_fired(tile_n, label)

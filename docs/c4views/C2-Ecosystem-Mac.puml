@@ -41,7 +41,7 @@ Rel(victorvsc, victormacosaddons, "POST :55123/intellij/file-opened", $techn="",
 Rel(livecoding, victormacosaddons, "POST :55123/intellij/file-opened", $techn="", $tags="", $link="")
 Rel(victormacosaddons, victormackit, "SwiftPM path dependency on ../victor-mac-kit", $techn="", $tags="", $link="")
 Rel(ClaudeCode, victormacosaddons, "HTTP :55123/hands-off/{start,end,state} from the PreToolUse hook via ~/bin/hands-off", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool, victormacosaddons, "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / pdf_export_alarm", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool, victormacosaddons, "WebSocket client to ws://127.0.0.1:8765: receives slide and IDE file-open events, sends display_emoji / session_started / session_ended / bell_ring / fx_fired / pdf_export_alarm", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

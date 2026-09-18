@@ -531,6 +531,11 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- |
 | Someone holding the secret FX link pressed the button<br>SECURITY: no token, no UUID — the link is anonymous by design; the host badge only needs to know that it moved.<br>`fx_fired` | `tile_n: int`<br>`label: string`<br>`at: number  # Unix timestamp (time.time()) when the tile was pressed` |
 
+### Addons WS
+| Message | Payload |
+| --- | --- |
+| Someone pulled the secret FX link — overlay announces the tile to the trainer<br>Fire-and-forget, best-effort. A closed overlay never fails the press — the participant is still told it fired.<br>Sent only after the press itself succeeded, on the *other* edge to the Mac (HTTP `GET :55123/press/<n>`). A refused press (disabled / cooling / unknown tile / effects down) sends nothing.<br>Carries no identity by design — the link is anonymous, so the tab says which tile fired, not who fired it.<br>On receipt the overlay shows a red bottom-center tab reading "🔴 [label]" that rises, holds 3s and falls away. No chime: the tile's own sound is already playing.<br>`fx_fired` | `tile_n: int  # Soundboard tile number that was pressed`<br>`label: string  # Human-readable tile name (falls back to the asset filename stem)` |
+
 ## Feature: Host-Machine
 
 ### Host REST

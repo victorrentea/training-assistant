@@ -78,7 +78,7 @@ debate?: PersistedDebateState{
 talk_presentation_name?: string  # Display name of the last PPTX dropped in talk mode (stem, no extension)
 talk_presentation_url?: string  # PDF export URL for talk PPTX (docs.google.com/presentation/d/.../export/pdf)
 talk_presentation_slug?: string  # Railway slug under which the talk PPTX PDF is cached
-fx_enabled?: bool  # Master switch for the secret FX link; resets OFF each session
+fx_enabled?: bool  # Master switch for the secret FX link; armed by default each session
 fx_token?: string  # Secret FX link token (CSPRNG, 12 chars)
 fx_tile_n?: int  # Soundboard tile the FX link fires
 fx_cooldown_seconds?: int  # Minimum seconds between two FX triggers
