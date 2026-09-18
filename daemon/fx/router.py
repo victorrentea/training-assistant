@@ -226,13 +226,14 @@ async def fx_fire(request: Request, token: str):
                                  caller=caller, anonymous=anonymous))
 
     # Dual-render, as the attention bell does: the host page flashes its badge,
-    # and the trainer's desktop gets a bottom-center tab. The badge is the one
-    # nobody sees — during a workshop the host panel is behind the slides — and
-    # a press the trainer cannot attribute is indistinguishable from his own
-    # tablet misfiring. Best-effort: the overlay is allowed to be closed, and a
-    # missing announcement must never turn a successful press into a failure.
+    # and the trainer's desktop gets a bottom-center tab naming the presser. The
+    # badge is the one nobody sees — during a workshop the host panel is behind
+    # the slides — and a press the trainer cannot attribute is indistinguishable
+    # from his own tablet misfiring. Only the name goes to the overlay; the tile
+    # is already playing out loud. Best-effort: the overlay is allowed to be
+    # closed, and a missing announcement must never fail a successful press.
     from daemon import addon_bridge_client
-    addon_bridge_client.send_fx_fired(n, label, caller, anonymous)
+    addon_bridge_client.send_fx_fired(caller, anonymous)
 
     return FxFireResponse(fired=True, reason="ok",
                           ready_in_seconds=participant_state.fx_cooldown_seconds)

@@ -92,7 +92,7 @@ components:
             description: Resolved display name of the ringing participant (never the raw UUID when a name is known)
 
     fx_fired:
-      summary: Someone pulled the secret FX link — overlay announces who fired what
+      summary: Someone pulled the secret FX link — overlay names who pressed it
       x-feature: fx
       x-doc-notes:
         - Fire-and-forget, best-effort. A closed overlay never fails the press —
@@ -105,22 +105,17 @@ components:
           page reads out of its own localStorage. Never a raw UUID: an unknown,
           unnamed or absent holder is "Someone".
         - >-
-          On receipt the overlay shows a red bottom-center tab reading
-          "🔴 [caller] · [label]" that rises, holds 3s and falls away. No chime:
-          the tile's own sound is already playing.
+          On receipt the overlay shows a red bottom-center tab reading "[caller]"
+          — the name alone, no glyph and no tile — that rises, holds 3s and falls
+          away. No chime, and no tile name: the tile's own sound is already
+          playing, so the tab carries only what the room cannot supply.
       payload:
         type: object
-        required: [type, tile_n, label, caller]
+        required: [type, caller]
         properties:
           type:
             type: string
             enum: [fx_fired]
-          tile_n:
-            type: integer
-            description: Soundboard tile number that was pressed
-          label:
-            type: string
-            description: Human-readable tile name (falls back to the asset filename stem)
           caller:
             type: string
             description: Resolved display name of whoever pressed the button ("Someone" when unknown)

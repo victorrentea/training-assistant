@@ -207,17 +207,17 @@ class TestDesktopAnnouncement:
 
     The host badge already flashes, but during a workshop the host panel is
     behind the slides — the tab is the only surface the trainer actually sees,
-    so it has to follow the press exactly: fire when the press lands, stay
-    silent when it doesn't, and never be able to fail the press.
+    so it has to follow the press exactly: name the presser when the press
+    lands, stay silent when it doesn't, and never be able to fail the press.
     """
 
-    def test_a_successful_press_announces_who_fired_what(self, client):
+    def test_a_successful_press_names_the_presser(self, client):
         participant_state.participant_names[PID] = "Ana Pop"
         with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
              patch("daemon.addon_bridge_client.send_fx_fired") as announce:
             client.post(f"/api/participant/fx/{TOKEN}/fire",
                         headers={"X-Participant-ID": PID})
-        announce.assert_called_once_with(69, "scream ghost", "Ana Pop", False)
+        announce.assert_called_once_with("Ana Pop", False)
 
     def test_an_anonymous_participant_is_flagged_not_hidden(self, client):
         participant_state.participant_names[PID] = "Grumpy Otter"
@@ -226,27 +226,30 @@ class TestDesktopAnnouncement:
              patch("daemon.addon_bridge_client.send_fx_fired") as announce:
             client.post(f"/api/participant/fx/{TOKEN}/fire",
                         headers={"X-Participant-ID": PID})
-        announce.assert_called_once_with(69, "scream ghost", "Grumpy Otter", True)
+        announce.assert_called_once_with("Grumpy Otter", True)
 
     def test_a_press_with_no_participant_header_announces_someone(self, client):
         """The link opened on a phone that never joined the workshop. It still
-        fires, and the tab still announces it — just without a name."""
+        fires, and the tab still shows — just saying "Someone"."""
         with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
              patch("daemon.addon_bridge_client.send_fx_fired") as announce:
             r = client.post(f"/api/participant/fx/{TOKEN}/fire")
         assert r.json()["fired"] is True
-        announce.assert_called_once_with(69, "scream ghost", "Someone", False)
+        announce.assert_called_once_with("Someone", False)
 
     def test_an_unknown_participant_id_never_leaks_onto_the_screen(self, client):
         """The regression this guards: a raw UUID on the trainer's banner, in a
         room where that banner is on the projector."""
         with patch("daemon.fx.router.effects_client.press_tile", return_value=True), \
              patch("daemon.addon_bridge_client.send_fx_fired") as announce:
-            client.post(f"/api/participant/fx/{TOKEN}/fire",
-                        headers={"X-Participant-ID": PID})
-        caller = announce.call_args.args[2]
+            r = client.post(f"/api/participant/fx/{TOKEN}/fire",
+                            headers={"X-Participant-ID": PID})
+        caller = announce.call_args.args[0]
         assert caller == "Someone"
+        # Neither wire may carry it: the overlay tab and the host badge are both
+        # shown in the room the pid's owner is sitting in.
         assert PID not in caller
+        assert PID not in r.text
 
     def test_a_blank_name_resolves_to_someone(self, client):
         participant_state.participant_names[PID] = "   "
@@ -254,7 +257,7 @@ class TestDesktopAnnouncement:
              patch("daemon.addon_bridge_client.send_fx_fired") as announce:
             client.post(f"/api/participant/fx/{TOKEN}/fire",
                         headers={"X-Participant-ID": PID})
-        assert announce.call_args.args[2] == "Someone"
+        assert announce.call_args.args[0] == "Someone"
 
     def test_a_refused_press_announces_nothing(self, client):
         """Disabled, cooling, no-tile and effects-down all mean the room heard
