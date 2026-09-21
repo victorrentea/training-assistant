@@ -8,16 +8,38 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>" />
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
 <style>
 body{visibility:hidden}
 :root{--participant-zoom:1}
-#notes-content{font-size:calc(1rem * var(--participant-zoom))}
+#notes-content{font-size:calc(1rem * var(--participant-zoom));font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--notes-ln-w:3ch}
 /* Notes render one keyed <div> per source line, so a live edit is reconciled --
    and flashed -- line by line; a blank line in the source becomes the gap after
    the last line of a paragraph. The padding/negative-margin pair reserves room
    for the "just changed" highlight, so nothing shifts when it appears. */
-#notes-content .notes-line{white-space:pre-wrap;padding:0 .45em;margin:0 -.45em;border-radius:5px}
+/* The trainer's notes ARE indented outline -- chapters, sub-chapters, bullets --
+   so the tab reads like the editor they were typed in: monospace, a line-number
+   gutter, and a fold chevron on every line that has deeper lines under it.
+   Each line is [gutter][text] as a flex row, so a wrapped line stays aligned
+   under its own first character instead of running back under the numbers. */
+#notes-content .notes-line{display:flex;align-items:flex-start;padding:0 .45em;margin:0 -.45em;border-radius:5px}
+#notes-content .notes-text{flex:1 1 auto;min-width:0;white-space:pre-wrap;word-break:break-word}
 #notes-content .notes-line[data-para-end]{margin-bottom:0.6em}
+/* Gutter: never part of a copy (user-select:none), never wider than the widest
+   line number (--notes-ln-w is set from the file itself on every render). */
+#notes-content .notes-gutter{flex:0 0 auto;display:flex;align-items:baseline;gap:.35ch;margin-right:.75ch;user-select:none;-webkit-user-select:none;font-size:.85em;opacity:.45}
+#notes-content .notes-ln{min-width:var(--notes-ln-w);text-align:right;font-variant-numeric:tabular-nums}
+/* The chevron slot is always reserved, so text never shifts sideways when a
+   line becomes (or stops being) foldable as the trainer types under it. */
+#notes-content .notes-fold{display:inline-block;width:1.1em;font-size:1.1em;line-height:1;visibility:hidden;cursor:pointer;border-radius:3px;transition:transform .12s ease,opacity .12s ease}
+#notes-content .notes-line.notes-foldable .notes-fold{visibility:visible;transform:rotate(90deg)}
+#notes-content .notes-line.notes-foldable.folded .notes-fold{transform:rotate(0deg)}
+#notes-content .notes-line.notes-foldable:hover .notes-gutter,#notes-content .notes-line.folded .notes-gutter{opacity:.95}
+#notes-content .notes-fold:focus-visible{outline:2px solid #8b5cf6;outline-offset:1px}
+/* Collapsed: the VS Code ellipsis badge, so a folded chapter still says "there
+   is more in here" without taking a line for it. */
+#notes-content .notes-line.folded .notes-text::after{content:'\22ef';margin-left:.7ch;padding:0 .45ch;border-radius:3px;background:rgba(127,127,127,.3)}
+#notes-content .notes-line.notes-collapsed{display:none}
 /* A line that changed while it was off-screen waits, statically marked, until it
    is scrolled into view -- only then does the 5s blink-and-fade run, so the
    reader always catches the flash instead of missing it above the fold. */
@@ -1987,6 +2009,7 @@ var LS = {
   FOLLOW: 'new:slides_follow',
   ACTIVE_SLIDE: 'new:active_slide_slug',
   NOTES_UNREAD: 'new:notes_unread',
+  NOTES_FOLDS: 'new:notes_folds',
   SUMMARY_UNREAD: 'new:summary_unread',
   FILES_UNREAD: 'new:files_unread',
   PROMPTS_UNREAD: 'new:prompts_unread',
@@ -2006,6 +2029,14 @@ var LS = {
     toRemove.forEach(function(k) { localStorage.removeItem(k); });
   },
   getEmoji:  function()     { return JSON.parse(localStorage.getItem(LS.EMOJI_PROMOTED) || '[]'); },
+  // Which notes chapters this reader collapsed, by line key (= hash of the line
+  // text). Keyed by text, not by line number, so folds survive the trainer
+  // inserting lines above them; a line that is itself edited loses its fold.
+  getNotesFolds: function() {
+    try { var a = JSON.parse(localStorage.getItem(LS.NOTES_FOLDS) || '[]'); return Array.isArray(a) ? a : []; }
+    catch (e) { return []; }
+  },
+  setNotesFolds: function(keys) { localStorage.setItem(LS.NOTES_FOLDS, JSON.stringify(keys.slice(-400))); },
   setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
   getScroll: function(view) { return localStorage.getItem(LS.scrollKey(view)); },
   setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
@@ -5859,16 +5890,59 @@ function linkifyText(text) {
 // Blank lines are not nodes — they become the bottom gap of the line they follow.
 function notesLineBlocks(text) {
   var out = [], seen = {};
-  var blocks = text.split(/\n[ \t]*\n+/).filter(function(b) { return b.length; });
-  blocks.forEach(function(block, bi) {
-    var lines = block.split('\n');
-    lines.forEach(function(line, li) {
-      var base = _hashStr(line);
-      var key = base + '.' + (seen[base] = (seen[base] || 0) + 1);
-      out.push({ key: key, text: line, paraEnd: li === lines.length - 1 && bi < blocks.length - 1 });
+  var raw = text.split('\n');
+  var last = raw.length - 1;
+  while (last >= 0 && !raw[last].trim()) last--;   // trailing blanks are not a gap
+  for (var i = 0; i <= last; i++) {
+    var line = raw[i];
+    if (!line.trim()) continue;                    // blank -> gap under the line above
+    var base = _hashStr(line);
+    var key = base + '.' + (seen[base] = (seen[base] || 0) + 1);
+    out.push({
+      key: key,
+      text: line,
+      // The number the gutter shows is the line's number in the FILE, blanks
+      // included -- otherwise it would not match what the trainer sees in the
+      // editor they are typing into.
+      num: i + 1,
+      indent: notesIndentWidth(line),
+      paraEnd: i < last && !raw[i + 1].trim(),
     });
-  });
+  }
   return out;
+}
+
+// A wrapped line restarts under its own first character, not under the gutter --
+// the editor's "wrappingIndent: same". The leading whitespace is left in the
+// text (a copy keeps the outline); the negative text-indent just parks it in
+// the padding the same amount of ch wide.
+function _notesHangingIndent(l) {
+  return l.indent ? ' style="padding-left:' + l.indent + 'ch;text-indent:-' + l.indent + 'ch"' : '';
+}
+
+// Indentation in visual columns, tabs rounded up to the next multiple of 4 --
+// the same rule an editor applies, so a tab-indented sub-point nests under a
+// space-indented one exactly as it does on the trainer's screen.
+function notesIndentWidth(line) {
+  var w = 0;
+  for (var i = 0; i < line.length; i++) {
+    if (line[i] === ' ') w++;
+    else if (line[i] === '\t') w += 4 - (w % 4);
+    else break;
+  }
+  return w;
+}
+
+// Folding is by indentation, like VS Code in a plain-text file: a line owns
+// every following line indented deeper than itself, and that run is its fold
+// range. foldEnd === its own index means nothing nests under it.
+function computeNotesFolds(lines) {
+  for (var i = 0; i < lines.length; i++) {
+    var j = i + 1;
+    while (j < lines.length && lines[j].indent > lines[i].indent) j++;
+    lines[i].foldEnd = j - 1;
+  }
+  return lines;
 }
 
 // One observer for the whole tab: a changed line stays statically marked until
@@ -5911,6 +5985,7 @@ function _pendingNoteLines() {
   if (!viewEl || !viewEl.clientHeight) return { above: above, below: below };   // tab hidden: no geometry
   var top = viewEl.scrollTop, bottom = top + viewEl.clientHeight;
   document.querySelectorAll('#notes-content .notes-fresh-pending').forEach(function(el) {
+    if (!el.offsetParent) return;                  // collapsed into a folded chapter
     if (el.offsetTop + el.offsetHeight <= top) above.push(el);
     else if (el.offsetTop >= bottom) below.push(el);
   });
@@ -5942,15 +6017,77 @@ function jumpToFreshNote(dir) {
 // Reconcile #notes-content's children to the line list: reuse unchanged nodes,
 // insert+flash new ones, drop the gone. Nothing flashes on the first render —
 // the whole file is "new" then, and a wall of purple says nothing.
+var _notesLines = [];                      // last rendered line list, for folding
+var _notesFolded = null;                   // { lineKey: true } -- collapsed chapters
+
+function _notesFoldState() {
+  if (!_notesFolded) {
+    _notesFolded = {};
+    LS.getNotesFolds().forEach(function(k) { _notesFolded[k] = true; });
+  }
+  return _notesFolded;
+}
+
+// Hide every line that sits inside a collapsed range, and mark the collapsed
+// heads. Runs after each render and after each click -- never touches text, so
+// a fold costs no re-render and keeps the selection.
+function applyNotesFolding() {
+  var folded = _notesFoldState(), hideUntil = -1;
+  _notesLines.forEach(function(l, i) {
+    var node = l.node;
+    if (!node) return;
+    var hidden = i <= hideUntil;
+    var isFolded = !hidden && l.foldEnd > i && !!folded[l.key];
+    if (isFolded) hideUntil = Math.max(hideUntil, l.foldEnd);
+    node.classList.toggle('notes-collapsed', hidden);
+    node.classList.toggle('folded', isFolded);
+    node.classList.toggle('notes-foldable', l.foldEnd > i);
+    var fold = node.querySelector('.notes-fold');
+    if (fold) fold.setAttribute('aria-label', (isFolded ? 'Expand' : 'Collapse') + ' section');
+  });
+  updateNotesCues();
+}
+
+function toggleNotesFold(key) {
+  var folded = _notesFoldState();
+  if (folded[key]) delete folded[key];
+  else folded[key] = true;
+  LS.setNotesFolds(Object.keys(folded));
+  applyNotesFolding();
+}
+
+// One delegated listener for the whole tab: the line nodes are recycled by the
+// reconciler, so per-node listeners would have to be re-attached on every edit.
+var _notesFoldBound = false;
+function _bindNotesFolding(container) {
+  if (_notesFoldBound) return;
+  _notesFoldBound = true;
+  container.addEventListener('click', function(e) {
+    var btn = e.target.closest ? e.target.closest('.notes-fold') : null;
+    if (!btn) return;
+    var line = btn.closest('.notes-line');
+    if (line) toggleNotesFold(line.getAttribute('data-key'));
+  });
+  container.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var btn = e.target.closest ? e.target.closest('.notes-fold') : null;
+    if (!btn) return;
+    e.preventDefault();
+    var line = btn.closest('.notes-line');
+    if (line) toggleNotesFold(line.getAttribute('data-key'));
+  });
+}
+
 function renderNotes(container, text) {
-  var lines = notesLineBlocks(text);
+  var lines = computeNotesFolds(notesLineBlocks(text));
   var firstRender = !container.dataset.rendered;
-  var existing = {}, fresh = [];
+  var existing = {}, fresh = [], freshIdx = [];
+  _bindNotesFolding(container);
   Array.prototype.forEach.call(container.children, function(ch) {
     var k = ch.getAttribute('data-key');
     if (k) existing[k] = ch;
   });
-  var desired = lines.map(function(l) {
+  var desired = lines.map(function(l, i) {
     var node = existing[l.key];
     if (node) {
       delete existing[l.key];                      // unchanged -> keep DOM node
@@ -5958,9 +6095,16 @@ function renderNotes(container, text) {
       node = document.createElement('div');
       node.className = 'notes-line';
       node.setAttribute('data-key', l.key);
-      node.innerHTML = linkifyText(l.text);
-      if (!firstRender) fresh.push(node);
+      node.innerHTML = '<span class="notes-gutter"><span class="notes-ln"></span>'
+        + '<span class="notes-fold material-symbols-outlined" role="button" tabindex="0">chevron_right</span>'
+        + '</span><span class="notes-text"' + _notesHangingIndent(l) + '>'
+        + linkifyText(l.text) + '</span>';
+      if (!firstRender) { fresh.push(node); freshIdx.push(i); }
     }
+    // Line numbers shift whenever the trainer inserts a line above, so they are
+    // rewritten on every render even for nodes that are otherwise untouched.
+    node.querySelector('.notes-ln').textContent = l.num;
+    l.node = node;
     if (l.paraEnd) node.setAttribute('data-para-end', '');
     else node.removeAttribute('data-para-end');
     return node;
@@ -5977,8 +6121,28 @@ function renderNotes(container, text) {
     if (container.children[i] !== node) container.insertBefore(node, container.children[i] || null);
   });
   container.dataset.rendered = '1';
+  // The widest line number decides the gutter width: 2-digit notes must not pay
+  // for a 4-digit gutter, and a 4-digit one must not push its text out of line.
+  var maxNum = lines.length ? lines[lines.length - 1].num : 1;
+  container.style.setProperty('--notes-ln-w', String(Math.max(2, String(maxNum).length)) + 'ch');
+  _notesLines = lines;
+  // A line the trainer just typed inside a collapsed chapter must not vanish:
+  // open everything above it before folding is applied.
+  freshIdx.forEach(function(i) { _unfoldNotesAncestors(lines, i); });
+  applyNotesFolding();
   fresh.forEach(_markNoteLineFresh);
   updateNotesCues();
+}
+
+// Every line that owns index i (shallower indent, fold range covering it).
+function _unfoldNotesAncestors(lines, i) {
+  var folded = _notesFoldState(), changed = false;
+  for (var j = i - 1; j >= 0; j--) {
+    if (lines[j].indent >= lines[i].indent) continue;
+    if (lines[j].foldEnd >= i && folded[lines[j].key]) { delete folded[lines[j].key]; changed = true; }
+    if (lines[j].indent === 0) break;
+  }
+  if (changed) LS.setNotesFolds(Object.keys(folded));
 }
 
 async function loadNotes() {

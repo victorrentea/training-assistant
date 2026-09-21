@@ -472,11 +472,14 @@ console.log('updateLinkCount()');
 // that changed (and flashes it). These assertions pin the two things that
 // makes possible: a stable key per line, and paragraph gaps without gap nodes.
 {
-  const notesLineBlocks = new Function(
+  const notesHelpers = new Function(
     extractFunction(PARTICIPANT_HTML, '_hashStr') + '\n'
+    + extractFunction(PARTICIPANT_HTML, 'notesIndentWidth') + '\n'
+    + extractFunction(PARTICIPANT_HTML, 'computeNotesFolds') + '\n'
     + extractFunction(PARTICIPANT_HTML, 'notesLineBlocks')
-    + '; return notesLineBlocks;'
+    + '; return { notesLineBlocks, computeNotesFolds, notesIndentWidth };'
   )();
+  const { notesLineBlocks, computeNotesFolds, notesIndentWidth } = notesHelpers;
 
   console.log('\nnotesLineBlocks()');
 
@@ -505,6 +508,29 @@ console.log('updateLinkCount()');
   const appended = notesLineBlocks('- todo\n- todo\n- todo\n- new one');
   assert('appending after duplicates does not renumber the existing ones',
     dupes.every((l, i) => l.key === appended[i].key));
+
+  // ── Gutter numbers: what the trainer's editor shows, blanks included ──────
+  const numbered = notesLineBlocks('alpha\n\n\nbeta');
+  assert('the gutter numbers the line in the FILE, not among the rendered ones',
+    numbered.map((l) => l.num).join('|') === '1|4');
+
+  // ── Indentation folding, VS Code style ───────────────────────────────────
+  assert('a tab counts as an indent step, so tabs and spaces nest together',
+    notesIndentWidth('\t- x') === 4 && notesIndentWidth('    - x') === 4);
+
+  const tree = computeNotesFolds(notesLineBlocks(
+    'chapter\n  sub one\n    detail\n  sub two\nnext chapter'
+  ));
+  assert('a chapter owns every deeper line under it',
+    tree[0].foldEnd === 3);
+  assert('a sub-chapter owns only its own deeper lines',
+    tree[1].foldEnd === 2 && tree[3].foldEnd === 3);
+  assert('a line with nothing nested under it is not foldable',
+    tree[2].foldEnd === 2 && tree[4].foldEnd === 4);
+
+  const overBlank = computeNotesFolds(notesLineBlocks('chapter\n  sub\n\n  sub after blank\nnext'));
+  assert('a blank line does not end a fold range',
+    overBlank[0].foldEnd === 2);
 }
 
 const hostMachineResults = [];
