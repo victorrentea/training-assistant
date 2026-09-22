@@ -42,6 +42,35 @@ def _handle_git_file_opened(data: dict) -> None:
     log.debug(_NAME, f"← git {url.split('/')[-1]}@{branch or '?'} {file_path}")
 
 
+def _session_started_msg(participant_url: str, session_folder: str | None) -> dict:
+    """The ``session_started`` payload, dates included.
+
+    ``session_last_day`` is the last day of the set the folder name declares
+    ("2026-09-14..15 AI@X" -> "2026-09-15"). The addons use it to hold the
+    feedback-form offer back until then: a survey handed out on day 1 of 3 asks
+    about a third of a workshop. The daemon is the one that knows the set,
+    because it is the one that parses session folder names.
+
+    Omitted when the folder carries no parsable dates, which the addons read as
+    "offer anyway" rather than "never offer".
+    """
+    msg: dict = {"type": "session_started", "participant_url": participant_url}
+    if not session_folder:
+        return msg
+    msg["session_folder"] = session_folder
+    from pathlib import Path
+
+    from daemon.config import parse_session_folder_dates
+    try:
+        dates = parse_session_folder_dates(Path(session_folder).name)
+    except ValueError as e:
+        log.error(_NAME, f"Invalid dates in session folder {session_folder!r}: {e}")
+        return msg
+    if dates is not None:
+        msg["session_last_day"] = dates.end.isoformat()
+    return msg
+
+
 class AddonBridgeClient:
     def __init__(self):
         self._ws = None
@@ -92,10 +121,7 @@ class AddonBridgeClient:
         session_folder: absolute path to the active session folder; addons use it to
         save artefacts (e.g. screenshots) into the session.
         """
-        msg: dict = {"type": "session_started", "participant_url": participant_url}
-        if session_folder:
-            msg["session_folder"] = session_folder
-        return self._send(msg)
+        return self._send(_session_started_msg(participant_url, session_folder))
 
     def send_session_ended(self) -> bool:
         """Notify addons that the session has ended."""

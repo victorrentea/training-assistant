@@ -56,7 +56,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Addons WS
 | Message | Payload |
 | --- | --- |
-| Notify addons that a workshop session has started<br>`session_started` | `participant_url: string  # Full URL for participants to join the session` |
+| Notify addons that a workshop session has started<br>`session_started` | `participant_url: string  # Full URL for participants to join the session`<br>`session_folder?: string  # Absolute path of the active session folder`<br>`session_last_day?: string  # Last day of the set, ISO, parsed from the folder name; addons only offer the feedback form on it` |
 | Notify addons that the workshop session has ended<br>`session_ended` | - |
 
 ## Feature: Identity
