@@ -39,6 +39,9 @@ body{visibility:hidden}
 /* Collapsed: the VS Code ellipsis badge, so a folded chapter still says "there
    is more in here" without taking a line for it. */
 #notes-content .notes-line.folded .notes-text::after{content:'\22ef';margin-left:.7ch;padding:0 .45ch;border-radius:3px;background:rgba(127,127,127,.3)}
+/* ...and, like VS Code's editor.foldBackground, the folded line is tinted from
+   the gutter to the right edge, so a run of folded chapters reads as one band. */
+#notes-content .notes-line.folded .notes-text{background:rgba(80,140,220,.2)}
 #notes-content .notes-line.notes-collapsed{display:none}
 /* A line that changed while it was off-screen waits, statically marked, until it
    is scrolled into view -- only then does the 5s blink-and-fade run, so the
