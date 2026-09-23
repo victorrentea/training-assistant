@@ -141,6 +141,13 @@ body{visibility:hidden}
 #notes-scroll,#summary-scroll,#agenda-view{overflow-anchor:none}
 /* Notes/agenda/summary get a 3× thicker scrollbar (vs. the 12px global) */
 #notes-scroll::-webkit-scrollbar,#summary-scroll::-webkit-scrollbar,#agenda-view::-webkit-scrollbar{width:36px}
+/* Side menu scrolls on short screens (low resolution / zoomed in) instead of
+   clipping the bottom items. The negative margin puts the scrollbar in the aside's
+   right padding, so the rows keep their width when nothing overflows. */
+#side-nav{overflow-y:auto;overflow-x:hidden;margin-right:-.75rem;padding-right:.75rem}
+#side-nav::-webkit-scrollbar{width:8px}
+#side-nav::-webkit-scrollbar-thumb{background:rgba(128,128,128,.45)}
+#side-nav::-webkit-scrollbar-thumb:hover{background:rgba(128,128,128,.7)}
 .badge-new{margin-left:auto;font-size:calc(.6rem + 1pt);font-weight:700;letter-spacing:.05em;background:#ef4444;color:#fff;padding:.1rem .35rem;border-radius:999px;line-height:1.4}
 #activity-score-badge{background:#fde047;color:#000}
 @keyframes badge-blink{0%,100%{opacity:1}50%{opacity:0}}
@@ -905,7 +912,7 @@ body{visibility:hidden}
 </div>
 <!-- Navigation Cluster -->
 <hr class="-mx-4 border-outline-variant"/>
-<nav class="flex flex-col space-y-1 flex-1 overflow-y-hidden min-h-0" style="row-gap:0.095rem;" onmouseenter="clearTimeout(_menuCollapseTimer)" onmouseleave="_startMenuCollapseTimer()">
+<nav id="side-nav" class="flex flex-col space-y-1 flex-1 min-h-0" style="row-gap:0.095rem;" onmouseenter="clearTimeout(_menuCollapseTimer)" onmouseleave="_startMenuCollapseTimer()">
 <div>
 <a data-nav="slides" onclick="toggleSlidesMenu()" class="nav-item rounded-full px-2 py-2 font-semibold flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">slideshow</span>
