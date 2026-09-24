@@ -26,6 +26,10 @@ class MiscState:
         # airtime"; only this answers "which slide was up while he was saying
         # THAT", which is what ties a summary paragraph to a slide number.
         self.slide_timeline: list[dict] = []  # [{slug, page, seconds, at}]
+        # Where the host is reading in the summary (SummaryScrollPosition dump),
+        # so a participant who joins or reconnects lands there. In memory only:
+        # a stale reading position is worth nothing after a daemon restart.
+        self.summary_scroll: dict | None = None
         self.agenda_docx_path: Path | None = None
         self.talk_presentation_name: str | None = None
         self.talk_presentation_url: str | None = None
@@ -170,6 +174,7 @@ class MiscState:
             self.current_slide = None
             self.slides_viewed = []
             self.slide_timeline = []
+            self.summary_scroll = None
             self.talk_presentation_name = None
             self.talk_presentation_url = None
             self.talk_presentation_slug = None

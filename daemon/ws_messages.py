@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, NonNegativeInt
 
 from daemon.slides.models import CurrentSlide, Deck
 
@@ -395,6 +395,22 @@ class SummaryUpdatedMsg(BaseModel):
     updated_at: str | None = None  # ISO timestamp of ai-summary.md mtime
 
 
+class SummaryScrollPosition(BaseModel):
+    """Where the host is reading in the summary, in terms every client can resolve.
+
+    Not pixels: participants differ in width, zoom and which bullets they have
+    expanded, so the position names the bullet at the top of the host's view.
+    """
+    block_key: str = Field(min_length=1, max_length=64)  # data-key of the top-level summary block
+    path: list[NonNegativeInt] = Field(default=[], max_length=12)  # bullet indices from that block down to the anchor
+    within: float = Field(default=0.0, ge=0.0, le=1.0)   # fraction of the anchor already scrolled past the top
+    summary_updated_at: str | None = Field(default=None, max_length=64)  # summary version the host had rendered
+
+
+class SummaryScrollMsg(SummaryScrollPosition):
+    type: Literal["summary_scroll"] = "summary_scroll"
+
+
 class AgendaUpdatedMsg(BaseModel):
     type: Literal["agenda_updated"] = "agenda_updated"
     has_agenda: bool = False  # whether an agenda .docx is available in the session folder
@@ -497,6 +513,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "notes_updated": NotesUpdatedMsg,
     "notes_appended": NotesAppendedMsg,
     "summary_updated": SummaryUpdatedMsg,
+    "summary_scroll": SummaryScrollMsg,
     "agenda_updated": AgendaUpdatedMsg,
     "feedback_form_updated": FeedbackFormUpdatedMsg,
     # Files
@@ -591,6 +608,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "notes_updated": "notes_summary",
     "notes_appended": "notes_summary",
     "summary_updated": "notes_summary",
+    "summary_scroll": "notes_summary",
     "agenda_updated": "notes_summary",
     "feedback_form_updated": "notes_summary",
     # Files

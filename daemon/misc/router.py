@@ -33,7 +33,13 @@ from daemon.session import state as session_shared_state
 from daemon.slides.models import Deck, SlidesHistoryResponse, SlidesLogEntry
 from daemon.summary.highlight import REJECTED, HighlightAnchor, apply_highlight_to_file
 from daemon.summary.loop import AI_SUMMARY_FILE, get_ai_summary_mtime
-from daemon.ws_messages import FeedbackFormUpdatedMsg, PasteReceivedMsg, SummaryUpdatedMsg
+from daemon.ws_messages import (
+    FeedbackFormUpdatedMsg,
+    PasteReceivedMsg,
+    SummaryScrollMsg,
+    SummaryScrollPosition,
+    SummaryUpdatedMsg,
+)
 from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
@@ -389,6 +395,16 @@ local_router = APIRouter(tags=["misc"])
 @local_router.post("/summary/highlight", response_model=HighlightResponse)
 async def highlight_summary_local(body: HighlightRequest):
     return await highlight_summary(body)
+
+
+# The host's summary page reports where it is reading; participants who follow
+# scroll there. Host-machine only, like the highlight: sent a few times a
+# second while the host scrolls, so it stays silent in the log.
+@local_router.post("/summary/scroll", response_model=SummaryScrollPosition)
+async def summary_scroll_local(body: SummaryScrollPosition):
+    misc_state.summary_scroll = body.model_dump()
+    broadcast(SummaryScrollMsg(**misc_state.summary_scroll))
+    return body
 
 
 class FeedbackFormRequest(BaseModel):

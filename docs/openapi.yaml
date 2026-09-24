@@ -1251,6 +1251,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/HighlightResponse'
       x-feature: notes_summary
+  /summary/scroll:
+    post:
+      tags:
+      - misc
+      summary: Summary Scroll Local
+      operationId: summary_scroll_local_summary_scroll_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SummaryScrollPosition'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryScrollPosition'
+      x-feature: notes_summary
   /feedback-form:
     post:
       tags:
@@ -3457,6 +3477,10 @@ components:
           - type: string
           - type: 'null'
           title: Summary Updated At
+        summary_scroll:
+          anyOf:
+          - $ref: '#/components/schemas/SummaryScrollPosition'
+          - type: 'null'
         slides_history_count:
           type: integer
           title: Slides History Count
@@ -4124,6 +4148,44 @@ components:
           title: Updated At
       type: object
       title: SummaryResponse
+    SummaryScrollPosition:
+      properties:
+        block_key:
+          type: string
+          maxLength: 64
+          minLength: 1
+          title: Block Key
+        path:
+          items:
+            type: integer
+            minimum: 0.0
+          type: array
+          maxItems: 12
+          title: Path
+          default: []
+        within:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Within
+          default: 0.0
+        summary_updated_at:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Summary Updated At
+      type: object
+      required:
+      - block_key
+      title: SummaryScrollPosition
+      description: 'Where the host is reading in the summary, in terms every client
+        can resolve.
+
+
+        Not pixels: participants differ in width, zoom and which bullets they have
+
+        expanded, so the position names the bullet at the top of the host''s view.'
     TalkPresentationPathRequest:
       properties:
         path:

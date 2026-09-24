@@ -45,6 +45,7 @@ channels:
           - $ref: '#/components/messages/notes_updated'
           - $ref: '#/components/messages/notes_appended'
           - $ref: '#/components/messages/summary_updated'
+          - $ref: '#/components/messages/summary_scroll'
           - $ref: '#/components/messages/agenda_updated'
           - $ref: '#/components/messages/feedback_form_updated'
           - $ref: '#/components/messages/files_count_updated'
@@ -539,6 +540,37 @@ components:
             format: date-time
             nullable: true
             description: ISO timestamp of ai-summary.md mtime
+
+    summary_scroll:
+      summary: Host scrolled the summary — followers scroll to the same bullet
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type, block_key]
+        properties:
+          type:
+            type: string
+            enum: [summary_scroll]
+          block_key:
+            type: string
+            description: data-key of the top-level summary block at the top of the host's view
+          path:
+            type: array
+            maxItems: 12
+            items:
+              type: integer
+              minimum: 0
+            description: Bullet indices from that block down to the anchor bullet
+          within:
+            type: number
+            minimum: 0
+            maximum: 1
+            description: Fraction of the anchor already scrolled past the top of the host's view
+          summary_updated_at:
+            type: string
+            format: date-time
+            nullable: true
+            description: Summary version the host had rendered
 
     agenda_updated:
       summary: Agenda .docx availability changed in the session folder

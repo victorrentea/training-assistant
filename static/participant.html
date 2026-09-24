@@ -184,7 +184,7 @@ body{visibility:hidden}
 @keyframes follow-blink-red{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:#e53935;background-color:#ffebee}}
 .follow-blink-red{animation:follow-blink-red 180ms ease-in-out 3}
 @keyframes slides-nav-pulse{0%,100%{color:var(--color-on-surface-variant,#5e6b70)}50%{color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
-.slides-nav-blink{animation:slides-nav-pulse 1.2s ease-in-out infinite}
+.slides-nav-blink,.summary-nav-blink{animation:slides-nav-pulse 1.2s ease-in-out infinite}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70);font-weight:600}
 .nav-item:hover{color:var(--color-on-surface,#161d1f);background-color:var(--color-surface-container-high,#dde3e5)}
 .nav-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
@@ -1115,6 +1115,15 @@ body{visibility:hidden}
 </div>
 <div id="summary-view" style="display:none" class="relative h-full flex flex-col">
   <div id="summary-dl" class="absolute top-6 right-6 z-20 flex items-center p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
+    <!-- Follow the trainer's reading position (never shown on the host machine,
+         which is the one being followed). -->
+    <span id="summary-follow-controls" class="inline-flex items-center gap-1.5 mr-2 ml-1" style="display:none">
+      <button onclick="_jumpToHostSummary()" data-tip="Jump to where Victor is reading" class="inline-flex items-center rounded-md px-2 py-1 cursor-pointer transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);font-size:0.95rem;line-height:1;">🎯</button>
+      <label for="summary-follow-checkbox" class="inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer rounded-md px-2 py-1 transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);">
+        <input id="summary-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onSummaryFollowChange(this.checked)" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
+        <span>Follow</span>
+      </label>
+    </span>
     <!-- Reading the whole summary aloud: one control instead of a click per
          bullet. Unlike .md/.pdf it stays visible in fullscreen — that is the
          mode the room is projected in. Hidden entirely when nothing nests. -->
@@ -1988,6 +1997,7 @@ function _onContentZoomWheel(e, scroller) {
     var newMax = scroller.scrollHeight - scroller.clientHeight;
     if (newMax > 0) scroller.scrollTop = fraction * newMax;
   }
+  _applyHostSummaryFollow();   // the reflow moved the trainer's bullet
 }
 
 function _installContentZoom() {
@@ -2017,6 +2027,7 @@ var LS = {
   EMOJI_PROMOTED: 'new:emoji_bar_promoted',
   VIEW: 'new:current_view',
   FOLLOW: 'new:slides_follow',
+  SUMMARY_FOLLOW: 'new:summary_follow',
   ACTIVE_SLIDE: 'new:active_slide_slug',
   NOTES_UNREAD: 'new:notes_unread',
   NOTES_FOLDS: 'new:notes_folds',
@@ -2065,6 +2076,10 @@ var LS = {
   // explicit untick (persisted here) turns it off, and it stays off.
   getFollow: function()     { var v = localStorage.getItem(LS.FOLLOW); return v === null ? true : v === '1'; },
   setFollow: function(val)  { localStorage.setItem(LS.FOLLOW, val ? '1' : '0'); },
+  // Same default for the summary: follow the trainer's reading position unless
+  // the participant explicitly unticked it.
+  getSummaryFollow: function()    { var v = localStorage.getItem(LS.SUMMARY_FOLLOW); return v === null ? true : v === '1'; },
+  setSummaryFollow: function(val) { localStorage.setItem(LS.SUMMARY_FOLLOW, val ? '1' : '0'); },
   getActiveSlide: function()     { return localStorage.getItem(LS.ACTIVE_SLIDE); },
   setActiveSlide: function(slug) { localStorage.setItem(LS.ACTIVE_SLIDE, slug); },
   isNotesUnread:   function()  { return localStorage.getItem(LS.NOTES_UNREAD) === 'true'; },
@@ -2095,6 +2110,7 @@ var LS = {
     localStorage.removeItem(LS.EMOJI_PROMOTED);
     localStorage.removeItem(LS.VIEW);
     localStorage.removeItem(LS.FOLLOW);
+    localStorage.removeItem(LS.SUMMARY_FOLLOW);
     localStorage.removeItem(LS.NOTES_UNREAD);
     localStorage.removeItem(LS.SUMMARY_UNREAD);
     localStorage.removeItem(LS.ACTIVITY_SEEN);
@@ -3538,7 +3554,11 @@ function showView(name) {
   _setTabUrl(name);
   if (name === 'agenda') loadAgenda();
   if (name === 'notes') { loadNotes(); _applyNotesBadgeUnread(false); }
-  if (name === 'summary') { loadSummary(); _applySummaryBadgeUnread(false); }
+  if (name === 'summary') {
+    var summaryNavEl = document.querySelector('[data-nav="summary"]');
+    if (summaryNavEl) summaryNavEl.classList.remove('summary-nav-blink');
+    loadSummary(); _applySummaryBadgeUnread(false);
+  }
   if (name === 'files') { _filesDirty = true; loadFilesMd(); _applyFilesBadgeUnread(false); }
   if (name === 'prompts') { _promptsDirty = true; loadPrompts(); _applyPromptsBadgeUnread(false); }
   VIEWS.forEach(function(v) {
@@ -3548,6 +3568,7 @@ function showView(name) {
   var scrollEl = document.getElementById(name + '-scroll') || document.getElementById(name + '-view');
   var saved = LS.getScroll(name);
   if (saved) scrollEl.scrollTop = parseInt(saved, 10);
+  if (name === 'summary') _applyHostSummaryFollow();
   if (name === 'slides') {
     var followCb = document.getElementById('slides-follow-checkbox');
     if (followCb) followCb.checked = LS.getFollow();
@@ -4779,6 +4800,7 @@ function _setDuplicateIndicator(isDup) {
     // an unchecked box would make the first host slide of the session get ignored.
     var _followCbBoot = document.getElementById('slides-follow-checkbox');
     if (_followCbBoot) _followCbBoot.checked = LS.getFollow();
+    _initSummaryFollow();
 
     // Kept as a promise: the landing-tab decision needs to know whether this session
     // has any deck at all, and the fetch runs in parallel with the state fetch below.
@@ -4860,6 +4882,7 @@ function _setDuplicateIndicator(isDup) {
     document.getElementById('prompts-badge').classList.toggle('badge-alert', (state.prompts_count || 0) > 0 && LS.isPromptsUnread());
     await _slidesCatalogReady; // never rejects: loadSlidesCatalog swallows its errors
     _hostSlidesCurrent = state.slides_current || null;
+    _hostSummaryScroll = state.summary_scroll || null;
     var saved = _computeLandingView({
       urlTab: location.pathname.split('/')[2] || '',
       savedView: LS.getView(),
@@ -4950,6 +4973,10 @@ function _applyState(msg) {
       notesBadge.style.display = 'none';
     }
     notesBadge.classList.toggle('badge-alert', LS.isNotesUnread());
+  }
+  // Reconnect: a position the socket missed acts like the broadcast it replaces.
+  if (msg.summary_scroll && JSON.stringify(msg.summary_scroll) !== JSON.stringify(_hostSummaryScroll)) {
+    _onIncomingHostSummaryScroll(msg.summary_scroll);
   }
   if (msg.summary_updated_at !== undefined) {
     var summaryNav = document.querySelector('[data-nav="summary"]');
@@ -5419,6 +5446,10 @@ function _handleWsMessage(msg) {
         _showNotesToast(msg.text, msg.at);
         _maybeNotifyPrompt(msg.text);
       }
+      break;
+    }
+    case 'summary_scroll': {
+      _onIncomingHostSummaryScroll(msg);
       break;
     }
     case 'summary_updated': {
@@ -6325,6 +6356,7 @@ document.addEventListener('click', function (e) {
   var li = btn.parentElement;
   _setSummaryLiExpanded(li, li.classList.contains('sum-collapsed'));
   _syncSummaryExpandAllBtn();
+  _applyHostSummaryFollow();
 });
 
 // One control for reading the whole thing aloud. It always does the thing the
@@ -6335,6 +6367,7 @@ function toggleAllSummary() {
   _summaryExpandAll = open;
   Array.prototype.forEach.call(items, function (li) { _setSummaryLiExpanded(li, open); });
   _syncSummaryExpandAllBtn();
+  _applyHostSummaryFollow();
 }
 
 function _syncSummaryExpandAllBtn() {
@@ -6439,6 +6472,9 @@ async function loadSummary() {
       el.textContent = 'No summary yet.';
     }
     if (priorScroll) viewEl.scrollTop = priorScroll;
+    _applyHostSummaryFollow();
+    // A re-render can rename the block the host is on: re-report the position.
+    if (_onHostMachine()) viewEl.dispatchEvent(new Event('scroll'));
     LS.setScroll('summary', viewEl.scrollTop);
   } catch (e) {
     el.textContent = 'Failed to load summary.';
@@ -6447,6 +6483,245 @@ async function loadSummary() {
     _suppressScrollSave.delete('summary');
     _syncSummaryExpandAllBtn();   // also hides it on the 'no summary' / error paths
   }
+}
+
+// ── Summary follow ───────────────────────────────────────────────────────────
+// While the trainer scrolls the Summary on the host machine, followers scroll to
+// the same bullet. Not pixels: widths, zoom and expanded bullets differ per
+// screen, so a position names the bullet on the reading line (the top edge of
+// the text area) — the top-level block's data-key, the bullet indices below it,
+// and how far through that bullet's own text the line sits.
+//   host  → POST 127.0.0.1:1234/summary/scroll → daemon → `summary_scroll` broadcast
+// The host machine only ever sends; every other screen only ever follows.
+var _hostSummaryScroll = null;       // latest host position (state or broadcast)
+var _summaryFollowBlinkAt = 0;       // throttles the "you stopped following" blink
+var _summaryIntentAt = 0;            // last reader input that can scroll (wheel/touch/key/scrollbar)
+var _summaryFollowScrollAt = 0;      // last scroll that following itself started
+var _summaryReloadedFor = null;      // host summary version we already re-fetched for
+var SUMMARY_SCROLL_SEND_MS = 200;    // at most ~5 positions a second while scrolling
+
+// The bullets directly below `el`, in document order: a list's items, a
+// wrapper's lists' items, or a bullet's sub-lists' items. None for a collapsed
+// bullet — its children are hidden, so nothing inside it can be on screen.
+function _summaryChildItems(el) {
+  if (el.tagName === 'LI' && el.classList.contains('sum-collapsed')) return [];
+  var lists = (el.tagName === 'UL' || el.tagName === 'OL') ? [el]
+    : Array.prototype.filter.call(el.children, function (c) { return c.tagName === 'UL' || c.tagName === 'OL'; });
+  var out = [];
+  lists.forEach(function (list) {
+    Array.prototype.forEach.call(list.children, function (c) { if (c.tagName === 'LI') out.push(c); });
+  });
+  return out;
+}
+
+// An element's own box, without its sub-bullets: a bullet that is expanded on
+// one screen and collapsed on another still has the same own text. Same for a
+// paragraph+list wrapper block: its own text is what precedes its first list.
+function _summaryOwnBox(el) {
+  var r = el.getBoundingClientRect();
+  var bottom = r.bottom;
+  if (el.tagName !== 'UL' && el.tagName !== 'OL') {
+    var sub = Array.prototype.find.call(el.children, function (c) {
+      return (c.tagName === 'UL' || c.tagName === 'OL') && c.offsetParent !== null;
+    });
+    if (sub) bottom = Math.min(bottom, sub.getBoundingClientRect().top);
+  }
+  return { top: r.top, height: Math.max(1, bottom - r.top) };
+}
+
+function _summaryReadingLine(scrollEl) {
+  return scrollEl.getBoundingClientRect().top + (parseFloat(getComputedStyle(scrollEl).paddingTop) || 0);
+}
+
+// Host side: which bullet sits on the reading line right now.
+function _summaryPositionAt(scrollEl) {
+  var content = document.getElementById('summary-content');
+  if (!content) return null;
+  var line = _summaryReadingLine(scrollEl);
+  var el = Array.prototype.find.call(content.children, function (b) {
+    return b.getAttribute('data-key') && b.getBoundingClientRect().bottom > line;
+  });
+  if (!el) return null;
+  var key = el.getAttribute('data-key'), path = [];
+  while (path.length < 12) {
+    var kids = _summaryChildItems(el);
+    if (!kids.length) break;
+    if (el.tagName !== 'UL' && el.tagName !== 'OL') {
+      var ownBox = _summaryOwnBox(el);
+      if (line < ownBox.top + ownBox.height) break;                  // on its own text
+    }
+    var idx = kids.findIndex(function (k) { return k.getBoundingClientRect().bottom > line; });
+    if (idx < 0) break;
+    el = kids[idx];
+    path.push(idx);
+  }
+  var own = _summaryOwnBox(el);
+  var within = Math.min(1, Math.max(0, (line - own.top) / own.height));
+  return { block_key: key, path: path, within: Math.round(within * 1000) / 1000,
+           summary_updated_at: _summaryTimestamp || null };
+}
+
+// Follower side: the element a position names on THIS screen, or null when this
+// summary does not have that block (yet). A bullet hidden inside one the reader
+// collapsed resolves to that collapsed bullet.
+function _resolveSummaryPosition(pos) {
+  var content = document.getElementById('summary-content');
+  if (!content || !pos || !pos.block_key) return null;
+  var el = Array.prototype.find.call(content.children, function (b) {
+    return b.getAttribute('data-key') === pos.block_key;
+  });
+  if (!el) return null;
+  var within = pos.within || 0;
+  var path = pos.path || [];
+  for (var i = 0; i < path.length; i++) {
+    var next = _summaryChildItems(el)[path[i]];
+    if (!next) { within = 0; break; }
+    el = next;
+  }
+  return { el: el, within: within };
+}
+
+function _isSummaryViewSelected() {
+  var v = document.getElementById('summary-view');
+  return !!(v && v.style.display !== 'none');
+}
+
+function _isSummaryFollowEnabled() {
+  var cb = document.getElementById('summary-follow-checkbox');
+  return !!(cb && cb.checked);
+}
+
+function _scrollSummaryToHost(pos) {
+  var scrollEl = document.getElementById('summary-scroll');
+  var target = scrollEl && _resolveSummaryPosition(pos);
+  if (!target) return false;
+  var own = _summaryOwnBox(target.el);
+  var delta = own.top + target.within * own.height - _summaryReadingLine(scrollEl);
+  if (Math.abs(delta) < 2) return true;
+  // Glide over a short hop so the reader can track the move; jump a long one,
+  // and never restart a glide still in flight — positions stream in every
+  // 200 ms while the trainer scrolls, and a restarted glide stutters.
+  var now = Date.now();
+  var glide = Math.abs(delta) <= scrollEl.clientHeight && now - _summaryFollowScrollAt > 600;
+  _summaryFollowScrollAt = now;
+  scrollEl.scrollTo({ top: scrollEl.scrollTop + delta, behavior: glide ? 'smooth' : 'auto' });
+  return true;
+}
+
+function _applyHostSummaryFollow() {
+  if (_onHostMachine() || !_hostSummaryScroll) return;
+  if (!_isSummaryViewSelected() || !_isSummaryFollowEnabled()) return;
+  if (_scrollSummaryToHost(_hostSummaryScroll)) return;
+  // The trainer reads a newer summary than ours (a missed summary_updated):
+  // fetch it once for that version — loadSummary lands us after the render.
+  var version = _hostSummaryScroll.summary_updated_at;
+  if (version && version !== _summaryReloadedFor) {
+    _summaryReloadedFor = version;
+    _summaryDirty = true;
+    loadSummary();
+  }
+}
+
+function _onIncomingHostSummaryScroll(pos) {
+  if (_onHostMachine()) return;                 // the trainer's own echo
+  _hostSummaryScroll = pos;
+  if (!_isSummaryViewSelected()) {
+    var nav = document.querySelector('[data-nav="summary"]');
+    if (nav) nav.classList.add('summary-nav-blink');
+    return;
+  }
+  if (_isSummaryFollowEnabled()) { _applyHostSummaryFollow(); return; }
+  // Unticked while the trainer moves on: a short red blink, at most every few
+  // seconds — positions stream in several times a second.
+  var now = Date.now();
+  if (now - _summaryFollowBlinkAt < 4000) return;
+  _summaryFollowBlinkAt = now;
+  var label = document.querySelector('label[for="summary-follow-checkbox"]');
+  if (label) {
+    label.classList.remove('follow-blink-red');
+    void label.offsetWidth; // restart animation
+    label.classList.add('follow-blink-red');
+  }
+}
+
+function _onSummaryFollowChange(checked) {
+  LS.setSummaryFollow(checked);
+  if (checked) _applyHostSummaryFollow();
+}
+
+// One-shot jump; leaves the Follow box as it is.
+function _jumpToHostSummary() {
+  if (_hostSummaryScroll) _scrollSummaryToHost(_hostSummaryScroll);
+}
+
+// A reader scrolling on their own stops following (for this page load only —
+// only an explicit untick is remembered). It takes both: input that can scroll
+// (not a pinch-zoom, not Space on a button) AND a scroll that really moved, with
+// no following-scroll started since — re-renders, zoom and expand/collapse move
+// the text too, and none of those may untick the box.
+function _noteSummaryScrollIntent() { _summaryIntentAt = Date.now(); }
+
+function _onSummaryScrollMaybeByHand(scrollEl) {
+  var top = scrollEl.scrollTop;
+  var moved = top !== scrollEl._followLastTop;
+  scrollEl._followLastTop = top;
+  if (!moved || _summaryIntentAt <= _summaryFollowScrollAt) return;
+  if (Date.now() - _summaryIntentAt > 400) return;
+  var cb = document.getElementById('summary-follow-checkbox');
+  if (cb && cb.checked) cb.checked = false;
+}
+
+function _initSummaryFollow() {
+  var scrollEl = document.getElementById('summary-scroll');
+  if (!scrollEl) return;
+  if (_onHostMachine()) { _initHostSummaryScrollSender(scrollEl); return; }
+  document.getElementById('summary-follow-controls').style.display = '';
+  document.getElementById('summary-follow-checkbox').checked = LS.getSummaryFollow();
+  // A resize (or a phone turned sideways) re-flows the text: land on the bullet again.
+  var resizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(_applyHostSummaryFollow, 150);
+  });
+  scrollEl._followLastTop = scrollEl.scrollTop;
+  scrollEl.addEventListener('scroll', function () { _onSummaryScrollMaybeByHand(scrollEl); }, { passive: true });
+  scrollEl.addEventListener('wheel', function (e) {
+    if (!e.ctrlKey && !e.metaKey) _noteSummaryScrollIntent();          // ctrl/⌘+wheel = zoom
+  }, { passive: true });
+  scrollEl.addEventListener('touchmove', _noteSummaryScrollIntent, { passive: true });
+  scrollEl.addEventListener('pointerdown', function (e) {
+    if (e.target === scrollEl && e.offsetX >= scrollEl.clientWidth) _noteSummaryScrollIntent(); // scrollbar drag
+  });
+  document.addEventListener('keydown', function (e) {
+    if (!_isSummaryViewSelected()) return;
+    if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].indexOf(e.key) < 0) return;
+    var t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(t.tagName))) return;
+    _noteSummaryScrollIntent();
+  });
+}
+
+// Host machine: report the reading position while the trainer scrolls — only
+// from the tab actually in front, throttled, and never twice the same position.
+function _initHostSummaryScrollSender(scrollEl) {
+  var timer = null, lastSentAt = 0, lastSent = '';
+  function send() {
+    timer = null;
+    if (document.visibilityState !== 'visible' || !_isSummaryViewSelected()) return;
+    var pos = _summaryPositionAt(scrollEl);
+    if (!pos) return;
+    var body = JSON.stringify(pos);
+    if (body === lastSent) return;
+    lastSent = body;
+    lastSentAt = Date.now();
+    fetch(HOST_MACHINE_DAEMON + '/summary/scroll', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body,
+    }).catch(function () { /* daemon down: the next scroll retries */ });
+  }
+  scrollEl.addEventListener('scroll', function () {
+    clearTimeout(timer);
+    timer = setTimeout(send, Math.max(0, SUMMARY_SCROLL_SEND_MS - (Date.now() - lastSentAt)));
+  }, { passive: true });
 }
 
 var _filesDirty = true;

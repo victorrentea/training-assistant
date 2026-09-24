@@ -48,6 +48,7 @@ from daemon.ws_messages import (
     ParticipantListUpdatedMsg,
     ParticipantNamesUpdatedMsg,
     ScoresUpdatedMsg,
+    SummaryScrollPosition,
 )
 from daemon.ws_publish import broadcast, notify_host
 
@@ -322,6 +323,7 @@ class ParticipantStateResponse(BaseModel):
     talk_presentation_slug: str | None = None
     notes_updated_at: str | None = None
     summary_updated_at: str | None = None
+    summary_scroll: SummaryScrollPosition | None = None
     slides_history_count: int
     files_count: int = 0
     prompts_count: int = 0
@@ -929,6 +931,8 @@ async def get_participant_state(request: Request):
         # Summary / notes (timestamps only — full content fetched on demand)
         "notes_updated_at": notes_updated_at,
         "summary_updated_at": summary["updated_at"],
+        # Where the host is reading, so a follower lands there on (re)connect
+        "summary_scroll": misc_state.summary_scroll,
         "slides_history_count": len(misc_state.slides_viewed),
         # Files opened this session (count only — full list fetched on demand)
         "files_count": _files_count(),
