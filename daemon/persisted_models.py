@@ -15,6 +15,8 @@ class PersistedGlobalState(PersistedModel):
     """Global daemon state persisted in `global-state.json`."""
 
     active_session_id: str | None = None
+    # Local calendar date (YYYY-MM-DD) the active session was started or resumed on.
+    active_since: str | None = None
     log_level: str | None = None
 
 

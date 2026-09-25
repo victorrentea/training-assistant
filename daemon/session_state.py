@@ -528,6 +528,22 @@ def find_notes_in_folder(folder: Path) -> Path | None:
     return txt_files[-1] if txt_files else None
 
 
+def session_day_is_over(active_since: str | None, today: date) -> bool:
+    """True once the local date has moved past the day the active session began.
+
+    A session serves one training day, so it auto-ends at midnight — or at the first
+    check after midnight when the laptop was asleep or off at 00:00. An unknown start
+    day (state written before this field existed) counts as today, so a daemon restart
+    never kills a session that is live right now.
+    """
+    if not active_since:
+        return False
+    try:
+        return date.fromisoformat(active_since) < today
+    except ValueError:
+        return False
+
+
 TRANSCRIPTION_DISCLOSURE = (
     "⚠️ This meeting is transcribed using a local model on Victor's machine "
     "to generate a summary of the content at the end."

@@ -40,6 +40,7 @@ from daemon.session_state import (
     find_notes_in_folder,
     find_session_folder_by_id,
     load_daemon_state,
+    session_day_is_over,
     load_session_state,
     load_slides_manifest,
     resolve_materials_folder,
@@ -927,6 +928,8 @@ def run() -> None:
     _raw_state = _boot_state
     _active_session_id: str | None = None
     session_name: str | None = None  # folder name of active session
+    # Local date the active session started on; unknown (legacy state) = today, see session_day_is_over.
+    _active_since: str | None = _raw_state.get("active_since") or date.today().isoformat()
 
     if "main" in _raw_state or "stack" in _raw_state:
         # Legacy format — extract session_id only, ignore stack
@@ -951,6 +954,8 @@ def run() -> None:
         state = {"log_level": log.get_level()}
         if _active_session_id:
             state["active_session_id"] = _active_session_id
+            if _active_since:
+                state["active_since"] = _active_since
         return state
 
     def _do_save_daemon_state():
@@ -1223,6 +1228,9 @@ def run() -> None:
                 # ── Check for session management requests ──
                 try:
                     session_req = session_pending.pop("session_request")
+                    if session_req is None and session_name and session_day_is_over(_active_since, date.today()):
+                        log.info("session", f"Day is over (started {_active_since}) — auto-ending {session_name}")
+                        session_req = {"action": "end"}
                     action = session_req.get("action") if session_req else None
                     if action == "create" and session_req is not None:
                         name = session_req["name"]
@@ -1232,6 +1240,7 @@ def run() -> None:
                         if sid:
                             set_current_session_id(sid)
                             _active_session_id = sid
+                        _active_since = date.today().isoformat()
                         folder = sessions_root / name
                         # Endpoint may have already pre-created the folder (so DriveFS
                         # can sync it before returning). It tells us whether the folder
