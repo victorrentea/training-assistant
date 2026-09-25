@@ -21,13 +21,13 @@ Participant -> RailwayHTTP: POST /{session}/api/participant/register\nX-Particip
 RailwayHTTP -> ParticipantAPI: proxy register request
 
 alt Returning UUID
-  ParticipantAPI -> ParticipantAPI: reuse stored name + avatar
+  ParticipantAPI -> ParticipantAPI: reuse stored name
 else First time in this session
-  ParticipantAPI -> ParticipantAPI: assign workshop/conference name\nassign avatar\ninitialize score
+  ParticipantAPI -> ParticipantAPI: assign workshop/conference name\ninitialize score
   ParticipantAPI -> Host: notify_host(updated participant list)
 end
 
-ParticipantAPI --> RailwayHTTP: {name, avatar}
+ParticipantAPI --> RailwayHTTP: {name}
 RailwayHTTP --> Participant: assigned identity
 
 Participant -> RailwayWS: connect /ws/{session_id}/{uuid}

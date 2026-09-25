@@ -352,25 +352,3 @@ class TestIdentityEdgeCases:
             for b in (b_host, b1, b2):
                 b.close()
 
-    def test_avatar_displayed_on_join(self, pax: ParticipantPage):
-        """After joining, an avatar image is displayed."""
-        pax.join("AvatarTest")
-        avatar = pax._page.locator("#my-avatar")
-        expect(avatar).to_be_visible(timeout=5000)
-        src = avatar.get_attribute("src")
-        assert src and len(src) > 0, f"Expected avatar image src, got: {src}"
-
-    def test_avatar_persists_after_rename(self, pax: ParticipantPage):
-        """Avatar should not change when participant renames."""
-        pax.join("AvatarKeep")
-        avatar = pax._page.locator("#my-avatar")
-        expect(avatar).to_be_visible(timeout=5000)
-        original_src = avatar.get_attribute("src")
-
-        # Rename
-        pax.rename("NewName")
-
-        # Avatar should be the same
-        pax._page.wait_for_timeout(500)
-        new_src = avatar.get_attribute("src")
-        assert new_src == original_src, f"Avatar changed after rename: {original_src} → {new_src}"

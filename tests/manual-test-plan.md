@@ -12,7 +12,7 @@
 - [P] Open `/` in a fresh browser (cleared localStorage).
 - [V] A LOTR name is pre-filled in the name field (fetched from `/api/suggest-name`).
 - [P] Click "Join session".
-- [V] Participant sees welcome screen with their name, avatar, participant count = 1.
+- [V] Participant sees welcome screen with their name, participant count = 1.
 - [V] Name is persisted in `localStorage` (`workshop_participant_name`).
 - [V] UUID is persisted in `localStorage` (`workshop_participant_uuid`).
 
@@ -47,16 +47,6 @@
 - [P1] Join as "Frodo". [P2] Join as "Frodo" in a different browser.
 - [V] Both participants appear in host list with the same name but different UUIDs.
 - [V] Both can interact independently (vote separately, submit separate questions).
-
-### 1.8 Avatar assignment
-- [P] Join as "Gandalf" (a LOTR name).
-- [V] Avatar shown is the Gandalf image (not a fallback circle).
-- [P2] Join as "CustomName123".
-- [V] Avatar is either a LOTR image (deterministic from UUID) or a colored circle with initial.
-
-### 1.9 Avatar persistence on rename
-- [P] Join as "Gandalf" (gets gandalf avatar). Rename to "Alice".
-- [V] Avatar remains gandalf (assign-once semantics — avatar tied to UUID, not name).
 
 ---
 
@@ -526,9 +516,9 @@
 - [V] Layout is responsive. All interactions (voting, Q&A, word cloud, code review) work via touch.
 - [V] Name input keyboard works. Vote taps register.
 
-### 13.9 30+ participants (avatar exhaustion)
-- Simulate 31+ participants joining.
-- [V] First 30 get unique LOTR avatars. 31st gets a duplicate avatar (no crash).
+### 13.9 30+ participants (name pool exhaustion)
+- Simulate 31+ participants joining anonymously.
+- [V] First 30 get unique LOTR names. 31st gets a `Guest-xxxxxx` name (no crash).
 
 ### 13.10 Concurrent Q&A upvotes
 - [P1]-[P5] all upvote the same question simultaneously.
@@ -589,7 +579,6 @@
 - [H] Start a conference session.
 - [P] Open `/` in a fresh browser.
 - [V] Participant auto-joins with a character name from the pool (e.g., "Yoda", "Neo").
-- [V] Participant gets a letter-based avatar (2-letter code with deterministic color).
 
 ### 17.4 Score hidden in conference mode
 - [H] Start a conference session.
@@ -599,7 +588,7 @@
 
 ### 17.5 Conference mode rename
 - [P] In conference mode, click on name to rename.
-- [V] Rename works but avatar stays as letter-based.
+- [V] Rename works.
 
 ---
 

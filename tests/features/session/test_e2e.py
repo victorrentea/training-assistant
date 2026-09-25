@@ -143,7 +143,6 @@ class TestSessionScopedAPIs:
         assert r.status_code == 200
         data = r.json()
         assert "name" in data
-        assert "avatar" in data
 
     def test_register_with_explicit_name_and_rejoin(self, server_url, session_id):
         import uuid
@@ -163,7 +162,6 @@ class TestSessionScopedAPIs:
         )
         assert rejoin_resp.status_code == 200
         assert rejoin_resp.json()["name"] == "SessionTestUser"
-        assert rejoin_resp.json()["avatar"] == register_resp.json()["avatar"]
 
     def test_register_duplicate_explicit_name_returns_409(self, server_url, session_id):
         import uuid

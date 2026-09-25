@@ -1,60 +1,8 @@
-"""Unit tests for state.py, messaging.py, and auth.py."""
+"""Unit tests for auth.py."""
 
 import os
 
 import pytest
-
-from daemon.participant.names import LOTR_NAMES, assign_avatar, get_avatar_filename
-from railway.shared.state import AppState
-
-# ═══════════════════════════════════════════════════════════════════════
-# state.py
-# ═══════════════════════════════════════════════════════════════════════
-
-
-class TestGetAvatarFilename:
-    def test_basic(self):
-        assert get_avatar_filename("Gandalf") == "gandalf.png"
-
-    def test_spaces(self):
-        assert get_avatar_filename("Tom Bombadil") == "tom-bombadil.png"
-
-    def test_mixed_case(self):
-        assert get_avatar_filename("Grima Wormtongue") == "grima-wormtongue.png"
-
-
-class TestAssignAvatar:
-    def test_lotr_name(self):
-        s = AppState()
-        avatar = assign_avatar(s, "uuid1", "Gandalf")
-        assert avatar == "gandalf.png"
-        assert s.participant_avatars["uuid1"] == "gandalf.png"
-
-    def test_lotr_duplicate_allowed(self):
-        s = AppState()
-        assign_avatar(s, "uuid1", "Gandalf")
-        avatar = assign_avatar(s, "uuid2", "Gandalf")
-        assert avatar == "gandalf.png"
-
-    def test_custom_name(self):
-        s = AppState()
-        avatar = assign_avatar(s, "uuid1", "CustomName")
-        assert avatar.endswith(".png")
-        assert avatar in [get_avatar_filename(n) for n in LOTR_NAMES]
-
-    def test_custom_name_cached(self):
-        s = AppState()
-        a1 = assign_avatar(s, "uuid1", "Custom")
-        a2 = assign_avatar(s, "uuid1", "Custom")
-        assert a1 == a2
-
-    def test_all_taken_fallback(self):
-        s = AppState()
-        # Fill all avatars
-        for i, n in enumerate(LOTR_NAMES):
-            s.participant_avatars[f"other-{i}"] = get_avatar_filename(n)
-        avatar = assign_avatar(s, "new-uuid", "NewPerson")
-        assert avatar.endswith(".png")
 
 
 # ═══════════════════════════════════════════════════════════════════════

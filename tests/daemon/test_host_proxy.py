@@ -37,16 +37,16 @@ class TestHostServerCreation:
             assert resp.status_code == 200
             assert "hello" in resp.text
 
-    def test_static_avatars_subdirectory(self, tmp_path):
-        """Verify /static/avatars/ serves files from subdirectory."""
-        avatars = tmp_path / "avatars"
-        avatars.mkdir()
-        (avatars / "gandalf.png").write_bytes(b"fake-png")
+    def test_static_subdirectory(self, tmp_path):
+        """Verify /static/<subdir>/ serves files from a subdirectory."""
+        img = tmp_path / "img"
+        img.mkdir()
+        (img / "logo.png").write_bytes(b"fake-png")
 
         with patch("daemon.host_server._STATIC_DIR", tmp_path):
             app = create_app("http://localhost:9999")
             client = TestClient(app)
-            resp = client.get("/static/avatars/gandalf.png")
+            resp = client.get("/static/img/logo.png")
             assert resp.status_code == 200
             assert resp.content == b"fake-png"
 

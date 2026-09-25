@@ -7,7 +7,6 @@ class TestQAState:
     def setup_method(self):
         self.state = QAState()
         self.names = {"uuid1": "Alice", "uuid2": "Bob", "__host__": "Host"}
-        self.avatars = {"uuid1": "avatar1.png", "uuid2": "avatar2.png"}
 
     def test_submit_creates_question(self):
         qid = self.state.submit("uuid1", "What is Python?")
@@ -71,24 +70,24 @@ class TestQAState:
 
     def test_build_question_list_resolves_names(self):
         self.state.submit("uuid1", "Question")
-        result = self.state.build_question_list(self.names, self.avatars)
+        result = self.state.build_question_list(self.names)
         assert len(result) == 1
         assert result[0]["author"] == "Alice"
         assert result[0]["author_uuid"] == "uuid1"
-        assert result[0]["author_avatar"] == "avatar1.png"
+        assert "author_avatar" not in result[0]
 
     def test_build_question_list_sorted_by_upvotes(self):
         q1 = self.state.submit("uuid1", "Less popular")
         q2 = self.state.submit("uuid2", "More popular")
         self.state.upvote(q2, "uuid1")
-        result = self.state.build_question_list(self.names, self.avatars)
+        result = self.state.build_question_list(self.names)
         assert result[0]["text"] == "More popular"
         assert result[1]["text"] == "Less popular"
 
     def test_build_question_list_upvoters_as_list(self):
         qid = self.state.submit("uuid1", "Question")
         self.state.upvote(qid, "uuid2")
-        result = self.state.build_question_list(self.names, self.avatars)
+        result = self.state.build_question_list(self.names)
         assert isinstance(result[0]["upvoters"], list)
         assert result[0]["upvote_count"] == 1
 

@@ -469,7 +469,7 @@ components:
 
     LeaderboardPosition:
       type: object
-      required: [rank, name, score, avatar]
+      required: [rank, name, score]
       properties:
         rank:
           type: integer
@@ -477,12 +477,10 @@ components:
           type: string
         score:
           type: integer
-        avatar:
-          type: string
 
     HostParticipant:
       type: object
-      required: [uuid, name, score, avatar]
+      required: [uuid, name, score]
       properties:
         uuid:
           type: string
@@ -493,5 +491,3 @@ components:
         location:
           type: string
           nullable: true
-        avatar:
-          type: string

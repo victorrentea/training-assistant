@@ -51,7 +51,6 @@ def _seed_ghost_everywhere():
     ps = participant_state
     for pid, name in ((GHOST, "Samwise"), (KEEPER, "Real Person")):
         ps.participant_names[pid] = name
-        ps.participant_avatars[pid] = f"{name}.png"
         ps.locations[pid] = "Bucharest"
         ps.location_timezones[pid] = "Europe/Bucharest"
         ps.location_countries[pid] = "RO"
@@ -90,7 +89,6 @@ class TestPurgeParticipant:
 
         ps = participant_state
         assert GHOST not in ps.participant_names
-        assert GHOST not in ps.participant_avatars
         assert GHOST not in ps.anonymous_pids
         assert GHOST not in ps.locations
         assert GHOST not in ps.location_timezones

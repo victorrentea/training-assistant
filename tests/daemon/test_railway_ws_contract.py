@@ -214,12 +214,10 @@ class TestRailwayWsPublish:
         """
         # Infrastructure / internal non-protocol types that are handled by Railway
         # but are not documented as standalone protocol messages in the YAML:
-        # - participant_registered, participant_renamed, participant_avatar_updated,
-        #   participant_location: daemon identity write-backs that piggyback on broadcast
+        # - participant_registered, participant_renamed, participant_location: daemon identity write-backs that piggyback on broadcast
         internal_only = {
             "participant_registered",
             "participant_renamed",
-            "participant_avatar_updated",
             "participant_location",
         }
 

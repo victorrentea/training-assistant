@@ -1717,16 +1717,6 @@ function _renderEngagementPopover() {
       const hhmmForColor = tzForColor ? _rawHhmmForTimezone(tzForColor) : '';
       const _ohc = _offHoursClass(hhmmForColor);
       const locClass = _ohc ? `pax-location offhours ${_ohc}` : 'pax-location';
-      const avatar = participant.avatar || '';
-      let avatarHtml = '';
-      if (avatar && avatar.startsWith('letter:')) {
-          const parts = avatar.split(':');
-          const lt = parts[1] || '??';
-          const clr = parts.slice(2).join(':') || 'var(--muted)';
-          avatarHtml = `<span class="avatar letter-avatar" style="width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:.65rem;line-height:1;color:#fff;background:${clr}">${lt}</span>`;
-      } else if (avatar) {
-          avatarHtml = `<img src="/static/avatars/${escHtml(avatar)}" class="avatar" style="width:28px;height:28px" onerror="this.style.display='none'">`;
-      }
       const debateSide = participantDebateSides[pid];
       const debateIcon = _debateActive
           ? (debateSide === 'for' ? '<span data-tip="FOR">👍</span> ' : debateSide === 'against' ? '<span data-tip="AGAINST">👎</span> ' : '<span data-tip="Undecided">⏳</span> ')
@@ -1743,7 +1733,7 @@ function _renderEngagementPopover() {
         const copiedClass = (entry.copied || entry.seen_by_host) ? ' downloaded' : '';
         return `<span class="upload-icon${copiedClass}" data-tip="${escAttr(entry.disk_path)}" data-uuid="${escAttr(pid)}" data-file-id="${escAttr(String(entry.id))}" onclick="copyDiskPath(this)"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v9"/><path d="M6 9.5L10 13.5L14 9.5"/><path d="M4.5 13.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1"/></svg></span>`;
       }).join('');
-      return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" data-tip="${ip ? 'IP: ' + ip : ''}">${debateIcon}${avatarHtml}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}${fxTag}</li>`;
+      return `<li class="${online ? 'online' : 'offline'}" data-uuid="${escHtml(pid)}"><span class="pax-name" data-tip="${ip ? 'IP: ' + ip : ''}">${debateIcon}<span class="pax-name-text truncate">${escHtml(name)}</span>${pasteIcons}${uploadIcons}</span>${scoreTag}${locLabel ? `<span class="${locClass}">${locLabel}</span>` : ''}${fxTag}</li>`;
     }).join('');
 
     if (flashPids && flashPids.size > 0) {
@@ -3245,14 +3235,11 @@ function _renderEngagementPopover() {
     if (list.querySelector('.qa-edit-input')) return;
 
     list.innerHTML = questions.map(q => {
-      const avatarHtml = q.author_avatar
-          ? `<img src="/static/avatars/${escHtml(q.author_avatar)}" class="avatar" style="width:24px;height:24px" onerror="this.style.display='none'">`
-          : '';
       return `
       <div class="qa-card${q.answered ? ' qa-answered' : ''}" data-id="${escHtml(q.id)}">
         <div class="qa-text">${escHtml(q.text)}</div>
         <div class="qa-meta">
-          ${avatarHtml}<span class="qa-author">${escHtml(q.author)}</span>
+          <span class="qa-author">${escHtml(q.author)}</span>
           <span class="qa-upvotes">▲ ${q.upvote_count}</span>
         </div>
         <div class="qa-actions">
@@ -3909,7 +3896,6 @@ function _renderEngagementPopover() {
       const aiClass = a.ai_generated ? ' debate-arg-ai' : '';
       return `<div class="debate-arg${aiClass}" data-id="${a.id}">
         <div class="debate-arg-header">
-          ${a.author_avatar ? `<img src="/static/avatars/${a.author_avatar}" class="debate-arg-avatar">` : ''}
           <span class="debate-arg-author">${escHtml(a.author)}</span>
           <span class="debate-arg-votes">▲ ${a.upvote_count}</span>
         </div>
@@ -4012,32 +3998,15 @@ function renderLeaderboard(data) {
         const div = document.createElement('div');
         div.className = 'leaderboard-entry' + (entry.rank === 1 ? ' first-place' : '');
 
-        const avatarStyle = entry.avatar && entry.avatar.startsWith('letter:')
-            ? `background:${entry.color}`
-            : `background:var(--surface2)`;
-        const avatarContent = entry.avatar && entry.avatar.startsWith('letter:')
-            ? entry.letter
-            : '';
-        const avatarImg = entry.avatar && !entry.avatar.startsWith('letter:')
-            ? `<img src="/static/avatars/${entry.avatar}" style="width:48px;height:48px;border-radius:50%" onerror="this.style.display='none'">`
-            : '';
-
         const universeTag = entry.universe
             ? ` <span class="leaderboard-universe">(${entry.universe})</span>`
             : '';
 
         div.innerHTML = `
             <span class="leaderboard-rank">#${entry.rank}</span>
-            ${avatarImg || `<span class="leaderboard-avatar" style="${avatarStyle}">${escHtml(entry.name)}${universeTag}</span>`}
             <span class="leaderboard-name">${escHtml(entry.name)}${universeTag}</span>
             <span class="leaderboard-score">${entry.score} pts</span>
         `;
-
-        // IMPORTANT: Fix the avatar — if using letter avatar, show letters not name
-        if (!avatarImg) {
-            const avatarSpan = div.querySelector('.leaderboard-avatar');
-            if (avatarSpan) avatarSpan.textContent = entry.letter || '??';
-        }
 
         entriesEl.appendChild(div);
 

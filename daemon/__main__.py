@@ -29,9 +29,6 @@ from daemon.lock import (
     write_lock,
 )
 from daemon.materials.upload import handle_build_materials_zip as _handle_materials_zip
-from daemon.wiki.publisher import WikiPublisher
-from daemon.wiki.publisher import install as install_wiki_publisher
-from daemon.wiki.publisher import uploader as wiki_uploader
 from daemon.session import pending as session_pending
 from daemon.session import state as session_shared_state
 from daemon.session_state import (
@@ -43,13 +40,13 @@ from daemon.session_state import (
     find_notes_in_folder,
     find_session_folder_by_id,
     load_daemon_state,
-    session_day_is_over,
     load_session_state,
     load_slides_manifest,
     resolve_materials_folder,
     save_daemon_state,
     save_session_meta,
     save_session_state,
+    session_day_is_over,
     session_state_path,
     set_current_session_id,
 )
@@ -57,6 +54,9 @@ from daemon.slides.loop import SlidesRunner
 from daemon.transcript.loader import load_transcription_files
 from daemon.transcript.state import TranscriptStateManager
 from daemon.upload import handle_file_ready_for_download as _handle_file_download
+from daemon.wiki.publisher import WikiPublisher
+from daemon.wiki.publisher import install as install_wiki_publisher
+from daemon.wiki.publisher import uploader as wiki_uploader
 from daemon.ws_client import DaemonWsClient
 
 
@@ -172,7 +172,6 @@ def _build_runtime_session_snapshot(
     )
     participants_payload: dict[str, dict[str, object]] = {}
     participant_ids = set(participant_state.participant_names)
-    participant_ids |= set(participant_state.participant_avatars)
     from daemon.scores import scores as daemon_scores
     participant_ids |= set(daemon_scores.scores)
     participant_ids |= set(participant_state.locations)
@@ -183,8 +182,6 @@ def _build_runtime_session_snapshot(
         row: dict[str, object] = {}
         if pid in participant_state.participant_names:
             row["name"] = participant_state.participant_names[pid]
-        if pid in participant_state.participant_avatars:
-            row["avatar"] = participant_state.participant_avatars[pid]
         if pid in daemon_scores.scores:
             row["score"] = daemon_scores.scores[pid]
         if pid in participant_state.locations:
@@ -1280,7 +1277,7 @@ def run() -> None:
                             except Exception as e:
                                 log.error("session", f"Failed self-healing {SESSION_STATE_FILENAME}: {e}")
                         if not session_name:
-                            # Fresh main session: clear runtime caches so participants/avatars/
+                            # Fresh main session: clear runtime caches so participants/
                             # count and activity artifacts don't leak from previous sessions.
                             from daemon.codereview.state import (
                                 codereview_state as _codereview_state,

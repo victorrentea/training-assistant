@@ -32,12 +32,12 @@ class TestComputeLocalHashes:
         assert "work-hours.js" not in hashes
 
     def test_recursive_scan(self, tmp_path):
-        sub = tmp_path / "avatars"
+        sub = tmp_path / "img"
         sub.mkdir()
-        (sub / "gandalf.png").write_bytes(b"png data")
+        (sub / "logo.png").write_bytes(b"png data")
         (tmp_path / "app.js").write_text("ok")
         hashes = compute_local_hashes(tmp_path)
-        assert "avatars/gandalf.png" in hashes
+        assert "img/logo.png" in hashes
         assert "app.js" in hashes
 
     def test_empty_dir(self, tmp_path):

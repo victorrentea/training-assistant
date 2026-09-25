@@ -88,7 +88,7 @@ partition "Participant Page (/{session_id}/)" {
 if (UUID in localStorage?) then (yes)
   :Attempt /rejoin with stored UUID;
   if (UUID in session.participants?) then (yes)
-    :Restore name & avatar;
+    :Restore name;
     :ENTER the app;
     stop
   else (no)

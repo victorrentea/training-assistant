@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = REPO_ROOT / "static"
 
 # Vendored/generated assets are not ours to author correct JS in.
-_SKIP_DIRS = {"vendor", "avatars"}
+_SKIP_DIRS = {"vendor"}
 
 # `<script ...>...</script>`, non-greedy body, case-insensitive tag name.
 _SCRIPT_RE = re.compile(r"<script([^>]*)>(.*?)</script>", re.IGNORECASE | re.DOTALL)

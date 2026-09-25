@@ -41,7 +41,6 @@ class HostParticipant(BaseModel):
     location: str
     location_tz: str = ""
     location_country: str = ""
-    avatar: str
     paste_texts: list[PasteEntry] = []
     received_files: list[UploadedFileEntry] = []
     engagement: dict[str, dict] = {}
@@ -54,7 +53,6 @@ class HostQAQuestion(BaseModel):
     text: str
     author: str
     author_uuid: str
-    author_avatar: str
     upvote_count: int
     upvoters: list[str]
     answered: bool
@@ -144,7 +142,6 @@ def _build_host_participants_list() -> list[dict]:
             "location": ps.locations.get(pid, ""),
             "location_tz": ps.location_timezones.get(pid, ""),
             "location_country": ps.location_countries.get(pid, ""),
-            "avatar": ps.participant_avatars.get(pid, ""),
             "online": pid in ps.online_participants,
             "engagement": ps.engagement.get(pid, {}),
             "last_active_at": ps.last_active_at.get(pid, 0),
@@ -174,7 +171,6 @@ def _build_qa_for_host() -> list[dict]:
             "text": q["text"],
             "author": ps.participant_names.get(q["author"], "Unknown"),
             "author_uuid": q["author"],
-            "author_avatar": ps.participant_avatars.get(q["author"], ""),
             "upvote_count": len(q["upvoters"]),
             "upvoters": list(q["upvoters"]),
             "answered": q["answered"],

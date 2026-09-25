@@ -35,7 +35,7 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 #   - CDN scripts: qrcode/d3/d3-cloud/opentelemetry (jsdelivr), leaflet (unpkg),
 #     highlight.js (cdnjs) → script-src whitelist
 #   - CDN styles: leaflet (unpkg) + highlight.js theme (cdnjs) → style-src whitelist
-#   - map tiles + country flags + avatars/QR → img-src https:/data:/blob:
+#   - map tiles + country flags + QR → img-src https:/data:/blob:
 #   - same-origin fetch + WebSocket to the daemon, Railway, and nominatim geocode
 # It still blocks the important bits: external <script>/<link> hosts off the
 # whitelist, <object>/<embed>, <base> hijack, framing (clickjacking), and stray

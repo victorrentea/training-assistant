@@ -115,7 +115,6 @@ def _clear_session_caches() -> None:
     state.upload_next_id = 0
     state.participant_history = set()
     state.participant_ips = {}
-    state.participant_avatars = {}
 
 
 async def _handle_set_session_id(data: dict):

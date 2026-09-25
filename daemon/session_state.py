@@ -291,6 +291,14 @@ def load_session_state(session_folder: Path) -> dict:
             except Exception as e:
                 # Keep unknown legacy fields while still validating known structures where possible.
                 log.error("session", f"Invalid {SESSION_STATE_FILENAME} payload; using raw data: {e}")
+                # The model's own scrub didn't run: drop removed avatar data here
+                # too, or every later save would write it back.
+                data.pop("participant_avatars", None)
+                participants = data.get("participants")
+                if isinstance(participants, dict):
+                    for row in participants.values():
+                        if isinstance(row, dict):
+                            row.pop("avatar", None)
                 return data
         log.error("session", f"Invalid {SESSION_STATE_FILENAME}: root must be object")
         return {}

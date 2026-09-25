@@ -20,7 +20,7 @@ STATIC_DIR = REPO_ROOT / "static"
 _TITLE_ATTR = re.compile(r'(?<![\w-])title\s*=\s*["\']')
 
 # Vendored third-party assets are not ours to restyle.
-_SKIP_DIRS = {"vendor", "avatars"}
+_SKIP_DIRS = {"vendor"}
 
 
 def _frontend_files() -> list[Path]:

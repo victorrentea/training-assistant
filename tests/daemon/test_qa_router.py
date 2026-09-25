@@ -20,7 +20,6 @@ def fresh_qa_state():
 def fresh_participant_state():
     ps = ParticipantState()
     ps.participant_names = {"uuid1": "Alice", "uuid2": "Bob", "__host__": "Host"}
-    ps.participant_avatars = {"uuid1": "a1.png", "uuid2": "a2.png"}
     with patch("daemon.qa.router.participant_state", ps):
         yield ps
 

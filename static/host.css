@@ -1431,7 +1431,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .debate-col-for .debate-arg { background: rgba(46, 204, 113, .12); }
 .debate-col-against .debate-arg { background: rgba(231, 76, 60, .12); }
 .debate-arg-header { display: flex; align-items: center; gap: .35rem; margin-bottom: .15rem; }
-.debate-arg-avatar { width: 24px; height: 24px; border-radius: 50%; }
 .debate-arg-author { font-size: .8rem; color: var(--muted); }
 .debate-arg-votes { margin-left: auto; font-size: .85rem; color: var(--accent); }
 .debate-arg-text { font-size: .9rem; color: var(--text); }
@@ -1696,19 +1695,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   min-width: 2.5rem;
 }
 .first-place .leaderboard-rank { color: gold; }
-.leaderboard-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1rem;
-  line-height: 1;
-  color: #fff;
-  flex-shrink: 0;
-}
 .leaderboard-name {
   flex: 1;
   text-align: left;

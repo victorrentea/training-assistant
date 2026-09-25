@@ -112,8 +112,8 @@ class QAState:
             for qid, q in self._sorted_questions()
         ]
 
-    def build_question_list(self, names: dict[str, str], avatars: dict[str, str]) -> list[dict]:
-        """Build sorted question list for host — resolves names and avatars."""
+    def build_question_list(self, names: dict[str, str]) -> list[dict]:
+        """Build sorted question list for host — resolves author names."""
         questions = []
         for qid, q in sorted(
             self.questions.items(),
@@ -124,7 +124,6 @@ class QAState:
                 "text": q["text"],
                 "author": names.get(q["author"], "Unknown"),
                 "author_uuid": q["author"],
-                "author_avatar": avatars.get(q["author"], ""),
                 "upvoters": list(q["upvoters"]),
                 "upvote_count": len(q["upvoters"]),
                 "answered": q["answered"],

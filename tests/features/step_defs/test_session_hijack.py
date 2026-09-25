@@ -57,7 +57,6 @@ def _populate_session_caches() -> None:
     state.upload_next_id = 7
     state.participant_history = {"u1"}
     state.participant_ips = {"u1": "1.2.3.4"}
-    state.participant_avatars = {"u1": "avatar"}
 
 
 def _caches_cleared() -> bool:
@@ -68,7 +67,6 @@ def _caches_cleared() -> bool:
         and state.upload_next_id == 0
         and state.participant_history == set()
         and state.participant_ips == {}
-        and state.participant_avatars == {}
     )
 
 

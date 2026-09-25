@@ -26,7 +26,6 @@ def test_persisted_session_state_model_validates_runtime_snapshot_shape():
         "participants": {
             "u1": {
                 "name": "Alice",
-                "avatar": "gandalf.png",
                 "score": 100,
                 "location": "🕐 America/Mexico_City",
             }
@@ -44,7 +43,6 @@ def test_persisted_session_state_model_validates_runtime_snapshot_shape():
     dumped = snapshot.model_dump()
     assert dumped["session_id"] == "session-1"
     assert dumped["participants"]["u1"]["name"] == "Alice"
-    assert dumped["participants"]["u1"]["avatar"] == "gandalf.png"
     assert dumped["participants"]["u1"]["score"] == 100
     assert dumped["participants"]["u1"]["location"] == "🕐 America/Mexico_City"
     assert dumped["qa_questions"]["q1"]["text"] == "Question?"
@@ -475,7 +473,6 @@ def test_apply_snapshot_restore_updates_participant_names():
 
     participant_state.reset()
     participant_state.participant_names["u-old"] = "ShouldBeCleared"
-    participant_state.participant_avatars["u-old"] = "old.png"
     participant_state.scores["u-old"] = 5
     participant_state.locations["u-old"] = "Old"
 
@@ -483,6 +480,7 @@ def test_apply_snapshot_restore_updates_participant_names():
         "participants": {
             "u1": {
                 "name": "Persisted Tester",
+                # Session files written before avatars were removed still carry one.
                 "avatar": "gandalf.png",
                 "score": 100,
                 "location": "🕐 America/Mexico_City",
@@ -493,7 +491,7 @@ def test_apply_snapshot_restore_updates_participant_names():
     })
 
     assert participant_state.participant_names == {"u1": "Persisted Tester"}
-    assert participant_state.participant_avatars == {"u1": "gandalf.png"}
+    assert not hasattr(participant_state, "participant_avatars")
     assert participant_state.scores == {"u1": 100}
     assert participant_state.locations == {"u1": "🕐 America/Mexico_City"}
 
@@ -527,7 +525,6 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     debate_state.reset()
 
     participant_state.participant_names["u1"] = "Alice"
-    participant_state.participant_avatars["u1"] = "gandalf.png"
     participant_state.scores["u1"] = 0
     daemon_scores.scores["u1"] = 0
     participant_state.locations["u1"] = "🕐 America/Mexico_City"
@@ -573,7 +570,6 @@ def test_runtime_session_snapshot_excludes_participant_universes():
     assert snapshot["participants"] == {
         "u1": {
             "name": "Alice",
-            "avatar": "gandalf.png",
             "score": 0,
             "location": "🕐 America/Mexico_City",
         }

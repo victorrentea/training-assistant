@@ -17,8 +17,6 @@ Updated 2026-03-22. Maps each manual test case to existing e2e coverage across a
 | 1.5 | Empty name rejected | COVERED | `test_empty_name_ignored` |
 | 1.6 | Long name (32+ chars) | COVERED | `test_long_name_truncated_to_32` |
 | 1.7 | Duplicate names | COVERED | `test_duplicate_names_both_in_host_list` |
-| 1.8 | Avatar assignment | COVERED | `test_avatar_displayed_on_join` |
-| 1.9 | Avatar persistence on rename | COVERED | `test_avatar_persists_after_rename` |
 
 ## 2. Connection & Reconnection
 
@@ -168,7 +166,7 @@ Updated 2026-03-22. Maps each manual test case to existing e2e coverage across a
 | 13.6 | Special characters / XSS | COVERED | `test_xss_in_question_escaped`, `test_special_chars_in_wordcloud` |
 | 13.7 | Network latency simulation | **GAP** | (requires network throttling) |
 | 13.8 | Mobile browser | **GAP** | (requires mobile viewport/device emulation) |
-| 13.9 | 30+ participants (avatar exhaustion) | **GAP** | (covered by load test, not e2e) |
+| 13.9 | 30+ participants (name pool exhaustion) | **GAP** | (covered by load test, not e2e) |
 | 13.10 | Concurrent Q&A upvotes | COVERED | `test_concurrent_upvotes_correct_count` |
 
 ## 14. Version Reload Guard

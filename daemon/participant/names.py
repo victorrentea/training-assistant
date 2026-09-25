@@ -1,4 +1,4 @@
-"""Avatar and name assignment logic for participant identity."""
+"""Name assignment logic for participant identity."""
 import random
 
 LOTR_NAMES = [
@@ -121,57 +121,6 @@ CHARACTER_NAMES: list[tuple[str, str]] = [
     ("The Doctor", "Doctor Who"), ("Dalek", "Doctor Who"),
     ("Sherlock", "BBC"), ("John Watson", "BBC"),
 ]
-
-
-def get_avatar_filename(name: str) -> str:
-    return name.lower().replace(' ', '-') + '.png'
-
-
-def assign_avatar(state, uuid: str, name: str) -> str:
-    """Assign avatar based on name. LOTR names get their matching avatar on first
-    assignment. Custom names get a unique avatar based on name hash.
-    Never overwrites an existing avatar (preserves refresh_avatar choices)."""
-    if uuid in state.participant_avatars:
-        return state.participant_avatars[uuid]
-    if name in LOTR_NAMES:
-        avatar = get_avatar_filename(name)
-        state.participant_avatars[uuid] = avatar
-        return avatar
-    taken = set(state.participant_avatars.values())
-    name_hash = sum(ord(c) for c in name) * 2654435761
-    preferred_index = name_hash % len(LOTR_NAMES)
-    for offset in range(len(LOTR_NAMES)):
-        avatar = get_avatar_filename(LOTR_NAMES[(preferred_index + offset) % len(LOTR_NAMES)])
-        if avatar not in taken:
-            state.participant_avatars[uuid] = avatar
-            return avatar
-    avatar = get_avatar_filename(LOTR_NAMES[preferred_index])
-    state.participant_avatars[uuid] = avatar
-    return avatar
-
-
-def refresh_avatar(state, uuid: str, rejected: set[str] | None = None) -> str | None:
-    """Reassign a random avatar different from current and any previously rejected,
-    ensuring uniqueness among connected participants."""
-    current = state.participant_avatars.get(uuid)
-    rejected = rejected or set()
-    if current:
-        rejected.add(current)
-
-    taken_by_others = {avatar for uid, avatar in state.participant_avatars.items()
-                       if uid != uuid and not uid.startswith("__")}
-    all_avatars = [get_avatar_filename(n) for n in LOTR_NAMES]
-
-    available = [a for a in all_avatars if a not in taken_by_others and a not in rejected]
-    if not available:
-        available = [a for a in all_avatars if a not in taken_by_others and a != current]
-    if not available:
-        available = [a for a in all_avatars if a != current]
-    if not available:
-        return None
-    new_avatar = random.choice(available)
-    state.participant_avatars[uuid] = new_avatar
-    return new_avatar
 
 
 def assign_conference_name(state) -> tuple[str, str]:

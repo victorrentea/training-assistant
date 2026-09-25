@@ -155,17 +155,13 @@ class TestPersistenceRoundTrip:
         try:
             # Simulate a live roster of REAL names, then snapshot it.
             ps.participant_names.update({"u1": "Ada Lovelace", "u2": "Alan Turing"})
-            ps.participant_avatars.update({"u1": "letter:AL:#1", "u2": "letter:AT:#2"})
             snap = ps.snapshot()
 
             # Simulate daemon reconnect/restart: wipe then restore from snapshot.
             ps.reset(mode="workshop")
             assert ps.participant_names == {}
             ps.sync_from_restore(
-                {
-                    "participant_names": snap["participant_names"],
-                    "participant_avatars": snap["participant_avatars"],
-                }
+                {"participant_names": snap["participant_names"]}
             )
             assert ps.participant_names == {"u1": "Ada Lovelace", "u2": "Alan Turing"}
 

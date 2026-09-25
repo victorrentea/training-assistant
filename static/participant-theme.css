@@ -132,12 +132,6 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgb(90 102 107);
   }
-
-  /* Avatar refresh button */
-  .avatar-refresh-btn {
-    background: var(--color-surface-container-high);
-    color: var(--color-on-surface);
-  }
 }
 
 /* ── Prose inline-code: drop Tailwind Typography's literal backticks ──

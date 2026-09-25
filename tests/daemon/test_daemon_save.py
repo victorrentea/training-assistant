@@ -134,7 +134,9 @@ def test_load_session_state_normalizes_legacy_participant_maps():
         from daemon.session_state import load_session_state as _load_session_state
         loaded = _load_session_state(folder)
         assert loaded["participants"]["u1"]["name"] == "Gandalf"
-        assert loaded["participants"]["u1"]["avatar"] == "gandalf.png"
+        # Avatars were removed: legacy avatar data is dropped, not carried forward.
+        assert "avatar" not in loaded["participants"]["u1"]
+        assert "participant_avatars" not in loaded
         assert loaded["participants"]["u1"]["score"] == 0
         assert loaded["participants"]["u1"]["location"] == "🕐 America/Mexico_City"
 
@@ -317,7 +319,6 @@ def _participant_state_snapshot(**overrides) -> dict:
     """Shape of daemon/participant/state.py::ParticipantState.snapshot()."""
     base = {
         "participant_names": {"u1": "Alice"},
-        "participant_avatars": {"u1": "alice.png"},
         "online_participants": ["u1"],
         "scores": {"u1": 10},
         "locations": {"u1": "Bucharest"},
@@ -574,3 +575,22 @@ def test_save_session_state_log_line_reports_only_genuinely_changed_keys(capsys)
         assert "fx_enabled" not in out
         assert "attention_enabled" not in out
         assert "trainer_pids" not in out
+
+
+def test_invalid_session_file_fallback_drops_legacy_avatars():
+    """Regression: a file failing validation came back raw, avatar data and all,
+    and every later save wrote it back."""
+    with tempfile.TemporaryDirectory() as d:
+        folder = Path(d)
+        (folder / "session-state.json").write_text(
+            json.dumps({
+                "participant_avatars": {"u1": "gandalf.png"},
+                "participants": {"u1": {"name": "Gandalf", "avatar": "gandalf.png", "score": "not-a-number"}},
+            }),
+            encoding="utf-8",
+        )
+        from daemon.session_state import load_session_state as _load_session_state
+        loaded = _load_session_state(folder)
+        assert loaded["participants"]["u1"]["name"] == "Gandalf"
+        assert "avatar" not in loaded["participants"]["u1"]
+        assert "participant_avatars" not in loaded

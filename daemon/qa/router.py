@@ -36,10 +36,7 @@ class ToggleAnsweredBody(BaseModel):
 
 def _build_questions_for_host():
     """Helper: build question list with resolved names for host."""
-    return qa_state.build_question_list(
-        participant_state.participant_names,
-        participant_state.participant_avatars,
-    )
+    return qa_state.build_question_list(participant_state.participant_names)
 
 
 def _build_questions_for_broadcast():

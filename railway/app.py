@@ -116,14 +116,6 @@ async def _redirect_invalid_session(request: Request, exc: InvalidSessionRedirec
     return RedirectResponse("/?error=invalid")
 
 
-@app.middleware("http")
-async def add_avatar_cache_headers(request: Request, call_next):
-    response = await call_next(request)
-    path = request.url.path
-    if path.startswith("/static/avatars/") and path.endswith(".png"):
-        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-    return response
-
 Instrumentator().instrument(app).expose(
     app, endpoint="/metrics", dependencies=[Depends(require_host_auth)]
 )

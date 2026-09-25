@@ -51,7 +51,7 @@ class SlidesHistoryCountUpdatedMsg(BaseModel):
 class ParticipantListUpdatedMsg(BaseModel):
     """Host-only: full participant list."""
     type: Literal["participant_list_updated"] = "participant_list_updated"
-    participants: list[dict[str, Any]]  # [{uuid, name, score, location, avatar, engagement, last_active_at, last_view}]
+    participants: list[dict[str, Any]]  # [{uuid, name, score, location, engagement, last_active_at, last_view}]
 
 
 class ParticipantNamesUpdatedMsg(BaseModel):
@@ -242,7 +242,7 @@ class DebateRoundEndedMsg(BaseModel):
 # ── Leaderboard ───────────────────────────────────────────────────────────────
 
 class LeaderboardRevealedMsg(BaseModel):
-    """Same structure for both participants and host: positions [{rank, name, score, avatar}]."""
+    """Same structure for both participants and host: positions [{rank, name, score}]."""
     type: Literal["leaderboard_revealed"] = "leaderboard_revealed"
     positions: list[dict[str, Any]]
 

@@ -41,7 +41,7 @@ RailwayHTTP -> QAAPI: proxy question submission
 QAAPI -> QAAPI: save question\nadd 100 points to author
 QAAPI -> RailwayWS: write_back qa_updated(raw questions)
 QAAPI -> RailwayWS: write_back scores_updated
-QAAPI -> HostWS: notify_host qa_updated(with names + avatars)
+QAAPI -> HostWS: notify_host qa_updated(with names)
 QAAPI -> HostWS: notify_host scores_updated
 
 Participant -> RailwayHTTP: POST /api/participant/qa/upvote
@@ -49,18 +49,18 @@ RailwayHTTP -> QAAPI: proxy upvote request
 QAAPI -> QAAPI: add upvote\nadd 50 points to author\nadd 25 points to voter
 QAAPI -> RailwayWS: write_back qa_updated(raw questions)
 QAAPI -> RailwayWS: write_back scores_updated
-QAAPI -> HostWS: notify_host qa_updated(with names + avatars)
+QAAPI -> HostWS: notify_host qa_updated(with names)
 QAAPI -> HostWS: notify_host scores_updated
 
 opt Host moderates the queue
   Host -> QAAPI: edit / delete / answered / clear
   QAAPI -> RailwayWS: broadcast qa_updated(raw questions)
-  QAAPI -> HostWS: notify_host qa_updated(with names + avatars)
+  QAAPI -> HostWS: notify_host qa_updated(with names)
 end
 end
 
 note over QAAPI, HostWS
 Participants receive anonymous/raw question payloads.
-The host gets a richer version with resolved participant names and avatars.
+The host gets a richer version with resolved participant names.
 end note
 @enduml

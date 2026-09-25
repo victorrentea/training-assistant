@@ -58,7 +58,7 @@ class TestScoring:
         pax._page.wait_for_timeout(1000)
 
         scores = host.get_participant_scores()
-        # Find the participant (name may have emoji/avatar prefix)
+        # Find the participant (name may have an emoji prefix)
         matching = {k: v for k, v in scores.items() if "ScoreHost" in k}
         assert len(matching) > 0, f"Participant ScoreHost not found in {scores}"
         score = list(matching.values())[0]

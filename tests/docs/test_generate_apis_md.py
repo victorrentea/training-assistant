@@ -119,7 +119,7 @@ def test_participant_identity_rows_have_expected_response_shapes():
     assert register_row, "Missing table row for POST /api/participant/register"
     assert "Register Participant, idempotent for returning participants." in register_row.group(0)
     assert "any" not in register_row.group(0)
-    assert "`name: string`<br>`avatar: string`" in register_row.group(0)
+    assert "`name: string`<br>`name_conflict?: bool`" in register_row.group(0)
 
     rename_row = re.search(r"^\| .*`PUT /api/participant/name`.*\|$", output, re.MULTILINE)
     assert rename_row, "Missing table row for PUT /api/participant/name"

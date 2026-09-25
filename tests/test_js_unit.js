@@ -39,12 +39,6 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function avatarColorFromUuid(uuid) {
-  const hash = parseInt((uuid || '').replace(/-/g, '').slice(0, 8), 16);
-  const hue = hash % 360;
-  return `hsl(${hue}, 60%, 40%)`;
-}
-
 const LS_ONBOARDING_HIDDEN_KEY = 'workshop_onboarding_hidden';
 const localStorage = (() => {
   const store = new Map();
@@ -150,34 +144,6 @@ assertEq('converts undefined to string', escHtml(undefined), 'undefined');
 assertEq('empty string stays empty', escHtml(''), '');
 assertEq('plain text passes through', escHtml('hello world'), 'hello world');
 assertEq('multiple ampersands', escHtml('a&b&c'), 'a&amp;b&amp;c');
-
-// ── avatarColorFromUuid ──────────────────────────────────────────────
-suite('avatarColorFromUuid()');
-
-// Deterministic: same UUID → same color
-const color1 = avatarColorFromUuid('550e8400-e29b-41d4-a716-446655440000');
-const color2 = avatarColorFromUuid('550e8400-e29b-41d4-a716-446655440000');
-assertEq('deterministic for same UUID', color1, color2);
-
-// Different UUIDs → different colors (probabilistically)
-const color3 = avatarColorFromUuid('00000000-0000-0000-0000-000000000000');
-const color4 = avatarColorFromUuid('ffffffff-ffff-ffff-ffff-ffffffffffff');
-assert('different UUIDs produce different hues', color3 !== color4);
-
-// Output format
-assert('returns hsl() string', /^hsl\(\d+, 60%, 40%\)$/.test(color1));
-
-// Hue is in 0-359 range
-const hueMatch = color1.match(/^hsl\((\d+)/);
-const hue = parseInt(hueMatch[1]);
-assert('hue is 0-359', hue >= 0 && hue < 360);
-
-// Edge cases
-assertEq('null UUID produces valid color', avatarColorFromUuid(null), 'hsl(NaN, 60%, 40%)');
-assertEq('empty string UUID', avatarColorFromUuid(''), 'hsl(NaN, 60%, 40%)');
-
-// All-zero UUID → hue 0
-assertEq('all-zero UUID → hue 0', avatarColorFromUuid('00000000-0000-0000-0000-000000000000'), 'hsl(0, 60%, 40%)');
 
 // ── onboarding checklist persistence ─────────────────────────────────
 suite('onboarding checklist persistence');

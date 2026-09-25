@@ -345,7 +345,6 @@ class HostPage:
                     score = int(m.group(1))
             # Strip score text and emoji from name
             name_clean = name_text.replace(score_el.inner_text().strip(), "").strip() if score_el.count() > 0 and score_el.is_visible() else name_text
-            # Remove avatar/emoji prefixes - just get the text content
             result[name_clean] = score
         return result
 

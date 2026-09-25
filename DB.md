@@ -25,7 +25,6 @@ mode?: string  # workshop | talk
 current_activity?: string  # none | quiz | wordcloud | qa | codereview | debate
 participants?: dict[str, PersistedParticipant{
   name?:string
-  avatar?:string
   score?:int | number
   location?:string
   engagement?:dict[str, ViewEngagement{

@@ -8,20 +8,11 @@ from daemon.scores import notify_host_scores, scores
 from daemon.ws_messages import LeaderboardRevealedMsg, ScoresUpdatedMsg
 from daemon.ws_publish import broadcast
 
-_AVATAR_COLORS = ['#e74c3c','#e67e22','#f1c40f','#27ae60','#16a085','#2980b9','#8e44ad','#c0392b']
-
-
-def _entry_color(pid: str) -> str:
-    return _AVATAR_COLORS[sum(ord(c) for c in pid) % len(_AVATAR_COLORS)]
-
 
 class LeaderboardPosition(BaseModel):
     rank: int
     name: str
     score: int
-    avatar: str | None = None
-    letter: str | None = None
-    color: str | None = None
     universe: str | None = None
     # Server-side truth: derived from who claimed trainer over loopback, never
     # inferred from the display string (which anyone could otherwise fake).
@@ -54,9 +45,6 @@ async def show_leaderboard():
             rank=i + 1,
             name=e["name"],
             score=e["score"],
-            avatar=participant_state.participant_avatars.get(e["uuid"]),
-            letter=(e["name"][0].upper() if e["name"] else "?"),
-            color=_entry_color(e["uuid"]),
             universe=participant_state.participant_universes.get(e["uuid"]) or None,
             is_trainer=e["uuid"] in participant_state.trainer_pids,
         )

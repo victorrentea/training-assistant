@@ -1,4 +1,4 @@
-"""Daemon participant router — identity endpoints (set_name, roll-avatar, location)."""
+"""Daemon participant router — identity endpoints (set_name, location)."""
 
 import asyncio
 import json
@@ -23,14 +23,7 @@ from starlette.responses import Response
 from daemon.emoji.catalog import EMOJI_CATALOG, EmojiDef
 from daemon.host_state_router import _build_host_participants_list
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
-from daemon.participant.names import (
-    LOTR_NAMES,
-    assign_conference_name,
-    get_avatar_filename,
-)
-from daemon.participant.names import (
-    refresh_avatar as _refresh_avatar_logic,
-)
+from daemon.participant.names import LOTR_NAMES, assign_conference_name
 from daemon.participant.purge import PurgeReport
 from daemon.participant.sanitize import (
     MAX_NAME_LEN as _MAX_NAME_LEN_SHARED,
@@ -44,13 +37,13 @@ from daemon.participant.sanitize import (
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
+from daemon.wiki.publisher import wiki_updated_at
 from daemon.ws_messages import (
     ParticipantListUpdatedMsg,
     ParticipantNamesUpdatedMsg,
     ScoresUpdatedMsg,
     SummaryScrollPosition,
 )
-from daemon.wiki.publisher import wiki_updated_at
 from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
@@ -67,7 +60,6 @@ _TIMEZONE_RE = re.compile(r"^🕐\s+(.+)$")
 
 class RegisterResponse(BaseModel):
     name: str
-    avatar: str
     # Soft, non-blocking duplicate flag: true iff an explicitly-typed name
     # collided with another participant at write time. NEVER a 409.
     name_conflict: bool = False
@@ -86,14 +78,6 @@ class RenameResponse(BaseModel):
     # PUT /name returns 200 + this body (symmetric with register) instead of a
     # bare 204, so the client can read the soft duplicate flag. NEVER a 409.
     name_conflict: bool = False
-
-
-class AvatarRequest(BaseModel):
-    rejected: list[str] = []
-
-
-class AvatarResponse(BaseModel):
-    avatar: str
 
 
 class LocationRequest(BaseModel):
@@ -302,7 +286,6 @@ class ParticipantStateResponse(BaseModel):
     # without any UUID on the wire. See daemon.scores.score_token.
     my_score_token: str
     my_name: str
-    my_avatar: str
     current_activity: str
     session_name: str | None = None
     # Roster display NAMES only (UUID-free) so the client can compute the
@@ -568,7 +551,7 @@ async def _notify_host_participant_list():
     """Push the roster to the host, and the UUID-free names to all participants.
 
     The host payload keeps UUIDs (host is trusted) and goes out on every roster
-    change (join / rename / activity / avatar / location). The participant
+    change (join / rename / activity / location). The participant
     names broadcast + attendees.md regen ride the same hook but only fire when
     the set of names actually changed (join / rename), not on heartbeats.
     """
@@ -597,10 +580,9 @@ router = APIRouter(prefix="/api/participant", tags=["participant"])
 
 
 def _build_mini_state() -> SimpleNamespace:
-    """Build an AppState-like facade from our local cache for avatar/name functions.
+    """Build an AppState-like facade from our local cache for the name functions.
 
-    The core.state functions (assign_avatar, refresh_avatar, assign_conference_name)
-    expect an object with participant_names, participant_avatars, participants, etc.
+    assign_conference_name expects an object with participant_names, participants, etc.
     We use SimpleNamespace to avoid depending on AppState.__init__.
 
     Note: `participants` is populated from `participant_names.keys()` so that
@@ -610,27 +592,11 @@ def _build_mini_state() -> SimpleNamespace:
     ps = participant_state
     return SimpleNamespace(
         participant_names=ps.participant_names,
-        participant_avatars=ps.participant_avatars,
         participants={
             uid: None for uid in ps.participant_names
         },  # fake WS entries for name pool checks
         mode=ps.mode,
     )
-
-
-def _pick_random_available_avatar(pid: str) -> str:
-    """Pick a random avatar, preferring ones unused by other participants in session."""
-    ps = participant_state
-    taken_by_others = {
-        avatar
-        for uid, avatar in ps.participant_avatars.items()
-        if uid != pid and not uid.startswith("__")
-    }
-    all_avatars = [get_avatar_filename(name) for name in LOTR_NAMES]
-    available = [avatar for avatar in all_avatars if avatar not in taken_by_others]
-    if not available:
-        available = all_avatars
-    return random.choice(available)
 
 
 @router.post("/rejoin", response_model=RegisterResponse)
@@ -644,15 +610,12 @@ async def rejoin_participant(request: Request):
     if pid not in ps.participant_names:
         return JSONResponse({"error": "Participant not found in current session"}, status_code=404)
 
-    return RegisterResponse(
-        name=ps.participant_names[pid],
-        avatar=ps.participant_avatars.get(pid, ""),
-    )
+    return RegisterResponse(name=ps.participant_names[pid])
 
 
 @router.post("/register", response_model=RegisterResponse)
 async def register_participant(request: Request, body: RegisterRequest):
-    """Register participant — assign name+avatar. Idempotent for returning participants."""
+    """Register participant — assign a name. Idempotent for returning participants."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
@@ -667,10 +630,7 @@ async def register_participant(request: Request, body: RegisterRequest):
         if pid in ps.trainer_pids and ps.participant_names[pid] != RESERVED_TRAINER_NAME:
             ps.participant_names[pid] = RESERVED_TRAINER_NAME
             ps.anonymous_pids.discard(pid)
-        return RegisterResponse(
-            name=ps.participant_names[pid],
-            avatar=ps.participant_avatars.get(pid, ""),
-        )
+        return RegisterResponse(name=ps.participant_names[pid])
 
     # New participant — assign identity
     raw_name: str
@@ -708,43 +668,11 @@ async def register_participant(request: Request, body: RegisterRequest):
     else:
         # Workshop mode: random LOTR name → anonymous (no typed name).
         ps.anonymous_pids.add(pid)
-        # random LOTR name while trying to keep name/avatar in sync
         taken_names = set(ps.participant_names.values())
-        taken_avatars = {
-            a
-            for uid, a in ps.participant_avatars.items()
-            if uid != pid and not uid.startswith("__")
-        }
-        sync_candidates = [
-            name
-            for name in LOTR_NAMES
-            if name not in taken_names and get_avatar_filename(name) not in taken_avatars
-        ]
-        if sync_candidates:
-            raw_name = random.choice(sync_candidates)
-        else:
-            remaining = [name for name in LOTR_NAMES if name not in taken_names]
-            raw_name = random.choice(remaining) if remaining else f"Guest-{secrets.token_hex(3)}"
+        remaining = [name for name in LOTR_NAMES if name not in taken_names]
+        raw_name = random.choice(remaining) if remaining else f"Guest-{secrets.token_hex(3)}"
 
     ps.participant_names[pid] = raw_name
-
-    # Avatar rules:
-    # - explicit name path: random available avatar across session participants
-    # - random workshop path: keep name/avatar synced when the chosen LOTR avatar is available
-    if explicit_name:
-        avatar = _pick_random_available_avatar(pid)
-    else:
-        mapped_avatar = get_avatar_filename(raw_name) if raw_name in LOTR_NAMES else None
-        taken_by_others = {
-            a
-            for uid, a in ps.participant_avatars.items()
-            if uid != pid and not uid.startswith("__")
-        }
-        if mapped_avatar and mapped_avatar not in taken_by_others:
-            avatar = mapped_avatar
-        else:
-            avatar = _pick_random_available_avatar(pid)
-    ps.participant_avatars[pid] = avatar
 
     # Initialize score
     ps.scores.setdefault(pid, 0)
@@ -768,7 +696,7 @@ async def register_participant(request: Request, body: RegisterRequest):
 
     await _notify_host_participant_list()
 
-    return RegisterResponse(name=raw_name, avatar=avatar, name_conflict=name_conflict)
+    return RegisterResponse(name=raw_name, name_conflict=name_conflict)
 
 
 @router.put("/name", response_model=RenameResponse)
@@ -842,28 +770,6 @@ async def report_activity(request: Request, body: ActivityReportRequest):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/roll-avatar", response_model=AvatarResponse)
-async def roll_avatar_endpoint(request: Request, body: AvatarRequest):
-    """Re-roll avatar (conference mode only)."""
-    pid = request.headers.get("x-participant-id")
-    if not pid:
-        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
-
-    rejected = set(body.rejected)
-
-    fake_state = _build_mini_state()
-    new_avatar = _refresh_avatar_logic(fake_state, pid, rejected)  # type: ignore[arg-type]
-
-    if not new_avatar:
-        return JSONResponse({"error": "No avatar available"}, status_code=409)
-
-    # Sync back to cache
-    participant_state.participant_avatars[pid] = new_avatar
-    await _notify_host_participant_list()
-
-    return AvatarResponse(avatar=new_avatar)
-
-
 @router.put("/location", status_code=204)
 async def set_location(request: Request, body: LocationRequest):
     """Store participant city/timezone."""
@@ -919,7 +825,6 @@ async def get_participant_state(request: Request):
         # Opaque token that keys this participant in the scores_updated broadcast.
         "my_score_token": _score_token(pid),
         "my_name": ps.participant_names.get(pid, ""),
-        "my_avatar": ps.participant_avatars.get(pid, ""),
         "current_activity": ps.current_activity,
         "session_name": get_active_session_name(),
         # Roster display names only (UUID-free) — feeds the duplicate indicator.

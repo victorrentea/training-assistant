@@ -108,7 +108,6 @@ def purge_participant(pid: str) -> PurgeReport:
 
     # ── Identity & roster ────────────────────────────────────────────────────
     drop("name", ps.participant_names)
-    drop("avatar", ps.participant_avatars)
     drop("universe", ps.participant_universes)
     drop("anonymous_flag", ps.anonymous_pids)
     drop("trainer_flag", ps.trainer_pids)

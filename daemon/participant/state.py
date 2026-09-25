@@ -32,7 +32,6 @@ class ParticipantState:
     def __init__(self):
         self._lock = threading.Lock()
         self.participant_names: dict[str, str] = {}
-        self.participant_avatars: dict[str, str] = {}
         self.participant_universes: dict[str, str] = {}
         # Explicit anonymity signal: pids that joined via the auto-assign path
         # (empty/blank name → fictional-pool name) and have NOT since typed a
@@ -132,7 +131,6 @@ class ParticipantState:
             participants = data.get("participants")
             if isinstance(participants, dict):
                 self.participant_names.clear()
-                self.participant_avatars.clear()
                 self.online_participants.clear()
                 self.scores.clear()
                 self.locations.clear()
@@ -145,9 +143,6 @@ class ParticipantState:
                     name = raw.get("name")
                     if isinstance(name, str):
                         self.participant_names[str(pid)] = name
-                    avatar = raw.get("avatar")
-                    if isinstance(avatar, str):
-                        self.participant_avatars[str(pid)] = avatar
                     score = raw.get("score")
                     if isinstance(score, (int, float)):
                         self.scores[str(pid)] = int(score)
@@ -169,9 +164,6 @@ class ParticipantState:
                 if "participant_names" in data:
                     self.participant_names.clear()
                     self.participant_names.update(data["participant_names"])
-                if "participant_avatars" in data:
-                    self.participant_avatars.clear()
-                    self.participant_avatars.update(data["participant_avatars"])
                 if "online_participants" in data and isinstance(data["online_participants"], (list, set, tuple)):
                     self.online_participants.clear()
                     self.online_participants.update(str(pid) for pid in data["online_participants"])
@@ -223,7 +215,6 @@ class ParticipantState:
         with self._lock:
             return {
                 "participant_names": dict(self.participant_names),
-                "participant_avatars": dict(self.participant_avatars),
                 "online_participants": sorted(self.online_participants),
                 "scores": dict(self.scores),
                 "locations": dict(self.locations),
@@ -267,7 +258,6 @@ class ParticipantState:
         """Reset participant-related runtime state for a fresh session."""
         with self._lock:
             self.participant_names.clear()
-            self.participant_avatars.clear()
             self.participant_universes.clear()
             self.anonymous_pids.clear()
             self.trainer_pids.clear()

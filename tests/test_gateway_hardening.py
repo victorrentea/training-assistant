@@ -77,7 +77,6 @@ def _populate_session_caches() -> None:
     state.participant_history = {"u1"}
     state.participant_ips = {"u1": "1.2.3.4"}
     state.participant_names = {"u1": "Alice"}
-    state.participant_avatars = {"u1": "avatar"}
 
 
 def _assert_caches_cleared() -> None:
@@ -88,7 +87,6 @@ def _assert_caches_cleared() -> None:
     assert state.participant_history == set()
     assert state.participant_ips == {}
     assert state.participant_names == {}
-    assert state.participant_avatars == {}
 
 
 # ---------------------------------------------------------------------------

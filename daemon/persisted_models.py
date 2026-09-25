@@ -39,7 +39,6 @@ class PersistedParticipant(PersistedModel):
     """Participant identity persisted in session snapshots."""
 
     name: str | None = None
-    avatar: str | None = None
     score: int | float | None = None
     location: str | None = None
     engagement: dict[str, ViewEngagement] = Field(default_factory=dict)
@@ -139,7 +138,6 @@ class PersistedSessionState(PersistedModel):
     participants: dict[str, PersistedParticipant] = Field(default_factory=dict, description="participant_uuid → identity/score")
     # Legacy split maps: accepted on read, omitted on write.
     participant_names: dict[str, str] = Field(default_factory=dict, exclude=True)
-    participant_avatars: dict[str, str] = Field(default_factory=dict, exclude=True)
     participant_universes: dict[str, str] = Field(default_factory=dict, exclude=True)
     scores: dict[str, int | float] = Field(default_factory=dict, exclude=True)
     locations: dict[str, str] = Field(default_factory=dict, exclude=True)
@@ -224,6 +222,9 @@ class PersistedSessionState(PersistedModel):
         data = dict(value)
         data.pop("summary_points", None)
         data.pop("leaderboard_active", None)
+        # Avatars were removed; extra="allow" would otherwise carry old files'
+        # avatar data into every future save.
+        data.pop("participant_avatars", None)
 
         # Legacy current_activity migration: "poll" → "quiz".
         if data.get("current_activity") == "poll":
@@ -238,11 +239,10 @@ class PersistedSessionState(PersistedModel):
                     participants[pid_str] = entry.model_dump(mode="json", exclude_unset=True)
                 elif isinstance(entry, dict):
                     participants[pid_str] = dict(entry)
+                participants.get(pid_str, {}).pop("avatar", None)
 
         _names_raw = data.get("participant_names")
         names: dict = _names_raw if isinstance(_names_raw, dict) else {}
-        _avatars_raw = data.get("participant_avatars")
-        avatars: dict = _avatars_raw if isinstance(_avatars_raw, dict) else {}
         _scores_raw = data.get("scores")
         scores: dict = _scores_raw if isinstance(_scores_raw, dict) else {}
         _locations_raw = data.get("locations")
@@ -250,7 +250,7 @@ class PersistedSessionState(PersistedModel):
         _engagement_raw = data.get("engagement")
         engagement_map: dict = _engagement_raw if isinstance(_engagement_raw, dict) else {}
 
-        all_ids = set(participants) | {str(pid) for pid in names} | {str(pid) for pid in avatars}
+        all_ids = set(participants) | {str(pid) for pid in names}
         all_ids |= {str(pid) for pid in scores} | {str(pid) for pid in locations}
         all_ids |= {str(pid) for pid in engagement_map}
         for pid in all_ids:
@@ -261,10 +261,6 @@ class PersistedSessionState(PersistedModel):
             name = names.get(pid)
             if isinstance(name, str) and name:
                 row.setdefault("name", name)
-
-            avatar = avatars.get(pid)
-            if isinstance(avatar, str) and avatar:
-                row.setdefault("avatar", avatar)
 
             score = scores.get(pid)
             if isinstance(score, (int, float)):

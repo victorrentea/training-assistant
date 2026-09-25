@@ -17,12 +17,17 @@ class TestUploadStatic:
         assert data["size"] == len(content)
 
     def test_upload_subdirectory_file(self, server_url):
-        content = b"/* avatar css */"
+        content = b"/* nested css */"
         resp = api(server_url, "post", "/internal/upload-static", json={
-            "path": "avatars/test-avatar.css",
+            "path": "css/nested-test.css",
             "content_b64": base64.b64encode(content).decode(),
         })
-        assert resp.status_code == 200
+        try:
+            assert resp.status_code == 200
+        finally:
+            # The endpoint writes into the repo's static/ folder; the previous
+            # fixture file of this test ended up committed.
+            api(server_url, "post", "/internal/delete-static", json={"path": "css/nested-test.css"})
 
     def test_upload_rejects_path_traversal(self, server_url):
         resp = api(server_url, "post", "/internal/upload-static", json={

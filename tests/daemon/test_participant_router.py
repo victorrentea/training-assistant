@@ -7,7 +7,6 @@ import pytest
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from daemon.participant.names import get_avatar_filename
 from daemon.participant.router import router
 from daemon.participant.state import ParticipantState
 
@@ -48,26 +47,36 @@ def client_with_writeback_header(fresh_state):
 
 
 class TestRegister:
-    def test_new_participant_gets_name_and_avatar(self, client, fresh_state):
+    def test_new_participant_gets_a_name_and_no_avatar(self, client, fresh_state):
         resp = client.post(
             "/api/participant/register", json={}, headers={"X-Participant-ID": "uuid1"}
         )
         assert resp.status_code == 200
         data = resp.json()
         assert data["name"]  # non-empty auto-assigned LOTR name
-        assert data["avatar"]  # non-empty
+        assert "avatar" not in data  # avatars were removed from the product
         assert fresh_state.participant_names["uuid1"] == data["name"]
 
     def test_returning_participant_gets_same_identity(self, client, fresh_state):
         fresh_state.participant_names["uuid1"] = "Bob"
-        fresh_state.participant_avatars["uuid1"] = "letter:BO:#abc"
         resp = client.post(
             "/api/participant/register", json={}, headers={"X-Participant-ID": "uuid1"}
         )
         assert resp.status_code == 200
         data = resp.json()
         assert data["name"] == "Bob"
-        assert data["avatar"] == "letter:BO:#abc"
+
+    def test_anonymous_joiners_get_distinct_lotr_names(self, client, fresh_state):
+        from daemon.participant.names import LOTR_NAMES
+
+        names = [
+            client.post(
+                "/api/participant/register", json={}, headers={"X-Participant-ID": f"anon{i}"}
+            ).json()["name"]
+            for i in range(3)
+        ]
+        assert len(set(names)) == 3
+        assert all(name in LOTR_NAMES for name in names)
 
     def test_two_participants_get_different_names(self, client, fresh_state):
         resp1 = client.post(
@@ -99,13 +108,11 @@ class TestRegister:
         assert resp.status_code == 200
         data = resp.json()
         assert data["name"] == "Alice"
-        assert data["avatar"]
         assert fresh_state.participant_names["uuid-explicit"] == "Alice"
 
     def test_explicit_name_duplicate_is_accepted_with_conflict_flag(self, client, fresh_state):
         """Duplicate names are NEVER blocked: register succeeds with name_conflict=true."""
         fresh_state.participant_names["uuid1"] = "Alice"
-        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
 
         resp = client.post(
             "/api/participant/register",
@@ -141,7 +148,6 @@ class TestRegister:
 
     def test_returning_participant_register_ignores_new_name(self, client, fresh_state):
         fresh_state.participant_names["uuid1"] = "Persisted Name"
-        fresh_state.participant_avatars["uuid1"] = "persisted-avatar.png"
 
         resp = client.post(
             "/api/participant/register",
@@ -151,41 +157,16 @@ class TestRegister:
         assert resp.status_code == 200
         data = resp.json()
         assert data["name"] == "Persisted Name"
-        assert data["avatar"] == "persisted-avatar.png"
-
-    def test_explicit_name_gets_available_avatar_not_used_by_others(self, client, fresh_state):
-        fresh_state.participant_names["uuid1"] = "Gandalf"
-        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
-
-        resp = client.post(
-            "/api/participant/register",
-            json={"name": "Alice"},
-            headers={"X-Participant-ID": "uuid2"},
-        )
-        assert resp.status_code == 200
-        assert resp.json()["avatar"] != "gandalf.png"
-
-    def test_random_register_keeps_name_avatar_in_sync_when_available(self, client, fresh_state):
-        resp = client.post(
-            "/api/participant/register",
-            json={},
-            headers={"X-Participant-ID": "uuid-random"},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["avatar"] == get_avatar_filename(data["name"])
 
 
 class TestRejoin:
     def test_rejoin_returns_existing_identity(self, client, fresh_state):
         fresh_state.participant_names["uuid1"] = "Bob"
-        fresh_state.participant_avatars["uuid1"] = "letter:BO:#abc"
 
         resp = client.post("/api/participant/rejoin", headers={"X-Participant-ID": "uuid1"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["name"] == "Bob"
-        assert data["avatar"] == "letter:BO:#abc"
 
     def test_rejoin_unknown_uuid_returns_404(self, client, fresh_state):
         resp = client.post("/api/participant/rejoin", headers={"X-Participant-ID": "missing"})
@@ -196,7 +177,6 @@ class TestRename:
     def test_rename_updates_name(self, client, fresh_state):
         # Register first
         fresh_state.participant_names["uuid1"] = "Gandalf"
-        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
         resp = client.put(
             "/api/participant/name",
             json={"name": "CustomName"},
@@ -240,19 +220,6 @@ class TestRename:
     def test_missing_participant_id_returns_400(self, client):
         resp = client.put("/api/participant/name", json={"name": "Alice"})
         assert resp.status_code == 400
-
-
-class TestRefreshAvatar:
-    def test_refresh_returns_new_avatar(self, client, fresh_state):
-        fresh_state.participant_avatars["uuid1"] = "letter:AB:#123"
-        resp = client.post(
-            "/api/participant/roll-avatar",
-            json={"rejected": []},
-            headers={"X-Participant-ID": "uuid1"},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["avatar"]  # non-empty
 
 
 class TestSetLocation:
@@ -343,23 +310,9 @@ class TestNoParticipantWriteBackEvents:
         self, client_with_writeback_header, fresh_state
     ):
         fresh_state.participant_names["uuid1"] = "Gandalf"
-        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
         resp = client_with_writeback_header.put(
             "/api/participant/name",
             json={"name": "CustomName"},
-            headers={"X-Participant-ID": "uuid1"},
-        )
-        assert resp.status_code == 200
-        assert "X-Write-Back-Events" not in resp.headers
-
-    def test_roll_avatar_does_not_emit_write_back_events(
-        self, client_with_writeback_header, fresh_state
-    ):
-        fresh_state.participant_names["uuid1"] = "Gandalf"
-        fresh_state.participant_avatars["uuid1"] = "gandalf.png"
-        resp = client_with_writeback_header.post(
-            "/api/participant/roll-avatar",
-            json={"rejected": []},
             headers={"X-Participant-ID": "uuid1"},
         )
         assert resp.status_code == 200
@@ -421,3 +374,4 @@ class TestActivity:
             headers={"X-Participant-ID": "u1"},
         )
         assert "bogus" not in fresh_state.engagement.get("u1", {})
+

@@ -23,7 +23,7 @@ paths:
       tags:
       - participant
       summary: Register Participant
-      description: Register participant — assign name+avatar. Idempotent for returning
+      description: Register participant — assign a name. Idempotent for returning
         participants.
       operationId: register_participant_api_participant_register_post
       requestBody:
@@ -87,27 +87,6 @@ paths:
       responses:
         '204':
           description: Successful Response
-      x-feature: identity
-  /api/participant/roll-avatar:
-    post:
-      tags:
-      - participant
-      summary: Roll Avatar Endpoint
-      description: Re-roll avatar (conference mode only).
-      operationId: roll_avatar_endpoint_api_participant_roll_avatar_post
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AvatarRequest'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AvatarResponse'
       x-feature: identity
   /api/participant/location:
     put:
@@ -2003,25 +1982,6 @@ components:
       required:
       - attention_enabled
       title: AttentionGlobalStateResponse
-    AvatarRequest:
-      properties:
-        rejected:
-          items:
-            type: string
-          type: array
-          title: Rejected
-          default: []
-      type: object
-      title: AvatarRequest
-    AvatarResponse:
-      properties:
-        avatar:
-          type: string
-          title: Avatar
-      type: object
-      required:
-      - avatar
-      title: AvatarResponse
     BugReportDiagnostics:
       properties:
         view:
@@ -2905,9 +2865,6 @@ components:
           type: string
           title: Location Country
           default: ''
-        avatar:
-          type: string
-          title: Avatar
         paste_texts:
           items:
             $ref: '#/components/schemas/PasteEntry'
@@ -2941,7 +2898,6 @@ components:
       - name
       - score
       - location
-      - avatar
       title: HostParticipant
     HostQAQuestion:
       properties:
@@ -2957,9 +2913,6 @@ components:
         author_uuid:
           type: string
           title: Author Uuid
-        author_avatar:
-          type: string
-          title: Author Avatar
         upvote_count:
           type: integer
           title: Upvote Count
@@ -2980,7 +2933,6 @@ components:
       - text
       - author
       - author_uuid
-      - author_avatar
       - upvote_count
       - upvoters
       - answered
@@ -3285,21 +3237,6 @@ components:
         score:
           type: integer
           title: Score
-        avatar:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Avatar
-        letter:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Letter
-        color:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Color
         universe:
           anyOf:
           - type: string
@@ -3385,9 +3322,6 @@ components:
         my_name:
           type: string
           title: My Name
-        my_avatar:
-          type: string
-          title: My Avatar
         current_activity:
           type: string
           title: Current Activity
@@ -3526,7 +3460,6 @@ components:
       - my_score
       - my_score_token
       - my_name
-      - my_avatar
       - current_activity
       - wordcloud
       - qa_questions
@@ -3839,9 +3772,6 @@ components:
         name:
           type: string
           title: Name
-        avatar:
-          type: string
-          title: Avatar
         name_conflict:
           type: boolean
           title: Name Conflict
@@ -3849,7 +3779,6 @@ components:
       type: object
       required:
       - name
-      - avatar
       title: RegisterResponse
     RenameRequest:
       properties:
