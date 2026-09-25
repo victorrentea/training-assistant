@@ -49,6 +49,7 @@ jobs:
               tests/features/quiz/test_e2e.py
               tests/features/scoring/test_e2e.py
               tests/e2e/test_participant_escape.py
+              tests/e2e/test_slides_follow_first_connect.py
 
     steps:
       - uses: actions/checkout@v4

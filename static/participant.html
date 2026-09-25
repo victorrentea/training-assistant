@@ -1449,6 +1449,10 @@ var PdfCache = (function() {
     }
   };
 })();
+// The pdf.js module below comes from a CDN and, being a module, runs only after the
+// page has parsed. On a cold cache the boot sequence can reach selectTopic() first,
+// find window.loadPdf undefined and silently open nothing — so it awaits this.
+window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerReady = resolve; });
 </script>
 <script type="module">
   import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
@@ -1464,7 +1468,9 @@ var PdfCache = (function() {
   };
   window.Slides = Slides; // exposed so non-module script (triggers) can read state
 
-  async function renderAllPagesInto(container, localPdfDoc, scale) {
+  // onPageRendered(i), if given, runs as soon as page i is in the DOM — before the
+  // rest of the deck, which on a big deck takes many seconds.
+  async function renderAllPagesInto(container, localPdfDoc, scale, onPageRendered) {
     container.replaceChildren();
     const numPages = localPdfDoc.numPages;
     for (let i = 1; i <= numPages; i++) {
@@ -1552,6 +1558,7 @@ var PdfCache = (function() {
           annLayer.appendChild(link);
         }
       }
+      if (onPageRendered) onPageRendered(i);
     }
     updatePageInfo();
     updateLinkCount();
@@ -1937,18 +1944,36 @@ var PdfCache = (function() {
       Slides.front.pdfDoc = newDoc;
       Slides.front.slug = slug || null;
       Slides.front.downloadedAt  = downloadedAt || null;
-      await renderAllPagesInto(Slides.front.el, newDoc, Slides.scale);
-      var page = (targetPage && targetPage > 1) ? targetPage : 1;
-      if (page > 1) {
+      // Land on the target page as soon as it is rendered, not after the whole deck:
+      // on a big deck the participant would otherwise sit on slide 1 for seconds.
+      // targetPage may be a getter (following the host) — re-read, so a slide the
+      // host shows during the render is not undone by a jump back at the end.
+      var wantedPage = function() {
+        var p = typeof targetPage === 'function' ? targetPage() : targetPage;
+        return Math.max(1, Number(p) || 1);
+      };
+      var landedPage = null;
+      var landOn = function(page) {
         var section = Slides.front.el.querySelector('section[data-page="' + page + '"]');
-        if (section) section.scrollIntoView({ behavior: 'instant', block: 'start' });
-      }
+        if (!section) return;
+        var prevBehavior = Slides.front.el.style.scrollBehavior;
+        Slides.front.el.style.scrollBehavior = 'auto';
+        Slides.front.el.scrollTop = page > 1 ? section.offsetTop : 0;
+        Slides.front.el.style.scrollBehavior = prevBehavior;
+        landedPage = page;
+        if (overlay) overlay.style.display = 'none';
+      };
+      await renderAllPagesInto(Slides.front.el, newDoc, Slides.scale, function(renderedPage) {
+        if (landedPage === null && renderedPage >= wantedPage()) landOn(wantedPage());
+      });
+      if (wantedPage() !== landedPage) landOn(wantedPage());
     } catch(e) {
       console.error('PDF load error', e);
     } finally {
       if (overlay) overlay.style.display = 'none';
     }
   };
+  window._markPdfViewerReady();
 </script>
 <script>
 var ZOOM_KEY = 'participant:contentZoom';
@@ -2290,7 +2315,7 @@ async function _applyHostSlideFollow(slidesCurrent) {
   var targetPage = _getHostCurrentPage(slidesCurrent);
   var topicEl = document.querySelector('.topic-item[data-slide-id="' + targetSlide._id + '"]');
   if (_activeSlideId !== targetSlide._id) {
-    await selectTopic(topicEl || document.querySelector('.topic-item'), null, targetSlide, targetPage);
+    await selectTopic(topicEl || document.querySelector('.topic-item'), null, targetSlide, _hostPageGetter(targetSlide.slug, targetPage));
     return;
   }
   var currentPage = _getCurrentSlidesPage();
@@ -2298,6 +2323,17 @@ async function _applyHostSlideFollow(slidesCurrent) {
   if (!_scrollSlidesToPage(targetPage)) {
     setTimeout(function() { _scrollSlidesToPage(targetPage); }, 200);
   }
+}
+// Target page for a deck load started to follow the host. Re-read while the deck
+// loads, so a slide the host shows meanwhile wins over the page the load started
+// with; once the host is on another deck or follow is unticked, keep that page.
+function _hostPageGetter(slug, startPage) {
+  return function() {
+    if (_isSlidesFollowEnabled() && _hostSlidesCurrent && _hostSlidesCurrent.slug === slug) {
+      return _getHostCurrentPage(_hostSlidesCurrent);
+    }
+    return startPage;
+  };
 }
 function _onIncomingHostSlidesCurrent(slidesCurrent) {
   _hostSlidesCurrent = slidesCurrent || null;
@@ -3398,11 +3434,16 @@ async function selectTopic(el, event, slide, targetPageOverride) {
     if (dlBtn) { dlBtn.href = dlUrl; dlBtn.setAttribute('download', slide.name || ''); }
     var downloadedAt = (_slidesCacheStatus[slide.slug] || {}).downloaded_at || null;
     var storedPage = slide.slug ? parseInt(localStorage.getItem('workshop_slide_page:' + slide.slug) || '1', 10) : 1;
-    var targetPage = targetPageOverride || (storedPage > 1 ? storedPage : 1);
+    // targetPageOverride may be a getter (see _hostPageGetter): re-read until the
+    // deck is on screen, so a host slide change during the load is not lost.
+    var getTargetPage = typeof targetPageOverride === 'function' ? targetPageOverride : null;
+    var targetPage = (getTargetPage ? getTargetPage() : targetPageOverride) || (storedPage > 1 ? storedPage : 1);
+    if (!getTargetPage) getTargetPage = function() { return targetPage; };
     _activeSlideId = slide._id || null;
     _activeSlideSlug = slide.slug || null;
     if (_activeSlideSlug) LS.setActiveSlide(_activeSlideSlug);
 
+    await window.pdfViewerReady;
     var frontReady = !!(window.Slides && window.Slides.front && window.Slides.front.pdfDoc);
     if (frontReady && window.prefetchInto) {
       // Defensive: if a concurrent first-time load made the front ready during our
@@ -3412,16 +3453,15 @@ async function selectTopic(el, event, slide, targetPageOverride) {
       // Double-buffer path: old slide stays visible, new loads in back.
       // We DO await so callers (_applyHostSlideFollow, _openSlideFromHistory)
       // that chain follow-up actions (like _scrollSlidesToPage) see the swap done.
-      var capturedPage = targetPage;
       await window.prefetchInto({
         url: slide.url,
         slug: slide.slug,
         downloadedAt: downloadedAt,
-        getPage: function() { return capturedPage; },
+        getPage: getTargetPage,
       });
     } else if (window.loadPdf) {
       // First-time path: centered overlay + render into front directly.
-      await window.loadPdf(slide.url, slide.slug, downloadedAt, targetPage);
+      await window.loadPdf(slide.url, slide.slug, downloadedAt, getTargetPage);
     }
   }
 }
