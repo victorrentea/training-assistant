@@ -50,6 +50,7 @@ from daemon.ws_messages import (
     ScoresUpdatedMsg,
     SummaryScrollPosition,
 )
+from daemon.wiki.publisher import wiki_updated_at
 from daemon.ws_publish import broadcast, notify_host
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,7 @@ _KNOWN_VIEWS = {
     "activity",
     "slides",
     "summary",
+    "wiki",
     "notes",
     "agenda",
     "report-bug",
@@ -323,6 +325,7 @@ class ParticipantStateResponse(BaseModel):
     talk_presentation_slug: str | None = None
     notes_updated_at: str | None = None
     summary_updated_at: str | None = None
+    wiki_updated_at: str | None = None
     summary_scroll: SummaryScrollPosition | None = None
     slides_history_count: int
     files_count: int = 0
@@ -492,12 +495,22 @@ def _participant_display_names() -> list[str]:
     identity is their X-Participant-ID UUID; leaking it enables impersonation.
     Reads the name dict directly (same filtering as the host enumerator: skip
     internal __ ids and blank names) without building the full host payload.
+
+    The trainer appears once, however many browsers claimed trainer: every claim
+    gets the same reserved name, and listing it twice made the trainer's own page
+    flag "duplicate name".
     """
-    return [
-        name
-        for pid, name in participant_state.participant_names.items()
-        if not pid.startswith("__") and str(name).strip()
-    ]
+    names: list[str] = []
+    trainer_listed = False
+    for pid, name in participant_state.participant_names.items():
+        if pid.startswith("__") or not str(name).strip():
+            continue
+        if pid in participant_state.trainer_pids:
+            if trainer_listed:
+                continue
+            trainer_listed = True
+        names.append(name)
+    return names
 
 
 def _is_name_taken(pid: str, name: str) -> bool:
@@ -510,8 +523,12 @@ def _is_name_taken(pid: str, name: str) -> bool:
     target = normalize_for_dedup(name)
     if not target:
         return False
+    trainers = participant_state.trainer_pids
     return any(
-        other_pid != pid and normalize_for_dedup(other_name) == target
+        other_pid != pid
+        # Two trainer claims (two browsers on the trainer's machine) are one person.
+        and not (pid in trainers and other_pid in trainers)
+        and normalize_for_dedup(other_name) == target
         for other_pid, other_name in participant_state.participant_names.items()
     )
 
@@ -931,6 +948,8 @@ async def get_participant_state(request: Request):
         # Summary / notes (timestamps only — full content fetched on demand)
         "notes_updated_at": notes_updated_at,
         "summary_updated_at": summary["updated_at"],
+        # Session wiki (Quartz site on Railway) — the timestamp is all the page needs
+        "wiki_updated_at": wiki_updated_at(),
         # Where the host is reading, so a follower lands there on (re)connect
         "summary_scroll": misc_state.summary_scroll,
         "slides_history_count": len(misc_state.slides_viewed),

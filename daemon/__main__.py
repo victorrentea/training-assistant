@@ -29,6 +29,9 @@ from daemon.lock import (
     write_lock,
 )
 from daemon.materials.upload import handle_build_materials_zip as _handle_materials_zip
+from daemon.wiki.publisher import WikiPublisher
+from daemon.wiki.publisher import install as install_wiki_publisher
+from daemon.wiki.publisher import uploader as wiki_uploader
 from daemon.session import pending as session_pending
 from daemon.session import state as session_shared_state
 from daemon.session_state import (
@@ -1125,6 +1128,17 @@ def run() -> None:
     # Re-probe Railway slide cache on every (re)connect (e.g. after Railway redeploy)
     ws_client.on_connect(slides_runner.probe_railway_cache)
 
+    # Session wiki: the summarizer's wiki/ vault, built with Quartz and served by
+    # Railway. Rebuilt only when the vault changes; re-sent (not rebuilt) on reconnect.
+    def _on_wiki_change(updated_at: str | None) -> None:
+        from daemon.ws_messages import WikiUpdatedMsg
+        from daemon.ws_publish import broadcast
+        broadcast(WikiUpdatedMsg(updated_at=updated_at))
+
+    wiki_publisher = WikiPublisher(upload=wiki_uploader(config), on_change=_on_wiki_change)
+    install_wiki_publisher(wiki_publisher)
+    ws_client.on_connect(wiki_publisher.invalidate)
+
     ws_client.start()
 
     # ── Start local host panel server ──
@@ -1490,6 +1504,7 @@ def run() -> None:
                     # picked up without a daemon restart (mirrors notes/summary handling).
                     misc_state.agenda_docx_path = _agenda_path_from_probe(notes_summary_probe)
                     _broadcast_notes_summary_counts(notes_summary_probe, change_parts, prev_probe)
+                wiki_publisher.tick(_active_session_id, config.session_folder)
 
                 if now - last_persist_poll_at >= 3.0:
                     last_persist_poll_at = now

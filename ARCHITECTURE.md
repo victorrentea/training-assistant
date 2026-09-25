@@ -380,7 +380,13 @@ Rel(effects_client, macos_addons, "Press tile / fetch catalog / ping", "Local HT
    - Every failure path prefers a stale archive over an error, because a participant clicking this button usually has no working alternative; `503` only when nothing was ever built.
    - This is deliberately **not** the `MaterialsMirrorRunner` removed in `dc1228ea`: no background tick, no per-file endpoints, and `materials/` is never mirrored.
 
-8. Participant engagement tracking
+8. Session wiki (Obsidian vault → Quartz site)
+   - The training-summarizer skill writes an Obsidian vault into `<session folder>/wiki/` (entry page `Home.md`). [`daemon/wiki/publisher.py`](daemon/wiki/publisher.py), ticked from the main loop, stats its pages at most every 5s and builds only once the vault changed **and** has been untouched for 20s (the summarizer writes in bursts).
+   - [`daemon/wiki/builder.py`](daemon/wiki/builder.py) runs [Quartz](https://quartz.jzhao.xyz) (open source; installed once by `scripts/setup-quartz.sh` into `~/.cache/training-assistant/quartz`) with the config/layout/CSS in `daemon/wiki/quartz/` plus `patch-graph.py` (Obsidian-look graph). `nice`d, in a background thread, on a temp copy of this session's vault only. `Home.html` is copied over the site root.
+   - The site is zipped and POSTed to `/api/wiki/upload` (host Basic auth). [`railway/features/wiki/router.py`](railway/features/wiki/router.py) unpacks it (zip-slip guarded) into `.server-data/wiki/<session_id>/`, **deleting every other session's site**, and serves it as static files at `/{session_id}/wiki-site/*` behind `require_active_session` — page views never reach the daemon, and a past cohort's link 404s.
+   - A typed `wiki_updated` broadcast (and `wiki_updated_at` in `/state`) shows the participant's **Wiki** menu entry, an iframe onto the site. On a Railway reconnect the daemon re-sends the cached zip instead of rebuilding.
+
+9. Participant engagement tracking
    - The participant page's `Engagement` module accumulates per-view active time / visits / clicks (active = tab visible plus an interaction within 60s) and flushes deltas to `POST /{session_id}/api/participant/activity` (≤ every 30s while active, plus on tab hide/unload) with the `X-Participant-ID` header; Railway proxies these through [`daemon/proxy_handler.py`](daemon/proxy_handler.py) like other `/api/participant/*` calls.
    - [`daemon/participant/router.py`](daemon/participant/router.py) merges the deltas into `ParticipantState.engagement` (uuid -> view -> time/visits/clicks) and stamps ephemeral `last_active_at` / `last_view`, then notifies the host via the existing `_notify_host_participant_list()` (no new WS message type).
    - The 3-second snapshot loop in [`daemon/__main__.py`](daemon/__main__.py) persists cumulative engagement into `PersistedParticipant.engagement` in `session-state.json`; `ParticipantState.sync_from_restore` restores it on session reopen.

@@ -39,7 +39,7 @@ def test_handler_posts_archive(tmp_path, monkeypatch):
         posted["url"] = url
         posted["body"] = body
 
-    monkeypatch.setattr("daemon.materials.upload._post_multipart", _fake_post)
+    monkeypatch.setattr("daemon.materials.upload.post_multipart", _fake_post)
     handle_build_materials_zip({"session_id": "e2etst"}, _config(tmp_path))
 
     assert posted["url"] == "https://interact.example.test/api/materials/zip/upload"
@@ -53,7 +53,7 @@ def test_handler_reports_error_when_folder_missing(tmp_path, monkeypatch):
     def _fake_post(url, body, boundary, config):
         posted["body"] = body
 
-    monkeypatch.setattr("daemon.materials.upload._post_multipart", _fake_post)
+    monkeypatch.setattr("daemon.materials.upload.post_multipart", _fake_post)
     config = _config(tmp_path / "missing")
     handle_build_materials_zip({"session_id": "e2etst"}, config)
 
@@ -71,7 +71,7 @@ def test_handler_reports_error_when_zip_too_large(tmp_path, monkeypatch):
     def _fake_post(url, body, boundary, config):
         posted["body"] = body
 
-    monkeypatch.setattr("daemon.materials.upload._post_multipart", _fake_post)
+    monkeypatch.setattr("daemon.materials.upload.post_multipart", _fake_post)
     handle_build_materials_zip({"session_id": "e2etst"}, _config(tmp_path))
 
     assert b'name="error"' in posted["body"]
@@ -84,7 +84,7 @@ def test_handler_survives_no_session_folder_configured(monkeypatch):
     def _fake_post(url, body, boundary, config):
         posted["body"] = body
 
-    monkeypatch.setattr("daemon.materials.upload._post_multipart", _fake_post)
+    monkeypatch.setattr("daemon.materials.upload.post_multipart", _fake_post)
     config = types.SimpleNamespace(
         session_folder=None,
         server_url="https://interact.example.test",

@@ -42,6 +42,40 @@ paths:
         '422':
           description: Neither a file nor an error field was provided
       x-feature: materials_zip
+  /api/wiki/upload:
+    post:
+      tags:
+      - wiki
+      summary: Publish the session wiki (a static Quartz site built by the daemon)
+      description: >
+        Sent by the daemon whenever the session folder's wiki/ vault has changed and
+        settled (and again, with the cached build, after a Railway reconnect). Replaces
+        the session's site, deletes every other session's, and serves it to participants
+        of the ACTIVE session only at GET /{session_id}/wiki-site/{path}. Zip-slip paths
+        are refused; 40 MB zip / 150 MB unpacked ceiling.
+      operationId: upload_wiki
+      security:
+      - basicAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WikiUploadRequest'
+      responses:
+        '200':
+          description: Site stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiUploadResponse'
+        '400':
+          description: Empty body, not a zip, or an unsafe path inside it
+        '413':
+          description: Zip or unpacked site exceeds the ceiling
+        '422':
+          description: session_id missing or not alphanumeric
+      x-feature: wiki
   /api/slides/upload:
     post:
       tags:
@@ -317,6 +351,29 @@ components:
           description: Stored archive size in bytes.
         filename:
           type: string
+      required:
+      - ok
+    WikiUploadRequest:
+      type: object
+      properties:
+        session_id:
+          type: string
+          description: Active session the site belongs to (alphanumeric).
+        file:
+          type: string
+          format: binary
+          description: Zipped Quartz output folder.
+      required:
+      - session_id
+      - file
+    WikiUploadResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        files:
+          type: integer
+          description: Number of files unpacked.
       required:
       - ok
     UploadSlidePdfRequest:

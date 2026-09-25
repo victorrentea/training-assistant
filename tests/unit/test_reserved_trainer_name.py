@@ -89,3 +89,29 @@ def test_claimed_trainer_may_hold_the_reserved_name():
     )
     assert r.status_code == 200
     assert participant_state.participant_names["trainer"] == RESERVED_TRAINER_NAME
+
+
+def _claim_trainer(pid: str) -> None:
+    participant_state.trainer_pids.add(pid)
+    participant_state.participant_names[pid] = RESERVED_TRAINER_NAME
+
+
+def test_trainer_in_two_browsers_is_not_their_own_duplicate():
+    """Regression: two trainer claims listed the reserved name twice, so the
+    trainer's page flagged "duplicate name" against itself."""
+    from daemon.participant.router import _is_name_taken, _participant_display_names
+
+    _claim_trainer("trainer-tab-1")
+    _claim_trainer("trainer-tab-2")
+    assert _participant_display_names().count(RESERVED_TRAINER_NAME) == 1
+    assert not _is_name_taken("trainer-tab-2", RESERVED_TRAINER_NAME)
+
+
+def test_real_duplicates_are_still_detected():
+    from daemon.participant.router import _is_name_taken, _participant_display_names
+
+    _claim_trainer("trainer-tab-1")
+    participant_state.participant_names["p1"] = "Alice"
+    participant_state.participant_names["p2"] = "Alice"
+    assert _participant_display_names().count("Alice") == 2
+    assert _is_name_taken("p2", "Alice")

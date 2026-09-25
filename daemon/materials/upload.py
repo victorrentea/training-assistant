@@ -58,7 +58,7 @@ def build_multipart(
     return b"".join(chunks), boundary
 
 
-def _post_multipart(url: str, body: bytes, boundary: str, config) -> None:
+def post_multipart(url: str, body: bytes, boundary: str, config) -> None:
     token = base64.b64encode(
         f"{config.host_username}:{config.host_password}".encode()
     ).decode("ascii")
@@ -98,6 +98,6 @@ def handle_build_materials_zip(data: dict, config) -> None:
 
     body, boundary = build_multipart(fields, file_part)
     try:
-        _post_multipart(url, body, boundary, config)
+        post_multipart(url, body, boundary, config)
     except (urllib.error.URLError, OSError) as exc:
         log.error("materials", f"Session zip upload failed: {exc}")

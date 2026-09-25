@@ -132,6 +132,7 @@ _PARTICIPANT_TAB_SLUGS = frozenset(
         "slides",
         "activity",
         "summary",
+        "wiki",
         "notes",
         "agenda",
         "report-bug",

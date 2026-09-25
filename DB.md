@@ -11,6 +11,7 @@ Generated from `daemon/persisted_models.py`.
 
 ```
 active_session_id?: string
+active_since?: string
 log_level?: string
 ```
 

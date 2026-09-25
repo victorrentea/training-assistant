@@ -21,6 +21,7 @@ from railway.features.slides import router as slides
 from railway.features.slides.upload import router as slides_upload_router
 from railway.features.upload import router as upload
 from railway.features.upload.router import public_router as upload_public_router
+from railway.features.wiki import router as wiki
 from railway.features.ws import router as ws
 from railway.features.ws.proxy_bridge import participant_proxy_router
 from railway.features.ws.router import session_router as ws_session_router
@@ -152,6 +153,9 @@ app.include_router(slides.daemon_router, dependencies=[Depends(require_host_auth
 # Daemon-facing materials zip upload (global — host auth is declared on the endpoint)
 app.include_router(materials.router)
 
+# Daemon-facing session wiki upload (global — host auth is declared on the endpoint)
+app.include_router(wiki.router)
+
 # Internal daemon → backend file management endpoints
 app.include_router(internal_router)
 
@@ -210,6 +214,7 @@ session_participant_live = APIRouter(
 session_participant_live.include_router(slides.public_router)     # /api/slides, /api/slides/check/{slug}, /api/slides/download/{slug}
 session_participant_live.include_router(upload_public_router)     # /api/upload (participant file upload)
 session_participant_live.include_router(materials.public_router)  # /api/materials/zip (session content archive)
+session_participant_live.include_router(wiki.public_router)       # /wiki-site/* (session wiki, static Quartz site)
 session_participant_live.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
 
 if os.environ.get("OTEL_TRACES_FILE"):
@@ -279,7 +284,8 @@ async def get_session_status(session_id: str):
 # /{session_id}/{tab} matches any two-segment path, so it must come after every
 # explicit root route and the /static mount above; otherwise it shadows them
 # (e.g. /api/status → session "api", /static/common.css → session "static").
-# Live (active-only) data routes are all /{session_id}/api/* (3-segment) so they
-# never shadow the root routes; register them just before the page catch-all.
+# Live (active-only) data routes are all /{session_id}/api/* or /{session_id}/wiki-site/*
+# (3+ segments) so they never shadow the root routes; register them just before the
+# page catch-all.
 app.include_router(session_participant_live)
 app.include_router(session_participant_pages)

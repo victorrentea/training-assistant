@@ -3477,6 +3477,11 @@ components:
           - type: string
           - type: 'null'
           title: Summary Updated At
+        wiki_updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Wiki Updated At
         summary_scroll:
           anyOf:
           - $ref: '#/components/schemas/SummaryScrollPosition'

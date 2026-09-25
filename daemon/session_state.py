@@ -306,6 +306,7 @@ _VIEW_ACTIVITIES = {
     "activity": "the live activity",
     "slides": "slides",
     "summary": "the summary",
+    "wiki": "the wiki",
     "notes": "notes",
     "agenda": "the agenda",
     "report-bug": "the bug report form",

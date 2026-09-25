@@ -186,6 +186,8 @@ body{visibility:hidden}
 @keyframes slides-nav-pulse{0%,100%{color:var(--color-on-surface-variant,#5e6b70)}50%{color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
 .slides-nav-blink,.summary-nav-blink{animation:slides-nav-pulse 1.2s ease-in-out infinite}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70);font-weight:600}
+/* Tighter than py-2: the menu keeps growing (Wiki), and on a laptop screen it crowded the sidebar. */
+aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .nav-item:hover{color:var(--color-on-surface,#161d1f);background-color:var(--color-surface-container-high,#dde3e5)}
 .nav-active{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important;font-weight:600}
 .nav-active:hover{background-color:var(--color-primary-container,#dfe0ff)!important;color:var(--color-on-primary-container,#3747ac)!important}
@@ -315,7 +317,7 @@ body{visibility:hidden}
            card is where the eye already goes for "me" things. */
         #fx-fire-row{width:100%;text-align:left;background:none;border:none;font:inherit;color:inherit}
         #fx-fire-row:disabled{cursor:not-allowed;opacity:.45}
-        #fx-fire-row .fx-glyph{font-size:22px;line-height:1;flex-shrink:0;display:inline-block;transform-origin:50% 12%}
+        #fx-fire-row .fx-glyph{flex-shrink:0;display:inline-block;transform-origin:50% 12%}
         /* A desk bell rocks about its handle and throws rings outward; both
            halves fire together so a press feels like a press even to someone
            who cannot hear the room. */
@@ -966,6 +968,10 @@ body{visibility:hidden}
 <span class="text-base">Summary</span>
 <span id="summary-badge" class="badge-new" style="display:none"></span>
 </a>
+<a data-nav="wiki" onclick="showView('wiki')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
+<span class="material-symbols-outlined">hub</span>
+<span class="text-base">Wiki</span>
+</a>
 <div id="gdrive-row" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all" style="display:none">
 <a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="flex items-center gap-3 flex-1 cursor-pointer">
 <span class="material-symbols-outlined flex-shrink-0">cloud</span>
@@ -992,7 +998,7 @@ body{visibility:hidden}
 </a>
 <a data-nav="report-bug" onclick="showView('report-bug')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">bug_report</span>
-<span class="text-base">Improve this Tool</span>
+<span class="text-base">Submit bug/feat</span>
 </a>
 <a data-nav="about" onclick="showView('about')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">waving_hand</span>
@@ -1011,7 +1017,7 @@ body{visibility:hidden}
 <button id="fx-fire-row" onclick="fireFx(this)" style="display:none; position:relative"
         class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
   <span class="fx-wave"></span><span class="fx-wave"></span>
-  <span class="fx-glyph">🛎️</span>
+  <span class="fx-glyph material-symbols-outlined">notifications</span>
   <span id="fx-fire-label" class="text-base flex-1">Ring</span>
 </button>
 <hr class="-mx-4 border-outline-variant"/>
@@ -1145,6 +1151,14 @@ body{visibility:hidden}
   <div id="summary-scroll" class="flex-grow overflow-y-auto px-16 pt-12" style="padding-bottom:125px" onscroll="saveScroll('summary',this)">
     <div id="summary-content" class="text-on-surface leading-relaxed prose max-w-none">Loading…</div>
   </div>
+</div>
+<!-- Wiki View: the session's wiki/ vault, built with Quartz and served by Railway -->
+<div id="wiki-view" style="display:none" class="relative h-full flex flex-col">
+  <a id="wiki-open-tab" href="#" target="_blank" rel="noopener" data-tip="Open the wiki in a new tab"
+     class="absolute top-4 right-6 z-20 flex items-center justify-center w-10 h-10 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10 text-on-surface-variant">
+    <span class="material-symbols-outlined" style="font-size:1.25rem">open_in_new</span>
+  </a>
+  <iframe id="wiki-frame" aria-label="Session wiki" class="flex-grow w-full border-0" style="background:transparent"></iframe>
 </div>
 <!-- Files View -->
 <div id="files-view" style="display:none" class="h-full flex flex-col">
@@ -3354,7 +3368,7 @@ function scheduleHideOverflow() {
     el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-1');
   }, 120);
 }
-var VIEWS = ['activity', 'slides', 'summary', 'notes', 'agenda', 'report-bug', 'upload-paste', 'files', 'prompts', 'about'];
+var VIEWS = ['activity', 'slides', 'summary', 'wiki', 'notes', 'agenda', 'report-bug', 'upload-paste', 'files', 'prompts', 'about'];
 var _suppressScrollSave = new Set();
 function saveScroll(name, el) {
   if (_suppressScrollSave.has(name)) return;
@@ -3559,6 +3573,7 @@ function showView(name) {
     if (summaryNavEl) summaryNavEl.classList.remove('summary-nav-blink');
     loadSummary(); _applySummaryBadgeUnread(false);
   }
+  if (name === 'wiki') loadWiki();
   if (name === 'files') { _filesDirty = true; loadFilesMd(); _applyFilesBadgeUnread(false); }
   if (name === 'prompts') { _promptsDirty = true; loadPrompts(); _applyPromptsBadgeUnread(false); }
   VIEWS.forEach(function(v) {
@@ -4263,6 +4278,29 @@ function dismissFeedbackCta() {
   try { localStorage.setItem('feedbackCtaDismissed', url); } catch (e) {}
 }
 
+// ── Session wiki ──
+// The daemon publishes the session's wiki/ vault as a static Quartz site under
+// /<session>/wiki-site/. The iframe is (re)loaded only when the tab is opened and
+// the published version changed, so a republish never yanks a reader's page.
+var _wikiUpdatedAt = null;
+var _wikiLoadedAt = null;
+
+function _wikiUrl() { return '/' + _sessionId + '/wiki-site/'; }
+
+function _applyWiki(updatedAt) {
+  _wikiUpdatedAt = updatedAt || null;
+  document.querySelector('[data-nav="wiki"]').style.display = _wikiUpdatedAt ? '' : 'none';
+  document.getElementById('wiki-open-tab').href = _wikiUrl();
+  var onWiki = document.getElementById('wiki-view').style.display !== 'none';
+  if (!_wikiUpdatedAt && onWiki) showView('activity');
+}
+
+function loadWiki() {
+  if (!_wikiUpdatedAt || _wikiLoadedAt === _wikiUpdatedAt) return;
+  _wikiLoadedAt = _wikiUpdatedAt;
+  document.getElementById('wiki-frame').src = _wikiUrl();
+}
+
 var _zipDownloading = false;
 
 // Downloads the whole session folder as a zip, relayed through Railway.
@@ -4871,6 +4909,7 @@ function _setDuplicateIndicator(isDup) {
       summaryBadge.style.display = 'none';
     }
     summaryBadge.classList.toggle('badge-alert', LS.isSummaryUnread());
+    _applyWiki(state.wiki_updated_at);
     var gdriveNav = document.getElementById('gdrive-nav');
     var gdriveRow = document.getElementById('gdrive-row');
     if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveRow.style.display = ''; }
@@ -5472,6 +5511,7 @@ function _handleWsMessage(msg) {
       break;
     }
     case 'feedback_form_updated': _applyFeedbackUrl(msg.feedback_url); break;
+    case 'wiki_updated': _applyWiki(msg.updated_at); break;
     case 'agenda_updated': {
       document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
       if (msg.has_agenda) {

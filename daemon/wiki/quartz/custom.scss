@@ -1,0 +1,19 @@
+@use "./base.scss";
+
+// Obsidian opens the graph as a full pane, not a small floating card.
+.graph > .global-graph-outer > .global-graph-container {
+  width: 96vw;
+  height: 92vh;
+  border-radius: 8px;
+}
+
+.graph > .graph-outer {
+  height: 300px;
+}
+
+// Dark mode follows the OS, exactly like the participant page around the iframe.
+// The component stays in the layout (its script applies the theme); only its
+// toggle is hidden, so the wiki can never disagree with the page it sits in.
+.darkmode {
+  display: none;
+}

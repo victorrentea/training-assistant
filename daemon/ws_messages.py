@@ -416,6 +416,12 @@ class AgendaUpdatedMsg(BaseModel):
     has_agenda: bool = False  # whether an agenda .docx is available in the session folder
 
 
+class WikiUpdatedMsg(BaseModel):
+    """Participant-only: the session wiki was (re)published, or withdrawn with None."""
+    type: Literal["wiki_updated"] = "wiki_updated"
+    updated_at: str | None = None  # ISO timestamp of the last successful publish
+
+
 class FeedbackFormUpdatedMsg(BaseModel):
     """Participant-only: the end-of-session feedback form link changed.
 
@@ -516,6 +522,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "summary_scroll": SummaryScrollMsg,
     "agenda_updated": AgendaUpdatedMsg,
     "feedback_form_updated": FeedbackFormUpdatedMsg,
+    "wiki_updated": WikiUpdatedMsg,
     # Files
     "files_count_updated": FilesCountUpdatedMsg,
     # Prompts
@@ -611,6 +618,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "summary_scroll": "notes_summary",
     "agenda_updated": "notes_summary",
     "feedback_form_updated": "notes_summary",
+    "wiki_updated": "notes_summary",
     # Files
     "files_count_updated": "files",
     # Prompts
