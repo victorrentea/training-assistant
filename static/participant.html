@@ -4302,15 +4302,20 @@ function loadWiki() {
   _wikiLoadedAt = _wikiUpdatedAt;
   var frame = document.getElementById('wiki-frame');
   // Open on the graph, like Obsidian's graph view: it is the map of the whole
-  // day. Same origin, so we can press Quartz's own global-graph button; its
-  // handler is wired on Quartz's "nav" event, hence the short delay.
+  // day. Same origin, so we can press Quartz's own global-graph button. Quartz
+  // wires that button only after its sidebar graph has rendered (a fetch and a
+  // WebGL init later), so keep pressing until the graph is really open.
   frame.addEventListener('load', function () {
-    setTimeout(function () {
+    var tries = 0;
+    (function openGraph() {
       try {
-        var icon = frame.contentDocument.querySelector('.global-graph-icon');
+        var doc = frame.contentDocument;
+        if (doc.querySelector('.global-graph-outer.active')) return;
+        var icon = doc.querySelector('.global-graph-icon');
         if (icon) icon.click();
-      } catch (e) { /* not reachable: stay on the page */ }
-    }, 300);
+      } catch (e) { return; /* not reachable: stay on the page */ }
+      if (++tries < 30) setTimeout(openGraph, 200);
+    })();
   }, { once: true });
   frame.src = _wikiUrl();
 }
