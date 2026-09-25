@@ -2,24 +2,22 @@ from pathlib import Path
 
 from daemon.session_state import (
     TRANSCRIPTION_DISCLOSURE,
-    TRANSCRIPTION_REASSURANCE,
     create_notes_file,
 )
 
 
-def test_new_notes_file_starts_with_transcription_disclosure(tmp_path: Path):
+def test_new_notes_file_has_name_then_transcription_disclosure(tmp_path: Path):
     folder = tmp_path / "2026-09-15 Clean Code"
     folder.mkdir()
 
     notes = create_notes_file(folder)
 
     lines = notes.read_text(encoding="utf-8").splitlines()
-    assert lines[0] == TRANSCRIPTION_DISCLOSURE
-    assert "transcribed" in lines[0]
-    assert lines[1] == TRANSCRIPTION_REASSURANCE
-    assert "local model" in lines[1]
-    assert "never sent to Claude" in lines[1]
-    assert lines[2] == "2026-09-15 Clean Code - notes.txt"
+    assert lines == [
+        "2026-09-15 Clean Code - notes.txt",
+        "⚠️ This meeting is transcribed using a local model on Victor's machine"
+        " to generate a summary of the content at the end.",
+    ]
 
 
 def test_existing_notes_file_is_not_clobbered(tmp_path: Path):
