@@ -54,7 +54,13 @@ PATCHES = [
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k.
     (".stroke({ alpha: l.alpha, width: 1, color: l.color })",
-     ".stroke({ alpha: l.alpha * 0.6, width: 0.6 / currentTransform.k, color: l.color })"),
+     ".stroke({ alpha: l.alpha * (l.active ? 1 : 0.6), width: 0.6 / currentTransform.k, color: l.color })"),
+    # Hover like Obsidian: the node and its links turn purple, everything else dims.
+    ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
+     'l.color = l.active ? "#8b5cf6" : computedStyleMap["--lightgray"]'),
+    ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
+     """      n.gfx.tint = hoveredNodeId === n.simulationData.id ? "#8b5cf6" : 0xffffff
+      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))"""),
     # Labels stay fully visible at normal zoom and fade out only when zoomed far out.
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
