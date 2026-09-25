@@ -82,10 +82,12 @@ class WikiPublisher:
         """Railway (re)connected and may have lost its copy: re-send the last site.
 
         Re-sends the cached zip rather than rebuilding, so a flaky connection never
-        costs a Quartz build.
+        costs a Quartz build. Also lifts the failure back-off: an upload that failed
+        because Railway was restarting deserves a retry now, not in five minutes.
         """
         with self._lock:
             self._resend = self._payload is not None
+            self._failed = None
 
     def tick(self, session_id: str | None, session_folder: Path | None) -> None:
         now = self._clock()

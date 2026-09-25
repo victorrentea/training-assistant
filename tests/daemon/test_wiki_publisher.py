@@ -204,3 +204,15 @@ def test_missing_quartz_install_says_how_to_fix_it(tmp_path, monkeypatch):
 )
 def test_session_title_drops_the_date(folder, title):
     assert session_title(Path(folder)) == title
+
+
+def test_reconnect_retries_a_publish_that_failed_while_railway_was_down(h):
+    """Regression: the first upload after a push hit Railway mid-redeploy and then
+    sat out the 5-minute back-off although Railway came back seconds later."""
+    h.page()
+    h.fail_build = True
+    h.tick()
+    h.fail_build = False
+    h.publisher.invalidate()
+    h.tick()
+    assert h.builds == ["AI@Rabo"]
