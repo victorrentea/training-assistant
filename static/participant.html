@@ -3573,13 +3573,15 @@ function showView(name) {
     if (summaryNavEl) summaryNavEl.classList.remove('summary-nav-blink');
     loadSummary(); _applySummaryBadgeUnread(false);
   }
-  if (name === 'wiki') loadWiki();
   if (name === 'files') { _filesDirty = true; loadFilesMd(); _applyFilesBadgeUnread(false); }
   if (name === 'prompts') { _promptsDirty = true; loadPrompts(); _applyPromptsBadgeUnread(false); }
   VIEWS.forEach(function(v) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
   });
+  // After the view is visible: Quartz measures its sidebar on load, and inside a
+  // display:none iframe everything measures 0 (the Explorer came up empty).
+  if (name === 'wiki') loadWiki();
   var scrollEl = document.getElementById(name + '-scroll') || document.getElementById(name + '-view');
   var saved = LS.getScroll(name);
   if (saved) scrollEl.scrollTop = parseInt(saved, 10);
@@ -4298,7 +4300,19 @@ function _applyWiki(updatedAt) {
 function loadWiki() {
   if (!_wikiUpdatedAt || _wikiLoadedAt === _wikiUpdatedAt) return;
   _wikiLoadedAt = _wikiUpdatedAt;
-  document.getElementById('wiki-frame').src = _wikiUrl();
+  var frame = document.getElementById('wiki-frame');
+  // Open on the graph, like Obsidian's graph view: it is the map of the whole
+  // day. Same origin, so we can press Quartz's own global-graph button; its
+  // handler is wired on Quartz's "nav" event, hence the short delay.
+  frame.addEventListener('load', function () {
+    setTimeout(function () {
+      try {
+        var icon = frame.contentDocument.querySelector('.global-graph-icon');
+        if (icon) icon.click();
+      } catch (e) { /* not reachable: stay on the page */ }
+    }, 300);
+  }, { once: true });
+  frame.src = _wikiUrl();
 }
 
 var _zipDownloading = false;

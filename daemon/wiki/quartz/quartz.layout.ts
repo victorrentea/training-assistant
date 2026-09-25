@@ -1,6 +1,9 @@
 import { PageLayout, SharedLayout } from "./quartz/cfg"
 import * as Component from "./quartz/components"
 
+// The summarizer's entry page is Home.md; the builder also copies it over the site root.
+const isHome = (slug?: string) => slug === "index" || slug === "Home"
+
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
@@ -16,9 +19,13 @@ export const defaultContentPageLayout: PageLayout = {
   beforeBody: [
     Component.ConditionalRender({
       component: Component.Breadcrumbs(),
-      condition: (page) => page.fileData.slug !== "index",
+      condition: (page) => !isHome(page.fileData.slug),
     }),
-    Component.ArticleTitle(),
+    // Home.md opens with its own H1; Quartz's title on top of it read "Home" twice.
+    Component.ConditionalRender({
+      component: Component.ArticleTitle(),
+      condition: (page) => !isHome(page.fileData.slug),
+    }),
     Component.ContentMeta(),
     Component.TagList(),
   ],
