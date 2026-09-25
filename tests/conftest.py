@@ -14,6 +14,9 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
+# Never let a test reach the live soundboard on this Mac: see tests/daemon/conftest.py.
+os.environ["VICTOR_ADDONS_URL"] = "http://127.0.0.1:9"
+
 # Ensure project root and tests dir are on sys.path
 _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _tests_dir = os.path.dirname(os.path.abspath(__file__))

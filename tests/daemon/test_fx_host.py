@@ -249,7 +249,8 @@ class TestHostTestButton:
     def test_the_host_test_is_counted_against_nobody(self, client):
         """The counters answer "who is leaning on this", and the trainer
         checking his own soundboard is not an answer to that."""
-        client.post("/api/cur/host/fx/test")
+        with patch("daemon.fx.router.effects_client.press_tile", return_value=True):
+            client.post("/api/cur/host/fx/test")
         assert participant_state.fx_press_counts == {}
 
     def test_a_failed_test_marks_it_not_reachable_in_state(self, client):
