@@ -177,9 +177,10 @@
       }
 
       var stack = stackAt[p.value] = (stackAt[p.value] || 0) + 1;
-      // Hover names the dot (shared tooltip.js, no delay); a transparent
+      // Hover names the dot (shared tooltip.js, no delay; the name only, the
+      // position already says the %); a transparent
       // halo makes the 5px dot easy to hit.
-      var dg = el('g', { class: 'aishare-dot', 'data-tip': p.name + ' · ' + p.value + '%', 'data-tip-instant': '' }, dotsG);
+      var dg = el('g', { class: 'aishare-dot', 'data-tip': p.name, 'data-tip-instant': '', 'data-value': p.value }, dotsG);
       el('circle', { r: 12, fill: 'transparent' }, dg);
       el('circle', { r: isMe ? 7 : 5, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-accent)',
         stroke: 'var(--aishare-bg, #fff)', 'stroke-width': 1.5 }, dg);
