@@ -14,9 +14,9 @@
  *   opts.names   false → no names under the axis; hovering a dot names it
  *
  * A smoothed density (Gaussian KDE, reflected at 0/100 so the bell does not
- * leak past the axis), one dot per answer sitting on the curve, the average,
- * and every name hanging diagonally below the axis ("sticks"), spread apart
- * just enough to stay legible. Tweened: on first render the plot grows open
+ * leak past the axis), one dot per answer sitting on the curve, the average
+ * as an unlabelled dashed line, and optionally every name hanging diagonally
+ * below the axis ("sticks"), spread apart just enough to stay legible. Tweened: on first render the plot grows open
  * and the bell rises; later answers morph it.
  *
  * Colors come from CSS custom properties set by the embedding page:
@@ -25,7 +25,7 @@
 (function () {
   var SVG_NS = 'http://www.w3.org/2000/svg';
   var GRID = 101;                 // density samples, one per percent
-  var TOP = 26;                   // room for the average label
+  var TOP = 26;                   // headroom above the tallest peak
   var STICK = 16;                 // leader from the axis down to the label
   var FONT = 13;
   var MAX_NAME = 22;
@@ -138,9 +138,7 @@
     if (n) {
       var avg = points.reduce(function (a, p) { return a + p.value; }, 0) / n;
       var avgG = el('g', { class: animate && first ? 'aishare-avg' : '' }, svg);
-      el('line', { x1: X(avg), x2: X(avg), y1: 20, y2: y0, stroke: 'var(--aishare-text)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4', 'stroke-opacity': 0.7 }, avgG);
-      el('text', { x: X(avg), y: 14, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: 'var(--aishare-text)' }, avgG)
-        .textContent = 'avg ' + Math.round(avg) + '%';
+      el('line', { x1: X(avg), x2: X(avg), y1: 4, y2: y0, stroke: 'var(--aishare-text)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4', 'stroke-opacity': 0.7 }, avgG);
     }
     var dotsG = el('g', {}, svg);
 
