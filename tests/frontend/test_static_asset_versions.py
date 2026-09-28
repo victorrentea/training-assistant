@@ -15,7 +15,7 @@ import pytest
 STATIC = Path(__file__).resolve().parents[2] / "static"
 PAGES = ["participant.html", "host.html"]
 # Scripts whose API changes together with the page: they must be versioned.
-MUST_BE_VERSIONED = {"aishare-chart.js"}
+MUST_BE_VERSIONED = {"aishare-chart.js", "tooltip.js"}
 TAG = re.compile(r'<script[^>]+src="/static/([\w./-]+\.js)(?:\?v=([0-9a-f]+))?"')
 
 

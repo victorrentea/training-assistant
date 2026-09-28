@@ -2,7 +2,7 @@
  * Shared tooltip component — the single tooltip implementation for every surface.
  *
  * Usage: put data-tip="some text" on any element. Nothing to initialize.
- * Add data-tip-instant to show it with no delay.
+ * Add data-tip-instant to show it with no delay and no fade.
  *
  * Why a component: this app accumulated three tooltip systems (native title=,
  * a dead .has-tooltip CSS block, and a JS bubble wired only to the emoji bar).
@@ -44,7 +44,9 @@
     '}',
     /* The peek-in: sliding up while fading is what separates a tooltip that
        feels responsive from one that merely appears. */
-    '#app-tooltip.visible { opacity: 1; transform: translateY(0); }'
+    '#app-tooltip.visible { opacity: 1; transform: translateY(0); }',
+    /* data-tip-instant: no peek-in either — the name must land in the same frame. */
+    '#app-tooltip.instant { transition: none; transform: none; }'
   ].join('\n');
 
   var el = null;
@@ -77,6 +79,7 @@
     if (!text) return;  // conditional call sites legitimately render an empty tip
 
     var tip = bubble();
+    tip.classList.toggle('instant', target.hasAttribute('data-tip-instant'));
     tip.textContent = text;
 
     var r = target.getBoundingClientRect();
