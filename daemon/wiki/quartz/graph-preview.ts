@@ -1,7 +1,8 @@
-// Node preview for the wiki graph: clicking a dot opens its note in a modal over
-// the graph (about half of it), with a link to the full page; ⌘/Ctrl-click still
-// navigates straight to the page. Hovering a dot shows a chip explaining both.
-// The trainer can read notes without leaving the graph (click, read, back, repeat).
+// Node preview for the wiki graph: clicking a dot docks its note in a panel over
+// half of the graph, on the side away from that dot, with a link to the full page;
+// ⌘/Ctrl-click still navigates straight to the page. The rest of the graph stays
+// visible and clickable, so clicking another dot just swaps the panel's note.
+// Hovering a dot shows a chip explaining both clicks.
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes
 // the graph call graphPreviewHover() on hover and graphPreviewOpen() on click.
@@ -13,7 +14,7 @@ const cache = new Map<string, Promise<HTMLElement[]>>()
 let mouseX = 0
 let mouseY = 0
 let chip: HTMLElement | null = null
-let backdrop: HTMLElement | null = null
+let panel: HTMLElement | null = null
 let opened: URL | null = null
 
 // The same content Quartz's own link popovers show (every `.popover-hint` of the
@@ -41,7 +42,7 @@ function loadNote(url: URL): Promise<HTMLElement[]> {
 }
 
 export function graphPreviewHover(url: URL | null) {
-  if (url && !opened) {
+  if (url) {
     loadNote(url) // warm up, so a click shows the note instantly
     if (!chip) {
       chip = document.createElement("div")
@@ -61,62 +62,73 @@ function placeChip() {
   if (chip) chip.style.transform = `translate(${mouseX + 14}px, ${mouseY - 30}px)`
 }
 
-// Half the graph's surface (70% × 70%), centred on it: the open global graph is
-// the reference, the small sidebar graph uses the window.
-function placeDialog(dialog: HTMLElement) {
+// Half of the graph, full height, on the side away from the clicked dot so it stays
+// in view. The open global graph is the reference; the small sidebar graph uses the
+// window. The side is kept while the panel stays open, so browsing doesn't jump.
+function placePanel(p: HTMLElement) {
   const graph = document.querySelector(".global-graph-outer.active .global-graph-container")
   const box = graph?.getBoundingClientRect() ?? new DOMRect(0, 0, innerWidth, innerHeight)
-  const width = Math.min(Math.max(box.width * 0.7, 320), innerWidth - 32)
-  const height = Math.min(Math.max(box.height * 0.7, 240), innerHeight - 32)
-  Object.assign(dialog.style, {
+  const width = Math.max(box.width / 2, Math.min(320, innerWidth - 32))
+  const onLeft = mouseX > box.left + box.width / 2
+  Object.assign(p.style, {
     width: `${width}px`,
-    height: `${height}px`,
-    left: `${box.left + (box.width - width) / 2}px`,
-    top: `${box.top + (box.height - height) / 2}px`,
+    height: `${box.height}px`,
+    left: `${onLeft ? box.left : box.right - width}px`,
+    top: `${box.top}px`,
   })
 }
 
-export async function graphPreviewOpen(url: URL) {
-  opened = url
-  chip?.classList.remove("visible")
+function paragraph(text: string) {
+  return Object.assign(document.createElement("p"), { textContent: text })
+}
 
-  if (!backdrop) {
-    backdrop = document.createElement("div")
-    backdrop.className = "graph-peek-backdrop"
-    backdrop.innerHTML = `
-      <div class="graph-peek" role="dialog" aria-modal="true">
-        <div class="graph-peek-bar">
-          <a class="graph-peek-open">Open full page ↗</a>
-          <button class="graph-peek-close" aria-label="Close">✕</button>
-        </div>
-        <div class="graph-peek-body"></div>
-      </div>`
-    // A click outside the dialog closes it, like Quartz's own overlays.
-    backdrop.addEventListener("click", (e) => e.target === backdrop && graphPreviewClose())
-    backdrop.querySelector(".graph-peek-close")!.addEventListener("click", graphPreviewClose)
-    document.body.appendChild(backdrop)
+export async function graphPreviewOpen(url: URL) {
+  const wasOpen = opened !== null
+  opened = url
+
+  if (!panel) {
+    panel = document.createElement("div")
+    panel.className = "graph-peek"
+    panel.setAttribute("role", "dialog")
+    panel.innerHTML = `
+      <div class="graph-peek-head">
+        <h1 class="graph-peek-title"></h1>
+        <a class="graph-peek-open">Open full page ↗</a>
+        <button class="graph-peek-close" aria-label="Close">✕</button>
+      </div>
+      <div class="graph-peek-body"></div>`
+    panel.querySelector(".graph-peek-close")!.addEventListener("click", graphPreviewClose)
+    document.body.appendChild(panel)
   }
 
-  const dialog = backdrop.querySelector(".graph-peek") as HTMLElement
-  const body = backdrop.querySelector(".graph-peek-body") as HTMLElement
-  ;(backdrop.querySelector(".graph-peek-open") as HTMLAnchorElement).href = url.toString()
-  body.replaceChildren(Object.assign(document.createElement("p"), { textContent: "Loading…" }))
+  const title = panel.querySelector(".graph-peek-title") as HTMLElement
+  const body = panel.querySelector(".graph-peek-body") as HTMLElement
+  ;(panel.querySelector(".graph-peek-open") as HTMLAnchorElement).href = url.toString()
+  title.textContent = ""
+  body.replaceChildren(paragraph("Loading…"))
   body.scrollTop = 0
-  placeDialog(dialog)
-  backdrop.classList.add("visible")
+  if (!wasOpen) placePanel(panel)
+  panel.classList.add("visible")
 
   const elts = await loadNote(url).catch(() => null)
-  if (opened?.toString() !== url.toString()) return // closed, or another node opened meanwhile
+  if (opened?.toString() !== url.toString()) return // closed, or another dot clicked meanwhile
   if (!elts || elts.length === 0) {
-    body.replaceChildren(Object.assign(document.createElement("p"), { textContent: "Could not load this note." }))
+    body.replaceChildren(paragraph("Could not load this note."))
     return
   }
-  body.replaceChildren(...elts.map((e) => e.cloneNode(true)))
+  const note = elts.map((e) => e.cloneNode(true) as HTMLElement)
+  // The note's own H1 moves up into the panel's head, next to the link and the ✕.
+  const h1 = note.map((e) => (e.tagName === "H1" ? e : e.querySelector("h1"))).find(Boolean)
+  if (h1) {
+    title.innerHTML = h1.innerHTML
+    h1.remove()
+  }
+  body.replaceChildren(...note.filter((e) => e !== h1))
 }
 
 function graphPreviewClose() {
   opened = null
-  backdrop?.classList.remove("visible")
+  panel?.classList.remove("visible")
 }
 
 window.addEventListener("pointermove", (e) => {
@@ -124,7 +136,7 @@ window.addEventListener("pointermove", (e) => {
   mouseY = e.clientY
   placeChip()
 })
-// Capture phase, so Esc closes only the modal and not the global graph behind it too.
+// Capture phase, so Esc closes only the panel and not the global graph behind it too.
 window.addEventListener(
   "keydown",
   (e) => {
@@ -136,7 +148,7 @@ window.addEventListener(
   },
   true,
 )
-// Following a link (the full-page link or one inside the note) leaves the modal behind.
+// Following a link (the full-page link or one inside the note) leaves the panel behind.
 document.addEventListener("nav", () => {
   graphPreviewClose()
   graphPreviewHover(null)

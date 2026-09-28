@@ -43,12 +43,12 @@
 
 // Node preview in the graph (graph-preview.ts). The chip never takes the pointer,
 // so the node under it stays hovered; everything floats above the full-screen
-// graph (z-index 9999).
+// graph (z-index 9999), and the chip above the note panel.
 .graph-peek-chip {
   position: fixed;
   left: 0;
   top: 0;
-  z-index: 10001;
+  z-index: 10003;
   pointer-events: none;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
@@ -68,46 +68,48 @@
   }
 }
 
-.graph-peek-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10002;
-  background: rgba(0, 0, 0, 0.35);
-  display: none;
-
-  &.visible {
-    display: block;
-  }
-}
-
 .graph-peek {
   position: fixed;
-  display: flex;
+  z-index: 10002;
+  display: none;
   flex-direction: column;
+  box-sizing: border-box;
   font-family: var(--bodyFont);
   line-height: normal;
   color: var(--darkgray);
   background: var(--light);
   border: 1px solid #8b5cf6;
   border-radius: 8px;
-  box-shadow: 6px 6px 36px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 36px rgba(0, 0, 0, 0.35);
   overflow: hidden;
+
+  &.visible {
+    display: flex;
+  }
 }
 
-.graph-peek-bar {
+// Title, full-page link and ✕ on one row, with no rule under it.
+.graph-peek-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.75rem 0.5rem 1.25rem;
-  border-bottom: 1px solid var(--lightgray);
+  gap: 0.75rem;
+  padding: 0.75rem 0.75rem 0 1.5rem;
+
+  .graph-peek-title {
+    flex: 1;
+    margin: 0;
+    font-size: 1.6rem;
+  }
 
   .graph-peek-open {
+    flex-shrink: 0;
     font-weight: 600;
     color: #8b5cf6;
     background: none;
   }
 
   .graph-peek-close {
+    flex-shrink: 0;
     border: none;
     background: none;
     font-size: 1.1rem;
