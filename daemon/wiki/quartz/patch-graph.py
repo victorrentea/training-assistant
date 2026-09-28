@@ -9,11 +9,6 @@ import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
-# Keep Quartz's original next to it, so re-running (after a patch change) starts clean.
-original = path.with_name(path.name + ".orig")
-if not original.exists():
-    original.write_text(path.read_text())
-src = original.read_text()
 
 PATCHES = [
     # Obsidian keeps hubs only a bit larger than leaves; sqrt made index/log/overview giant.
@@ -64,21 +59,72 @@ PATCHES = [
     # Labels stay fully visible at normal zoom and fade out only when zoomed far out.
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
-    # Shift-peek (graph-preview.ts): every hover change, in or out, goes through
-    # updateHoverInfo, so that is where the preview learns which note is under the mouse.
+    # Node preview (graph-preview.ts). Every hover change, in or out, goes through
+    # updateHoverInfo: that is where the hint chip learns which note is under the mouse.
     ('import { D3Config } from "../Graph"',
-     'import { D3Config } from "../Graph"\nimport { graphPreviewHover } from "./graph-preview"'),
+     'import { D3Config } from "../Graph"\nimport { graphPreviewHover, graphPreviewOpen } from "./graph-preview"'),
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
      "    graphPreviewHover(newHoveredId === null ? null\n"
      "      : new URL(resolveRelative(fullSlug, newHoveredId as SimpleSlug), window.location.toString()))\n"),
+    # A click opens the note in a modal over the graph; ⌘/Ctrl-click navigates as before.
+    # d3-drag ignores Ctrl-clicks by default, which would make Ctrl-click do nothing.
+    ("""        .container(() => app.canvas)
+""",
+     """        .container(() => app.canvas)
+        .filter((event) => !event.button)
+"""),
+    ("""            const targ = resolveRelative(fullSlug, node.id)
+            window.spaNavigate(new URL(targ, window.location.toString()))""",
+     """            const url = new URL(resolveRelative(fullSlug, node.id), window.location.toString())
+            const click = event.sourceEvent as MouseEvent | undefined
+            click?.metaKey || click?.ctrlKey ? window.spaNavigate(url) : graphPreviewOpen(url)"""),
+    ("""      node.gfx.on("click", () => {
+        const targ = resolveRelative(fullSlug, node.simulationData.id)
+        window.spaNavigate(new URL(targ, window.location.toString()))""",
+     """      node.gfx.on("click", (click) => {
+        const targ = resolveRelative(fullSlug, node.simulationData.id)
+        const url = new URL(targ, window.location.toString())
+        click.metaKey || click.ctrlKey ? window.spaNavigate(url) : graphPreviewOpen(url)"""),
 ]
 
-for old, new in PATCHES:
-    count = src.count(old)
-    if count != 1:
-        sys.exit(f"patch-graph: expected 1 match, found {count}:\n{old}")
-    src = src.replace(old, new)
+# The "Graph View" heading itself opens the full graph, with the graph icon right
+# after the text: the icon alone, in the corner of the small graph, was barely visible.
+# The button keeps its global-graph-icon class, which is what graph.inline.ts binds to.
+GRAPH_TSX_PATCHES = [
+    ("""        <h3>{i18n(cfg.locale).components.graph.title}</h3>
+        <div class="graph-outer">
+          <div class="graph-container" data-cfg={JSON.stringify(localGraph)}></div>
+          <button class="global-graph-icon" aria-label="Global Graph">""",
+     """        <h3>
+          <button class="global-graph-icon graph-title" aria-label="Open the full graph">
+            {i18n(cfg.locale).components.graph.title}"""),
+    ("""          </button>
+        </div>
+        <div class="global-graph-outer">""",
+     """          </button>
+        </h3>
+        <div class="graph-outer">
+          <div class="graph-container" data-cfg={JSON.stringify(localGraph)}></div>
+        </div>
+        <div class="global-graph-outer">"""),
+]
 
-path.write_text(src)
-print(f"patch-graph: applied {len(PATCHES)} patches to {path}")
+
+def apply(target: pathlib.Path, patches: list[tuple[str, str]]) -> None:
+    # Keep Quartz's original next to it, so re-running (after a patch change) starts clean.
+    original = target.with_name(target.name + ".orig")
+    if not original.exists():
+        original.write_text(target.read_text())
+    src = original.read_text()
+    for old, new in patches:
+        count = src.count(old)
+        if count != 1:
+            sys.exit(f"patch-graph: expected 1 match in {target.name}, found {count}:\n{old}")
+        src = src.replace(old, new)
+    target.write_text(src)
+    print(f"patch-graph: applied {len(patches)} patches to {target}")
+
+
+apply(path, PATCHES)
+apply(path.parents[1] / "Graph.tsx", GRAPH_TSX_PATCHES)

@@ -11,6 +11,29 @@
   height: 300px;
 }
 
+// "Graph View" is the button that opens the full graph (patch-graph.py moved it
+// into the heading), with the graph icon right after the text.
+.graph > h3 > .graph-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+
+  svg {
+    width: 1.1em;
+    height: 1.1em;
+  }
+
+  &:hover {
+    color: #8b5cf6;
+  }
+}
+
 // Dark mode follows the OS, exactly like the participant page around the iframe.
 // The component stays in the layout (its script applies the theme); only its
 // toggle is hidden, so the wiki can never disagree with the page it sits in.
@@ -18,15 +41,23 @@
   display: none;
 }
 
-// Shift-peek on graph nodes (graph-preview.ts). Both float above the full-screen
-// graph (z-index 9999) and never take the pointer, so the node stays hovered.
-.graph-peek-chip,
-.graph-peek {
+// Node preview in the graph (graph-preview.ts). The chip never takes the pointer,
+// so the node under it stays hovered; everything floats above the full-screen
+// graph (z-index 9999).
+.graph-peek-chip {
   position: fixed;
   left: 0;
   top: 0;
   z-index: 10001;
   pointer-events: none;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-family: var(--bodyFont);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--light);
+  background: #8b5cf6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.12s ease;
@@ -37,35 +68,65 @@
   }
 }
 
-.graph-peek-chip {
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  font-family: var(--bodyFont);
-  font-size: 0.75rem;
-  white-space: nowrap;
-  color: var(--light);
-  background: #8b5cf6;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+.graph-peek-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  background: rgba(0, 0, 0, 0.35);
+  display: none;
+
+  &.visible {
+    display: block;
+  }
 }
 
 .graph-peek {
-  overflow: hidden;
-  padding: 0 1.1rem 1rem;
+  position: fixed;
+  display: flex;
+  flex-direction: column;
   font-family: var(--bodyFont);
   line-height: normal;
   color: var(--darkgray);
   background: var(--light);
   border: 1px solid #8b5cf6;
   border-radius: 8px;
-  box-shadow: 6px 6px 36px rgba(0, 0, 0, 0.3);
-  // A note longer than the panel fades out instead of being cut mid-line.
-  &.clipped::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 3rem;
-    background: linear-gradient(transparent, var(--light));
+  box-shadow: 6px 6px 36px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.graph-peek-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--lightgray);
+
+  .graph-peek-open {
+    font-weight: 600;
+    color: #8b5cf6;
+    background: none;
   }
+
+  .graph-peek-close {
+    border: none;
+    background: none;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0.3rem 0.45rem;
+    border-radius: 4px;
+    color: var(--gray);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--dark);
+      background: var(--lightgray);
+    }
+  }
+}
+
+.graph-peek-body {
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 1.5rem 1.25rem;
 }
