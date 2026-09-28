@@ -2,6 +2,7 @@
  * Shared tooltip component — the single tooltip implementation for every surface.
  *
  * Usage: put data-tip="some text" on any element. Nothing to initialize.
+ * Add data-tip-instant to show it with no delay.
  *
  * Why a component: this app accumulated three tooltip systems (native title=,
  * a dead .has-tooltip CSS block, and a JS bubble wired only to the emoji bar).
@@ -99,6 +100,9 @@
 
   function scheduleShow(target) {
     clearTimeout(timer);
+    // data-tip-instant: for targets you sweep across (chart dots), where even
+    // 150ms makes the name trail behind the pointer.
+    if (target.hasAttribute('data-tip-instant')) { show(target); return; }
     timer = setTimeout(function () { show(target); }, SHOW_DELAY_MS);
   }
 

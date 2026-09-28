@@ -2647,7 +2647,7 @@ function _renderEngagementPopover() {
       names: document.getElementById('aishare-host-names'),
     };
     if (state.active) {
-      AiShareChart.render(parts, points, { axis: true, inset: 11, id: 'host',
+      AiShareChart.render(parts, points, { axis: true, inset: 11, id: 'host', names: false,
         height: Math.round(Math.max(180, Math.min(340, window.innerHeight * 0.34))) });
     } else {
       AiShareChart.reset(parts);

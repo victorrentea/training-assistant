@@ -11,6 +11,7 @@
  *   opts.axis    true → draw an axis line (host, which has no slider)
  *   opts.height  plot height in px
  *   opts.stickFrom  px above the names box where the leaders start (the axis)
+ *   opts.names   false → no names under the axis; hovering a dot names it
  *
  * A smoothed density (Gaussian KDE, reflected at 0/100 so the bell does not
  * leak past the axis), one dot per answer sitting on the curve, the average,
@@ -148,6 +149,8 @@
     var fontSize = Math.max(8, Math.min(FONT, gap - 3));
     var longest = points.reduce(function (m, p) { return Math.max(m, shortName(p.name).length); }, 0);
     var NH = STICK + longest * fontSize * 0.6 * Math.SQRT1_2 + fontSize + 6;
+    var showNames = opts.names !== false;
+    if (!showNames) NH = 0;
     names.innerHTML = '';
     names.style.height = NH + 'px';
     var nsvg = el('svg', { width: W, height: NH, viewBox: '0 0 ' + W + ' ' + NH, class: 'aishare-svg' }, names);
@@ -160,24 +163,28 @@
     var dots = points.map(function (p, i) {
       var isMe = me && p.name === me;
       var fresh = !st.seen[p.name];
-      var gi = el('g', { class: 'aishare-label' + (fresh && animate ? ' aishare-fresh' : '') + (isMe ? ' aishare-me' : ''),
-        style: 'animation-delay:' + (fresh ? 300 + i * 35 : 0) + 'ms' }, nsvg);
       var ax = X(p.value);
-      el('path', { d: 'M' + ax + ' ' + (-stickFrom) + ' L' + ax + ' 0 L' + lx[i] + ' ' + STICK, fill: 'none',
-        stroke: isMe ? 'var(--aishare-me)' : 'var(--aishare-muted)', 'stroke-opacity': isMe ? 0.9 : 0.45, 'stroke-width': 1 }, gi);
-      var ty = STICK + 4;
-      var t = el('text', { x: lx[i], y: ty, 'text-anchor': 'end', 'font-size': fontSize,
-        'font-weight': isMe ? 800 : 500, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-text)',
-        transform: 'rotate(-45 ' + lx[i] + ' ' + ty + ')' }, gi);
-      t.textContent = shortName(p.name);
-      el('title', {}, gi).textContent = p.name + ': ' + p.value + '% by AI';
+      if (showNames) {
+        var gi = el('g', { class: 'aishare-label' + (fresh && animate ? ' aishare-fresh' : '') + (isMe ? ' aishare-me' : ''),
+          style: 'animation-delay:' + (fresh ? 300 + i * 35 : 0) + 'ms' }, nsvg);
+        el('path', { d: 'M' + ax + ' ' + (-stickFrom) + ' L' + ax + ' 0 L' + lx[i] + ' ' + STICK, fill: 'none',
+          stroke: isMe ? 'var(--aishare-me)' : 'var(--aishare-muted)', 'stroke-opacity': isMe ? 0.9 : 0.45, 'stroke-width': 1 }, gi);
+        var ty = STICK + 4;
+        var t = el('text', { x: lx[i], y: ty, 'text-anchor': 'end', 'font-size': fontSize,
+          'font-weight': isMe ? 800 : 500, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-text)',
+          transform: 'rotate(-45 ' + lx[i] + ' ' + ty + ')' }, gi);
+        t.textContent = shortName(p.name);
+      }
 
       var stack = stackAt[p.value] = (stackAt[p.value] || 0) + 1;
-      var c = el('circle', { r: isMe ? 7 : 5, cx: ax, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-accent)',
-        stroke: 'var(--aishare-bg, #fff)', 'stroke-width': 1.5 }, dotsG);
-      el('title', {}, c).textContent = p.name + ': ' + p.value + '%';
+      // Hover names the dot (shared tooltip.js, no delay); a transparent
+      // halo makes the 5px dot easy to hit.
+      var dg = el('g', { class: 'aishare-dot', 'data-tip': p.name + ' · ' + p.value + '%', 'data-tip-instant': '' }, dotsG);
+      el('circle', { r: 12, fill: 'transparent' }, dg);
+      el('circle', { r: isMe ? 7 : 5, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-accent)',
+        stroke: 'var(--aishare-bg, #fff)', 'stroke-width': 1.5 }, dg);
       var prev = st.dots[p.name];
-      return { el: c, fromX: prev ? prev.x : ax, toX: ax, value: p.value, stack: stack - 1,
+      return { el: dg, fromX: prev ? prev.x : ax, toX: ax, value: p.value, stack: stack - 1,
         fromY: prev ? prev.y : null, delay: fresh && animate ? 250 + i * 35 : 0 };
     });
     st.seen = {}; points.forEach(function (p) { st.seen[p.name] = true; });
@@ -196,8 +203,7 @@
         var yOn = curveAt(ys, o.value) - o.stack * 10;
         // A new dot drops in from the top; a known one glides to its new spot.
         var y = o.fromY == null ? 6 + (yOn - 6) * ease(local) : o.fromY + (yOn - o.fromY) * ease(t);
-        o.el.setAttribute('cx', x.toFixed(1));
-        o.el.setAttribute('cy', y.toFixed(1));
+        o.el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')');
         o.el.style.opacity = o.fromY == null && local === 0 ? 0 : 1;
         o.x = x; o.y = y;
       });
@@ -238,6 +244,7 @@
     css.id = 'aishare-chart-style';
     css.textContent =
       '.aishare-svg{display:block;overflow:visible;font-family:inherit}' +
+      '.aishare-dot{cursor:pointer}.aishare-dot circle:last-child{transition:r .12s}.aishare-dot:hover circle:last-child{r:8}' +
       '.aishare-fresh{opacity:0;animation:aishare-in .45s ease-out forwards}' +
       '.aishare-avg{animation:aishare-fade .6s ease-out .9s both}' +
       '@keyframes aishare-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}' +

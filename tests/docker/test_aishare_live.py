@@ -71,16 +71,21 @@ def test_aishare_slider_reveal_and_clear():
 
         # ── Host reveals → both see the distribution with names
         host.reveal_aishare(True)
-        expect(alice._page.locator("#aishare-names .aishare-label")).to_have_count(2, timeout=5000)
-        expect(bob._page.locator("#aishare-names .aishare-label")).to_have_count(2, timeout=5000)
-        assert sorted(alice.aishare_chart_labels()) == ["Alice", "Bob"]
+        expect(alice._page.locator("#aishare-plot .aishare-dot")).to_have_count(2, timeout=5000)
+        expect(bob._page.locator("#aishare-plot .aishare-dot")).to_have_count(2, timeout=5000)
+        expect(alice._page.locator("#aishare-names .aishare-label")).to_have_count(0)
+        expect(alice._page.locator("#aishare-value")).to_be_hidden()  # no number, the thumb says it
+        # Names only on hover: the shared tooltip, instantly.
+        alice._page.wait_for_timeout(1500)  # let the dots land on the curve
+        alice._page.locator('#aishare-plot .aishare-dot[data-tip="Bob · 20%"]').hover()
+        expect(alice._page.locator("#app-tooltip.visible")).to_have_text("Bob · 20%", timeout=1000)
+        _shot(alice._page, "aishare-pax-hover")
         _shot(alice._page, "aishare-pax-revealed")
         _shot(host_raw, "aishare-host")
 
         # ── A participant moves the slider after the reveal → others see it live
         bob.set_aishare(55)
-        expect(bob._page.locator("#aishare-names title", has_text="Bob: 55%")).to_have_count(1, timeout=5000)
-        expect(alice._page.locator("#aishare-names title", has_text="Bob: 55%")).to_have_count(1, timeout=5000)
+        expect(alice._page.locator('#aishare-plot .aishare-dot[data-tip="Bob · 55%"]')).to_have_count(1, timeout=5000)
 
         # ── Refresh keeps Alice's answer
         alice._page.reload(wait_until="networkidle")
@@ -138,8 +143,10 @@ def test_aishare_fits_a_crowd_of_25():
         expect(host_raw.locator("#aishare-host-status")).to_contain_text("25 answers", timeout=5000)
 
         host.reveal_aishare(True)
-        expect(raw.locator("#aishare-names .aishare-label")).to_have_count(25, timeout=5000)
-        assert "Victor Rentea" in victor.aishare_chart_labels()
+        expect(raw.locator("#aishare-plot .aishare-dot")).to_have_count(25, timeout=5000)
+        raw.wait_for_timeout(1500)
+        raw.locator('#aishare-plot .aishare-dot[data-tip="Victor Rentea · 40%"]').hover()
+        expect(raw.locator("#app-tooltip.visible")).to_have_text("Victor Rentea · 40%", timeout=1000)
         _shot(raw, "aishare-crowd-pax")
         _shot(host_raw, "aishare-crowd-host")
         if SHOTS:
