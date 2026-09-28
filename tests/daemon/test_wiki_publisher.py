@@ -172,6 +172,16 @@ def test_obsidian_settings_do_not_count_as_content(tmp_path):
     assert builder.fingerprint(tmp_path)[0] == 1
 
 
+def test_an_embedded_image_counts_as_content_but_not_as_a_page(tmp_path):
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "deck-12.png").write_bytes(b"png")
+    assert builder.fingerprint(tmp_path) is None  # images alone are not a wiki
+    (tmp_path / "Home.md").write_text("# Home")
+    before = builder.fingerprint(tmp_path)
+    (tmp_path / "assets" / "deck-12.png").write_bytes(b"re-rendered png")
+    assert builder.fingerprint(tmp_path) != before
+
+
 def test_home_page_becomes_the_landing_page(tmp_path):
     wiki_dir, out = tmp_path / "wiki", tmp_path / "out"
     wiki_dir.mkdir()

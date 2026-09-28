@@ -40,27 +40,34 @@ def find_wiki_dir(session_folder: Path | None) -> Path | None:
     return wiki if wiki.is_dir() else None
 
 
-def _markdown_files(wiki_dir: Path):
-    for path in wiki_dir.rglob("*.md"):
-        if ".obsidian" not in path.relative_to(wiki_dir).parts:
+# Slides and screenshots the summarizer embeds with ![[assets/…]]: re-rendering one
+# without touching its page must still republish the site.
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+
+
+def _content_files(wiki_dir: Path):
+    for path in wiki_dir.rglob("*"):
+        if path.suffix.lower() in {".md", *_IMAGE_SUFFIXES} and ".obsidian" not in path.relative_to(wiki_dir).parts:
             yield path
 
 
 def fingerprint(wiki_dir: Path) -> tuple[int, int, int] | None:
-    """(file count, newest mtime_ns, total bytes) of the vault's pages; None if it has none.
+    """(file count, newest mtime_ns, total bytes) of the vault's pages and images; None if it has no page.
 
-    A stat per page — cheap enough to poll every few seconds.
+    A stat per file — cheap enough to poll every few seconds.
     """
     count = newest = total = 0
-    for path in _markdown_files(wiki_dir):
+    pages = False
+    for path in _content_files(wiki_dir):
         try:
             st = path.stat()
         except OSError:
             continue
+        pages = pages or path.suffix == ".md"
         count += 1
         newest = max(newest, st.st_mtime_ns)
         total += st.st_size
-    return (count, newest, total) if count else None
+    return (count, newest, total) if pages else None
 
 
 def _prepare_quartz(qdir: Path) -> None:
