@@ -54,17 +54,26 @@ PATCHES = [
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
      'l.color = l.active ? "#8b5cf6" : computedStyleMap["--lightgray"]'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
-     """      n.gfx.tint = hoveredNodeId === n.simulationData.id ? "#8b5cf6" : 0xffffff
+     """      // Repainted, not tinted: a tint multiplies, so on light theme's dark-grey dots
+      // "purple" came out almost black.
+      const purple = hoveredNodeId === n.simulationData.id || selectedNodeId === n.simulationData.id
+      n.gfx.clear().circle(0, 0, n.radius).fill({ color: purple ? "#8b5cf6" : n.color })
       tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))"""),
     # Labels stay fully visible at normal zoom and fade out only when zoomed far out.
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
     # Node preview (graph-preview.ts). Every hover change, in or out, goes through
     # updateHoverInfo: that is where the hint chip learns which note is under the mouse.
+    # The clicked dot stays purple (selectedNodeId) through the modal and after it,
+    # until another dot is hovered.
+    ("  let hoveredNodeId: string | null = null\n",
+     "  let hoveredNodeId: string | null = null\n"
+     "  let selectedNodeId: string | null = null\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\nimport { graphPreviewHover, graphPreviewOpen } from "./graph-preview"'),
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
+     "    if (newHoveredId !== null && newHoveredId !== selectedNodeId) selectedNodeId = null\n"
      "    graphPreviewHover(newHoveredId === null ? null\n"
      "      : new URL(resolveRelative(fullSlug, newHoveredId as SimpleSlug), window.location.toString()))\n"),
     # A click opens the note in a modal over the graph; ⌘/Ctrl-click navigates as before.
@@ -78,14 +87,38 @@ PATCHES = [
             window.spaNavigate(new URL(targ, window.location.toString()))""",
      """            const url = new URL(resolveRelative(fullSlug, node.id), window.location.toString())
             const click = event.sourceEvent as MouseEvent | undefined
-            click?.metaKey || click?.ctrlKey ? window.spaNavigate(url) : graphPreviewOpen(url)"""),
+            if (click?.metaKey || click?.ctrlKey) {
+              window.spaNavigate(url)
+            } else {
+              selectedNodeId = node.id
+              graphPreviewOpen(url)
+            }"""),
     ("""      node.gfx.on("click", () => {
         const targ = resolveRelative(fullSlug, node.simulationData.id)
         window.spaNavigate(new URL(targ, window.location.toString()))""",
      """      node.gfx.on("click", (click) => {
         const targ = resolveRelative(fullSlug, node.simulationData.id)
         const url = new URL(targ, window.location.toString())
-        click.metaKey || click.ctrlKey ? window.spaNavigate(url) : graphPreviewOpen(url)"""),
+        if (click.metaKey || click.ctrlKey) {
+          window.spaNavigate(url)
+        } else {
+          selectedNodeId = node.simulationData.id
+          graphPreviewOpen(url)
+        }"""),
+    # The full graph opens by itself the first time the wiki loads (the trainer lives in
+    # it); later navigations, like clicking into a note, leave it closed.
+    ("""document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {""",
+     """let globalGraphShownAtStart = false
+
+document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {"""),
+    ("""  document.addEventListener("keydown", shortcutHandler)
+""",
+     """  document.addEventListener("keydown", shortcutHandler)
+  if (!globalGraphShownAtStart) {
+    globalGraphShownAtStart = true
+    void renderGlobalGraph()
+  }
+"""),
 ]
 
 # The "Graph View" heading itself opens the full graph, with the graph icon right

@@ -43,7 +43,7 @@
 
 // Node preview in the graph (graph-preview.ts). The chip never takes the pointer,
 // so the node under it stays hovered; everything floats above the full-screen
-// graph (z-index 9999), and the chip above the note panel.
+// graph (z-index 9999), and the chip above the modal.
 .graph-peek-chip {
   position: fixed;
   left: 0;
@@ -68,10 +68,21 @@
   }
 }
 
+.graph-peek-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  background: rgba(0, 0, 0, 0.35);
+  display: none;
+
+  &.visible {
+    display: block;
+  }
+}
+
 .graph-peek {
   position: fixed;
-  z-index: 10002;
-  display: none;
+  display: flex;
   flex-direction: column;
   box-sizing: border-box;
   font-family: var(--bodyFont);
@@ -80,12 +91,8 @@
   background: var(--light);
   border: 1px solid #8b5cf6;
   border-radius: 8px;
-  box-shadow: 0 0 36px rgba(0, 0, 0, 0.35);
+  box-shadow: 6px 6px 36px rgba(0, 0, 0, 0.35);
   overflow: hidden;
-
-  &.visible {
-    display: flex;
-  }
 }
 
 // Title, full-page link and ✕ on one row, with no rule under it.
