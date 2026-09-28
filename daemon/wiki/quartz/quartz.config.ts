@@ -72,7 +72,9 @@ const config: QuartzConfig = {
       Plugin.ObsidianFlavoredMarkdown({ enableInHtmlEmbed: false }),
       Plugin.GitHubFlavoredMarkdown(),
       Plugin.TableOfContents(),
-      Plugin.CrawlLinks({ markdownLinkResolution: "shortest" }),
+      // The site runs inside the participant page's iframe, and GitHub & co refuse to be
+      // framed ("This content is blocked"): external links must leave in a new tab.
+      Plugin.CrawlLinks({ markdownLinkResolution: "shortest", openLinksInNewTab: true }),
       Plugin.Description(),
       // No Latex: session notes quote prices ("$100/month … $5/day"), and $…$ turned them into math.
     ],
