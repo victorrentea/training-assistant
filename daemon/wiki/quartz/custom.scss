@@ -17,3 +17,55 @@
 .darkmode {
   display: none;
 }
+
+// Shift-peek on graph nodes (graph-preview.ts). Both float above the full-screen
+// graph (z-index 9999) and never take the pointer, so the node stays hovered.
+.graph-peek-chip,
+.graph-peek {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 10001;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+
+  &.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.graph-peek-chip {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-family: var(--bodyFont);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--light);
+  background: #8b5cf6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.graph-peek {
+  overflow: hidden;
+  padding: 0 1.1rem 1rem;
+  font-family: var(--bodyFont);
+  line-height: normal;
+  color: var(--darkgray);
+  background: var(--light);
+  border: 1px solid #8b5cf6;
+  border-radius: 8px;
+  box-shadow: 6px 6px 36px rgba(0, 0, 0, 0.3);
+  // A note longer than the panel fades out instead of being cut mid-line.
+  &.clipped::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3rem;
+    background: linear-gradient(transparent, var(--light));
+  }
+}

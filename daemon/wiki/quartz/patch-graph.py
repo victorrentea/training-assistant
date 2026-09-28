@@ -64,6 +64,14 @@ PATCHES = [
     # Labels stay fully visible at normal zoom and fade out only when zoomed far out.
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
+    # Shift-peek (graph-preview.ts): every hover change, in or out, goes through
+    # updateHoverInfo, so that is where the preview learns which note is under the mouse.
+    ('import { D3Config } from "../Graph"',
+     'import { D3Config } from "../Graph"\nimport { graphPreviewHover } from "./graph-preview"'),
+    ("    hoveredNodeId = newHoveredId\n",
+     "    hoveredNodeId = newHoveredId\n"
+     "    graphPreviewHover(newHoveredId === null ? null\n"
+     "      : new URL(resolveRelative(fullSlug, newHoveredId as SimpleSlug), window.location.toString()))\n"),
 ]
 
 for old, new in PATCHES:
