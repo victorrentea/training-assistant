@@ -21,6 +21,9 @@
  *
  * Colors come from CSS custom properties set by the embedding page:
  *   --aishare-accent, --aishare-text, --aishare-muted, --aishare-me, --aishare-bg
+ *   --aishare-future  (optional) the 95%+ slice of the curve — Simon Willison's
+ *                     prophecy that by the end of 2026 half of developers will
+ *                     have AI generate more than 95% of their code
  */
 (function () {
   var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -29,6 +32,8 @@
   var STICK = 16;                 // leader from the axis down to the label
   var FONT = 13;
   var MAX_NAME = 22;
+  var FUTURE = 95;                // from here on the curve is drawn green
+  var FUTURE_COLOR = 'var(--aishare-future, #2f9e44)';
 
   function el(tag, attrs, parent) {
     var n = document.createElementNS(SVG_NS, tag);
@@ -124,6 +129,9 @@
     var grad = el('linearGradient', { id: 'aishare-fill-' + (opts.id || 'x'), x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
     el('stop', { offset: '0%', 'stop-color': 'var(--aishare-accent)', 'stop-opacity': 0.55 }, grad);
     el('stop', { offset: '100%', 'stop-color': 'var(--aishare-accent)', 'stop-opacity': 0.06 }, grad);
+    var fgrad = el('linearGradient', { id: 'aishare-future-' + (opts.id || 'x'), x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    el('stop', { offset: '0%', 'stop-color': FUTURE_COLOR, 'stop-opacity': 0.6 }, fgrad);
+    el('stop', { offset: '100%', 'stop-color': FUTURE_COLOR, 'stop-opacity': 0.1 }, fgrad);
 
     [0, 25, 50, 75, 100].forEach(function (t) {
       // The % labels live in the page's scale bar above the plot.
@@ -132,6 +140,9 @@
 
     var area = el('path', { fill: 'url(#aishare-fill-' + (opts.id || 'x') + ')' }, svg);
     var line = el('path', { fill: 'none', stroke: 'var(--aishare-accent)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }, svg);
+    // The 95%+ slice, painted over the accent curve in green.
+    var futureArea = el('path', { fill: 'url(#aishare-future-' + (opts.id || 'x') + ')' }, svg);
+    var futureLine = el('path', { fill: 'none', stroke: FUTURE_COLOR, 'stroke-width': 2.5, 'stroke-linejoin': 'round' }, svg);
     if (opts.axis) el('line', { x1: X(0), x2: X(100), y1: y0 - 0.75, y2: y0 - 0.75, stroke: 'var(--aishare-muted)', 'stroke-width': 1.5 }, svg);
 
     var n = points.length;
@@ -196,6 +207,10 @@
       for (var i = 0; i < GRID; i++) d += (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + (y0 - ys[i]).toFixed(1);
       line.setAttribute('d', d);
       area.setAttribute('d', d + 'L' + X(100) + ' ' + y0 + 'L' + X(0) + ' ' + y0 + 'Z');
+      var f = '';
+      for (var k = FUTURE; k < GRID; k++) f += (k > FUTURE ? 'L' : 'M') + X(k).toFixed(1) + ' ' + (y0 - ys[k]).toFixed(1);
+      futureLine.setAttribute('d', f);
+      futureArea.setAttribute('d', f + 'L' + X(100) + ' ' + y0 + 'L' + X(FUTURE) + ' ' + y0 + 'Z');
       dots.forEach(function (o) {
         var local = Math.max(0, Math.min(1, (elapsed - o.delay) / 500));
         var x = o.fromX + (o.toX - o.fromX) * ease(local);
