@@ -25,6 +25,7 @@ channels:
           - $ref: '#/components/messages/quiz_queue_updated'
           - $ref: '#/components/messages/vote_update'
           - $ref: '#/components/messages/poll_host_update'
+          - $ref: '#/components/messages/aishare_host_update'
           - $ref: '#/components/messages/wordcloud_updated'
           - $ref: '#/components/messages/qa_updated'
           - $ref: '#/components/messages/codereview_selections_updated'
@@ -138,6 +139,38 @@ components:
               type: integer
             description: Per-option host-added extras (e.g. for chat answers); total = participant + extras
 
+
+    # ── AI share ─────────────────────────────────────────────────────────────
+
+    aishare_host_update:
+      summary: Host-only AI-share snapshot — always carries every answer
+      x-feature: aishare
+      x-doc-notes:
+        - Sent exclusively to the host channel (notify_host), revealed or not.
+      payload:
+        type: object
+        required: [type, active, revealed]
+        properties:
+          type:
+            type: string
+            enum: [aishare_host_update]
+          active:
+            type: boolean
+          revealed:
+            type: boolean
+          points:
+            type: array
+            items:
+              type: object
+              required: [name, value]
+              properties:
+                name:
+                  type: string
+                value:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: 0 = all by hand … 100 = all by AI
     # ── Word Cloud ────────────────────────────────────────────────────────────
 
     wordcloud_updated:

@@ -39,6 +39,7 @@ from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
 from daemon.wiki.publisher import wiki_updated_at
 from daemon.ws_messages import (
+    AiSharePoint,
     ParticipantListUpdatedMsg,
     ParticipantNamesUpdatedMsg,
     ScoresUpdatedMsg,
@@ -252,6 +253,14 @@ class DebateArgumentParticipant(BaseModel):
     has_upvoted: bool
 
 
+class AiShareParticipantState(BaseModel):
+    active: bool
+    revealed: bool
+    count: int
+    points: list[AiSharePoint] | None = None
+    my_value: int | None = None
+
+
 class WordcloudData(BaseModel):
     words: dict[str, int]
     word_order: list[str]
@@ -302,6 +311,7 @@ class ParticipantStateResponse(BaseModel):
     poll_active: bool = False
     my_poll_voted_indices: list[int] | None = None
     poll_vote_counts: list[int] | None = None
+    aishare: AiShareParticipantState
     codereview: CodeReviewParticipantState
     debate: DebateData
     slides_current: CurrentSlide | None = None
@@ -469,6 +479,13 @@ def _build_poll_for_participant(pid: str) -> dict:
         "my_poll_voted_indices": my_entry["option_indices"] if my_entry else None,
         "poll_vote_counts": counts,
     }
+
+
+def _build_aishare_for_participant(pid: str) -> dict:
+    from daemon.aishare.router import participant_view
+    from daemon.aishare.state import aishare_state
+
+    return {**participant_view(), "my_value": aishare_state.values.get(pid)}
 
 
 def _participant_display_names() -> list[str]:
@@ -841,6 +858,8 @@ async def get_participant_state(request: Request):
         **quiz_data,
         # Poll (personalised)
         **poll_fields,
+        # AI share slider (own answer always; everyone's only once revealed)
+        "aishare": _build_aishare_for_participant(pid),
         # Codereview (personalised)
         "codereview": cr,
         # Debate (personalised, grouped, UUID-free)

@@ -128,6 +128,37 @@ class PollHostUpdateMsg(BaseModel):
     host_extras: list[int] = []          # host-added extras (per option); total = participant + extras
 
 
+# ── AI share (slider: how much of your code does AI generate) ─────────────────
+
+class AiSharePoint(BaseModel):
+    name: str
+    value: int                         # 0 = all by hand … 100 = all by AI
+
+
+class AiShareOpenedMsg(BaseModel):
+    """Bare signal — fires once on Start. Participants jump to the Activity
+    view; AiShareUpdatedMsg follows with the snapshot."""
+    type: Literal["aishare_opened"] = "aishare_opened"
+
+
+class AiShareUpdatedMsg(BaseModel):
+    """Participant-facing snapshot. `points` (names + values, UUID-free) only
+    while the host has revealed the distribution; otherwise None."""
+    type: Literal["aishare_updated"] = "aishare_updated"
+    active: bool
+    revealed: bool
+    count: int = 0
+    points: list[AiSharePoint] | None = None
+
+
+class AiShareHostUpdateMsg(BaseModel):
+    """Host-only snapshot (sent via notify_host). Always carries every answer."""
+    type: Literal["aishare_host_update"] = "aishare_host_update"
+    active: bool
+    revealed: bool
+    points: list[AiSharePoint] = []
+
+
 class QuizEndCountdownStartedMsg(BaseModel):
     type: Literal["quiz_end_countdown_started"] = "quiz_end_countdown_started"
     seconds: int
@@ -498,6 +529,9 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Poll
     "poll_opened": PollOpenedMsg,
     "poll_updated": PollUpdatedMsg,
+    # AI share
+    "aishare_opened": AiShareOpenedMsg,
+    "aishare_updated": AiShareUpdatedMsg,
     # Scores
     "scores_updated": ScoresUpdatedMsg,
     # Word Cloud
@@ -547,6 +581,8 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
     "vote_update": VoteUpdateMsg,
     # Poll
     "poll_host_update": PollHostUpdateMsg,
+    # AI share
+    "aishare_host_update": AiShareHostUpdateMsg,
     # Word Cloud
     "wordcloud_updated": WordcloudUpdatedMsg,
     # Q&A
@@ -595,6 +631,9 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Poll
     "poll_opened": "poll",
     "poll_updated": "poll",
+    # AI share
+    "aishare_opened": "aishare",
+    "aishare_updated": "aishare",
     # Scores & Leaderboard
     "scores_updated": "scores_leaderboard",
     "leaderboard_revealed": "scores_leaderboard",
@@ -643,6 +682,8 @@ HOST_MESSAGE_FEATURES: dict[str, str] = {
     "vote_update": "quiz",
     # Poll
     "poll_host_update": "poll",
+    # AI share
+    "aishare_host_update": "aishare",
     # Word Cloud
     "wordcloud_updated": "wordcloud",
     # Q&A

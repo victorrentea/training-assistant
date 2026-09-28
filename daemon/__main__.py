@@ -139,6 +139,7 @@ def _build_runtime_session_snapshot(
     *,
     session_name: str | None,
 ) -> dict:
+    from daemon.aishare.state import aishare_state
     from daemon.codereview.state import codereview_state
     from daemon.debate.state import debate_state
     from daemon.misc.state import misc_state
@@ -218,6 +219,7 @@ def _build_runtime_session_snapshot(
             "host_extras": list(poll_state.host_extras),
         } if poll_state.data is not None or poll_state.votes else None),
         "qa_questions": qa_payload,
+        "aishare": aishare_state.snapshot(),
         "wordcloud": {
             "words": dict(wordcloud_state.words),
             "word_order": list(wordcloud_state.word_order),
@@ -282,6 +284,9 @@ def _apply_runtime_snapshot_restore(snapshot: dict | None) -> None:
     misc_state.sync_from_restore(snapshot)
     codereview_state.sync_from_restore(snapshot)
     debate_state.sync_from_restore(snapshot)
+
+    from daemon.aishare.state import aishare_state
+    aishare_state.restore(snapshot.get("aishare"))
 
     from daemon.poll.state import PollData, poll_state
     poll_data = snapshot.get("poll")
@@ -1279,6 +1284,7 @@ def run() -> None:
                         if not session_name:
                             # Fresh main session: clear runtime caches so participants/
                             # count and activity artifacts don't leak from previous sessions.
+                            from daemon.aishare.state import aishare_state as _aishare_state
                             from daemon.codereview.state import (
                                 codereview_state as _codereview_state,
                             )
@@ -1297,6 +1303,7 @@ def run() -> None:
 
                             _participant_state.reset(mode="talk" if session_type == "talk" else "workshop")
                             _wordcloud_state.clear()
+                            _aishare_state.reset()
                             _qa_state.clear()
                             _misc_state.reset_for_new_session()
                             _quiz_state.clear()

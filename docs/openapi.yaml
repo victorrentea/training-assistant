@@ -935,6 +935,76 @@ paths:
         '204':
           description: Successful Response
       x-feature: scores_leaderboard
+  /api/{session_id}/host/aishare:
+    get:
+      tags:
+      - aishare
+      summary: Get Aishare
+      description: Host snapshot fetch on tab activation. Subsequent updates via WS.
+      operationId: get_aishare_api__session_id__host_aishare_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiShareHostState'
+      x-feature: aishare
+  /api/{session_id}/host/aishare/start:
+    post:
+      tags:
+      - aishare
+      summary: Start Aishare
+      description: Open a fresh round and route every participant to the slider.
+      operationId: start_aishare_api__session_id__host_aishare_start_post
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: aishare
+  /api/{session_id}/host/aishare/reveal:
+    post:
+      tags:
+      - aishare
+      summary: Reveal Aishare
+      description: Show (or hide) everyone's answers to all participants.
+      operationId: reveal_aishare_api__session_id__host_aishare_reveal_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevealRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: aishare
+  /api/{session_id}/host/aishare/clear:
+    post:
+      tags:
+      - aishare
+      summary: Clear Aishare
+      operationId: clear_aishare_api__session_id__host_aishare_clear_post
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: aishare
+  /api/participant/aishare/value:
+    post:
+      tags:
+      - aishare
+      summary: Set Aishare Value
+      description: Participant moves their slider; the last value wins.
+      operationId: set_aishare_value_api_participant_aishare_value_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiShareValueRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: aishare
   /api/participant/paste:
     post:
       tags:
@@ -1964,6 +2034,78 @@ components:
           default: []
       type: object
       title: AiResultRequest
+    AiShareHostState:
+      properties:
+        active:
+          type: boolean
+          title: Active
+        revealed:
+          type: boolean
+          title: Revealed
+        points:
+          items:
+            $ref: '#/components/schemas/AiSharePoint'
+          type: array
+          title: Points
+      type: object
+      required:
+      - active
+      - revealed
+      - points
+      title: AiShareHostState
+    AiShareParticipantState:
+      properties:
+        active:
+          type: boolean
+          title: Active
+        revealed:
+          type: boolean
+          title: Revealed
+        count:
+          type: integer
+          title: Count
+        points:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/AiSharePoint'
+            type: array
+          - type: 'null'
+          title: Points
+        my_value:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: My Value
+      type: object
+      required:
+      - active
+      - revealed
+      - count
+      title: AiShareParticipantState
+    AiSharePoint:
+      properties:
+        name:
+          type: string
+          title: Name
+        value:
+          type: integer
+          title: Value
+      type: object
+      required:
+      - name
+      - value
+      title: AiSharePoint
+    AiShareValueRequest:
+      properties:
+        value:
+          type: integer
+          maximum: 100.0
+          minimum: 0.0
+          title: Value
+      type: object
+      required:
+      - value
+      title: AiShareValueRequest
     ArgumentRequest:
       properties:
         text:
@@ -3388,6 +3530,8 @@ components:
             type: array
           - type: 'null'
           title: Poll Vote Counts
+        aishare:
+          $ref: '#/components/schemas/AiShareParticipantState'
         codereview:
           $ref: '#/components/schemas/CodeReviewParticipantState'
         debate:
@@ -3464,6 +3608,7 @@ components:
       - wordcloud
       - qa_questions
       - quiz_active
+      - aishare
       - codereview
       - debate
       - slides_history_count
@@ -3817,6 +3962,15 @@ components:
       required:
       - correct_indices
       title: RevealCorrectRequest
+    RevealRequest:
+      properties:
+        revealed:
+          type: boolean
+          title: Revealed
+      type: object
+      required:
+      - revealed
+      title: RevealRequest
     RoundTimerRequest:
       properties:
         round_index:

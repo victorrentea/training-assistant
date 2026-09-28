@@ -22,7 +22,7 @@ log_level?: string
 session_id?: string  # URL-safe alphanumeric join code (CSPRNG-generated)
 saved_at?: string  # ISO timestamp of last snapshot write
 mode?: string  # workshop | talk
-current_activity?: string  # none | quiz | wordcloud | qa | codereview | debate
+current_activity?: string  # none | quiz | poll | wordcloud | qa | codereview | debate | aishare
 participants?: dict[str, PersistedParticipant{
   name?:string
   score?:int | number
@@ -51,6 +51,11 @@ poll?: PersistedPollState{
 }
 qa?: dict[str, any]
 qa_questions?: dict[str, dict[str, any]]  # question_id → {text, author, upvoters, answered}
+aishare?: PersistedAiShareState{
+  active?:bool
+  revealed?:bool  # participants see everyone's answers
+  values?:dict[str, int]  # participant_uuid → 0 (all by hand) … 100 (all by AI)
+}
 wordcloud?: PersistedWordCloudState{
   words?:dict[str, int]  # word → submission count
   word_order?:list[string]  # Words in submission order

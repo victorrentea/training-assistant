@@ -396,6 +396,7 @@
         // the quiz tab — avoids two GET /quiz on every state snapshot.
         if (msg.current_activity === 'quiz') fetchQuizState();
         if (msg.current_activity === 'poll') fetchPollState();
+        if (msg.current_activity === 'aishare') fetchAiShareState();
         _debateActive = msg.current_activity === 'debate' && !!msg.debate_phase;
         ingestParticipants(msg.participants || []);
         totalParticipants = (msg.participants || []).length;
@@ -482,6 +483,8 @@
         _hostPollStarted = !!msg.started;
         _hostPollEnded = !!msg.ended;
         renderPoll();
+      } else if (msg.type === 'aishare_host_update') {
+        renderAiShareHost(msg);
       } else if (msg.type === 'poll_opened') {
         // Bare signal — snapshot follows via poll_host_update.
         fetchPollState();
@@ -2621,6 +2624,45 @@ function _renderEngagementPopover() {
     await fetch(API('/quiz'), { method: 'DELETE' });
   }
 
+  // ── AI share slider ──
+  async function fetchAiShareState() {
+    try {
+      const resp = await fetch(API('/aishare'));
+      if (resp.ok) renderAiShareHost(await resp.json());
+    } catch (e) { /* silent */ }
+  }
+
+  function renderAiShareHost(state) {
+    const points = state.points || [];
+    const reveal = document.getElementById('aishare-reveal');
+    reveal.checked = !!state.revealed;
+    reveal.disabled = !state.active;
+    document.getElementById('aishare-start-btn').textContent = state.active ? 'Restart' : 'Start';
+    const n = points.length;
+    document.getElementById('aishare-host-status').textContent = state.active
+      ? `${n} ${n === 1 ? 'answer' : 'answers'}${state.revealed ? ' · visible to everyone' : ' · only you see them'}`
+      : 'Start to put a slider in front of every participant.';
+    const chart = document.getElementById('aishare-host-chart');
+    if (state.active) AiShareChart.render(chart, points);
+    else AiShareChart.reset(chart);
+  }
+
+  async function startAiShare() {
+    await fetch(API('/aishare/start'), { method: 'POST' });
+  }
+
+  async function setAiShareRevealed(revealed) {
+    await fetch(API('/aishare/reveal'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ revealed }),
+    });
+  }
+
+  async function clearAiShare() {
+    await fetch(API('/aishare/clear'), { method: 'POST' });
+  }
+
   async function fetchPollState() {
     try {
       const resp = await fetch(API('/poll'));
@@ -2960,6 +3002,7 @@ function _renderEngagementPopover() {
   async function switchTab(tab) {
     updateCenterPanel(tab);
     if (tab === 'quiz') fetchQuizState();
+    if (tab === 'aishare') fetchAiShareState();
     await fetch(API('/activity'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -2991,7 +3034,7 @@ function _renderEngagementPopover() {
     _resetInactivityTimer();
     const centerQrPanel = document.getElementById('center-qr');
     if (centerQrPanel) centerQrPanel.classList.toggle('link-only', currentActivity === 'none');
-    ['qr', 'quiz', 'poll', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
+    ['qr', 'quiz', 'poll', 'aishare', 'wordcloud', 'qa', 'debate', 'codereview'].forEach(id => {
       const el = document.getElementById('center-' + id);
       if (id === 'qr') {
         el.style.display = currentActivity === 'none' ? 'flex' : 'none';
@@ -3006,7 +3049,7 @@ function _renderEngagementPopover() {
         const divider = el.querySelector('.or-divider span');
         if (divider) divider.textContent = currentActivity === 'quiz' ? 'generate next' : 'generate question';
       } else {
-        const flexPanels = new Set(['codereview', 'poll']);
+        const flexPanels = new Set(['codereview', 'poll', 'aishare']);
         const showVal = flexPanels.has(id) ? 'flex' : '';
         el.style.display = currentActivity === id ? showVal : 'none';
       }
@@ -3024,13 +3067,13 @@ function _renderEngagementPopover() {
     const slidesTab = document.getElementById('tab-slides');
     if (slidesTab) slidesTab.classList.toggle('active', currentActivity === 'none');
     if (currentActivity && currentActivity !== 'none') {
-      ['quiz', 'poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
+      ['quiz', 'poll', 'aishare', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.toggle('active', currentActivity === t);
         document.getElementById('tab-content-' + t).style.display = currentActivity === t ? (t === 'codereview' ? 'flex' : '') : 'none';
       });
     } else {
       // When activity is 'none', deactivate all other tabs
-      ['quiz', 'poll', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
+      ['quiz', 'poll', 'aishare', 'wordcloud', 'qa', 'codereview', 'debate'].forEach(t => {
         document.getElementById('tab-' + t).classList.remove('active');
         document.getElementById('tab-content-' + t).style.display = 'none';
       });

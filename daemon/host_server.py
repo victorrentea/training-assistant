@@ -264,6 +264,11 @@ def create_app(backend_url: str) -> FastAPI:
     app.include_router(poll_participant_router)   # /api/{session_id}/api/participant/poll/*
     app.include_router(leaderboard_router)        # /api/{session_id}/leaderboard/*
 
+    from daemon.aishare.router import host_router as aishare_host_router
+    from daemon.aishare.router import participant_router as aishare_participant_router
+    app.include_router(aishare_host_router)          # /api/{session_id}/host/aishare/*
+    app.include_router(aishare_participant_router)   # /api/participant/aishare/*
+
     from daemon.misc.router import host_router as misc_host_router
     from daemon.misc.router import local_router as misc_local_router
     from daemon.misc.router import participant_router as misc_participant_router

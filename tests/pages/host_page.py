@@ -4,6 +4,8 @@ All interactions go through the real browser UI.
 """
 from __future__ import annotations
 
+import re
+
 from playwright.sync_api import Page, expect
 
 
@@ -408,6 +410,26 @@ class HostPage:
 
     def start_poll(self):
         self._page.click("#poll-start-btn")
+
+    # ── AI share slider ──
+
+    def open_aishare_tab(self):
+        self._page.wait_for_selector("#tab-aishare", state="visible", timeout=15000)
+        self._page.click("#tab-aishare")
+        expect(self._page.locator("#tab-aishare")).to_have_class(re.compile(r"\bactive\b"), timeout=5000)
+
+    def start_aishare(self):
+        self._page.click("#aishare-start-btn")
+        expect(self._page.locator("#aishare-reveal")).to_be_enabled(timeout=5000)
+
+    def reveal_aishare(self, revealed: bool = True):
+        self._page.locator("#aishare-reveal").set_checked(revealed)
+
+    def clear_aishare(self):
+        self._page.click("#aishare-clear-btn")
+
+    def aishare_status_text(self) -> str:
+        return self._page.locator("#aishare-host-status").inner_text()
 
     def stop_poll(self):
         """End the live poll but keep the draft for editing."""

@@ -31,6 +31,8 @@ channels:
           - $ref: '#/components/messages/quiz_end_countdown_started'
           - $ref: '#/components/messages/poll_opened'
           - $ref: '#/components/messages/poll_updated'
+          - $ref: '#/components/messages/aishare_opened'
+          - $ref: '#/components/messages/aishare_updated'
           - $ref: '#/components/messages/scores_updated'
           - $ref: '#/components/messages/wordcloud_updated'
           - $ref: '#/components/messages/qa_updated'
@@ -273,6 +275,57 @@ components:
             type: boolean
             default: false
             description: True after host clicked Stop, until Clear is clicked. Participant view becomes read-only.
+
+    # ── AI share ──────────────────────────────────────────────────────────────
+
+    aishare_opened:
+      summary: Host started the "how much of your code does AI generate" slider
+      x-feature: aishare
+      x-doc-notes:
+        - Bare signal; participants jump to the Activity view and reset their own answer.
+        - WS ordering guarantees aishare_updated arrives immediately after.
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [aishare_opened]
+
+    aishare_updated:
+      summary: AI-share snapshot — fires on start, reveal toggle, every answer and clear
+      x-feature: aishare
+      x-doc-notes:
+        - "`points` (names + values, UUID-free) is present only while the host has revealed the distribution."
+        - "`active=false` means the activity was cleared; hide the slider."
+      payload:
+        type: object
+        required: [type, active, revealed]
+        properties:
+          type:
+            type: string
+            enum: [aishare_updated]
+          active:
+            type: boolean
+          revealed:
+            type: boolean
+          count:
+            type: integer
+            description: Number of participants who answered
+          points:
+            nullable: true
+            type: array
+            items:
+              type: object
+              required: [name, value]
+              properties:
+                name:
+                  type: string
+                value:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: 0 = all by hand … 100 = all by AI
 
     # ── Scores ────────────────────────────────────────────────────────────────
 

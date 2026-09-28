@@ -70,6 +70,14 @@ class PersistedPollState(PersistedModel):
     votes: dict[str, Any] = Field(default_factory=dict)
 
 
+class PersistedAiShareState(PersistedModel):
+    """AI-share slider snapshot persisted in session state."""
+
+    active: bool = False
+    revealed: bool = Field(default=False, description="participants see everyone's answers")
+    values: dict[str, int] = Field(default_factory=dict, description="participant_uuid → 0 (all by hand) … 100 (all by AI)")
+
+
 class PersistedWordCloudState(PersistedModel):
     """Word cloud snapshot persisted in session state."""
 
@@ -133,7 +141,7 @@ class PersistedSessionState(PersistedModel):
     session_id: str | None = Field(default=None, description="URL-safe alphanumeric join code (CSPRNG-generated)")
     saved_at: str | None = Field(default=None, description="ISO timestamp of last snapshot write")
     mode: str | None = Field(default=None, description="workshop | talk")
-    current_activity: str | None = Field(default=None, description="none | quiz | wordcloud | qa | codereview | debate")
+    current_activity: str | None = Field(default=None, description="none | quiz | poll | wordcloud | qa | codereview | debate | aishare")
 
     participants: dict[str, PersistedParticipant] = Field(default_factory=dict, description="participant_uuid → identity/score")
     # Legacy split maps: accepted on read, omitted on write.
@@ -163,6 +171,7 @@ class PersistedSessionState(PersistedModel):
     qa: dict[str, Any] | None = None
     qa_questions: dict[str, dict[str, Any]] = Field(default_factory=dict, description="question_id → {text, author, upvoters, answered}")
 
+    aishare: PersistedAiShareState | None = None
     wordcloud: PersistedWordCloudState | None = None
     # Legacy flat word cloud fields: accepted on read, omitted on write.
     wordcloud_words: dict[str, int] = Field(default_factory=dict, exclude=True)

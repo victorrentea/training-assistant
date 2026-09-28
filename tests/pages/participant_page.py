@@ -79,6 +79,17 @@ class ParticipantPage:
             return  # already joined under this name via ?as=
         self.rename(name)
 
+    # ── AI share slider ──
+
+    def wait_for_aishare(self, timeout: int = 8000) -> None:
+        expect(self._page.locator("#activity-aishare-section")).to_be_visible(timeout=timeout)
+
+    def set_aishare(self, value: int) -> None:
+        self._page.locator("#aishare-slider").fill(str(value))
+
+    def aishare_chart_labels(self) -> list[str]:
+        return self._page.locator("#aishare-chart .aishare-label text").all_text_contents()
+
     def rename(self, name: str) -> None:
         """Trigger inline name edit and set a new name."""
         self._page.evaluate("_startNameEdit()")

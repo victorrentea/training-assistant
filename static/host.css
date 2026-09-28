@@ -745,6 +745,20 @@ body {
   letter-spacing: .01em;
 }
 
+#center-aishare {
+  --aishare-accent: var(--accent);
+  --aishare-me: #ff922b;
+  --aishare-text: var(--text);
+  --aishare-muted: var(--muted);
+  --aishare-bg: var(--surface);
+  flex-direction: column;
+  justify-content: center;
+  padding: 1rem 1.5rem;
+  overflow-y: auto;
+}
+.aishare-host-question { font-size: 1rem; font-weight: 600; color: var(--text); margin: .75rem 0; }
+.aishare-host-status { margin-top: .6rem; font-size: .85rem; color: var(--muted); }
+
 #center-wordcloud {
   display: flex;
   align-items: center;
