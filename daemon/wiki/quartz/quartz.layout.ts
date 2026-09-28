@@ -4,6 +4,11 @@ import * as Component from "./quartz/components"
 // The summarizer's entry page is Home.md; the builder also copies it over the site root.
 const isHome = (slug?: string) => slug === "index" || slug === "Home"
 
+// Every note the summarizer writes opens with its own "# Title", so Quartz's title
+// above it read the same words twice on every page.
+const startsWithH1 = (tree: any) =>
+  tree?.children?.find((n: any) => n.type === "element")?.tagName === "h1"
+
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
@@ -21,10 +26,9 @@ export const defaultContentPageLayout: PageLayout = {
       component: Component.Breadcrumbs(),
       condition: (page) => !isHome(page.fileData.slug),
     }),
-    // Home.md opens with its own H1; Quartz's title on top of it read "Home" twice.
     Component.ConditionalRender({
       component: Component.ArticleTitle(),
-      condition: (page) => !isHome(page.fileData.slug),
+      condition: (page) => !isHome(page.fileData.slug) && !startsWithH1(page.tree),
     }),
     Component.ContentMeta(),
     Component.TagList(),
