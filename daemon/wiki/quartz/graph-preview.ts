@@ -93,8 +93,8 @@ function zoom(dialog: HTMLElement, opening: boolean): Promise<void> {
   const dot = { transform: `translate(${dx}px, ${dy}px) scale(0.02)`, opacity: 0.6 }
   const full = { transform: "none", opacity: 1 }
   const timing = opening
-    ? { duration: 600, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }
-    : { duration: 500, easing: "cubic-bezier(0.4, 0, 0.6, 1)" }
+    ? { duration: 900, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }
+    : { duration: 750, easing: "cubic-bezier(0.4, 0, 0.6, 1)" }
   running = [
     dialog.animate(opening ? [dot, full] : [full, dot], timing),
     backdrop!.animate(opening ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }], timing),
