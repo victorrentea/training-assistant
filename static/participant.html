@@ -700,7 +700,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-value.untouched { font-size: 1rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); padding-top: .9rem; }
 .aishare-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .aishare-head h2 { margin: 0; }
-.aishare-status { flex-shrink: 0; font-size: .9rem; font-weight: 600; color: var(--color-on-surface-variant, #566166); }
+/* Same size as the question (.poll-card h2) — it reads as the question's other half. */
+.aishare-status { flex-shrink: 0; font-size: 1.15rem; line-height: 1.4; font-weight: 700; color: var(--color-on-surface-variant, #566166); }
 .aishare-value { margin-bottom: 1rem; }
 /* The plot opens upward from the slider when the host reveals the answers. */
 .aishare-plot { height: 0; overflow: hidden; transition: height .7s cubic-bezier(.2,.8,.2,1); }
