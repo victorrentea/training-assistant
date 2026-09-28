@@ -88,7 +88,7 @@ class ParticipantPage:
         self._page.locator("#aishare-slider").fill(str(value))
 
     def aishare_chart_labels(self) -> list[str]:
-        return self._page.locator("#aishare-chart .aishare-label text").all_text_contents()
+        return self._page.locator("#aishare-names .aishare-label text").all_text_contents()
 
     def rename(self, name: str) -> None:
         """Trigger inline name edit and set a new name."""

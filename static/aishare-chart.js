@@ -1,26 +1,33 @@
 /* AI-share distribution chart — shared by host.html and participant.html.
  *
- * AiShareChart.render(container, points, opts)
- *   points: [{name, value}]  value 0 (all by hand) … 100 (all by AI)
- *   opts.me: name to highlight (the viewing participant)
+ * AiShareChart.render(parts, points, opts)
+ *   parts.plot   element above the axis: the bell curve is drawn here
+ *   parts.names  element below the axis: names hang diagonally from it
+ *   points       [{name, value}]  value 0 (all by hand) … 100 (all by AI)
+ *   opts.me      name to highlight (the viewing participant)
+ *   opts.inset   px from each edge of the plot to x=0 / x=100 — on the
+ *                participant page this is the slider thumb radius, so the
+ *                curve sits exactly over the slider that acts as its axis
+ *   opts.axis    true → draw an axis line (host, which has no slider)
+ *   opts.height  plot height in px
+ *   opts.stickFrom  px above the names box where the leaders start (the axis)
  *
- * Draws a smoothed density curve (Gaussian KDE, reflected at 0/100 so the
- * bell does not leak past the axis), one dot per answer sitting on the curve,
+ * A smoothed density (Gaussian KDE, reflected at 0/100 so the bell does not
+ * leak past the axis), one dot per answer sitting on the curve, the average,
  * and every name hanging diagonally below the axis ("sticks"), spread apart
- * just enough to stay legible. Transitions are tweened: the bell rises from
- * the axis the first time and morphs as answers move.
+ * just enough to stay legible. Tweened: on first render the plot grows open
+ * and the bell rises; later answers morph it.
  *
  * Colors come from CSS custom properties set by the embedding page:
- *   --aishare-accent, --aishare-text, --aishare-muted, --aishare-me
+ *   --aishare-accent, --aishare-text, --aishare-muted, --aishare-me, --aishare-bg
  */
 (function () {
   var SVG_NS = 'http://www.w3.org/2000/svg';
   var GRID = 101;                 // density samples, one per percent
-  var PLOT_H = 190;               // curve area height (px)
-  var TOP = 34;                   // room for the end captions
-  var STICK = 14;                 // leader from the axis down to the label
-  var FONT = 12;
-  var MAX_NAME = 16;
+  var TOP = 26;                   // room for the average label
+  var STICK = 16;                 // leader from the axis down to the label
+  var FONT = 13;
+  var MAX_NAME = 22;
 
   function el(tag, attrs, parent) {
     var n = document.createElementNS(SVG_NS, tag);
@@ -73,112 +80,110 @@
 
   function ease(t) { return 1 - Math.pow(1 - t, 3); }
 
-  function render(container, points, opts) {
-    opts = opts || {};
+  function render(parts, points, opts) {
+    var plot = parts.plot;
     points = (points || []).slice().sort(function (a, b) { return a.value - b.value || String(a.name).localeCompare(String(b.name)); });
-    var st = container._aishare || (container._aishare = { ys: null, dots: {}, seen: {} });
-    st.points = points; st.opts = opts;
+    var st = plot._aishare || (plot._aishare = { ys: null, dots: {}, seen: {} });
+    st.parts = parts; st.points = points; st.opts = opts || {};
     if (!st.ro && window.ResizeObserver) {
       st.ro = new ResizeObserver(function () {
-        if (container.clientWidth !== st.width) draw(container, false);
+        if (plot.clientWidth !== st.width) draw(plot, false);
       });
-      st.ro.observe(container);
+      st.ro.observe(plot);
     }
-    draw(container, true);
+    draw(plot, true);
   }
 
-  function draw(container, animate) {
-    var st = container._aishare;
-    var points = st.points, me = st.opts.me;
-    var W = Math.max(280, container.clientWidth || 600);
-    st.width = container.clientWidth;
-
-    var n = points.length;
-    var longest = points.reduce(function (m, p) { return Math.max(m, shortName(p.name).length); }, 0);
-    var labelDiag = longest * FONT * 0.58 * Math.SQRT1_2;      // projected size of a 45° label
-    var ml = Math.max(18, Math.min(labelDiag, 110) + 6);         // labels hang down-left
-    var mr = 18;
-    var pw = W - ml - mr;
-    var y0 = TOP + PLOT_H;
-    var H = y0 + STICK + labelDiag + FONT + 8;
-    var X = function (v) { return ml + (v / 100) * pw; };
+  function draw(plot, animate) {
+    var st = plot._aishare;
+    var points = st.points, opts = st.opts, me = opts.me, names = st.parts.names;
+    var W = Math.max(240, plot.clientWidth || 600);
+    st.width = plot.clientWidth;
+    var plotH = opts.height || 220;
+    var inset = opts.inset || 12;
+    var pw = W - 2 * inset;
+    var X = function (v) { return inset + (v / 100) * pw; };
+    var H = TOP + plotH;
+    var y0 = H;                    // baseline = bottom edge of the plot = the axis
+    var first = !st.ys;
 
     var target = density(points.map(function (p) { return p.value; }));
     var peak = Math.max.apply(null, target.concat([1e-9]));
-    // Keep a single answer from filling the whole height: scale against a
-    // floor so small groups look like a bump rather than a spike.
-    var scale = (PLOT_H * 0.88) / Math.max(peak, 0.012);
+    // Scale against a floor so a lone answer is a bump, not a spike.
+    var scale = (plotH * 0.9) / Math.max(peak, 0.012);
     var targetPx = target.map(function (d) { return d * scale; });
     var fromPx = st.ys || new Array(GRID).fill(0);
 
-    container.innerHTML = '';
+    // ── Plot (above the axis) ──
+    plot.innerHTML = '';
+    plot.style.height = H + 'px';            // CSS transition turns this into "rising open"
     var svg = el('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, class: 'aishare-svg', role: 'img',
-      'aria-label': 'Distribution of how much code is generated by AI' }, container);
+      'aria-label': 'Distribution of how much code is generated by AI' }, plot);
     var defs = el('defs', {}, svg);
-    var grad = el('linearGradient', { id: 'aishare-fill', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    var grad = el('linearGradient', { id: 'aishare-fill-' + (opts.id || 'x'), x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
     el('stop', { offset: '0%', 'stop-color': 'var(--aishare-accent)', 'stop-opacity': 0.55 }, grad);
-    el('stop', { offset: '100%', 'stop-color': 'var(--aishare-accent)', 'stop-opacity': 0.05 }, grad);
+    el('stop', { offset: '100%', 'stop-color': 'var(--aishare-accent)', 'stop-opacity': 0.06 }, grad);
 
-    // Captions + grid
-    var cap = { 'font-size': 13, 'font-weight': 600, fill: 'var(--aishare-text)' };
-    el('text', Object.assign({ x: ml, y: 18, 'text-anchor': 'start' }, cap), svg).textContent = '✍️ All by hand';
-    el('text', Object.assign({ x: ml + pw, y: 18, 'text-anchor': 'end' }, cap), svg).textContent = 'All by AI 🤖';
     [0, 25, 50, 75, 100].forEach(function (t) {
-      el('line', { x1: X(t), x2: X(t), y1: TOP, y2: y0, stroke: 'var(--aishare-muted)', 'stroke-opacity': 0.18, 'stroke-dasharray': '2 4' }, svg);
+      // The % labels live in the page's scale bar above the plot.
+      el('line', { x1: X(t), x2: X(t), y1: 0, y2: y0, stroke: 'var(--aishare-muted)', 'stroke-opacity': 0.2, 'stroke-dasharray': '2 4' }, svg);
     });
 
-    var area = el('path', { fill: 'url(#aishare-fill)' }, svg);
+    var area = el('path', { fill: 'url(#aishare-fill-' + (opts.id || 'x') + ')' }, svg);
     var line = el('path', { fill: 'none', stroke: 'var(--aishare-accent)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }, svg);
-    el('line', { x1: ml, x2: ml + pw, y1: y0, y2: y0, stroke: 'var(--aishare-muted)', 'stroke-width': 1.5 }, svg);
-    [0, 25, 50, 75, 100].forEach(function (t) {
-      el('text', { x: X(t), y: y0 - 5, 'text-anchor': t === 0 ? 'start' : t === 100 ? 'end' : 'middle',
-        'font-size': 10, fill: 'var(--aishare-muted)' }, svg).textContent = t + '%';
-    });
+    if (opts.axis) el('line', { x1: X(0), x2: X(100), y1: y0 - 0.75, y2: y0 - 0.75, stroke: 'var(--aishare-muted)', 'stroke-width': 1.5 }, svg);
 
-    // Average marker
-    var avgG = null;
+    var n = points.length;
     if (n) {
       var avg = points.reduce(function (a, p) { return a + p.value; }, 0) / n;
-      avgG = el('g', { class: animate && !st.ys ? 'aishare-avg' : '' }, svg);
-      el('line', { x1: X(avg), x2: X(avg), y1: TOP + 6, y2: y0, stroke: 'var(--aishare-text)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4', 'stroke-opacity': 0.7 }, avgG);
-      el('text', { x: X(avg), y: TOP + 2, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: 'var(--aishare-text)' }, avgG)
+      var avgG = el('g', { class: animate && first ? 'aishare-avg' : '' }, svg);
+      el('line', { x1: X(avg), x2: X(avg), y1: 20, y2: y0, stroke: 'var(--aishare-text)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4', 'stroke-opacity': 0.7 }, avgG);
+      el('text', { x: X(avg), y: 14, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: 'var(--aishare-text)' }, avgG)
         .textContent = 'avg ' + Math.round(avg) + '%';
     }
-
-    // Names: diagonal sticks under the axis, spread so all of them fit.
-    var gap = Math.min(FONT + 5, n > 1 ? pw / (n - 1) : pw);
-    var fontSize = Math.max(8, Math.min(FONT, gap - 3));
-    var lx = spread(points.map(function (p) { return X(p.value); }), gap, ml, ml + pw);
-    var labelsG = el('g', {}, svg);
     var dotsG = el('g', {}, svg);
+
+    // ── Names (below the axis): diagonal sticks, spread so all of them fit ──
+    var gap = Math.min(FONT + 6, n > 1 ? pw / (n - 1) : pw);
+    var fontSize = Math.max(8, Math.min(FONT, gap - 3));
+    var longest = points.reduce(function (m, p) { return Math.max(m, shortName(p.name).length); }, 0);
+    var NH = STICK + longest * fontSize * 0.6 * Math.SQRT1_2 + fontSize + 6;
+    names.innerHTML = '';
+    names.style.height = NH + 'px';
+    var nsvg = el('svg', { width: W, height: NH, viewBox: '0 0 ' + W + ' ' + NH, class: 'aishare-svg' }, names);
+    // Leaders may start above the names box (e.g. from the slider, across the
+    // "All by hand / All by AI" row) so each name still points at its answer.
+    var stickFrom = opts.stickFrom || 0;
+    var lx = spread(points.map(function (p) { return X(p.value); }), gap, X(0), X(100));
+
     var stackAt = {};
     var dots = points.map(function (p, i) {
       var isMe = me && p.name === me;
       var fresh = !st.seen[p.name];
       var gi = el('g', { class: 'aishare-label' + (fresh && animate ? ' aishare-fresh' : '') + (isMe ? ' aishare-me' : ''),
-        style: 'animation-delay:' + (fresh ? 250 + i * 35 : 0) + 'ms' }, labelsG);
-      var ax = X(p.value), ly = y0 + STICK;
-      el('path', { d: 'M' + ax + ' ' + y0 + ' L' + lx[i] + ' ' + ly, fill: 'none',
+        style: 'animation-delay:' + (fresh ? 300 + i * 35 : 0) + 'ms' }, nsvg);
+      var ax = X(p.value);
+      el('path', { d: 'M' + ax + ' ' + (-stickFrom) + ' L' + ax + ' 0 L' + lx[i] + ' ' + STICK, fill: 'none',
         stroke: isMe ? 'var(--aishare-me)' : 'var(--aishare-muted)', 'stroke-opacity': isMe ? 0.9 : 0.45, 'stroke-width': 1 }, gi);
-      var t = el('text', { x: lx[i], y: ly + 4, 'text-anchor': 'end', 'font-size': fontSize,
+      var ty = STICK + 4;
+      var t = el('text', { x: lx[i], y: ty, 'text-anchor': 'end', 'font-size': fontSize,
         'font-weight': isMe ? 800 : 500, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-text)',
-        transform: 'rotate(-45 ' + lx[i] + ' ' + (ly + 4) + ')' }, gi);
-      t.textContent = shortName(p.name) + ' · ' + p.value + '%';
-      var ttl = el('title', {}, gi); ttl.textContent = p.name + ': ' + p.value + '% by AI';
+        transform: 'rotate(-45 ' + lx[i] + ' ' + ty + ')' }, gi);
+      t.textContent = shortName(p.name);
+      el('title', {}, gi).textContent = p.name + ': ' + p.value + '% by AI';
 
-      var k = p.value;
-      var stack = stackAt[k] = (stackAt[k] || 0) + 1;
-      var c = el('circle', { r: isMe ? 6.5 : 4.5, cx: ax, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-accent)',
+      var stack = stackAt[p.value] = (stackAt[p.value] || 0) + 1;
+      var c = el('circle', { r: isMe ? 7 : 5, cx: ax, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-accent)',
         stroke: 'var(--aishare-bg, #fff)', 'stroke-width': 1.5 }, dotsG);
+      el('title', {}, c).textContent = p.name + ': ' + p.value + '%';
       var prev = st.dots[p.name];
       return { el: c, fromX: prev ? prev.x : ax, toX: ax, value: p.value, stack: stack - 1,
-        fromY: prev ? prev.y : null, delay: fresh && animate ? 200 + i * 35 : 0 };
+        fromY: prev ? prev.y : null, delay: fresh && animate ? 250 + i * 35 : 0 };
     });
     st.seen = {}; points.forEach(function (p) { st.seen[p.name] = true; });
 
     function curveAt(ys, v) {
-      var i = Math.max(0, Math.min(GRID - 1, Math.round(v)));
-      return y0 - ys[i];
+      return y0 - ys[Math.max(0, Math.min(GRID - 1, Math.round(v)))];
     }
     function paint(ys, t, elapsed) {
       var d = '';
@@ -187,19 +192,19 @@
       area.setAttribute('d', d + 'L' + X(100) + ' ' + y0 + 'L' + X(0) + ' ' + y0 + 'Z');
       dots.forEach(function (o) {
         var local = Math.max(0, Math.min(1, (elapsed - o.delay) / 500));
-        var e = ease(local);
-        var x = o.fromX + (o.toX - o.fromX) * e;
-        var yOn = curveAt(ys, o.value) - o.stack * 9;
-        var y = o.fromY == null ? (TOP - 10) + (yOn - TOP + 10) * e : o.fromY + (yOn - o.fromY) * ease(t);
-        if (o.fromY == null && local === 0) y = -20;
+        var x = o.fromX + (o.toX - o.fromX) * ease(local);
+        var yOn = curveAt(ys, o.value) - o.stack * 10;
+        // A new dot drops in from the top; a known one glides to its new spot.
+        var y = o.fromY == null ? 6 + (yOn - 6) * ease(local) : o.fromY + (yOn - o.fromY) * ease(t);
         o.el.setAttribute('cx', x.toFixed(1));
         o.el.setAttribute('cy', y.toFixed(1));
+        o.el.style.opacity = o.fromY == null && local === 0 ? 0 : 1;
         o.x = x; o.y = y;
       });
     }
 
     cancelAnimationFrame(st.raf);
-    var duration = !animate ? 0 : (st.ys ? 450 : 1100);
+    var duration = !animate ? 0 : (first ? 1100 : 450);
     var extra = dots.reduce(function (m, o) { return Math.max(m, o.delay + 500); }, 0);
     var start = performance.now();
     function frame(now) {
@@ -212,17 +217,20 @@
       if (t < 1 || (animate && elapsed < extra)) st.raf = requestAnimationFrame(frame);
       else st.dots = dots.reduce(function (m, o, i) { m[points[i].name] = { x: o.x, y: o.y }; return m; }, {});
     }
-    st.raf = requestAnimationFrame(frame);
-    if (!animate) frame(performance.now() + 1e6);
+    if (animate) st.raf = requestAnimationFrame(frame);
+    else frame(start + 1e6);
   }
 
-  function reset(container) {
-    var st = container && container._aishare;
-    if (!st) return;
-    cancelAnimationFrame(st.raf);
-    if (st.ro) st.ro.disconnect();
-    container._aishare = null;
-    container.innerHTML = '';
+  function reset(parts) {
+    var plot = parts && parts.plot;
+    var st = plot && plot._aishare;
+    if (st) {
+      cancelAnimationFrame(st.raf);
+      if (st.ro) st.ro.disconnect();
+      plot._aishare = null;
+    }
+    if (plot) { plot.innerHTML = ''; plot.style.height = '0px'; }
+    if (parts && parts.names) { parts.names.innerHTML = ''; parts.names.style.height = '0px'; }
   }
 
   if (!document.getElementById('aishare-chart-style')) {

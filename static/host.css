@@ -756,6 +756,12 @@ body {
   padding: 1rem 1.5rem;
   overflow-y: auto;
 }
+#center-aishare .aishare-plot { height: 0; overflow: hidden; transition: height .7s cubic-bezier(.2,.8,.2,1); }
+#center-aishare .aishare-scale { position: relative; height: 1.5rem; margin-bottom: .35rem; font-size: .85rem; font-weight: 600; color: var(--muted); }
+#center-aishare .aishare-scale > span { position: absolute; bottom: 0; white-space: nowrap; }
+#center-aishare .aishare-end-l { left: 0; }
+#center-aishare .aishare-end-r { right: 0; }
+#center-aishare .aishare-tick { left: calc(11px + (100% - 22px) * var(--p)); transform: translateX(-50%); font-weight: 500; }
 .aishare-host-question { font-size: 1rem; font-weight: 600; color: var(--text); margin: .75rem 0; }
 .aishare-host-status { margin-top: .6rem; font-size: .85rem; color: var(--muted); }
 

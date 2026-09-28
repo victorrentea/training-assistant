@@ -2642,9 +2642,16 @@ function _renderEngagementPopover() {
     document.getElementById('aishare-host-status').textContent = state.active
       ? `${n} ${n === 1 ? 'answer' : 'answers'}${state.revealed ? ' · visible to everyone' : ' · only you see them'}`
       : 'Start to put a slider in front of every participant.';
-    const chart = document.getElementById('aishare-host-chart');
-    if (state.active) AiShareChart.render(chart, points);
-    else AiShareChart.reset(chart);
+    const parts = {
+      plot: document.getElementById('aishare-host-plot'),
+      names: document.getElementById('aishare-host-names'),
+    };
+    if (state.active) {
+      AiShareChart.render(parts, points, { axis: true, inset: 11, id: 'host',
+        height: Math.round(Math.max(180, Math.min(340, window.innerHeight * 0.34))) });
+    } else {
+      AiShareChart.reset(parts);
+    }
   }
 
   async function startAiShare() {

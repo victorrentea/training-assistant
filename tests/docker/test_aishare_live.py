@@ -3,6 +3,9 @@ the Activity view and answer with a slider, the host reveals the distribution
 to everyone, then clears it."""
 import os
 import sys
+import json
+import urllib.request
+import uuid
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
@@ -56,27 +59,28 @@ def test_aishare_slider_reveal_and_clear():
         host.start_aishare()
         alice.wait_for_aishare()
         bob.wait_for_aishare()
-        expect(alice._page.locator("#aishare-chart")).to_be_hidden()
+        expect(alice._page.locator("#aishare-plot svg")).to_have_count(0)
 
         # ── Both answer; nobody sees the others yet
         alice.set_aishare(80)
         bob.set_aishare(20)
         expect(host_raw.locator("#aishare-host-status")).to_contain_text("2 answers", timeout=5000)
-        expect(alice._page.locator("#aishare-status")).to_contain_text("2 colleagues", timeout=5000)
-        expect(alice._page.locator("#aishare-chart")).to_be_hidden()
+        expect(alice._page.locator("#aishare-status")).to_have_text("2 answers", timeout=5000)
+        expect(alice._page.locator("#aishare-plot svg")).to_have_count(0)
         _shot(alice._page, "aishare-pax-hidden")
 
         # ── Host reveals → both see the distribution with names
         host.reveal_aishare(True)
-        expect(alice._page.locator("#aishare-chart .aishare-label")).to_have_count(2, timeout=5000)
-        expect(bob._page.locator("#aishare-chart .aishare-label")).to_have_count(2, timeout=5000)
-        assert sorted(alice.aishare_chart_labels()) == ["Alice · 80%", "Bob · 20%"]
+        expect(alice._page.locator("#aishare-names .aishare-label")).to_have_count(2, timeout=5000)
+        expect(bob._page.locator("#aishare-names .aishare-label")).to_have_count(2, timeout=5000)
+        assert sorted(alice.aishare_chart_labels()) == ["Alice", "Bob"]
         _shot(alice._page, "aishare-pax-revealed")
         _shot(host_raw, "aishare-host")
 
         # ── A participant moves the slider after the reveal → others see it live
         bob.set_aishare(55)
-        expect(alice._page.locator("#aishare-chart")).to_contain_text("Bob · 55%", timeout=5000)
+        expect(bob._page.locator("#aishare-names title", has_text="Bob: 55%")).to_have_count(1, timeout=5000)
+        expect(alice._page.locator("#aishare-names title", has_text="Bob: 55%")).to_have_count(1, timeout=5000)
 
         # ── Refresh keeps Alice's answer
         alice._page.reload(wait_until="networkidle")
@@ -88,4 +92,60 @@ def test_aishare_slider_reveal_and_clear():
         expect(alice._page.locator("#activity-aishare-section")).to_be_hidden(timeout=5000)
         expect(bob._page.locator("#activity-aishare-section")).to_be_hidden(timeout=5000)
 
+        browser.close()
+
+
+CROWD = [("Ana", 10), ("Bogdan Popescu", 35), ("Cristi", 40), ("Diana", 45), ("Elena Ionescu", 50),
+         ("Florin", 55), ("George", 60), ("Horia", 60), ("Ioana", 62), ("Jean-Luc Picard", 65),
+         ("Kamil", 70), ("Laura", 70), ("Mihai", 70), ("Nicoleta", 75), ("Ovidiu", 80),
+         ("Paula", 80), ("Radu", 85), ("Sorin", 90), ("Tudor", 95), ("Zoe", 30),
+         ("Andrei", 20), ("Bianca", 65), ("Cosmin", 55), ("Dan", 100)]
+
+
+def _post(url, body, pid):
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST",
+                                 headers={"Content-Type": "application/json", "X-Participant-ID": pid})
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        assert resp.status < 300
+
+
+@pytest.mark.nightly
+def test_aishare_fits_a_crowd_of_25():
+    """24 answers seeded over REST + one real browser: every name must be drawn."""
+    session_id = fresh_session("AiShareCrowd")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        host_ctx = browser.new_context(http_credentials={"username": HOST_USER, "password": HOST_PASS},
+                                       viewport={"width": 1500, "height": 900})
+        host_raw = host_ctx.new_page()
+        host_raw.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
+        host = HostPage(host_raw)
+
+        raw = browser.new_context(viewport={"width": 1440, "height": 900}).new_page()
+        raw.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+        victor = ParticipantPage(raw)
+        victor.join("Victor Rentea")
+
+        host.open_aishare_tab()
+        host.start_aishare()
+        victor.wait_for_aishare()
+        victor.set_aishare(40)
+        for name, value in CROWD:
+            pid = str(uuid.uuid4())
+            _post(f"{BASE}/{session_id}/api/participant/register", {"name": name}, pid)
+            _post(f"{BASE}/{session_id}/api/participant/aishare/value", {"value": value}, pid)
+        expect(host_raw.locator("#aishare-host-status")).to_contain_text("25 answers", timeout=5000)
+
+        host.reveal_aishare(True)
+        expect(raw.locator("#aishare-names .aishare-label")).to_have_count(25, timeout=5000)
+        assert "Victor Rentea" in victor.aishare_chart_labels()
+        _shot(raw, "aishare-crowd-pax")
+        _shot(host_raw, "aishare-crowd-host")
+        if SHOTS:
+            dark = browser.new_context(viewport={"width": 1440, "height": 900}, color_scheme="dark").new_page()
+            dark.goto(f"{BASE}/{session_id}", wait_until="networkidle")
+            ParticipantPage(dark).join("Dark Viewer")
+            ParticipantPage(dark).wait_for_aishare()
+            _shot(dark, "aishare-crowd-pax-dark")
         browser.close()
