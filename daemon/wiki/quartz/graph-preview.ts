@@ -88,11 +88,13 @@ function zoom(dialog: HTMLElement, opening: boolean): Promise<void> {
   const r = dialog.getBoundingClientRect()
   const dx = origin.x - (r.left + r.width / 2)
   const dy = origin.y - (r.top + r.height / 2)
-  const dot = { transform: `translate(${dx}px, ${dy}px) scale(0.02)`, opacity: 0.3 }
+  // Slow enough to follow, and mostly opaque on the way: the point is to show the
+  // trainer where the note came from and where it goes back to.
+  const dot = { transform: `translate(${dx}px, ${dy}px) scale(0.02)`, opacity: 0.6 }
   const full = { transform: "none", opacity: 1 }
   const timing = opening
-    ? { duration: 280, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }
-    : { duration: 220, easing: "cubic-bezier(0.6, 0, 0.8, 0.4)" }
+    ? { duration: 600, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }
+    : { duration: 500, easing: "cubic-bezier(0.4, 0, 0.6, 1)" }
   running = [
     dialog.animate(opening ? [dot, full] : [full, dot], timing),
     backdrop!.animate(opening ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }], timing),
