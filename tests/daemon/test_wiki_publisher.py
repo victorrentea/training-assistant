@@ -236,6 +236,43 @@ def test_build_copy_gets_each_notes_day_in_its_frontmatter(tmp_path):
     assert (tmp_path / "Home.md").read_text() == HOME_TWO_DAYS
 
 
+SUPPLY_CHAIN_DAY_1 = """# Supply chain
+
+**`npm i -g …@latest` is an SBOM bomb: one stolen maintainer key owns you.**
+
+- Pin versions of the tools and skills your agents run — [[Skill trust]].
+"""
+FOOTER = "\n---\nRelated: [[Skill trust]] · [[Spec-driven frameworks]] · [[Home]]\nSource: Day 1 — section *Spec-driven development*\n"
+
+
+def test_a_note_mostly_rewritten_on_a_later_day_is_that_days():
+    day_2 = """
+## 📅 Ziua 2
+- `npm install` runs strangers' code through postinstall scripts — [[Install scripts]].
+- Log lines written from request strings become prompts for the agent reading them later.
+"""
+    assert builder.reworked_day(SUPPLY_CHAIN_DAY_1 + day_2 + FOOTER) == "Ziua 2"
+
+
+def test_a_small_later_addition_leaves_the_note_on_its_birth_day():
+    assert builder.reworked_day(SUPPLY_CHAIN_DAY_1 + "\n## 📅 Ziua 2\n- Pin it.\n" + FOOTER) is None
+    assert builder.reworked_day(SUPPLY_CHAIN_DAY_1 + FOOTER) is None
+
+
+def test_the_footer_and_frontmatter_do_not_count_toward_the_share():
+    note = "---\naliases: [sc]\n---\n# Supply chain\nshort.\n## 📅 Ziua 2\n- a longer line added today\n" + FOOTER * 5
+    assert builder.reworked_day(note) == "Ziua 2"
+
+
+def test_build_copy_colours_a_reworked_note_with_the_day_that_reworked_it(tmp_path):
+    (tmp_path / "Home.md").write_text(HOME_TWO_DAYS)
+    (tmp_path / "Caching.md").write_text("# Caching\nold.\n## 📅 Ziua 2\n- most of this note came on day two\n")
+    (tmp_path / "Agregat.md").write_text("# Agregat\nold.\n## 📅 Ziua 7\n- a heading Home does not know\n")
+    builder.mark_note_days(tmp_path)
+    assert (tmp_path / "Caching.md").read_text().startswith('---\nwikiDay: 2\nwikiDayLabel: "Ziua 2"\n---\n')
+    assert (tmp_path / "Agregat.md").read_text().startswith('---\nwikiDay: 1\nwikiDayLabel: "Ziua 1"\n---\n')
+
+
 def test_a_single_day_vault_is_not_coloured(tmp_path):
     (tmp_path / "Home.md").write_text("# 📅 Ziua 1\n- [[Caching]]")
     (tmp_path / "Caching.md").write_text("# Caching")

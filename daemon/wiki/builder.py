@@ -139,11 +139,43 @@ def note_days(home_md: str) -> dict[str, tuple[int, str]]:
     return days
 
 
+def reworked_day(note_md: str) -> str | None:
+    """The day heading whose `## 📅 <day>` section holds more than half of the note, if any.
+
+    A later day that revisits a note appends its material under the same heading
+    Home uses for that day. Once that section outweighs everything else, the note
+    is mostly that day's, and should light up with it. Measured in non-blank
+    characters of the body, without frontmatter, headings or the `---` footer.
+    """
+    body = note_md
+    if body.startswith("---\n"):
+        end = body.find("\n---\n", 4)
+        body = body[end + 5:] if end != -1 else body
+    footer = body.rfind("\n---\n")
+    if footer != -1:
+        body = body[:footer]
+    sizes: dict[str | None, int] = {}
+    day: str | None = None
+    for line in body.splitlines():
+        heading = _DAY_HEADING.match(line)
+        if heading:
+            day = heading.group(1)
+            continue
+        sizes[day] = sizes.get(day, 0) + len("".join(line.split()))
+    total = sum(sizes.values())
+    for label, size in sizes.items():
+        if label and size * 2 > total:
+            return label
+    return None
+
+
 def mark_note_days(content_dir: Path) -> None:
     """Stamp each note's day into its frontmatter, for the graph to colour by (build copy only).
 
     patch-graph.py carries `wikiDay`/`wikiDayLabel` through Quartz's content index.
-    A single-day vault gets nothing: one colour for everyone says nothing.
+    A note is the day it was born, unless a later day reworked more than half of
+    it (reworked_day). A single-day vault gets nothing: one colour for everyone
+    says nothing.
     """
     home = content_dir / "Home.md"
     if not home.is_file():
@@ -151,12 +183,16 @@ def mark_note_days(content_dir: Path) -> None:
     days = note_days(home.read_text(encoding="utf-8"))
     if len({number for number, _ in days.values()}) < 2:
         return
+    numbers = {label: number for number, label in days.values()}
     for path in content_dir.rglob("*.md"):
         if path.stem not in days:
             continue
         number, label = days[path.stem]
-        fields = f"wikiDay: {number}\nwikiDayLabel: {json.dumps(label, ensure_ascii=False)}\n"
         text = path.read_text(encoding="utf-8")
+        reworked = reworked_day(text)
+        if reworked in numbers and numbers[reworked] > number:
+            number, label = numbers[reworked], reworked
+        fields = f"wikiDay: {number}\nwikiDayLabel: {json.dumps(label, ensure_ascii=False)}\n"
         if text.startswith("---\n"):
             text = "---\n" + fields + text[4:]
         else:
