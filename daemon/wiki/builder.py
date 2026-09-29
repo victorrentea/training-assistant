@@ -8,9 +8,7 @@ session, from that session's folder only — nothing from other sessions can lea
 from __future__ import annotations
 
 import io
-import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -95,7 +93,6 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="wiki-content-") as tmp:
         content = Path(tmp) / "content"
         shutil.copytree(wiki_dir, content, ignore=_IGNORED)
-        mark_note_days(content)
         try:
             result = subprocess.run(
                 # nice: the build must never make the trainer's machine stutter mid-demo
@@ -112,92 +109,6 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
         tail = "\n".join((result.stderr or result.stdout).strip().splitlines()[-15:])
         raise WikiBuildError(f"Quartz build failed:\n{tail}")
     _use_home_as_landing_page(wiki_dir, out_dir)
-
-
-_DAY_HEADING = re.compile(r"^#{1,3}\s*📅\s*(.+?)\s*$")
-_WIKILINK = re.compile(r"\[\[([^\]|#]+)")
-
-
-def note_days(home_md: str) -> dict[str, tuple[int, str]]:
-    """Note name → (day number, day heading) from Home.md's `# 📅 Ziua N` sections.
-
-    A multi-day vault is cumulative and Home lists each day's new notes under that
-    day's heading, so the first day a note is linked from is the day it was born.
-    Days are numbered by heading order, not by the digit in the text.
-    """
-    days: dict[str, tuple[int, str]] = {}
-    day: tuple[int, str] | None = None
-    count = 0
-    for line in home_md.splitlines():
-        heading = _DAY_HEADING.match(line)
-        if heading:
-            count += 1
-            day = (count, heading.group(1))
-        elif day:
-            for name in _WIKILINK.findall(line):
-                days.setdefault(name.strip(), day)
-    return days
-
-
-def reworked_day(note_md: str) -> str | None:
-    """The day heading whose `## 📅 <day>` section holds more than half of the note, if any.
-
-    A later day that revisits a note appends its material under the same heading
-    Home uses for that day. Once that section outweighs everything else, the note
-    is mostly that day's, and should light up with it. Measured in non-blank
-    characters of the body, without frontmatter, headings or the `---` footer.
-    """
-    body = note_md
-    if body.startswith("---\n"):
-        end = body.find("\n---\n", 4)
-        body = body[end + 5:] if end != -1 else body
-    footer = body.rfind("\n---\n")
-    if footer != -1:
-        body = body[:footer]
-    sizes: dict[str | None, int] = {}
-    day: str | None = None
-    for line in body.splitlines():
-        heading = _DAY_HEADING.match(line)
-        if heading:
-            day = heading.group(1)
-            continue
-        sizes[day] = sizes.get(day, 0) + len("".join(line.split()))
-    total = sum(sizes.values())
-    for label, size in sizes.items():
-        if label and size * 2 > total:
-            return label
-    return None
-
-
-def mark_note_days(content_dir: Path) -> None:
-    """Stamp each note's day into its frontmatter, for the graph to colour by (build copy only).
-
-    patch-graph.py carries `wikiDay`/`wikiDayLabel` through Quartz's content index.
-    A note is the day it was born, unless a later day reworked more than half of
-    it (reworked_day). A single-day vault gets nothing: one colour for everyone
-    says nothing.
-    """
-    home = content_dir / "Home.md"
-    if not home.is_file():
-        return
-    days = note_days(home.read_text(encoding="utf-8"))
-    if len({number for number, _ in days.values()}) < 2:
-        return
-    numbers = {label: number for number, label in days.values()}
-    for path in content_dir.rglob("*.md"):
-        if path.stem not in days:
-            continue
-        number, label = days[path.stem]
-        text = path.read_text(encoding="utf-8")
-        reworked = reworked_day(text)
-        if reworked in numbers and numbers[reworked] > number:
-            number, label = numbers[reworked], reworked
-        fields = f"wikiDay: {number}\nwikiDayLabel: {json.dumps(label, ensure_ascii=False)}\n"
-        if text.startswith("---\n"):
-            text = "---\n" + fields + text[4:]
-        else:
-            text = "---\n" + fields + "---\n" + text
-        path.write_text(text, encoding="utf-8")
 
 
 def _use_home_as_landing_page(wiki_dir: Path, out_dir: Path) -> None:

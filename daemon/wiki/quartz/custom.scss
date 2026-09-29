@@ -106,45 +106,44 @@ body {
   display: none;
 }
 
-// Multi-day graph (patch-graph.py): the latest day's dots at full contrast
-// against the background, every earlier day's barely above it.
+// Seen/unseen (note-pane.ts): a note not yet opened in the pane on this browser is
+// at full contrast, one already read is dimmed - its dot in the graph and every
+// link to it in the pane alike. The dim grey still has to read as link text.
 :root {
-  --graph-today: #000000;
-  --graph-earlier: #d3dbe0;
+  --wiki-unseen: #000000;
+  --wiki-seen: #a3adb5;
 }
 
 :root[saved-theme="dark"] {
-  --graph-today: #ffffff;
-  --graph-earlier: #3a424a;
+  --wiki-unseen: #ffffff;
+  --wiki-seen: #6f7a84;
 }
 
-// Which dot colour is which training day (patch-graph.py), bottom-left of the full
-// graph. It never takes the pointer, so it can't swallow a drag or a click.
-.graph-day-legend {
+.note-pane-body a.internal {
+  color: var(--wiki-unseen);
+
+  &.seen {
+    color: var(--wiki-seen);
+  }
+}
+
+// Bottom-left of the full graph (patch-graph.py): back to the layout it opened with.
+.graph-reset {
   position: absolute;
   left: 0.8rem;
   bottom: 0.7rem;
   z-index: 1;
-  display: flex;
-  gap: 0.9rem;
   padding: 0.3rem 0.7rem;
   border-radius: 999px;
-  pointer-events: none;
   font-family: var(--bodyFont);
   font-size: 0.8rem;
   color: var(--darkgray);
   background: var(--light);
   border: 1px solid var(--lightgray);
+  cursor: pointer;
 
-  span {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  i {
-    width: 0.6rem;
-    height: 0.6rem;
-    border-radius: 50%;
+  &:hover {
+    color: #8b5cf6;
+    border-color: #8b5cf6;
   }
 }

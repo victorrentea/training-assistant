@@ -3,10 +3,19 @@
 // Clicking a dot, or a link inside the note, selects that note: its dot turns
 // purple and the pane swaps in place, without ever leaving the graph. Hovering a
 // link in the note lights up its dot and the edge to it from the selected note.
+// Every note shown here counts as seen on this browser: its dot and the links to it
+// dim, so what is left to read stands out.
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes the
 // full graph register here (connectGraph) and call selectNote() on a click.
-import { SimpleSlug, getFullSlug, normalizeRelativeURLs, resolveRelative, simplifySlug } from "../../util/path"
+import {
+  SimpleSlug,
+  getFullSlug,
+  normalizeRelativeURLs,
+  pathToRoot,
+  resolveRelative,
+  simplifySlug,
+} from "../../util/path"
 
 export type PaneGraph = {
   select(slug: SimpleSlug): void
@@ -20,6 +29,35 @@ let graph: PaneGraph | null = null
 let selected: SimpleSlug | null = null
 let highlighted: SimpleSlug | null = null
 let pane: HTMLElement | null = null
+
+// Kept per site (the path holds the session id), so one training's reading doesn't
+// grey out the next one's notes. Private windows or blocked storage just start over.
+const seenKey = () => `wiki-seen:${new URL(pathToRoot(getFullSlug(window)), window.location.href).pathname}`
+let seen: Set<string> | null = null
+
+function seenNotes(): Set<string> {
+  if (!seen) {
+    try {
+      seen = new Set(JSON.parse(localStorage.getItem(seenKey()) ?? "[]"))
+    } catch {
+      seen = new Set()
+    }
+  }
+  return seen
+}
+
+export function isSeen(slug: string): boolean {
+  return seenNotes().has(slug)
+}
+
+function markSeen(slug: SimpleSlug) {
+  const notes = seenNotes()
+  if (notes.has(slug)) return
+  notes.add(slug)
+  try {
+    localStorage.setItem(seenKey(), JSON.stringify([...notes]))
+  } catch {}
+}
 
 function noteUrl(slug: SimpleSlug): URL {
   return new URL(resolveRelative(getFullSlug(window), slug), window.location.toString())
@@ -107,6 +145,7 @@ function paragraph(text: string) {
 
 export async function selectNote(slug: SimpleSlug) {
   selected = slug
+  markSeen(slug)
   highlight(null)
   graph?.select(slug)
 
@@ -127,6 +166,9 @@ export async function selectNote(slug: SimpleSlug) {
   title.innerHTML = h1?.innerHTML ?? ""
   h1?.remove()
   body.replaceChildren(...note.filter((e) => e !== h1))
+  body.querySelectorAll<HTMLAnchorElement>("a[data-slug]").forEach((a) => {
+    a.classList.toggle("seen", isSeen(simplifySlug(a.dataset.slug as never)))
+  })
 }
 
 // A page load (or back/forward) selects the page in the URL; the site root is a copy

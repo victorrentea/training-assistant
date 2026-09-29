@@ -14,60 +14,17 @@ PATCHES = [
     # Obsidian keeps hubs only a bit larger than leaves; sqrt made index/log/overview giant.
     ("return 2 + Math.sqrt(numLinks)",
      "return 3 + Math.log2(1 + numLinks)"),
-    # One neutral node colour like Obsidian, no teal "visited" nodes; current page keeps the accent.
-    # Multi-day vaults (builder.mark_note_days): the latest day's notes are the
-    # high-contrast grey, every earlier day's the dim one, so what the room added
-    # today stands out. Same grey family on purpose: a hue per day read as noise.
+    # One neutral node colour like Obsidian; the current page keeps the accent.
+    # Seen/unseen instead of Quartz's teal "visited": a note never opened in the pane
+    # on this browser is the high-contrast grey, one already read the dim one
+    # (note-pane.ts keeps the list), so what is left to read stands out.
     ("""    } else if (visited.has(d.id) || d.id.startsWith("tags/")) {
       return computedStyleMap["--tertiary"]
     } else {
       return computedStyleMap["--gray"]
-    }
-  }""",
-     """    } else if (d.day) {
-      return d.day === latestDay ? computedStyleMap["--graph-today"] : computedStyleMap["--graph-earlier"]
-    } else {
-      return computedStyleMap["--darkgray"]
-    }
-  }
-
-  // Which grey is today, in the corner of the full graph.
-  const days = new Map<number, string>()
-  for (const n of graphData.nodes) if (n.day) days.set(n.day, n.dayLabel ?? String(n.day))
-  const latestDay = Math.max(0, ...days.keys())
-  if (days.size > 1 && graph.classList.contains("global-graph-container")) {
-    const legend = document.createElement("div")
-    legend.className = "graph-day-legend"
-    const earlier = [...days].filter(([day]) => day !== latestDay).sort((a, b) => a[0] - b[0])
-    for (const [label, cssVar] of [
-      [days.get(latestDay)!, "--graph-today"],
-      [earlier.map(([, l]) => l).join(" · "), "--graph-earlier"],
-    ] as const) {
-      const dot = document.createElement("i")
-      dot.style.background = computedStyleMap[cssVar]
-      const item = document.createElement("span")
-      item.append(dot, label)
-      legend.append(item)
-    }
-    graph.append(legend)
-  }"""),
-    ("""type NodeData = {
-  id: SimpleSlug
-  text: string
-  tags: string[]
-} & SimulationNodeDatum""",
-     """type NodeData = {
-  id: SimpleSlug
-  text: string
-  tags: string[]
-  day?: number
-  dayLabel?: string
-} & SimulationNodeDatum"""),
-    ("""      tags: data.get(url)?.tags ?? [],
     }""",
-     """      tags: data.get(url)?.tags ?? [],
-      day: data.get(url)?.day,
-      dayLabel: data.get(url)?.dayLabel,
+     """    } else {
+      return isSeen(d.id) ? computedStyleMap["--wiki-seen"] : computedStyleMap["--wiki-unseen"]
     }"""),
     # Labels visible from the start and hanging under the node, not floating above it.
     ("""      alpha: 0,
@@ -97,8 +54,8 @@ PATCHES = [
   ] as const""",
      """    "--darkgray",
     "--bodyFont",
-    "--graph-today",
-    "--graph-earlier",
+    "--wiki-seen",
+    "--wiki-unseen",
   ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k. A lit edge
@@ -125,7 +82,7 @@ PATCHES = [
      "  let selectedNodeId: string | null = null\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, selectNote, warmNote } from "./note-pane"'),
+     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, selectNote, warmNote } from "./note-pane"'),
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
      "    if (newHoveredId !== null) warmNote(newHoveredId as SimpleSlug)\n"),
@@ -147,6 +104,7 @@ PATCHES = [
   const paneGraph: PaneGraph = {
     select(id) {
       selectedNodeId = id
+      for (const n of nodeRenderData) n.color = color(n.simulationData)
       if (!dragging) renderPixiFromD3()
     },
     highlight(id) {
@@ -192,6 +150,19 @@ PATCHES = [
   }
   window.addEventListener("resize", refit)
   window.addCleanup(() => window.removeEventListener("resize", refit))
+  // Dragged dots and zoom back to the start: a fresh render lays the graph out the
+  // same way every time (d3 seeds the positions deterministically).
+  for (const container of containers) {
+    if (container.querySelector(".graph-reset")) continue
+    const reset = document.createElement("button")
+    reset.className = "graph-reset"
+    reset.textContent = "⟲ Reset layout"
+    reset.addEventListener("click", () => {
+      cleanupGlobalGraphs()
+      void renderGlobalGraph()
+    })
+    container.append(reset)
+  }
 """),
 ]
 
@@ -218,26 +189,6 @@ GRAPH_TSX_PATCHES = [
 ]
 
 
-# The day a note was born (wikiDay/wikiDayLabel frontmatter, stamped by
-# builder.mark_note_days) travels to the graph in the content index.
-CONTENT_INDEX_PATCHES = [
-    ("""  date?: Date
-  description?: string
-}""",
-     """  date?: Date
-  description?: string
-  day?: number
-  dayLabel?: string
-}"""),
-    ("""            description: file.data.description ?? "",
-          })""",
-     """            description: file.data.description ?? "",
-            day: file.data.frontmatter?.wikiDay as number | undefined,
-            dayLabel: file.data.frontmatter?.wikiDayLabel as string | undefined,
-          })"""),
-]
-
-
 def apply(target: pathlib.Path, patches: list[tuple[str, str]]) -> None:
     # Keep Quartz's original next to it, so re-running (after a patch change) starts clean.
     original = target.with_name(target.name + ".orig")
@@ -255,4 +206,3 @@ def apply(target: pathlib.Path, patches: list[tuple[str, str]]) -> None:
 
 apply(path, PATCHES)
 apply(path.parents[1] / "Graph.tsx", GRAPH_TSX_PATCHES)
-apply(path.parents[2] / "plugins" / "emitters" / "contentIndex.tsx", CONTENT_INDEX_PATCHES)
