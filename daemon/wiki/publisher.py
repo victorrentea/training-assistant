@@ -107,7 +107,8 @@ class WikiPublisher:
                 self._set_updated_at(None)
             if self._busy:
                 return
-            if fp is None:
+            # fp implies the rest; spelled out so the type checker narrows them too.
+            if fp is None or wiki_dir is None or session_id is None or session_folder is None:
                 self._set_updated_at(None)
                 return
             key: _Key = (session_id, str(wiki_dir), fp)

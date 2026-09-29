@@ -57,7 +57,7 @@ def participant_view() -> dict:
 async def _push_state() -> None:
     broadcast(AiShareUpdatedMsg(**participant_view()))
     await notify_host(AiShareHostUpdateMsg(
-        active=aishare_state.active, revealed=aishare_state.revealed, points=_points(),
+        active=aishare_state.active, revealed=aishare_state.revealed, points=[AiSharePoint.model_validate(p) for p in _points()],
     ))
 
 
@@ -70,7 +70,7 @@ host_router = APIRouter(prefix="/api/{session_id}/host/aishare", tags=["aishare"
 async def get_aishare():
     """Host snapshot fetch on tab activation. Subsequent updates via WS."""
     return AiShareHostState(
-        active=aishare_state.active, revealed=aishare_state.revealed, points=_points(),
+        active=aishare_state.active, revealed=aishare_state.revealed, points=[AiSharePoint.model_validate(p) for p in _points()],
     )
 
 
