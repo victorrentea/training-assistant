@@ -25,7 +25,7 @@ PATCHES = [
     }
   }""",
      """    } else if (d.day) {
-      return d.day === latestDay ? computedStyleMap["--dark"] : computedStyleMap["--gray"]
+      return d.day === latestDay ? computedStyleMap["--graph-today"] : computedStyleMap["--graph-earlier"]
     } else {
       return computedStyleMap["--darkgray"]
     }
@@ -40,8 +40,8 @@ PATCHES = [
     legend.className = "graph-day-legend"
     const earlier = [...days].filter(([day]) => day !== latestDay).sort((a, b) => a[0] - b[0])
     for (const [label, cssVar] of [
-      [days.get(latestDay)!, "--dark"],
-      [earlier.map(([, l]) => l).join(" · "), "--gray"],
+      [days.get(latestDay)!, "--graph-today"],
+      [earlier.map(([, l]) => l).join(" · "), "--graph-earlier"],
     ] as const) {
       const dot = document.createElement("i")
       dot.style.background = computedStyleMap[cssVar]
@@ -92,6 +92,14 @@ PATCHES = [
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
      "forceCollide<NodeData>((n) => nodeRadius(n) + 14)"),
+    ("""    "--darkgray",
+    "--bodyFont",
+  ] as const""",
+     """    "--darkgray",
+    "--bodyFont",
+    "--graph-today",
+    "--graph-earlier",
+  ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k.
     (".stroke({ alpha: l.alpha, width: 1, color: l.color })",
