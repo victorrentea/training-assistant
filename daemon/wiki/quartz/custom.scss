@@ -54,6 +54,32 @@ body {
     overflow: auto;
     overscroll-behavior: contain;
     padding: 0 1.5rem 1.25rem;
+
+    // Always visible and three times macOS's overlay thumb, so the reader sees at a
+    // glance how long the note is and can grab it. Styling ::-webkit-scrollbar is
+    // what turns Chrome/Safari's auto-hiding overlay into a permanent bar; Firefox
+    // doesn't know it and only gets the colours.
+    &::-webkit-scrollbar {
+      width: 18px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--lightgray);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--gray);
+      border: 3px solid var(--lightgray);
+      border-radius: 9px;
+
+      &:hover {
+        background: var(--darkgray);
+      }
+    }
+
+    @supports not selector(::-webkit-scrollbar) {
+      scrollbar-color: var(--gray) var(--lightgray);
+    }
   }
 }
 
