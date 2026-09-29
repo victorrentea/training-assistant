@@ -304,6 +304,50 @@
         ]
       }
     },
+    "/api/wiki/upload": {
+      "post": {
+        "summary": "Upload Wiki",
+        "description": "Replace the session's wiki site with the uploaded build, and drop every other session's.",
+        "operationId": "upload_wiki_api_wiki_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_wiki_api_wiki_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WikiUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ]
+      }
+    },
     "/internal/upload-static": {
       "post": {
         "summary": "Upload Static",
@@ -1006,6 +1050,25 @@
         ],
         "title": "Body_upload_slide_pdf_api_slides_upload_post"
       },
+      "Body_upload_wiki_api_wiki_upload_post": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "file"
+        ],
+        "title": "Body_upload_wiki_api_wiki_upload_post"
+      },
       "DeleteStaticRequest": {
         "properties": {
           "path": {
@@ -1148,6 +1211,24 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WikiUploadResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "WikiUploadResponse"
       },
       "_AckBody": {
         "properties": {

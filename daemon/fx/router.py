@@ -26,9 +26,7 @@ The press itself still takes an **integer** the daemon looked up in the catalog.
 No string from a request ever becomes part of a URL on the effects port.
 """
 import logging
-import os
 import time
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
