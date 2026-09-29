@@ -15,28 +15,36 @@ PATCHES = [
     ("return 2 + Math.sqrt(numLinks)",
      "return 3 + Math.log2(1 + numLinks)"),
     # One neutral node colour like Obsidian, no teal "visited" nodes; current page keeps the accent.
-    # Multi-day vaults: day 1 stays neutral and each later day gets its own colour
-    # (builder.mark_note_days), so what the room added today stands out from yesterday.
+    # Multi-day vaults (builder.mark_note_days): the latest day's notes are the
+    # high-contrast grey, every earlier day's the dim one, so what the room added
+    # today stands out. Same grey family on purpose: a hue per day read as noise.
     ("""    } else if (visited.has(d.id) || d.id.startsWith("tags/")) {
       return computedStyleMap["--tertiary"]
     } else {
       return computedStyleMap["--gray"]
     }
   }""",
-     """    } else {
-      return dayColor(d.day) ?? computedStyleMap["--darkgray"]
+     """    } else if (d.day) {
+      return d.day === latestDay ? computedStyleMap["--dark"] : computedStyleMap["--gray"]
+    } else {
+      return computedStyleMap["--darkgray"]
     }
   }
 
-  // Which colour is which day, in the corner of the full graph.
+  // Which grey is today, in the corner of the full graph.
   const days = new Map<number, string>()
   for (const n of graphData.nodes) if (n.day) days.set(n.day, n.dayLabel ?? String(n.day))
+  const latestDay = Math.max(0, ...days.keys())
   if (days.size > 1 && graph.classList.contains("global-graph-container")) {
     const legend = document.createElement("div")
     legend.className = "graph-day-legend"
-    for (const [day, label] of [...days].sort((a, b) => a[0] - b[0])) {
+    const earlier = [...days].filter(([day]) => day !== latestDay).sort((a, b) => a[0] - b[0])
+    for (const [label, cssVar] of [
+      [days.get(latestDay)!, "--dark"],
+      [earlier.map(([, l]) => l).join(" · "), "--gray"],
+    ] as const) {
       const dot = document.createElement("i")
-      dot.style.background = dayColor(day) ?? computedStyleMap["--darkgray"]
+      dot.style.background = computedStyleMap[cssVar]
       const item = document.createElement("span")
       item.append(dot, label)
       legend.append(item)
@@ -54,13 +62,7 @@ PATCHES = [
   tags: string[]
   day?: number
   dayLabel?: string
-} & SimulationNodeDatum
-
-// Day 1 has no entry: it keeps the neutral colour. Purple stays reserved for hover.
-const DAY_COLORS = ["#f59e0b", "#14b8a6", "#ec4899", "#3b82f6"]
-function dayColor(day: number | undefined): string | undefined {
-  return day && day > 1 ? DAY_COLORS[(day - 2) % DAY_COLORS.length] : undefined
-}"""),
+} & SimulationNodeDatum"""),
     ("""      tags: data.get(url)?.tags ?? [],
     }""",
      """      tags: data.get(url)?.tags ?? [],
