@@ -202,6 +202,47 @@ def test_explicit_index_is_left_alone(tmp_path):
     assert (out / "index.html").read_text() == "index"
 
 
+HOME_TWO_DAYS = """# Workshop
+
+Intro that links [[Caching]] before any day.
+
+# 📅 Ziua 1
+- [[Caching]] — first seen here
+- [[Cache rece|cold cache]] and [[Agregat#Root]]
+
+# 📅 Ziua 2
+- [[Agregat]] — built on day 1, mentioned again
+- [[Hexagonala]]
+"""
+
+
+def test_a_note_belongs_to_the_first_day_that_links_it():
+    assert builder.note_days(HOME_TWO_DAYS) == {
+        "Caching": (1, "Ziua 1"),
+        "Cache rece": (1, "Ziua 1"),
+        "Agregat": (1, "Ziua 1"),
+        "Hexagonala": (2, "Ziua 2"),
+    }
+
+
+def test_build_copy_gets_each_notes_day_in_its_frontmatter(tmp_path):
+    (tmp_path / "Home.md").write_text(HOME_TWO_DAYS)
+    (tmp_path / "Caching.md").write_text("# Caching")
+    (tmp_path / "Hexagonala.md").write_text("---\naliases: [hex]\n---\n# Hexagonala")
+    builder.mark_note_days(tmp_path)
+    assert (tmp_path / "Caching.md").read_text() == '---\nwikiDay: 1\nwikiDayLabel: "Ziua 1"\n---\n# Caching'
+    assert (tmp_path / "Hexagonala.md").read_text() == (
+        '---\nwikiDay: 2\nwikiDayLabel: "Ziua 2"\naliases: [hex]\n---\n# Hexagonala')
+    assert (tmp_path / "Home.md").read_text() == HOME_TWO_DAYS
+
+
+def test_a_single_day_vault_is_not_coloured(tmp_path):
+    (tmp_path / "Home.md").write_text("# 📅 Ziua 1\n- [[Caching]]")
+    (tmp_path / "Caching.md").write_text("# Caching")
+    builder.mark_note_days(tmp_path)
+    assert (tmp_path / "Caching.md").read_text() == "# Caching"
+
+
 def test_missing_quartz_install_says_how_to_fix_it(tmp_path, monkeypatch):
     monkeypatch.setenv("QUARTZ_DIR", str(tmp_path / "nowhere"))
     with pytest.raises(builder.WikiBuildError, match="setup-quartz.sh"):

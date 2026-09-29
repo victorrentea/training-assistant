@@ -8,7 +8,9 @@ session, from that session's folder only — nothing from other sessions can lea
 from __future__ import annotations
 
 import io
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -93,6 +95,7 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="wiki-content-") as tmp:
         content = Path(tmp) / "content"
         shutil.copytree(wiki_dir, content, ignore=_IGNORED)
+        mark_note_days(content)
         try:
             result = subprocess.run(
                 # nice: the build must never make the trainer's machine stutter mid-demo
@@ -109,6 +112,56 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
         tail = "\n".join((result.stderr or result.stdout).strip().splitlines()[-15:])
         raise WikiBuildError(f"Quartz build failed:\n{tail}")
     _use_home_as_landing_page(wiki_dir, out_dir)
+
+
+_DAY_HEADING = re.compile(r"^#{1,3}\s*📅\s*(.+?)\s*$")
+_WIKILINK = re.compile(r"\[\[([^\]|#]+)")
+
+
+def note_days(home_md: str) -> dict[str, tuple[int, str]]:
+    """Note name → (day number, day heading) from Home.md's `# 📅 Ziua N` sections.
+
+    A multi-day vault is cumulative and Home lists each day's new notes under that
+    day's heading, so the first day a note is linked from is the day it was born.
+    Days are numbered by heading order, not by the digit in the text.
+    """
+    days: dict[str, tuple[int, str]] = {}
+    day: tuple[int, str] | None = None
+    count = 0
+    for line in home_md.splitlines():
+        heading = _DAY_HEADING.match(line)
+        if heading:
+            count += 1
+            day = (count, heading.group(1))
+        elif day:
+            for name in _WIKILINK.findall(line):
+                days.setdefault(name.strip(), day)
+    return days
+
+
+def mark_note_days(content_dir: Path) -> None:
+    """Stamp each note's day into its frontmatter, for the graph to colour by (build copy only).
+
+    patch-graph.py carries `wikiDay`/`wikiDayLabel` through Quartz's content index.
+    A single-day vault gets nothing: one colour for everyone says nothing.
+    """
+    home = content_dir / "Home.md"
+    if not home.is_file():
+        return
+    days = note_days(home.read_text(encoding="utf-8"))
+    if len({number for number, _ in days.values()}) < 2:
+        return
+    for path in content_dir.rglob("*.md"):
+        if path.stem not in days:
+            continue
+        number, label = days[path.stem]
+        fields = f"wikiDay: {number}\nwikiDayLabel: {json.dumps(label, ensure_ascii=False)}\n"
+        text = path.read_text(encoding="utf-8")
+        if text.startswith("---\n"):
+            text = "---\n" + fields + text[4:]
+        else:
+            text = "---\n" + fields + "---\n" + text
+        path.write_text(text, encoding="utf-8")
 
 
 def _use_home_as_landing_page(wiki_dir: Path, out_dir: Path) -> None:

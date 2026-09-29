@@ -139,3 +139,34 @@
   overscroll-behavior: contain;
   padding: 0 1.5rem 1.25rem;
 }
+
+// Which dot colour is which training day (patch-graph.py), bottom-left of the full
+// graph. It never takes the pointer, so it can't swallow a drag or a click.
+.graph-day-legend {
+  position: absolute;
+  left: 0.8rem;
+  bottom: 0.7rem;
+  z-index: 1;
+  display: flex;
+  gap: 0.9rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  pointer-events: none;
+  font-family: var(--bodyFont);
+  font-size: 0.8rem;
+  color: var(--darkgray);
+  background: var(--light);
+  border: 1px solid var(--lightgray);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  i {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+  }
+}
