@@ -101,9 +101,10 @@ PATCHES = [
     "--graph-earlier",
   ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
-    # the stage scales by the zoom factor k, so divide the width by k.
+    # the stage scales by the zoom factor k, so divide the width by k. A lit edge
+    # (hovered dot, or a link hovered in the note pane) is thicker, to stand out.
     (".stroke({ alpha: l.alpha, width: 1, color: l.color })",
-     ".stroke({ alpha: l.alpha * (l.active ? 1 : 0.6), width: 0.6 / currentTransform.k, color: l.color })"),
+     ".stroke({ alpha: l.alpha * (l.active ? 1 : 0.6), width: (l.active ? 1.6 : 0.6) / currentTransform.k, color: l.color })"),
     # Hover like Obsidian: the node and its links turn purple, everything else dims.
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
      'l.color = l.active ? "#8b5cf6" : computedStyleMap["--lightgray"]'),
@@ -116,62 +117,81 @@ PATCHES = [
     # Labels stay fully visible at normal zoom and fade out only when zoomed far out.
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
-    # Node preview (graph-preview.ts). Every hover change, in or out, goes through
-    # updateHoverInfo: that is where the hint chip learns which note is under the mouse.
-    # The clicked dot stays purple (selectedNodeId) through the modal and after it,
-    # until another dot is hovered.
+    # Note pane (note-pane.ts): the full graph is the wiki's main screen, with the
+    # selected note in a pane beside it. The selected dot stays purple (selectedNodeId)
+    # until another one is picked; hovering a dot fetches its note ahead of the click.
     ("  let hoveredNodeId: string | null = null\n",
      "  let hoveredNodeId: string | null = null\n"
      "  let selectedNodeId: string | null = null\n"),
     ('import { D3Config } from "../Graph"',
-     'import { D3Config } from "../Graph"\nimport { graphPreviewHover, graphPreviewOpen } from "./graph-preview"'),
+     'import { D3Config } from "../Graph"\n'
+     'import { PaneGraph, connectGraph, disconnectGraph, selectNote, warmNote } from "./note-pane"'),
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
-     "    if (newHoveredId !== null && newHoveredId !== selectedNodeId) selectedNodeId = null\n"
-     "    graphPreviewHover(newHoveredId === null ? null\n"
-     "      : new URL(resolveRelative(fullSlug, newHoveredId as SimpleSlug), window.location.toString()))\n"),
-    # A click opens the note in a modal over the graph; ⌘/Ctrl-click navigates as before.
-    # d3-drag ignores Ctrl-clicks by default, which would make Ctrl-click do nothing.
-    ("""        .container(() => app.canvas)
-""",
-     """        .container(() => app.canvas)
-        .filter((event) => !event.button)
-"""),
+     "    if (newHoveredId !== null) warmNote(newHoveredId as SimpleSlug)\n"),
+    # A click selects the note into the pane; the graph stays where it is.
     ("""            const targ = resolveRelative(fullSlug, node.id)
             window.spaNavigate(new URL(targ, window.location.toString()))""",
-     """            const url = new URL(resolveRelative(fullSlug, node.id), window.location.toString())
-            const click = event.sourceEvent as MouseEvent | undefined
-            if (click?.metaKey || click?.ctrlKey) {
-              window.spaNavigate(url)
-            } else {
-              selectedNodeId = node.id
-              graphPreviewOpen(url)
-            }"""),
+     """            void selectNote(node.id)"""),
     ("""      node.gfx.on("click", () => {
         const targ = resolveRelative(fullSlug, node.simulationData.id)
         window.spaNavigate(new URL(targ, window.location.toString()))""",
-     """      node.gfx.on("click", (click) => {
-        const targ = resolveRelative(fullSlug, node.simulationData.id)
-        const url = new URL(targ, window.location.toString())
-        if (click.metaKey || click.ctrlKey) {
-          window.spaNavigate(url)
-        } else {
-          selectedNodeId = node.simulationData.id
-          graphPreviewOpen(url)
-        }"""),
-    # The full graph opens by itself the first time the wiki loads (the trainer lives in
-    # it); later navigations, like clicking into a note, leave it closed.
-    ("""document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {""",
-     """let globalGraphShownAtStart = false
+     """      node.gfx.on("click", () => {
+        void selectNote(node.simulationData.id)"""),
+    # The full graph answers the pane: which dot is selected, and which one a link in
+    # the note points at. That one lights up with the selected dot and the edge
+    # between them; the rest dims, as when hovering a dot.
+    ("""  let stopAnimation = false
+""",
+     """  const isGlobal = graph.classList.contains("global-graph-container")
+  const paneGraph: PaneGraph = {
+    select(id) {
+      selectedNodeId = id
+      if (!dragging) renderPixiFromD3()
+    },
+    highlight(id) {
+      hoveredNodeId = id
+      const pair = new Set([id, selectedNodeId])
+      for (const l of linkRenderData) {
+        const { source, target } = l.simulationData
+        l.active = id !== null && pair.has(source.id) && pair.has(target.id)
+      }
+      for (const n of nodeRenderData) n.active = id !== null && pair.has(n.simulationData.id)
+      if (!dragging) renderPixiFromD3()
+    },
+  }
+  if (isGlobal) connectGraph(paneGraph)
 
-document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {"""),
+  let stopAnimation = false
+"""),
+    ("""  return () => {
+    stopAnimation = true
+    app.destroy()
+  }""",
+     """  return () => {
+    stopAnimation = true
+    if (isGlobal) disconnectGraph(paneGraph)
+    app.destroy()
+  }"""),
+    # The full graph is always open: rendered on every page load, re-rendered to fit a
+    # resized window, and neither Esc, a click outside it nor Ctrl+G closes it.
+    ("      registerEscapeHandler(container, hideGlobalGraph)\n", ""),
+    ("anyGlobalGraphOpen ? hideGlobalGraph() : renderGlobalGraph()",
+     "if (!anyGlobalGraphOpen) void renderGlobalGraph()"),
     ("""  document.addEventListener("keydown", shortcutHandler)
 """,
      """  document.addEventListener("keydown", shortcutHandler)
-  if (!globalGraphShownAtStart) {
-    globalGraphShownAtStart = true
-    void renderGlobalGraph()
+  void renderGlobalGraph()
+  let resizeTimer = 0
+  const refit = () => {
+    clearTimeout(resizeTimer)
+    resizeTimer = window.setTimeout(() => {
+      cleanupGlobalGraphs()
+      void renderGlobalGraph()
+    }, 250)
   }
+  window.addEventListener("resize", refit)
+  window.addCleanup(() => window.removeEventListener("resize", refit))
 """),
 ]
 

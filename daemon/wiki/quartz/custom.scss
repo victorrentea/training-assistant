@@ -1,10 +1,75 @@
 @use "./base.scss";
 
-// Obsidian opens the graph as a full pane, not a small floating card.
-.graph > .global-graph-outer > .global-graph-container {
-  width: 96vw;
-  height: 92vh;
-  border-radius: 8px;
+// The wiki is its graph (note-pane.ts): the full graph holds the left two thirds of
+// the window for good, the selected note the right third. Together they cover the
+// whole Quartz page, which never shows, so the page itself must not scroll.
+// Below 800px they stack: graph on top, note underneath.
+$pane-width: 33.333vw;
+
+html,
+body {
+  overflow: hidden;
+}
+
+.graph > .global-graph-outer {
+  width: calc(100vw - #{$pane-width});
+  height: 100vh;
+  backdrop-filter: none;
+  background: var(--light);
+
+  & > .global-graph-container {
+    position: absolute;
+    inset: 0;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+  }
+}
+
+.note-pane {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 9999;
+  width: $pane-width;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  border-left: 1px solid var(--lightgray);
+  background: var(--light);
+  font-family: var(--bodyFont);
+  color: var(--darkgray);
+
+  .note-pane-title {
+    margin: 0;
+    padding: 1rem 1.5rem 0.25rem;
+    font-size: 1.5rem;
+  }
+
+  .note-pane-body {
+    flex: 1;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 0 1.5rem 1.25rem;
+  }
+}
+
+@media (max-width: 800px) {
+  .graph > .global-graph-outer {
+    width: 100vw;
+    height: 45vh;
+  }
+
+  .note-pane {
+    top: 45vh;
+    width: 100vw;
+    height: 55vh;
+    border-left: none;
+    border-top: 1px solid var(--lightgray);
+  }
 }
 
 .graph > .graph-outer {
@@ -39,105 +104,6 @@
 // toggle is hidden, so the wiki can never disagree with the page it sits in.
 .darkmode {
   display: none;
-}
-
-// Node preview in the graph (graph-preview.ts). The chip never takes the pointer,
-// so the node under it stays hovered; everything floats above the full-screen
-// graph (z-index 9999), and the chip above the modal.
-.graph-peek-chip {
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 10003;
-  pointer-events: none;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  font-family: var(--bodyFont);
-  font-size: 0.75rem;
-  white-space: nowrap;
-  color: var(--light);
-  background: #8b5cf6;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.12s ease;
-
-  &.visible {
-    opacity: 1;
-    visibility: visible;
-  }
-}
-
-.graph-peek-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10002;
-  background: rgba(0, 0, 0, 0.35);
-  display: none;
-
-  &.visible {
-    display: block;
-  }
-}
-
-.graph-peek {
-  position: fixed;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  font-family: var(--bodyFont);
-  line-height: normal;
-  color: var(--darkgray);
-  background: var(--light);
-  border: 1px solid #8b5cf6;
-  border-radius: 8px;
-  box-shadow: 6px 6px 36px rgba(0, 0, 0, 0.35);
-  overflow: hidden;
-}
-
-// Title, full-page link and ✕ on one row, with no rule under it.
-.graph-peek-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 0.75rem 0 1.5rem;
-
-  .graph-peek-title {
-    flex: 1;
-    margin: 0;
-    font-size: 1.6rem;
-  }
-
-  .graph-peek-open {
-    flex-shrink: 0;
-    font-weight: 600;
-    color: #8b5cf6;
-    background: none;
-  }
-
-  .graph-peek-close {
-    flex-shrink: 0;
-    border: none;
-    background: none;
-    font-size: 1.1rem;
-    line-height: 1;
-    padding: 0.3rem 0.45rem;
-    border-radius: 4px;
-    color: var(--gray);
-    cursor: pointer;
-
-    &:hover {
-      color: var(--dark);
-      background: var(--lightgray);
-    }
-  }
-}
-
-.graph-peek-body {
-  flex: 1;
-  overflow: auto;
-  overscroll-behavior: contain;
-  padding: 0 1.5rem 1.25rem;
 }
 
 // Multi-day graph (patch-graph.py): the latest day's dots at full contrast
