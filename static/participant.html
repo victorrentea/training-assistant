@@ -175,7 +175,7 @@ body{visibility:hidden}
 #pdf-stack.selecting-text .pdf-links a{pointer-events:none!important}
 .buf-front  { opacity: 1; pointer-events: auto; z-index: 2; }
 .buf-back   { opacity: 0; pointer-events: none; z-index: 1; }
-#notes-badge,#summary-badge,#files-badge,#prompts-badge{background:#9ca3af}
+#notes-badge,#summary-badge,#wiki-badge,#files-badge,#prompts-badge{background:#9ca3af}
 .badge-alert{background:#ef4444!important}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes follow-pulse{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
@@ -995,6 +995,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <a data-nav="wiki" onclick="showView('wiki')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">hub</span>
 <span class="text-base">Wiki</span>
+<span id="wiki-badge" class="badge-new" style="display:none"></span>
 </a>
 <div id="gdrive-row" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all" style="display:none">
 <a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="flex items-center gap-3 flex-1 cursor-pointer">
@@ -2119,6 +2120,7 @@ var LS = {
   NOTES_UNREAD: 'new:notes_unread',
   NOTES_FOLDS: 'new:notes_folds',
   SUMMARY_UNREAD: 'new:summary_unread',
+  WIKI_SEEN: 'new:wiki_seen',
   FILES_UNREAD: 'new:files_unread',
   PROMPTS_UNREAD: 'new:prompts_unread',
   ACTIVITY_SEEN: 'new:activity_seen',
@@ -2173,6 +2175,8 @@ var LS = {
   setNotesUnread:  function(v) { localStorage.setItem(LS.NOTES_UNREAD, v ? 'true' : 'false'); },
   isSummaryUnread: function()  { return localStorage.getItem(LS.SUMMARY_UNREAD) === 'true'; },
   setSummaryUnread: function(v){ localStorage.setItem(LS.SUMMARY_UNREAD, v ? 'true' : 'false'); },
+  getWikiSeen:     function()  { return localStorage.getItem(LS.WIKI_SEEN); },
+  setWikiSeen:     function(v) { localStorage.setItem(LS.WIKI_SEEN, v); },
   isFilesUnread:   function()  { return localStorage.getItem(LS.FILES_UNREAD) === 'true'; },
   setFilesUnread:  function(v) { localStorage.setItem(LS.FILES_UNREAD, v ? 'true' : 'false'); },
   isPromptsUnread: function()  { return localStorage.getItem(LS.PROMPTS_UNREAD) === 'true'; },
@@ -3669,7 +3673,11 @@ function showView(name) {
   });
   // After the view is visible: Quartz measures its sidebar on load, and inside a
   // display:none iframe everything measures 0 (the Explorer came up empty).
-  if (name === 'wiki') loadWiki();
+  if (name === 'wiki') {
+    loadWiki();
+    if (_wikiUpdatedAt) LS.setWikiSeen(_wikiUpdatedAt);
+    _applyWikiBadgeUnread();
+  }
   var scrollEl = document.getElementById(name + '-scroll') || document.getElementById(name + '-view');
   var saved = LS.getScroll(name);
   if (saved) scrollEl.scrollTop = parseInt(saved, 10);
@@ -4382,6 +4390,21 @@ function _applyWiki(updatedAt) {
   document.getElementById('wiki-open-tab').href = _wikiUrl();
   var onWiki = document.getElementById('wiki-view').style.display !== 'none';
   if (!_wikiUpdatedAt && onWiki) showView('activity');
+  var badge = document.getElementById('wiki-badge');
+  badge.style.display = _wikiUpdatedAt ? '' : 'none';
+  if (!_wikiUpdatedAt) return;
+  badge.textContent = _formatRelativeTime(_wikiUpdatedAt);
+  _startTimestampUpdates();
+  // Red until this version is opened. The version itself is remembered, not an
+  // unread flag: a daemon reconnect re-announces the same build and must not
+  // light it again. A first visit takes the current build as seen.
+  if (onWiki || LS.getWikiSeen() === null) LS.setWikiSeen(_wikiUpdatedAt);
+  _applyWikiBadgeUnread();
+}
+
+function _applyWikiBadgeUnread() {
+  document.getElementById('wiki-badge').classList.toggle('badge-alert',
+    !!_wikiUpdatedAt && LS.getWikiSeen() !== _wikiUpdatedAt);
 }
 
 function loadWiki() {
@@ -4489,6 +4512,9 @@ function _startTimestampUpdates() {
     }
     if (_summaryTimestamp && summaryBadge.style.display !== 'none') {
       summaryBadge.textContent = _formatRelativeTime(_summaryTimestamp);
+    }
+    if (_wikiUpdatedAt) {
+      document.getElementById('wiki-badge').textContent = _formatRelativeTime(_wikiUpdatedAt);
     }
   }, 10000); // Update every 10 seconds
 }
