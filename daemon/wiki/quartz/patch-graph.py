@@ -62,7 +62,10 @@ PATCHES = [
     # (hovered dot, or a link hovered in the note pane) is thicker, to stand out.
     (".stroke({ alpha: l.alpha, width: 1, color: l.color })",
      ".stroke({ alpha: l.alpha * (l.active ? 1 : 0.6), width: (l.active ? 1.6 : 0.6) / currentTransform.k, color: l.color })"),
-    # Hover like Obsidian: the node and its links turn purple, everything else dims.
+    # Hover: the node and its links turn purple; the rest keep their look, without the
+    # dimming Quartz applies to edges even with focusOnHover off (nodes: quartz.layout.ts).
+    ("alpha = l.active ? 1 : 0.2",
+     "alpha = 1"),
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
      'l.color = l.active ? "#8b5cf6" : computedStyleMap["--lightgray"]'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
@@ -97,7 +100,7 @@ PATCHES = [
         void selectNote(node.simulationData.id)"""),
     # The full graph answers the pane: which dot is selected, and which one a link in
     # the note points at. That one lights up with the selected dot and the edge
-    # between them; the rest dims, as when hovering a dot.
+    # between them, as when hovering a dot.
     ("""  let stopAnimation = false
 """,
      """  const isGlobal = graph.classList.contains("global-graph-container")

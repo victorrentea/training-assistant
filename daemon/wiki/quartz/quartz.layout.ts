@@ -52,13 +52,16 @@ export const defaultContentPageLayout: PageLayout = {
     Component.Graph({
       // Tag nodes doubled the node count and turned the global view into a hairball.
       // Node size, label placement and colours are patched in by patch-graph.py.
+      // No focusOnHover: the hovered dot and its edges turn purple, the rest stay as they were.
       localGraph: {
+        focusOnHover: false,
         showTags: false,
         repelForce: 1,
         linkDistance: 45,
         fontSize: 0.5,
       },
       globalGraph: {
+        focusOnHover: false,
         showTags: false,
         enableRadial: false,
         repelForce: 5,
