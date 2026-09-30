@@ -46,7 +46,8 @@ body {
   .note-pane-title {
     margin: 0;
     padding: 1rem 1.5rem 0.25rem;
-    font-size: 1.5rem;
+    font-size: 2.5rem;
+    line-height: 1.15;
   }
 
   .note-pane-body {
@@ -54,6 +55,13 @@ body {
     overflow: auto;
     overscroll-behavior: contain;
     padding: 0 1.5rem 1.25rem;
+
+    // The note's lead sentence (its first paragraph) is what the reader takes away;
+    // twice the size, it holds the eye before the bullets underneath.
+    article > p:first-child {
+      font-size: 2em;
+      line-height: 1.3;
+    }
 
     // Always visible and three times macOS's overlay thumb, so the reader sees at a
     // glance how long the note is and can grab it. Styling ::-webkit-scrollbar is
