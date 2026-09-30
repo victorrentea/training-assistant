@@ -43,6 +43,12 @@ body {
   font-family: var(--bodyFont);
   color: var(--darkgray);
 
+  // Closed with Esc or a second click on the selected dot (note-pane.ts): blank, but
+  // still covering the Quartz page underneath.
+  &.closed > * {
+    visibility: hidden;
+  }
+
   .note-pane-title {
     margin: 0;
     padding: 1rem 1.5rem 0.25rem;

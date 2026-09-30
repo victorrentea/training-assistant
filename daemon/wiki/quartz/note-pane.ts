@@ -5,9 +5,12 @@
 // link in the note lights up its dot and the edge to it from the selected note.
 // Every note shown here counts as seen on this browser: its dot and the links to it
 // dim, so what is left to read stands out.
+// Esc, or a second click on the selected dot, closes the note and deselects the dot:
+// the pane stays, blank, as it covers the Quartz page underneath. The next click on a
+// dot opens a note again.
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes the
-// full graph register here (connectGraph) and call selectNote() on a click.
+// full graph register here (connectGraph) and call toggleNote() on a click.
 import {
   SimpleSlug,
   getFullSlug,
@@ -18,7 +21,7 @@ import {
 } from "../../util/path"
 
 export type PaneGraph = {
-  select(slug: SimpleSlug): void
+  select(slug: SimpleSlug | null): void
   highlight(slug: SimpleSlug | null): void
 }
 
@@ -143,6 +146,22 @@ function paragraph(text: string) {
   return Object.assign(document.createElement("p"), { textContent: text })
 }
 
+const isClosed = (pane: HTMLElement) => pane.classList.contains("closed")
+
+export function closeNote() {
+  if (!pane || isClosed(pane)) return
+  selected = null
+  highlight(null)
+  graph?.select(null)
+  pane.classList.add("closed")
+}
+
+// A click on a dot: the selected one closes the pane, any other one selects its note.
+export function toggleNote(slug: SimpleSlug) {
+  if (slug === selected && pane && !isClosed(pane)) closeNote()
+  else void selectNote(slug)
+}
+
 export async function selectNote(slug: SimpleSlug) {
   selected = slug
   markSeen(slug)
@@ -150,6 +169,7 @@ export async function selectNote(slug: SimpleSlug) {
   graph?.select(slug)
 
   const pane = ensurePane()
+  pane.classList.remove("closed")
   const title = pane.querySelector(".note-pane-title") as HTMLElement
   const body = pane.querySelector(".note-pane-body") as HTMLElement
   const elts = await loadNote(slug).catch(() => null)
@@ -176,4 +196,12 @@ export async function selectNote(slug: SimpleSlug) {
 document.addEventListener("nav", () => {
   const slug = simplifySlug(getFullSlug(window))
   void selectNote(slug === "/" ? ("Home" as SimpleSlug) : slug)
+})
+
+// Not while typing, e.g. in Quartz's search box, whose own Esc closes it.
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return
+  const target = e.target as HTMLElement | null
+  if (target?.closest?.("input, textarea, [contenteditable]")) return
+  closeNote()
 })

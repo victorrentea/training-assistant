@@ -85,19 +85,20 @@ PATCHES = [
      "  let selectedNodeId: string | null = null\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, selectNote, warmNote } from "./note-pane"'),
+     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, toggleNote, warmNote } from "./note-pane"'),
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
      "    if (newHoveredId !== null) warmNote(newHoveredId as SimpleSlug)\n"),
-    # A click selects the note into the pane; the graph stays where it is.
+    # A click selects the note into the pane, or closes the pane when the dot is the
+    # selected one; the graph stays where it is.
     ("""            const targ = resolveRelative(fullSlug, node.id)
             window.spaNavigate(new URL(targ, window.location.toString()))""",
-     """            void selectNote(node.id)"""),
+     """            toggleNote(node.id)"""),
     ("""      node.gfx.on("click", () => {
         const targ = resolveRelative(fullSlug, node.simulationData.id)
         window.spaNavigate(new URL(targ, window.location.toString()))""",
      """      node.gfx.on("click", () => {
-        void selectNote(node.simulationData.id)"""),
+        toggleNote(node.simulationData.id)"""),
     # The full graph answers the pane: which dot is selected, and which one a link in
     # the note points at. That one lights up with the selected dot and the edge
     # between them, as when hovering a dot.
