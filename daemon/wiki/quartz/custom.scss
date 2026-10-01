@@ -63,9 +63,10 @@ body {
     padding: 0 1.5rem 1.25rem;
 
     // The note's lead sentence (its first paragraph) is what the reader takes away;
-    // twice the size, it holds the eye before the bullets underneath.
+    // larger, it holds the eye before the bullets underneath. 1.6em, not 2em: at
+    // twice the size it outshouted the title above it (Victor, 2026-10-01).
     article > p:first-child {
-      font-size: 2em;
+      font-size: 1.6em;
       line-height: 1.3;
     }
 
