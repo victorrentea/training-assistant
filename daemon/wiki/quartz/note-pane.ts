@@ -131,16 +131,55 @@ function ensurePane(): HTMLElement {
   // Stopped before it bubbles up to Quartz's SPA router, which listens on window.
   body.addEventListener("click", (e) => {
     const slug = linkSlug(e.target)
-    if (!slug) return
-    e.preventDefault()
-    e.stopPropagation()
-    selectNote(slug)
+    if (slug) {
+      e.preventDefault()
+      e.stopPropagation()
+      selectNote(slug)
+      return
+    }
+    const img = (e.target as Element | null)?.closest?.("img")
+    if (img) {
+      e.preventDefault()
+      e.stopPropagation()
+      zoomImage(img as HTMLImageElement)
+    }
   })
   body.addEventListener("mouseover", (e) => highlight(linkSlug(e.target)))
   body.addEventListener("mouseleave", () => highlight(null))
   document.body.appendChild(pane)
   return pane
 }
+
+// A click on a picture in the note (a slide, a screenshot) shows it fullscreen, to
+// read its details, until Esc or a click on it. Real fullscreen when the browser
+// grants it (the participant page's iframe allows it); otherwise, e.g. inside an
+// iframe that doesn't, the overlay alone covers the window.
+let zoomed: HTMLElement | null = null
+
+function zoomImage(img: HTMLImageElement) {
+  unzoom()
+  const overlay = document.createElement("div")
+  overlay.className = "note-pane-zoom"
+  overlay.appendChild(Object.assign(document.createElement("img"), { src: img.currentSrc || img.src, alt: img.alt }))
+  overlay.addEventListener("click", unzoom)
+  document.body.appendChild(overlay)
+  zoomed = overlay
+  overlay.requestFullscreen?.().catch(() => {})
+}
+
+function unzoom() {
+  if (!zoomed) return
+  const overlay = zoomed
+  zoomed = null
+  if (document.fullscreenElement === overlay) void document.exitFullscreen().catch(() => {})
+  overlay.remove()
+}
+
+// In real fullscreen the browser takes Esc for itself and never passes it on: leaving
+// fullscreen is the only sign of it.
+document.addEventListener("fullscreenchange", () => {
+  if (zoomed && document.fullscreenElement !== zoomed) unzoom()
+})
 
 function paragraph(text: string) {
   return Object.assign(document.createElement("p"), { textContent: text })
@@ -211,5 +250,6 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return
   const target = e.target as HTMLElement | null
   if (target?.closest?.("input, textarea, [contenteditable]")) return
-  closeNote()
+  if (zoomed) unzoom() // a zoomed picture goes first, the note stays
+  else closeNote()
 })
