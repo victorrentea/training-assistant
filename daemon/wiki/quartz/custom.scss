@@ -1,9 +1,11 @@
 @use "./base.scss";
 
 // The wiki is its graph (note-pane.ts): the full graph holds the left two thirds of
-// the window for good, the selected note the right third. Together they cover the
-// whole Quartz page, which never shows, so the page itself must not scroll.
+// the window, the selected note the right third. Together they cover the whole
+// Quartz page, which never shows, so the page itself must not scroll.
 // Below 800px they stack: graph on top, note underneath.
+// With the note closed (html.note-closed) the graph alone covers the whole window:
+// a blank third left behind looked like a broken page (Victor, 2026-10-02).
 $pane-width: 33.333vw;
 
 html,
@@ -42,12 +44,6 @@ body {
   background: var(--light);
   font-family: var(--bodyFont);
   color: var(--darkgray);
-
-  // Closed with Esc or a second click on the selected dot (note-pane.ts): blank, but
-  // still covering the Quartz page underneath.
-  &.closed > * {
-    visibility: hidden;
-  }
 
   .note-pane-title {
     margin: 0;
@@ -110,6 +106,17 @@ body {
     height: 55vh;
     border-left: none;
     border-top: 1px solid var(--lightgray);
+  }
+}
+
+html.note-closed {
+  .graph > .global-graph-outer {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .note-pane {
+    display: none;
   }
 }
 

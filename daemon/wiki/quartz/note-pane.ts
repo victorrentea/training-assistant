@@ -6,8 +6,8 @@
 // Every note shown here counts as seen on this browser: its dot and the links to it
 // dim, so what is left to read stands out.
 // Esc, or a second click on the selected dot, closes the note and deselects the dot:
-// the pane stays, blank, as it covers the Quartz page underneath. The next click on a
-// dot opens a note again.
+// the pane goes away and the graph takes the whole window, re-fitted to it. The next
+// click on a dot opens a note again, and the graph steps back to its two thirds.
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes the
 // full graph register here (connectGraph) and call toggleNote() on a click.
@@ -146,19 +146,27 @@ function paragraph(text: string) {
   return Object.assign(document.createElement("p"), { textContent: text })
 }
 
-const isClosed = (pane: HTMLElement) => pane.classList.contains("closed")
+// The class sits on <html>, so custom.scss can widen the graph and hide the pane at
+// once. The graph re-fits on a window resize (patch-graph.py), so one is faked.
+const isClosed = () => document.documentElement.classList.contains("note-closed")
+
+function setClosed(closed: boolean) {
+  if (closed === isClosed()) return
+  document.documentElement.classList.toggle("note-closed", closed)
+  window.dispatchEvent(new Event("resize"))
+}
 
 export function closeNote() {
-  if (!pane || isClosed(pane)) return
+  if (!pane || isClosed()) return
   selected = null
   highlight(null)
   graph?.select(null)
-  pane.classList.add("closed")
+  setClosed(true)
 }
 
 // A click on a dot: the selected one closes the pane, any other one selects its note.
 export function toggleNote(slug: SimpleSlug) {
-  if (slug === selected && pane && !isClosed(pane)) closeNote()
+  if (slug === selected && pane && !isClosed()) closeNote()
   else void selectNote(slug)
 }
 
@@ -169,7 +177,7 @@ export async function selectNote(slug: SimpleSlug) {
   graph?.select(slug)
 
   const pane = ensurePane()
-  pane.classList.remove("closed")
+  setClosed(false)
   const title = pane.querySelector(".note-pane-title") as HTMLElement
   const body = pane.querySelector(".note-pane-body") as HTMLElement
   const elts = await loadNote(slug).catch(() => null)
