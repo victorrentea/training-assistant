@@ -1,13 +1,14 @@
-// The wiki is its graph: the full graph fills the left two thirds of the window for
-// good, and this pane, the right third, shows the selected note (Home at start).
+// The wiki is its graph: the full graph fills the whole window for good, and this
+// pane, floating over its right third, shows the selected note (Home at start).
 // Clicking a dot, or a link inside the note, selects that note: its dot turns
 // purple and the pane swaps in place, without ever leaving the graph. Hovering a
 // link in the note lights up its dot and the edge to it from the selected note.
 // Every note shown here counts as seen on this browser: its dot and the links to it
 // dim, so what is left to read stands out.
 // Esc, or a second click on the selected dot, closes the note and deselects the dot:
-// the pane goes away and the graph takes the whole window, re-fitted to it. The next
-// click on a dot opens a note again, and the graph steps back to its two thirds.
+// the pane goes away, uncovering the rest of the graph. The next click on a dot opens
+// a note again. Neither moves the graph: only a render (page load, window resize,
+// Reset layout) centres it, on the part of the window the pane leaves free.
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes the
 // full graph register here (connectGraph) and call toggleNote() on a click.
@@ -185,14 +186,18 @@ function paragraph(text: string) {
   return Object.assign(document.createElement("p"), { textContent: text })
 }
 
-// The class sits on <html>, so custom.scss can widen the graph and hide the pane at
-// once. The graph re-fits on a window resize (patch-graph.py), so one is faked.
+// The class sits on <html>, where custom.scss hides the pane.
 const isClosed = () => document.documentElement.classList.contains("note-closed")
 
 function setClosed(closed: boolean) {
-  if (closed === isClosed()) return
   document.documentElement.classList.toggle("note-closed", closed)
-  window.dispatchEvent(new Event("resize"))
+}
+
+// How much of the window's right side the pane hides, so a graph render centres
+// itself on the rest (patch-graph.py). A page load renders the graph before or after
+// the first note opens, so the pane is made here if need be: it is about to show.
+export function paneCover(): number {
+  return isClosed() ? 0 : ensurePane().offsetWidth
 }
 
 export function closeNote() {

@@ -45,7 +45,22 @@ PATCHES = [
 
     nodeRenderData.push(nodeRenderDatum)"""),
     ("n.label.position.set(x + width / 2, y + height / 2)",
-     "n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)"),
+     "n.label.position.set(x + centerX, y + height / 2 + n.radius + 2)"),
+    # The note pane floats over the full graph's right side (note-pane.ts), so the
+    # graph centres itself on the part left free, not on the whole window.
+    ("""  const width = graph.offsetWidth
+""",
+     """  const width = graph.offsetWidth
+  const centerX = graph.classList.contains("global-graph-container")
+    ? Math.max((width - paneCover()) / 2, width / 4)
+    : width / 2
+"""),
+    ("n.gfx.position.set(x + width / 2, y + height / 2)",
+     "n.gfx.position.set(x + centerX, y + height / 2)"),
+    ("l.gfx.moveTo(linkData.source.x! + width / 2, linkData.source.y! + height / 2)",
+     "l.gfx.moveTo(linkData.source.x! + centerX, linkData.source.y! + height / 2)"),
+    (".lineTo(linkData.target.x! + width / 2, linkData.target.y! + height / 2)",
+     ".lineTo(linkData.target.x! + centerX, linkData.target.y! + height / 2)"),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
      "forceCollide<NodeData>((n) => nodeRadius(n) + 14)"),
@@ -85,7 +100,7 @@ PATCHES = [
      "  let selectedNodeId: string | null = null\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, toggleNote, warmNote } from "./note-pane"'),
+     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, paneCover, toggleNote, warmNote } from "./note-pane"'),
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
      "    if (newHoveredId !== null) warmNote(newHoveredId as SimpleSlug)\n"),
@@ -136,7 +151,7 @@ PATCHES = [
     app.destroy()
   }"""),
     # The full graph is always open: rendered on every page load, re-rendered to fit a
-    # resized window, and neither Esc, a click outside it nor Ctrl+G closes it.
+    # resized window (not when the note pane opens or closes: it floats over the graph), and neither Esc, a click outside it nor Ctrl+G closes it.
     ("      registerEscapeHandler(container, hideGlobalGraph)\n", ""),
     ("anyGlobalGraphOpen ? hideGlobalGraph() : renderGlobalGraph()",
      "if (!anyGlobalGraphOpen) void renderGlobalGraph()"),
