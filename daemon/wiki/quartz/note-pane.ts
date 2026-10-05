@@ -151,10 +151,9 @@ function ensurePane(): HTMLElement {
   return pane
 }
 
-// A click on a picture in the note (a slide, a screenshot) shows it fullscreen, to
-// read its details, until Esc or a click on it. Real fullscreen when the browser
-// grants it (the participant page's iframe allows it); otherwise, e.g. inside an
-// iframe that doesn't, the overlay alone covers the window.
+// A click on a picture in the note (a slide, a screenshot) blows it up over the whole
+// window, to read its details, until Esc or a click on it. Never real browser
+// fullscreen: leaving it would wreck the window layout the user had.
 let zoomed: HTMLElement | null = null
 
 function zoomImage(img: HTMLImageElement) {
@@ -165,22 +164,14 @@ function zoomImage(img: HTMLImageElement) {
   overlay.addEventListener("click", unzoom)
   document.body.appendChild(overlay)
   zoomed = overlay
-  overlay.requestFullscreen?.().catch(() => {})
 }
 
 function unzoom() {
   if (!zoomed) return
   const overlay = zoomed
   zoomed = null
-  if (document.fullscreenElement === overlay) void document.exitFullscreen().catch(() => {})
   overlay.remove()
 }
-
-// In real fullscreen the browser takes Esc for itself and never passes it on: leaving
-// fullscreen is the only sign of it.
-document.addEventListener("fullscreenchange", () => {
-  if (zoomed && document.fullscreenElement !== zoomed) unzoom()
-})
 
 function paragraph(text: string) {
   return Object.assign(document.createElement("p"), { textContent: text })

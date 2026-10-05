@@ -100,7 +100,7 @@ body {
   }
 }
 
-// A picture clicked in the note, fullscreen (note-pane.ts), as large as fits.
+// A picture clicked in the note (note-pane.ts), over the whole window, as large as fits.
 .note-pane-zoom {
   position: fixed;
   inset: 0;
