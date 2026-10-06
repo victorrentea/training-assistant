@@ -2,7 +2,9 @@
 """Tests for daemon host server and proxy module."""
 from unittest.mock import patch
 
+import pytest
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from daemon import log as daemon_log
 from daemon.host_server import create_app
@@ -125,6 +127,30 @@ class TestLocalAccessGuard:
             assert resp.status_code == 204
         finally:
             daemon_log.set_level(previous)
+
+    def test_host_socket_refused_to_a_page_of_the_site(self):
+        # The daemon vouches for the host socket with its own credentials, so only
+        # its own loopback panel may open it — not a page served by the site.
+        with patch("daemon.host_server.proxy_websocket") as proxied:
+            with pytest.raises(WebSocketDisconnect) as closed:  # refused at the handshake
+                with self._client().websocket_connect(
+                    "/ws/sess01/__host__", headers={"origin": "https://interact.victorrentea.ro"}
+                ):
+                    pass
+        assert closed.value.code == 1008
+        proxied.assert_not_called()
+
+    def test_host_socket_allowed_to_the_loopback_panel(self):
+        async def fake_proxy(websocket, path, ws_url):
+            await websocket.accept()
+            await websocket.send_text(path)
+            await websocket.close()
+
+        with patch("daemon.host_server.proxy_websocket", side_effect=fake_proxy):
+            with self._client().websocket_connect(
+                "/ws/sess01/__host__", headers={"origin": "http://127.0.0.1:1234"}
+            ) as ws:
+                assert ws.receive_text() == "sess01/__host__"
 
     def test_allows_missing_origin_state_change(self):
         # Non-browser clients (daemon tooling, tests) legitimately send no Origin.
