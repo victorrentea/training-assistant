@@ -364,7 +364,7 @@ class TestSessionResetAndStaleGating:
         state.session_id = None
         state.daemon_ws = None
         client = TestClient(app)
-        with client.websocket_connect("/ws/abc123/__host__") as ws:
+        with client.websocket_connect("/ws/abc123/__host__", headers=_daemon_auth_headers()) as ws:
             with pytest.raises(WebSocketDisconnect) as closed:
                 ws.receive_text()
         assert closed.value.code == 1013
@@ -417,6 +417,18 @@ class TestHostSocketAuth:
     def test_wrong_credentials_are_refused(self, monkeypatch):
         bad = base64.b64encode(b"host:nope").decode()
         self._assert_refused(self._client(monkeypatch), "/ws/sess01/__host__", {"Authorization": f"Basic {bad}"})
+
+    def test_right_password_wrong_user_is_refused(self, monkeypatch):
+        pw = os.environ.get("HOST_PASSWORD") or "host"
+        bad = base64.b64encode(f"nothost:{pw}".encode()).decode()
+        self._assert_refused(self._client(monkeypatch), "/ws/sess01/__host__", {"Authorization": f"Basic {bad}"})
+
+    def test_anonymous_host_claim_on_another_session_learns_nothing(self, monkeypatch):
+        client = self._client(monkeypatch)
+        with client.websocket_connect("/ws/junk99/__host__") as ws:
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()  # closed outright: no redirect naming the live session
+        assert closed.value.code == 1008
 
     def test_a_forged_cookie_is_refused(self, monkeypatch):
         self._assert_refused(self._client(monkeypatch), "/ws/sess01/__host__", {"cookie": "is_host=1"})

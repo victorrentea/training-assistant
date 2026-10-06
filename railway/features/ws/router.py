@@ -427,11 +427,21 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
 @session_router.websocket("/ws/{session_id}/{participant_id}")
 async def session_websocket_endpoint(websocket: WebSocket, session_id: str, participant_id: str):
     """WebSocket endpoint for participants and host (__host__), requiring a valid session_id."""
+    pid = participant_id.strip()
+    is_host = (pid == "__host__")
+    if is_host and not _is_host_panel_authorized(websocket):
+        # Connecting as host kicks the current host socket: an anonymous claim
+        # would take the trainer's panel down. The panel proves itself — via the
+        # daemon's local proxy (Basic credentials) or the cookie /host sets.
+        # Judged first, so an anonymous claim learns nothing (not even a redirect).
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+
     # Validate session_id — accept first so client gets a clean close code.
     # Active-only: a registry-valid recent-PAST id must NOT open a live socket
     # either — its read-only ended page never tries to (it is script-free).
     if not is_active_session_id(session_id):
-        is_host_attempt = participant_id.strip() == "__host__"
         if state.session_id is None and session_registry.get(session_id) is None:
             # No session announced yet and this id never seen by this process
             # (Railway just restarted; the daemon reconnects ~3 s later and then
@@ -443,7 +453,7 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
             # holds.
             await websocket.accept()
             await websocket.close(code=1013)
-        elif is_host_attempt:
+        elif is_host:
             await websocket.accept()
             if state.session_id:
                 await websocket.send_text(json.dumps({"type": "redirect", "url": f"/host/{state.session_id}"}))
@@ -460,17 +470,7 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
             await websocket.close(code=1008)
         return
 
-    pid = participant_id.strip()
-    is_host = (pid == "__host__")
-
     if not is_host and (not pid or pid.startswith("__")):
-        await websocket.accept()
-        await websocket.close(code=1008)
-        return
-    if is_host and not _is_host_panel_authorized(websocket):
-        # Connecting as host kicks the current host socket: an anonymous claim
-        # would take the trainer's panel down. The panel proves itself — via the
-        # daemon's local proxy (Basic credentials) or the cookie /host sets.
         await websocket.accept()
         await websocket.close(code=1008)
         return

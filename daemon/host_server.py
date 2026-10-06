@@ -337,7 +337,10 @@ def create_app(backend_url: str) -> FastAPI:
         # before proxy_websocket() accepts the connection.
         origin = websocket.headers.get("origin")
         host_ok = _hostname(websocket.headers.get("host", "")) in _ALLOWED_HOSTS
-        origin_ok = (not origin) or _hostname(origin) in _ALLOWED_ORIGINS
+        # The host socket goes out with the daemon's own credentials: only the panel
+        # this daemon serves (a loopback page) may open it, never a page of the site.
+        allowed = _ALLOWED_HOSTS if path.strip().endswith("__host__") else _ALLOWED_ORIGINS
+        origin_ok = (not origin) or _hostname(origin) in allowed
         if not (host_ok and origin_ok):
             await websocket.close(code=1008)  # policy violation
             return
