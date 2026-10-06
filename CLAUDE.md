@@ -45,8 +45,7 @@ On startup the daemon opens the host panel (`http://127.0.0.1:1234/host`) in the
 
 Transcription (Whisper, audio capture) is in [`victor-macos-addons`](https://github.com/victorrentea/victor-macos-addons) — this daemon only reads normalized transcript files.
 
-Transcript query: `python3 -m daemon.transcript_query <from_iso> <to_iso>`
-Transcript rebuild: `python3 -m daemon.rebuild_normalized_transcripts --from-iso <iso_datetime>`
+Transcript query: `python3 -m daemon.transcript.query <from_iso> <to_iso>`
 
 ### Deleting a stray participant
 
@@ -78,7 +77,7 @@ no restart is needed.
 Whenever the user says “remember”, add it to this file (CLAUDE.md). Only add after explicit request or user confirmation.
 
 - Session links must remain stable across days: each session has a unique persistent `session_id`
-- `daemon_state.json` is the source of truth for which session is currently active
+- `global-state.json` in the sessions root (`daemon_state.json` is its legacy name, still read as a fallback) is the source of truth for which session is currently active
 - Slow hermetic tests (>5s) must be tagged `@pytest.mark.nightly` (excluded from every-push CI, run in nightly build)
 - There is a course catalog and a slides catalog file mapping course names to local PPTX paths
 - Daemon logs are available at `/Users/victorrentea/workspace/training-assistant/logs/daemon.log`
