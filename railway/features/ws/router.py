@@ -431,13 +431,14 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
             else:
                 await websocket.send_text(json.dumps({"type": "redirect", "url": "/host"}))
             await websocket.close(code=1000)
-        elif state.session_id is None and state.daemon_ws is None:
-            # No session known and no daemon to announce one (Railway just
-            # restarted): this id cannot be judged yet. Ask the client to retry
-            # rather than send a live audience to the landing page; once the
-            # daemon re-announces its session the same id connects again, and a
-            # really stale id gets the redirect below. Nothing is revealed or
-            # steered, so the anti-hijack rule holds.
+        elif state.session_id is None and session_registry.get(session_id) is None:
+            # No session announced yet and this id never seen by this process
+            # (Railway just restarted; the daemon reconnects ~3 s later and then
+            # announces its session): it cannot be judged yet. Ask the client to
+            # retry rather than send a live audience to the landing page; once the
+            # session is announced the same id connects again. An id that ended
+            # (it stays in the registry) still gets the redirect below. The reply
+            # does not depend on any other session, so the anti-hijack rule holds.
             await websocket.accept()
             await websocket.close(code=1013)
         else:

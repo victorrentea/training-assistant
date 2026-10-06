@@ -46,6 +46,7 @@ from railway.features.ws.router import (
 )
 from railway.shared import rate_limit
 from railway.shared.rate_limit import TokenBucketLimiter, probe_limiter
+from railway.shared.session_registry import session_registry
 from railway.shared.state import state
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -330,6 +331,31 @@ class TestSessionResetAndStaleGating:
             with pytest.raises(WebSocketDisconnect) as closed:
                 ws.receive_text()
         assert closed.value.code == 1013
+
+    def test_unknown_session_socket_retries_while_daemon_connected_but_not_announced(self, monkeypatch):
+        """The daemon socket is accepted before it announces its session: a phone
+        retrying in that window must still be told to retry, not redirected."""
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = None
+        state.daemon_ws = object()
+        client = TestClient(app)
+        with client.websocket_connect("/ws/abc123/pax-uuid") as ws:
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()
+        assert closed.value.code == 1013
+
+    def test_ended_session_socket_is_redirected_even_with_no_session_active(self, monkeypatch):
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        session_registry.register("endedsess", "Old workshop")
+        session_registry.mark_ended("endedsess")
+        state.session_id = None
+        state.daemon_ws = None
+        client = TestClient(app)
+        try:
+            with client.websocket_connect("/ws/endedsess/pax-uuid") as ws:
+                assert json.loads(ws.receive_text()) == {"type": "redirect", "url": "/?error=invalid"}
+        finally:
+            session_registry._entries.pop("endedsess", None)
 
     def test_unknown_session_socket_still_redirected_when_daemon_present(self, monkeypatch):
         monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
