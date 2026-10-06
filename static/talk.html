@@ -334,7 +334,11 @@
   // phone screen and under a moderate pinch-zoom, at ~4.7 MB of canvas per shown
   // slide, fine for the 10-20 slides of a talk.
   const RENDER_WIDTH_PX = 1440;
-  const RANGE_CHUNK_BYTES = 131072;
+  // 1 MB ranges: pdf.js reads most of a Google-Slides export on open anyway, and
+  // every request costs the single-worker relay CPU. Measured on the 5.4 MB
+  // Agentic Engineering deck: 128 KB ranges cost ~68 ms of relay CPU per phone,
+  // 1 MB ranges ~16 ms — a 500-phone join storm needs ~8 s of CPU instead of ~34 s.
+  const RANGE_CHUNK_BYTES = 1048576;
   const sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
   const scroller = document.getElementById('view-slides');
   const container = document.getElementById('pdf-pages');
