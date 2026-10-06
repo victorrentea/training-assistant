@@ -9,6 +9,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import ssl
 import urllib.request
 from datetime import datetime, timezone
@@ -196,7 +197,11 @@ def _download_pdf_sync(url: str, dest: Path) -> int:
         raise RuntimeError(
             f"Downloaded content for slug does not start with %PDF (got {data[:20]!r})"
         )
-    dest.write_bytes(data)
+    # Write aside, then rename over: phones range-read this file during a talk and
+    # must never see it half-written (os.replace is atomic on one filesystem).
+    tmp = dest.with_name(f".{dest.name}.{os.getpid()}.part")
+    tmp.write_bytes(data)
+    os.replace(tmp, dest)
     return len(data)
 
 

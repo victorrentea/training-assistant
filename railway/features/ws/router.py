@@ -388,7 +388,12 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
 
         while True:
             raw = await websocket.receive_text()
-            data = json.loads(raw)
+            try:
+                data = json.loads(raw)
+            except ValueError:
+                continue  # participants send nothing meaningful; ignore garbage frames
+            if not isinstance(data, dict):
+                continue
             msg_type = data.get("type")
             if msg_type:
                 ws_messages_total.labels(type=msg_type).inc()
