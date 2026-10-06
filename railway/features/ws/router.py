@@ -22,6 +22,7 @@ from railway.features.ws.daemon_protocol import (
     push_to_daemon,
 )
 from railway.features.ws.proxy_bridge import handle_proxy_response
+from railway.shared.auth import get_host_cookie_token
 from railway.shared.messaging import (
     SPECIAL_PIDS,
     broadcast_participant_update,
@@ -94,6 +95,13 @@ def _is_host_authorized_for_ws(websocket: WebSocket) -> bool:
         secrets.compare_digest(username.encode(), expected_user.encode())
         and secrets.compare_digest(password.encode(), expected_pass.encode())
     )
+
+
+def _is_host_panel_authorized(websocket: WebSocket) -> bool:
+    cookie = websocket.cookies.get("is_host") or ""
+    if cookie and secrets.compare_digest(cookie.encode(), get_host_cookie_token().encode()):
+        return True
+    return _is_host_authorized_for_ws(websocket)
 
 
 async def _handle_code_timestamp(data: dict):
@@ -456,6 +464,13 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
     is_host = (pid == "__host__")
 
     if not is_host and (not pid or pid.startswith("__")):
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+    if is_host and not _is_host_panel_authorized(websocket):
+        # Connecting as host kicks the current host socket: an anonymous claim
+        # would take the trainer's panel down. The panel proves itself — via the
+        # daemon's local proxy (Basic credentials) or the cookie /host sets.
         await websocket.accept()
         await websocket.close(code=1008)
         return

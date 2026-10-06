@@ -382,6 +382,61 @@ class TestSessionResetAndStaleGating:
 
 
 # ---------------------------------------------------------------------------
+# Host socket: only a proven trainer may take the __host__ slot
+# ---------------------------------------------------------------------------
+
+class TestHostSocketAuth:
+    """Connecting as __host__ kicks the current host socket, so an anonymous
+    claim would take the trainer's panel down (the repo is public)."""
+
+    def _client(self, monkeypatch) -> TestClient:
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = "sess01"
+        state.daemon_ws = object()
+        return TestClient(app)
+
+    def _assert_refused(self, client, url, headers=None):
+        panel = AsyncMock()  # the trainer's panel, already connected
+        state.participants["__host__"] = panel
+        with client.websocket_connect(url, headers=headers or {}) as ws:
+            # The kick runs before accept: checked here, a regression fails fast
+            # instead of hanging on the receive below.
+            panel.send_text.assert_not_called()
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()
+        assert closed.value.code == 1008
+        assert state.participants["__host__"] is panel
+        panel.close.assert_not_called()
+
+    def test_anonymous_host_socket_is_refused_and_kicks_nobody(self, monkeypatch):
+        self._assert_refused(self._client(monkeypatch), "/ws/sess01/__host__")
+
+    def test_padded_host_id_is_refused_too(self, monkeypatch):
+        self._assert_refused(self._client(monkeypatch), "/ws/sess01/%20__host__%20")
+
+    def test_wrong_credentials_are_refused(self, monkeypatch):
+        bad = base64.b64encode(b"host:nope").decode()
+        self._assert_refused(self._client(monkeypatch), "/ws/sess01/__host__", {"Authorization": f"Basic {bad}"})
+
+    def test_a_forged_cookie_is_refused(self, monkeypatch):
+        self._assert_refused(self._client(monkeypatch), "/ws/sess01/__host__", {"cookie": "is_host=1"})
+
+    def _assert_admitted(self, client, headers):
+        old_tab = AsyncMock()
+        state.participants["__host__"] = old_tab
+        with client.websocket_connect("/ws/sess01/__host__", headers=headers):
+            # A proven trainer takes over from an older panel tab, as before.
+            old_tab.send_text.assert_awaited_once_with(json.dumps({"type": "kicked"}))
+
+    def test_daemon_proxied_panel_with_credentials_is_admitted(self, monkeypatch):
+        self._assert_admitted(self._client(monkeypatch), _daemon_auth_headers())
+
+    def test_railway_served_panel_with_host_cookie_is_admitted(self, monkeypatch):
+        from railway.shared.auth import get_host_cookie_token
+        self._assert_admitted(self._client(monkeypatch), {"cookie": f"is_host={get_host_cookie_token()}"})
+
+
+# ---------------------------------------------------------------------------
 # Fix 5 — Content-Security-Policy on railway-served HTML
 # ---------------------------------------------------------------------------
 
