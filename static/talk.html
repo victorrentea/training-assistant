@@ -539,7 +539,12 @@
     var uid = null;
     try { uid = localStorage.getItem(UUID_KEY); } catch (e) {}
     if (uid) return uid;
-    uid = crypto.randomUUID();
+    // crypto.randomUUID needs iOS 15.4+ and a secure context; without it the whole
+    // page died on this line. getRandomValues is everywhere: build a v4 UUID from it.
+    uid = (window.crypto && typeof crypto.randomUUID === 'function') ? crypto.randomUUID()
+      : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, function(c) {
+          return (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16);
+        });
     _uuidIsNew = true;
     try { localStorage.setItem(UUID_KEY, uid); } catch (e) {}
     return uid;
