@@ -448,10 +448,27 @@
       placeholder.style.display = 'none';
       jumpIfReady();
     } catch (e) {
+      console.error('[talk] page render error', page, e);
+      if (deck !== d) return;
+      // The PDF may have changed on Railway mid-talk (the trainer saved the deck and
+      // it was downloaded again): the open document's byte ranges then point into
+      // another file. Open it afresh once and render this page again.
+      if (!entry.reopened) {
+        entry.reopened = true;
+        reopenDeck(d);
+        d.queue = d.queue.then(function() { return renderEntry(d, page, entry); });
+        return;
+      }
       entry.section.remove();
       d.pages.delete(page);  // a later show() of this page retries
-      console.error('[talk] page render error', page, e);
     }
+  }
+
+  function reopenDeck(d) {
+    if (d.doc) d.doc.destroy().catch(function() {});
+    d.doc = null;
+    d.url = d.url.split('?')[0] + '?v=' + Date.now();  // never reuse cached ranges of the old file
+    d.opened = openDeck(d);
   }
 
   function jumpIfReady() {
@@ -501,7 +518,9 @@
       annLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
       section.appendChild(annLayer);
       for (const ann of annotations) {
-        if (!ann || ann.subtype !== 'Link' || !(ann.url || ann.unsafeUrl)) continue;
+        // Web links only: a javascript: (or any other scheme) link in the PDF must not run on tap.
+        const href = ann && ann.subtype === 'Link' ? (ann.url || ann.unsafeUrl || '') : '';
+        if (!/^https?:\/\//i.test(href)) continue;
         const rect = viewport.convertToViewportRectangle(ann.rect);
         const left = Math.min(rect[0], rect[2]);
         const top = Math.min(rect[1], rect[3]);
@@ -513,7 +532,7 @@
         const widthPct = (width / viewport.width * 100).toFixed(3);
         const heightPct = (height / viewport.height * 100).toFixed(3);
         const link = document.createElement('a');
-        link.href = ann.url || ann.unsafeUrl;
+        link.href = href;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.style.cssText = `position:absolute;left:${leftPct}%;top:${topPct}%;width:${widthPct}%;height:${heightPct}%;pointer-events:auto;cursor:pointer;background:transparent`;
