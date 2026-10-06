@@ -1,14 +1,18 @@
 """Roster fan-out under a conference-talk join storm.
 
 * talk mode does not broadcast the participant names (workshop mode still does);
-* the active-count broadcast is throttled, and the final count always goes out.
+* the active-count broadcast is throttled, and the final count always goes out;
+* host roster pushes are coalesced, and the final roster always goes out.
 """
 import asyncio
+import json
 import threading
 import time
 from unittest.mock import patch
 
 import pytest
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
 from daemon import throttle as throttle_mod
 from daemon import ws_publish
@@ -158,3 +162,94 @@ def test_active_count_without_daemon_loop_is_sent_directly(
     fanout.request_active_count_broadcast()
     sent = railway.of_type("active_participants_count_updated")
     assert [e["count"] for e in sent] == [1]
+
+
+# ── Host roster pushes: coalesced, final roster delivered ─────────────────────
+
+
+class _HostWs:
+    """Stand-in for the trainer's host-panel WS; records pushed frames."""
+
+    def __init__(self):
+        self.frames: list[dict] = []
+
+    async def send_text(self, payload):
+        self.frames.append(json.loads(payload))
+
+    def rosters(self):
+        return [f["participants"] for f in self.frames if f["type"] == "participant_list_updated"]
+
+
+@pytest.fixture
+def host_ws(monkeypatch):
+    ws = _HostWs()
+    monkeypatch.setattr(ws_publish, "_host_wss", {ws})
+    return ws
+
+
+def test_register_storm_coalesces_host_roster_pushes(
+    railway, host_ws, fresh_roster, monkeypatch
+):
+    """200 people register back to back: the host gets the first join at once,
+    then one trailing push carrying everybody, not 200 full rosters."""
+    monkeypatch.setattr(fanout.host_roster, "_interval", 0.2)
+    fresh_roster.mode = "talk"
+    app = FastAPI()
+    app.include_router(participant_router.router)
+
+    async def storm():
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://d") as c:
+            for i in range(200):
+                r = await c.post("/api/participant/register", json={},
+                                 headers={"X-Participant-ID": f"p{i}"})
+                assert r.status_code == 200
+        assert len(host_ws.rosters()) == 1  # leading edge only so far
+        await asyncio.sleep(0.5)
+
+    with patch.object(participant_router, "_regenerate_attendees"):
+        asyncio.run(storm())
+
+    rosters = host_ws.rosters()
+    assert len(rosters) == 2, [len(r) for r in rosters]
+    assert len(rosters[0]) == 1
+    assert {p["uuid"] for p in rosters[-1]} == {f"p{i}" for i in range(200)}
+
+
+def test_presence_storm_from_main_thread_coalesces_host_roster(
+    railway, host_ws, fresh_roster, daemon_loop, monkeypatch
+):
+    """Presence events run on the daemon main thread, not on the loop."""
+    monkeypatch.setattr(fanout.host_roster, "_interval", 0.2)
+    monkeypatch.setattr(fanout.active_count, "_interval", 0.2)
+    for i in range(300):
+        fresh_roster.participant_names[f"p{i}"] = f"Name {i}"
+    for i in range(300):
+        fanout.handle_participant_presence({"uuid": f"p{i}", "online": True})
+
+    def all_online_in_last_roster():
+        rosters = host_ws.rosters()
+        return bool(rosters) and sum(p["online"] for p in rosters[-1]) == 300
+
+    assert _wait_until(all_online_in_last_roster)
+    time.sleep(0.5)
+    assert 1 <= len(host_ws.rosters()) <= 3
+    counts = railway.of_type("active_participants_count_updated")
+    assert 1 <= len(counts) <= 3 and counts[-1]["count"] == 300
+
+
+def test_presence_ignores_internal_ids_and_tracks_offline(
+    railway, host_ws, fresh_roster, daemon_loop
+):
+    fresh_roster.participant_names.update({"a": "A", "b": "B"})
+    fanout.handle_participant_presence({"uuid": "__host__", "online": True})
+    fanout.handle_participant_presence({"uuid": "a", "online": True, "tz": "Europe/Bucharest"})
+    fanout.handle_participant_presence({"uuid": "b", "online": True})
+    fanout.handle_participant_presence({"uuid": "b", "online": False})
+    assert fresh_roster.online_participants == {"a"}
+    assert fresh_roster.location_timezones["a"] == "Europe/Bucharest"
+
+    def last_count():
+        sent = railway.of_type("active_participants_count_updated")
+        return sent[-1]["count"] if sent else None
+
+    assert _wait_until(lambda: last_count() == 1)

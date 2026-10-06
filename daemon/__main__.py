@@ -861,49 +861,10 @@ def run() -> None:
         lambda data: _handle_materials_zip(data, config),
     )
 
-    def _push_host_participant_list() -> None:
-        try:
-            import asyncio as _asyncio
-
-            from daemon.host_state_router import _build_host_participants_list
-            from daemon.loop import get_event_loop as _get_event_loop
-            from daemon.ws_messages import ParticipantListUpdatedMsg
-            from daemon.ws_publish import notify_host as _notify_host
-
-            _loop = _get_event_loop()
-            if _loop and _loop.is_running():
-                _asyncio.run_coroutine_threadsafe(
-                    _notify_host(
-                        ParticipantListUpdatedMsg(
-                            participants=_build_host_participants_list(),
-                        )
-                    ),
-                    _loop,
-                )
-        except Exception:
-            pass
-
-    # The active count goes to every participant; it is throttled because a talk
-    # can have hundreds of people come online within a minute or two.
+    # Presence fan-out (host roster + active count) is throttled: a talk can have
+    # hundreds of people come online within a minute or two.
     from daemon.participant import fanout as _fanout
-
-    def _handle_participant_presence(data: dict) -> None:
-        from daemon.participant.router import _apply_browser_tz
-        from daemon.participant.state import participant_state as _participant_state
-
-        pid = str(data.get("uuid", "")).strip()
-        if not pid or pid.startswith("__"):
-            return
-
-        if bool(data.get("online")):
-            _participant_state.online_participants.add(pid)
-            _apply_browser_tz(pid, data.get("tz"))
-        else:
-            _participant_state.online_participants.discard(pid)
-        _push_host_participant_list()
-        _fanout.request_active_count_broadcast()
-
-    ws_client.register_handler("participant_presence", _handle_participant_presence)
+    ws_client.register_handler("participant_presence", _fanout.handle_participant_presence)
 
     # State push handler — daemon receives current state from Railway on connect
     from daemon.misc.state import misc_state
@@ -911,7 +872,7 @@ def run() -> None:
     def _handle_daemon_state_push(data):
         _apply_runtime_snapshot_restore(data)
         if "online_participants" in data:
-            _push_host_participant_list()
+            _fanout.host_roster.request_threadsafe()
             _fanout.request_active_count_broadcast()
 
     ws_client.register_handler("daemon_state_push", _handle_daemon_state_push)

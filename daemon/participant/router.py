@@ -21,8 +21,8 @@ from pydantic import BaseModel, Field
 from starlette.responses import Response
 
 from daemon.emoji.catalog import EMOJI_CATALOG, EmojiDef
-from daemon.host_state_router import _build_host_participants_list
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
+from daemon.participant import fanout
 from daemon.participant.names import LOTR_NAMES, assign_conference_name
 from daemon.participant.purge import PurgeReport
 from daemon.participant.sanitize import (
@@ -40,12 +40,11 @@ from daemon.slides.models import CurrentSlide
 from daemon.wiki.publisher import wiki_updated_at
 from daemon.ws_messages import (
     AiSharePoint,
-    ParticipantListUpdatedMsg,
     ParticipantNamesUpdatedMsg,
     ScoresUpdatedMsg,
     SummaryScrollPosition,
 )
-from daemon.ws_publish import broadcast, notify_host
+from daemon.ws_publish import broadcast
 
 logger = logging.getLogger(__name__)
 # Server-side cap on participant display names; mirrored by maxlength="64" on
@@ -573,16 +572,14 @@ def _publish_names_if_changed() -> None:
 async def _notify_host_participant_list():
     """Push the roster to the host, and the UUID-free names to all participants.
 
-    The host payload keeps UUIDs (host is trusted) and goes out on every roster
-    change (join / rename / activity / location). The participant
-    names broadcast + attendees.md regen ride the same hook but only fire when
-    the set of names actually changed (join / rename), not on heartbeats.
+    The host payload keeps UUIDs (host is trusted) and goes out on roster changes
+    (join / rename / activity / location / presence), throttled to one push per
+    second with the final state always sent (see daemon/participant/fanout.py).
+    The participant names broadcast + attendees.md regen ride the same hook but
+    only fire when the set of names actually changed (join / rename), not on
+    heartbeats.
     """
-    await notify_host(
-        ParticipantListUpdatedMsg(
-            participants=_build_host_participants_list(),
-        )
-    )
+    await fanout.host_roster.request()
     _publish_names_if_changed()
 
 
