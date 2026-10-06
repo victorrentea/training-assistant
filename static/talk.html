@@ -318,15 +318,17 @@
   }
 </script>
 <script type="module">
-  // ── Slide display: only the slides the trainer has shown, range-loaded ────────
+  // ── Slide display: only the slides the trainer has shown ─────────────────────
   // A deck is a large PDF (100+ pages), but a talk shows a subset of it, jumping
-  // around. pdf.js fetches the file with HTTP range requests (disableAutoFetch +
-  // disableStream) instead of downloading it whole up front. How much that saves
-  // depends on the PDF: on open pdf.js still reads every page dictionary, which
-  // Google-Slides exports spread across the file. It renders only pages the
-  // trainer has shown during this visit, stacked in the order they were FIRST
-  // shown (scrolling back follows the story), each once, each with its clickable
-  // link layer. Nothing outside this block knows slides are PDFs.
+  // around. The phone downloads the deck once (one request, retried until it
+  // completes) and then draws every slide from memory: a slide change needs no
+  // network at all, so a venue Wi-Fi drop can never leave a slide half-loaded.
+  // (HTTP range loading was tried: pdf.js reads ~80% of a Google-Slides export on
+  // open anyway, costs the single-worker relay ~6x more CPU per phone, and a single
+  // failed range request left the document hanging for good.) It renders only
+  // pages the trainer has shown during this visit, stacked in the order they were
+  // FIRST shown (scrolling back follows the story), each once, each with its
+  // clickable link layer. Nothing outside this block knows slides are PDFs.
   import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
@@ -334,11 +336,6 @@
   // phone screen and under a moderate pinch-zoom, at ~4.7 MB of canvas per shown
   // slide, fine for the 10-20 slides of a talk.
   const RENDER_WIDTH_PX = 1440;
-  // 1 MB ranges: pdf.js reads most of a Google-Slides export on open anyway, and
-  // every request costs the single-worker relay CPU. Measured on the 5.4 MB
-  // Agentic Engineering deck: 128 KB ranges cost ~68 ms of relay CPU per phone,
-  // 1 MB ranges ~16 ms — a 500-phone join storm needs ~8 s of CPU instead of ~34 s.
-  const RANGE_CHUNK_BYTES = 1048576;
   const sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
   const scroller = document.getElementById('view-slides');
   const container = document.getElementById('pdf-pages');
@@ -405,9 +402,12 @@
         });
         if (deck !== d) return false;
         if (check.ok || check.status === 404) {
-          const doc = await pdfjsLib.getDocument({
-            url: d.url, disableAutoFetch: true, disableStream: true, rangeChunkSize: RANGE_CHUNK_BYTES
-          }).promise;
+          // no-cache: revalidated with the ETag, so a reload gets a 304, not 5 MB again.
+          const resp = await fetch(d.url, { cache: 'no-cache' });
+          if (!resp.ok) throw new Error('deck download HTTP ' + resp.status);
+          const data = await resp.arrayBuffer();
+          if (deck !== d) return false;
+          const doc = await pdfjsLib.getDocument({ data: data }).promise;
           if (deck !== d) { doc.destroy().catch(function() {}); return false; }
           d.doc = doc;
           d.numPages = doc.numPages;
@@ -454,25 +454,14 @@
     } catch (e) {
       console.error('[talk] page render error', page, e);
       if (deck !== d) return;
-      // The PDF may have changed on Railway mid-talk (the trainer saved the deck and
-      // it was downloaded again): the open document's byte ranges then point into
-      // another file. Open it afresh once and render this page again.
-      if (!entry.reopened) {
-        entry.reopened = true;
-        reopenDeck(d);
+      if (!entry.retried) {  // e.g. a transient canvas allocation failure: try once more
+        entry.retried = true;
         d.queue = d.queue.then(function() { return renderEntry(d, page, entry); });
         return;
       }
       entry.section.remove();
       d.pages.delete(page);  // a later show() of this page retries
     }
-  }
-
-  function reopenDeck(d) {
-    if (d.doc) d.doc.destroy().catch(function() {});
-    d.doc = null;
-    d.url = d.url.split('?')[0] + '?v=' + Date.now();  // never reuse cached ranges of the old file
-    d.opened = openDeck(d);
   }
 
   function jumpIfReady() {
@@ -497,6 +486,9 @@
       section.classList.remove('slide-highlight');
       void section.offsetWidth;  // restart the animation
       section.classList.add('slide-highlight');
+      // Drop the class when done: left on, the flash replayed on every slide ever
+      // highlighted whenever the slides view came back from display:none.
+      section.addEventListener('animationend', function() { section.classList.remove('slide-highlight'); }, { once: true });
     }
     function onScroll() {
       clearTimeout(debounce);
@@ -688,12 +680,15 @@
       if (_activeView === 'slides' && /^(Arrow(Up|Down)|Page(Up|Down)|Home|End| )$/.test(e.key)) gesture();
     });
     view.addEventListener('scroll', function() {
-      if (!_userScrolled || !_following || !_live) return;
+      if (!_userScrolled || !_live) return;
       clearTimeout(settle);
       settle = setTimeout(function() {
-        if (_userScrolled && _following && _live && isSlideInView(_live.slug, _live.page) === false) {
-          _setFollowing(false);
-        }
+        if (!_userScrolled || !_live) return;
+        var liveInView = isSlideInView(_live.slug, _live.page);
+        // Scrolled away from the live slide: pause. Scrolled back onto it by hand:
+        // follow again, exactly as if the "Current Slide" button had been tapped.
+        if (_following && liveInView === false) _setFollowing(false);
+        else if (!_following && liveInView === true) _setFollowing(true);
       }, 150);
     }, { passive: true });
   })();
