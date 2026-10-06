@@ -4877,10 +4877,6 @@ function _setDuplicateIndicator(isDup) {
       delete state.quiz_correct_indices;
     }
     _applyState(state);
-    _initialStateApplied = true;
-    // The socket opened while this snapshot was in flight: it may predate the
-    // socket, so a broadcast sent in between never reached us. Catch up once.
-    if (_refetchWhenStateApplied) _refetchInitialState();
     document.getElementById('loading-screen').style.display = 'none';
     _scheduleBreakReminders();
     initLocationMenuEntry();
@@ -5875,12 +5871,6 @@ async function _refetchInitialState() {
 // "reconnecting…" banner — so the page recovers on its own whenever the server
 // returns, without a manual refresh.
 var _WS_RECONNECT_DELAYS = [500, 500, 1000, 1000, 1500, 1500, 2000, 2000, 2500];
-// The first /state and the first socket run in parallel. A broadcast sent after
-// the /state snapshot but before the socket is registered is lost (e.g. someone
-// joining under the same name that very second: no duplicate flag), so whichever
-// of the two finishes second triggers one catch-up /state.
-var _initialStateApplied = false;
-var _refetchWhenStateApplied = false;
 var _wsReconnectAttempts = 0;
 // Set true once a `redirect` frame has been received / navigation is underway.
 // The gateway sends {type:redirect,url:...} immediately before close(1008) for a
@@ -5899,10 +5889,8 @@ function _connectWS() {
     _wsReconnectAttempts = 0;
     var _giveup = document.getElementById('reconnect-giveup');
     if (_giveup) _giveup.style.display = 'none';
-    if (!_firstConnect || _initialStateApplied) {
+    if (!_firstConnect) {
       _refetchInitialState();
-    } else {
-      _refetchWhenStateApplied = true;
     }
     _firstConnect = false;
     // Show access duration toast 10 seconds after connecting
