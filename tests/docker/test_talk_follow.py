@@ -73,7 +73,7 @@ class _MockAddonBridge:
 
 _IN_VIEW_JS = """(n) => {
   const s = document.querySelector('#pdf-pages section[data-page="' + n + '"]');
-  if (!s || !s.querySelector('canvas')) return false;
+  if (!s || !s.querySelector('.slide-img')) return false;
   const v = document.getElementById('view-slides').getBoundingClientRect();
   const r = s.getBoundingClientRect();
   return Math.min(r.bottom, v.bottom) - Math.max(r.top, v.top) >= 0.5 * Math.min(r.height, v.height);

@@ -99,7 +99,7 @@ class _MockAddonBridge:
 
 _IN_VIEW_JS = """(n) => {
   const s = document.querySelector('#pdf-pages section[data-page="' + n + '"]');
-  if (!s || !s.querySelector('canvas')) return false;
+  if (!s || !s.querySelector('.slide-img')) return false;
   const v = document.getElementById('view-slides').getBoundingClientRect();
   const r = s.getBoundingClientRect();
   return Math.min(r.bottom, v.bottom) - Math.max(r.top, v.top) >= 0.5 * Math.min(r.height, v.height);
@@ -169,7 +169,7 @@ def test_three_phones_follow_the_talk_and_react():
         # (Waited for: the scroll to the revisited slide is smooth.)
         fit_js = """() => {
           const v = document.getElementById('view-slides').getBoundingClientRect();
-          const c = document.querySelector('#pdf-pages section[data-page="3"] canvas').getBoundingClientRect();
+          const c = document.querySelector('#pdf-pages section[data-page="3"] .slide-img').getBoundingClientRect();
           return c.top >= v.top - 1 && c.bottom <= v.bottom + 1 && c.left >= v.left - 1 && c.right <= v.right + 1;
         }"""
         try:
@@ -178,7 +178,7 @@ def test_three_phones_follow_the_talk_and_react():
             geo = pages["landscape"].evaluate("""() => {
               const r = (el) => { const b = el.getBoundingClientRect(); return [b.left, b.top, b.right, b.bottom].map(Math.round); };
               return {view: r(document.getElementById('view-slides')),
-                      slide: r(document.querySelector('#pdf-pages section[data-page="3"] canvas'))};
+                      slide: r(document.querySelector('#pdf-pages section[data-page="3"] .slide-img'))};
             }""")
             raise AssertionError(f"landscape slide does not fit inside the slides view: {geo}") from exc
 
@@ -209,7 +209,7 @@ def test_three_phones_follow_the_talk_and_react():
         _all_in_view({k: v for k, v in pages.items() if k != "small"}, 8)
         late.wait_for_function(_IN_VIEW_JS, arg=8, timeout=15_000)
         reader.wait_for_function(
-            "() => !!document.querySelector('#pdf-pages section[data-page=\"8\"] canvas')", timeout=15_000)
+            "() => !!document.querySelector('#pdf-pages section[data-page=\"8\"] .slide-img')", timeout=15_000)
         assert not reader.evaluate(_IN_VIEW_JS, 8), "paused reader was moved to the live slide"
         reader.locator("#fab-current-slide button").click()
         reader.wait_for_function(_IN_VIEW_JS, arg=8, timeout=10_000)
