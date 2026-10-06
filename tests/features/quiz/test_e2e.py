@@ -289,10 +289,10 @@ class TestIdentityEdgeCases:
         name = pax._page.locator("#display-name").inner_text().strip()
         assert len(name) > 0, "Name should not be empty after attempting blank rename"
 
-    def test_long_name_truncated_to_32(self, pax: ParticipantPage):
-        """Names longer than 32 chars are truncated server-side."""
+    def test_long_name_truncated_to_64(self, pax: ParticipantPage):
+        """Names are capped at 64 chars (maxlength="64", mirroring daemon/participant/sanitize.py)."""
         pax.join("ShortFirst")
-        long_name = "A" * 40
+        long_name = "A" * 70
 
         pax._page.evaluate("_startNameEdit()")
         edit_input = pax._page.locator("#name-edit-input")
@@ -300,10 +300,12 @@ class TestIdentityEdgeCases:
         edit_input.fill(long_name)
         edit_input.press("Enter")
 
-        pax._page.wait_for_timeout(1000)
         # Read the name text span only — #display-name also holds an "edit" icon affordance.
-        displayed = pax._page.locator("#display-name .display-name-text").inner_text().strip()
-        assert len(displayed) <= 32, f"Name should be max 32 chars, got {len(displayed)}: '{displayed}'"
+        name_text = pax._page.locator("#display-name .display-name-text")
+        # Wait for the rename to land: a fixed sleep let the old name pass the length check.
+        expect(name_text).to_have_text(re.compile(r"^A+$"), timeout=5000)
+        displayed = name_text.inner_text().strip()
+        assert len(displayed) == 64, f"Name should be capped at 64 chars, got {len(displayed)}: '{displayed}'"
 
     def test_duplicate_name_admitted_and_flagged_on_own_card(self, server_url, playwright):
         """Duplicate names are permitted and flagged, never blocked.

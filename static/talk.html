@@ -169,6 +169,19 @@
         .slide-highlight {
           animation: slide-highlight 2s ease-out forwards;
         }
+        /* A whole slide always fits on screen: --slide-max-h is the height of the
+           slides view (set from JS), which only binds on a phone in landscape. */
+        #pdf-pages section { width: fit-content; margin-left: auto; margin-right: auto; }
+        #pdf-pages canvas { display: block; width: auto; max-width: 100%; max-height: var(--slide-max-h, none); }
+        /* Phone in landscape: compact tab bar (icons only) and emoji bar leave the slide more room. */
+        @media (orientation: landscape) and (max-height: 500px) {
+          header { padding-top: 4px; padding-bottom: 4px; }
+          header .tab-btn { flex-direction: row; padding: 4px 12px; min-width: 0; }
+          header .tab-btn > span:last-child { display: none; }
+          #pax-count-display { flex-direction: row; padding: 4px 10px; min-width: 0; }
+          #emoji-nav { padding-top: 2px; padding-bottom: 2px; }
+          #emoji-nav .emoji-glyph { width: 2.75rem; height: 2.75rem; font-size: 1.25rem; }
+        }
     </style>
 <script src="/static/emoji-float.js"></script>
 </head>
@@ -313,6 +326,13 @@
   const container = document.getElementById('pdf-pages');
   const placeholder = document.getElementById('slide-placeholder');
   const downloadBtn = document.getElementById('btn-download-slides');
+
+  function fitSlidesToView() {
+    // The parent stays laid out while the Speaker tab hides the slides view.
+    document.documentElement.style.setProperty('--slide-max-h', Math.max(120, scroller.parentElement.clientHeight - 8) + 'px');
+  }
+  fitSlidesToView();
+  window.addEventListener('resize', fitSlidesToView);
 
   let deck = null;     // { slug, url, doc, numPages, opened, queue, pages: Map(page → {section, ready}) }
   let target = null;   // { slug, page, highlight } — scroll there once that page is on screen
