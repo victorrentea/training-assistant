@@ -40,9 +40,12 @@ session_router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Grace period before kicking participants after a daemon WS drop. The daemon
-# reconnects in ~3s on transient network blips; only evict clients if the
-# daemon is still absent after this window.
-_DAEMON_DISCONNECT_GRACE_SECONDS = float(os.environ.get("DAEMON_DISCONNECT_GRACE_SECONDS", "5"))
+# reconnects in ~3s on a transient blip, but a trainer's laptop on conference
+# Wi-Fi can lose its uplink for longer, and the auto-update restart (kill, git
+# pull, cold start) takes several seconds: evicting a whole talk audience to the
+# landing page after 5 s would make hundreds of people re-scan the QR code.
+# While the daemon is away, phones stay connected and simply get no updates.
+_DAEMON_DISCONNECT_GRACE_SECONDS = float(os.environ.get("DAEMON_DISCONNECT_GRACE_SECONDS", "60"))
 _pending_kick_task: asyncio.Task | None = None
 
 # Strong references to fire-and-forget tasks so the event loop doesn't garbage
@@ -423,6 +426,15 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
             else:
                 await websocket.send_text(json.dumps({"type": "redirect", "url": "/host"}))
             await websocket.close(code=1000)
+        elif state.session_id is None and state.daemon_ws is None:
+            # No session known and no daemon to announce one (Railway just
+            # restarted): this id cannot be judged yet. Ask the client to retry
+            # rather than send a live audience to the landing page; once the
+            # daemon re-announces its session the same id connects again, and a
+            # really stale id gets the redirect below. Nothing is revealed or
+            # steered, so the anti-hijack rule holds.
+            await websocket.accept()
+            await websocket.close(code=1013)
         else:
             await websocket.accept()
             # SECURITY: never steer a stale/unknown session onto the active one —

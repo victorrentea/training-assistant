@@ -33,6 +33,7 @@ from urllib.parse import urlparse
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from railway.app import app
 from railway.features.pages.router import _CSP
@@ -316,6 +317,30 @@ class TestSessionResetAndStaleGating:
 
         state.daemon_ws = object()  # daemon reconnected (any non-None socket)
         assert client.get("/api/status").json()["session_active"] is True
+
+    def test_unknown_session_socket_retries_while_no_daemon(self, monkeypatch):
+        """Right after a Railway restart no session is known until the daemon
+        reconnects. A phone reconnecting first must be told to retry (1013), not
+        sent to the landing page (which would make the whole room re-scan)."""
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = None
+        state.daemon_ws = None
+        client = TestClient(app)
+        with client.websocket_connect("/ws/abc123/pax-uuid") as ws:
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()
+        assert closed.value.code == 1013
+
+    def test_unknown_session_socket_still_redirected_when_daemon_present(self, monkeypatch):
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = "newsess"
+        state.daemon_ws = object()
+        client = TestClient(app)
+        with client.websocket_connect("/ws/oldsess/pax-uuid") as ws:
+            assert json.loads(ws.receive_text()) == {"type": "redirect", "url": "/?error=invalid"}
+
+    def test_daemon_grace_outlasts_a_laptop_wifi_blip(self):
+        assert ws_router._DAEMON_DISCONNECT_GRACE_SECONDS >= 30
 
 
 # ---------------------------------------------------------------------------
