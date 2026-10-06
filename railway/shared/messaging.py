@@ -86,6 +86,22 @@ async def fan_out(text: str, targets: list[tuple[str, WebSocket]]) -> None:
             _drop(pid, ws)
 
 
+# App-level heartbeat to participant sockets. WebSocket protocol pings are
+# invisible to page JS, so a phone whose connection died silently (a network
+# switch while it was in a pocket: no FIN, no RST) never notices and stays on an
+# old slide. With a frame at least this often, the talk page can tell and reconnect.
+HEARTBEAT_INTERVAL_SECONDS = float(os.environ.get("WS_HEARTBEAT_INTERVAL_SECONDS", "25"))
+_HEARTBEAT_FRAME = json.dumps({"type": "heartbeat"})
+
+
+async def heartbeat_loop() -> None:
+    while True:
+        await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
+        targets = [(pid, ws) for pid, ws in state.participants.items() if pid not in SPECIAL_PIDS]
+        if targets:
+            await fan_out(_HEARTBEAT_FRAME, targets)
+
+
 async def broadcast(message: Union[BaseModel, dict], exclude: Optional[str] = None):
     """Send identical message to all connected clients."""
     text = message.model_dump_json() if isinstance(message, BaseModel) else json.dumps(message)

@@ -954,6 +954,7 @@
   function _handleMessage(msg) {
     switch (msg.type) {
       case 'redirect': _redirecting = true; window.location.href = msg.url || '/'; break;
+      case 'heartbeat': _heartbeatSeen = true; break;
       case 'current_slide_updated': _onLiveSlide(msg.current_slide); break;
       case 'talk_pdf_ready': if (msg.slug) _onLiveSlide({ slug: msg.slug, page: 1 }); break;
       case 'emoji_counters_updated': if (msg.counters) _applyEmojiCounters(msg.counters); break;
@@ -964,6 +965,10 @@
   var _wsAttempts = 0;
   var _wsEverOpened = false;
   var _lastStateAt = 0;
+  var _ws = null;               // the current socket; frames from an abandoned one are ignored
+  var _lastFrameAt = 0;
+  var _heartbeatSeen = false;   // the relay sends one every 25 s; the watchdog relies on it
+  var WS_SILENCE_MS = 60000;
   // Set once a `redirect` frame arrived: the gateway sends it right before
   // close(1008), and onclose must not override where it sent us.
   var _redirecting = false;
@@ -971,6 +976,8 @@
   function _connectWS() {
     var proto = location.protocol === 'https:' ? 'wss' : 'ws';
     var ws = new WebSocket(proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_uuid));
+    _ws = ws;
+    _lastFrameAt = Date.now();  // a new socket gets a full silence window
     var live = false;
     var liveTimer = null;
     // A relay that cannot take us yet (1013 "retry later") also opens the socket
@@ -989,6 +996,8 @@
     }
     ws.onopen = function() { liveTimer = setTimeout(markLive, 3000); };
     ws.onmessage = function(e) {
+      if (ws !== _ws) return;
+      _lastFrameAt = Date.now();
       markLive();
       var msg;
       try { msg = JSON.parse(e.data); } catch (_) { return; }
@@ -996,7 +1005,7 @@
     };
     ws.onclose = function(e) {
       clearTimeout(liveTimer);
-      if (_redirecting) return;
+      if (ws !== _ws || _redirecting) return;
       if (e.code === 1008) {
         // Session over / invalid. Normally the redirect frame already navigated;
         // if it got lost, land on the neutral page that explains it.
@@ -1017,6 +1026,24 @@
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  });
+
+  // A socket that died silently (network switch while the phone was in a pocket)
+  // never fires 'close'. The relay sends a heartbeat every 25 s, so a long silence
+  // means a dead socket: drop it and connect afresh (the new socket resyncs state).
+  function _abandonSocketIfSilent(maxSilenceMs) {
+    if (!_ws || !_heartbeatSeen || Date.now() - _lastFrameAt <= maxSilenceMs) return;
+    var dead = _ws;
+    _ws = null;  // its late events, if any, are ignored
+    try { dead.close(); } catch (e) {}
+    _connectWS();
+  }
+  setInterval(function() { _abandonSocketIfSilent(WS_SILENCE_MS); }, 15000);
+  // Back on the page (unlocked phone, returned from another app): catch up at once.
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState !== 'visible' || !_sessionId) return;
+    _syncState();
+    _abandonSocketIfSilent(30000);
   });
 
   // If the slide module never loads (pdf.js from the CDN blocked, or a browser too
