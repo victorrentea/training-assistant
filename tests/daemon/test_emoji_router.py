@@ -148,6 +148,17 @@ class TestEmojiReaction:
                                       headers={"X-Participant-ID": "__host__"})
             assert resp.status_code == 204
 
+    def test_host_id_through_railway_is_rate_limited(self, emoji_client):
+        """SECURITY: the "__host__" exemption is for the host's own local calls. A
+        participant typing X-Participant-ID: __host__ arrives through Railway (proxy
+        marker set) and is throttled like anyone else."""
+        headers = {"X-Participant-ID": "__host__", "x-railway-proxied": "1"}
+        for _ in range(15):
+            r = emoji_client.post("/api/participant/emoji/reaction", json={"emoji": "❤️"}, headers=headers)
+            assert r.status_code == 204
+        r = emoji_client.post("/api/participant/emoji/reaction", json={"emoji": "❤️"}, headers=headers)
+        assert r.status_code == 429
+
     def test_no_rate_limit_exemption_for_crafted_host_prefix(self, emoji_client):
         """SECURITY (fix #5): only the exact "__host__" id is exempt.
 

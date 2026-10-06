@@ -1569,7 +1569,11 @@ def run() -> None:
             except Exception as e:
                 # Keep daemon alive for unexpected transient errors; loop retries.
                 log.error("daemon", f"Unexpected error (will retry): {e}")
-            time.sleep(DAEMON_POLL_INTERVAL)
+            # Sleep one poll interval, but wake at once on a PowerPoint slide change
+            # (drained at the top of the loop). All periodic work above is
+            # time-based, so an early wake-up only runs it sooner, never twice.
+            _bridge.slide_wakeup.wait(DAEMON_POLL_INTERVAL)
+            _bridge.slide_wakeup.clear()
     finally:
         ws_client.stop()
 

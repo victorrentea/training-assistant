@@ -106,8 +106,12 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
 
     # Throttle bursts: cap each participant at 15 reactions/minute. Only the
     # ONE legitimate host id is exempt — matching on the exact "__host__" id, not
-    # a "__" prefix, so a crafted "__x" X-Participant-ID can't bypass the limit.
-    if pid != "__host__" and not emoji_rate_limiter.allow(pid):
+    # a "__" prefix, so a crafted "__x" X-Participant-ID can't bypass the limit —
+    # and only on the host's own local calls: through Railway the id is whatever
+    # the caller typed, so a proxied "__host__" is limited like anyone else.
+    from daemon.proxy_handler import RAILWAY_PROXY_MARKER
+    host_exempt = pid == "__host__" and not request.headers.get(RAILWAY_PROXY_MARKER)
+    if not host_exempt and not emoji_rate_limiter.allow(pid):
         return JSONResponse({"error": "Too many reactions"}, status_code=429)
 
     # Over the global cap: same silent 204, and nothing else happens — no overlay,
