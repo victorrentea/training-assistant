@@ -36,6 +36,8 @@ from daemon.summary.loop import AI_SUMMARY_FILE, get_ai_summary_mtime
 from daemon.ws_messages import (
     FeedbackFormUpdatedMsg,
     PasteReceivedMsg,
+    SlidesClearedMsg,
+    SlidesHistoryCountUpdatedMsg,
     SummaryScrollMsg,
     SummaryScrollPosition,
     SummaryUpdatedMsg,
@@ -325,6 +327,25 @@ async def get_agenda():
 # ── Host router (called directly on daemon localhost) ──
 
 host_router = APIRouter(prefix="/api/{session_id}/host", tags=["misc"])
+
+
+class SlidesClearedResponse(BaseModel):
+    ok: bool = True
+
+
+@host_router.post("/slides/clear", response_model=SlidesClearedResponse)
+async def clear_shown_slides():
+    """Host wipes the shown slides so the audience starts clean.
+
+    Resets the current slide and the slide history; connected phones drop every
+    slide on screen, and one joining afterwards waits for the next slide.
+    """
+    misc_state.clear_shown_slides()
+    broadcast(SlidesClearedMsg())
+    broadcast(SlidesHistoryCountUpdatedMsg(count=0))
+    from daemon import log
+    log.info("slides", "🧹 Shown slides cleared by host")
+    return SlidesClearedResponse()
 
 
 @host_router.get("/pastes", response_model=PastsResponse)

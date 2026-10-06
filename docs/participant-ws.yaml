@@ -19,6 +19,7 @@ channels:
       message:
         oneOf:
           - $ref: '#/components/messages/current_slide_updated'
+          - $ref: '#/components/messages/slides_cleared'
           - $ref: '#/components/messages/decks_updated'
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/active_participants_count_updated'
@@ -77,6 +78,17 @@ components:
             enum: [current_slide_updated]
           current_slide:
             $ref: '#/components/schemas/CurrentSlide'
+
+    slides_cleared:
+      summary: Host cleared the shown slides — drop every slide on screen and wait for the next one
+      x-feature: slides
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [slides_cleared]
 
     decks_updated:
       summary: Deck cache status changed — contains full cache map to avoid polling

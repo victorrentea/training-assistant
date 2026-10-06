@@ -1526,6 +1526,7 @@ function _renderEngagementPopover() {
     const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
 
     const pptxDrop = document.getElementById('talk-pptx-drop');
+    const clearSlidesBtn = document.getElementById('talk-clear-slides');
     const leftCol = document.querySelector('.host-col-left');
     if (isConference) {
       rightCol.style.display = 'none';
@@ -1534,6 +1535,7 @@ function _renderEngagementPopover() {
       if (leftTabsWrapper) leftTabsWrapper.style.display = 'none';
       if (slidesLeftQR) slidesLeftQR.style.display = 'flex';
       if (pptxDrop) pptxDrop.style.display = 'inline-flex';
+      if (clearSlidesBtn) clearSlidesBtn.style.display = '';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = 'none';
       // Make center QR bright for conference
@@ -1547,6 +1549,7 @@ function _renderEngagementPopover() {
       if (leftTabsWrapper) leftTabsWrapper.style.display = _currentActivity === 'none' ? 'none' : 'flex';
       if (slidesLeftQR) slidesLeftQR.style.display = _currentActivity === 'none' ? 'flex' : 'none';
       if (pptxDrop) pptxDrop.style.display = 'none';
+      if (clearSlidesBtn) clearSlidesBtn.style.display = 'none';
       confQR.style.display = 'none';
       if (debateTab) debateTab.style.display = '';
       // Restore muted center QR
@@ -4540,6 +4543,16 @@ function _setTalkPptxLabel(name, slugReady) {
   labelEl.textContent = '▶ ' + name;
   const check = document.getElementById('talk-pptx-check');
   if (check) check.style.display = slugReady ? '' : 'none';
+}
+
+async function clearTalkSlides() {
+  if (!confirm('Clear all slides shown to the audience?')) return;
+  try {
+    const r = await fetch(API('/slides/clear'), { method: 'POST' });
+    if (!r.ok) console.warn('clear slides failed:', r.status);
+  } catch (e) {
+    console.error('clear slides failed', e);
+  }
 }
 
 function onTalkPptxSelected(input) {

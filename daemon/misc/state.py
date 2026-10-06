@@ -34,6 +34,10 @@ class MiscState:
         self.talk_presentation_name: str | None = None
         self.talk_presentation_url: str | None = None
         self.talk_presentation_slug: str | None = None
+        # Set by the host's "Clear slides"; while set, a joining talk phone gets no
+        # talk_presentation_slug fallback (page 1) — it waits for the next slide.
+        # In memory only: the next slide event resets it.
+        self.slides_cleared: bool = False
         # uuid → monotonic timestamps of bug reports emailed this session (anti-flood)
         self.bug_reports_sent: dict[str, list[float]] = {}
 
@@ -180,6 +184,14 @@ class MiscState:
             self.talk_presentation_slug = None
             self.agenda_docx_path = None
             self.bug_reports_sent.clear()
+
+    def clear_shown_slides(self):
+        """Forget every slide shown so far: no current slide, no slide history."""
+        with self._lock:
+            self.current_slide = None
+            self.slides_viewed = []
+            self.slide_timeline = []
+            self.slides_cleared = True
 
 
 misc_state = MiscState()

@@ -871,7 +871,8 @@ async def get_participant_state(request: Request):
         "emoji_counters": dict(ps.emoji_counters),
         # Slides (from misc state — synced from Railway)
         "slides_current": misc_state.current_slide,
-        "talk_presentation_slug": misc_state.talk_presentation_slug,
+        # After "Clear slides" a joining phone must not fall back to page 1.
+        "talk_presentation_slug": None if misc_state.slides_cleared else misc_state.talk_presentation_slug,
         # Summary / notes (timestamps only — full content fetched on demand)
         "notes_updated_at": notes_updated_at,
         "summary_updated_at": summary["updated_at"],

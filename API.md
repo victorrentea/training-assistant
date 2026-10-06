@@ -121,6 +121,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Host navigated to a new slide<br>`current_slide_updated` | `current_slide: CurrentSlide{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`slug:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`page:int`<br>`}` |
+| Host cleared the shown slides — drop every slide on screen and wait for the next one<br>`slides_cleared` | - |
 | Deck cache status changed — contains full cache map to avoid polling<br>Compare incoming decks[slug].downloaded_at against previous value to detect content changes (re-download).<br>`decks_updated` | `decks?: dict[str, Deck{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`status:'not_cached' \| 'cached' \| 'downloading' \| 'download_failed'`<br>&nbsp;&nbsp;&nbsp;&nbsp;`size_bytes?:int`<br>&nbsp;&nbsp;&nbsp;&nbsp;`downloaded_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`modified_at?:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`title:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`error?:string`<br>`}]` |
 | Participant slide history count changed<br>`slides_history_updated` | `count: int` |
 
@@ -128,6 +129,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Endpoint | Request | Response |
 | --- | --- | --- |
 | Get Slides Compilation, compile all viewed slide pages into one PDF and return as a download; long-running: may trigger Railway to download PDFs from Google Drive first; progress is logged to the daemon log.<br>`GET /api/{session_id}/host/slides-compilation` | - | `any` |
+| Clear Shown Slides, host wipes the shown slides so the audience starts clean; resets the current slide and the slide history; connected phones drop every slide on screen, and one joining afterwards waits for the next slide.<br>`POST /api/{session_id}/host/slides/clear` | - | `ok?: bool` |
 
 ### Host WS
 | Message | Payload |

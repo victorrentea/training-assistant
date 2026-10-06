@@ -1154,6 +1154,7 @@ def run() -> None:
                             }
                             if misc_state.current_slide != _sc:
                                 misc_state.current_slide = _sc
+                                misc_state.slides_cleared = False
                                 from daemon.slides.models import CurrentSlide
                                 from daemon.ws_messages import SlidesCurrentMsg
                                 ws_publish.broadcast(SlidesCurrentMsg(current_slide=CurrentSlide(**_sc)))

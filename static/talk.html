@@ -410,13 +410,14 @@
     return visible >= (minFraction || 0.5) * Math.min(r.height, view.height);
   }
 
-  function loadDeck(slug) {
+  // Drop the deck on screen (download, pdf.js doc, rendered slides) and show the
+  // placeholder again. Also the host's "Clear slides": nothing left until the next slide.
+  function clearDeck() {
     if (deck && deck.download) deck.download.abort();
     if (deck && deck.doc) deck.doc.destroy().catch(function() {});
     container.querySelectorAll('img.slide-img').forEach(function(img) { URL.revokeObjectURL(img.src); });
-    const url = '/' + sessionId + '/api/slides/download/' + encodeURIComponent(slug);
-    deck = { slug: slug, url: url, doc: null, numPages: 0, queue: Promise.resolve(), pages: new Map() };
-    deck.opened = openDeck(deck);
+    deck = null;
+    target = null;
     container.replaceChildren();
     placeholder.style.display = '';
     placeholder.querySelector('.text-sm').textContent = 'Loading slides…';  // undo a "can't be shown"
@@ -424,6 +425,13 @@
     if (spinner) spinner.style.animation = 'spin 1s linear infinite';
     downloadBtn.disabled = true;
     window._currentPdfUrl = null;
+  }
+
+  function loadDeck(slug) {
+    clearDeck();
+    const url = '/' + sessionId + '/api/slides/download/' + encodeURIComponent(slug);
+    deck = { slug: slug, url: url, doc: null, numPages: 0, queue: Promise.resolve(), pages: new Map() };
+    deck.opened = openDeck(deck);
   }
 
   // Like participant.html, ask /check first: it makes Railway fetch and cache the
@@ -664,7 +672,7 @@
     page.cleanup();  // drop pdf.js's per-page resources (decoded images, operator list)
   }
 
-  window._resolveSlideDisplay({ show: show, isPageInView: isPageInView });
+  window._resolveSlideDisplay({ show: show, isPageInView: isPageInView, clear: clearDeck });
 </script>
 <script>
   // Served at /{session_id}/ — read the id from the URL path, not from a public endpoint.
@@ -794,6 +802,14 @@
     if (deckChanged) _setFollowing(true);
     if (_following) _showLive(deckChanged ? true : (moved ? 'revisit' : false));
     else showSlide(slug, page, { scroll: false });
+  }
+
+  // Host pressed "Clear slides": forget the live slide and every slide on screen;
+  // the next current_slide_updated starts a fresh deck view.
+  function _onSlidesCleared() {
+    _live = null;
+    _setFollowing(true);
+    _slideDisplayReady.then(function(d) { d.clear(); });
   }
 
   function _showLive(highlight, instant) {
@@ -1012,6 +1028,7 @@
       case 'redirect': _redirecting = true; window.location.href = msg.url || '/'; break;
       case 'heartbeat': _heartbeatSeen = true; break;
       case 'current_slide_updated': _onLiveSlide(msg.current_slide); break;
+      case 'slides_cleared': _onSlidesCleared(); break;
       case 'talk_pdf_ready': if (msg.slug) _onLiveSlide({ slug: msg.slug, page: 1 }); break;
       case 'emoji_counters_updated': if (msg.counters) _applyEmojiCounters(msg.counters); break;
       case 'active_participants_count_updated': _applyPaxCount(msg.count); break;

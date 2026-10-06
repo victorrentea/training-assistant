@@ -22,6 +22,11 @@ class SlidesCurrentMsg(BaseModel):
     current_slide: CurrentSlide
 
 
+class SlidesClearedMsg(BaseModel):
+    """Host wiped the shown slides: no current slide, no slide history."""
+    type: Literal["slides_cleared"] = "slides_cleared"
+
+
 class DecksUpdatedMsg(BaseModel):
     type: Literal["decks_updated"] = "decks_updated"
     decks: dict[str, Deck] = {}
@@ -513,6 +518,7 @@ class ReloadMsg(BaseModel):
 PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Slides
     "current_slide_updated": SlidesCurrentMsg,
+    "slides_cleared": SlidesClearedMsg,
     "decks_updated": DecksUpdatedMsg,
     # Activity
     "activity_updated": ActivityUpdatedMsg,
@@ -615,6 +621,7 @@ HOST_MESSAGES: dict[str, type[BaseModel]] = {
 PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Slides
     "current_slide_updated": "slides",
+    "slides_cleared": "slides",
     "decks_updated": "slides",
     # Activity
     "activity_updated": "activity",
