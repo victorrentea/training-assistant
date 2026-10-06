@@ -425,11 +425,17 @@
   async function openDeck(d) {
     for (let attempt = 0; deck === d; attempt++) {
       try {
+        // /check only nudges Railway to fetch the deck: when it fails or is slow
+        // (the daemon waits for a fresher PDF export), Railway usually holds the
+        // deck already, so download anyway after the first try.
+        const checkCtrl = new AbortController();
+        const checkTimer = setTimeout(function() { checkCtrl.abort(); }, 8000);
         const check = await fetch('/' + sessionId + '/api/slides/check/' + encodeURIComponent(d.slug), {
-          cache: 'no-store', headers: { 'X-Participant-ID': window._uuid || '' }
-        });
+          cache: 'no-store', headers: { 'X-Participant-ID': window._uuid || '' }, signal: checkCtrl.signal
+        }).catch(function() { return { ok: false, status: 0 }; });
+        clearTimeout(checkTimer);
         if (deck !== d) return false;
-        if (check.ok || check.status === 404) {
+        if (check.ok || check.status === 404 || attempt >= 1) {
           window._currentPdfUrl = d.url;  // Download works even before (or without) pdf.js
           downloadBtn.disabled = false;
           d.download = new AbortController();
