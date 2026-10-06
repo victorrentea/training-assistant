@@ -10,7 +10,10 @@
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <!-- Material Symbols -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Only the icons this page uses (alphabetical, as Google Fonts requires): ~3 KB instead
+     of the 1.1 MB full icon font, times every phone on the venue Wi-Fi. Add a name here
+     when a new icon is used. -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;icon_names=commit,download,mic,slideshow,smartphone,sync&amp;display=swap" rel="stylesheet"/>
 <style>html:not(.fonts-ready) body{visibility:hidden}</style>
 <script>
   // Hide the page until the icon font is in (no ligature-text flash), but never
@@ -169,6 +172,9 @@
         .slide-highlight {
           animation: slide-highlight 2s ease-out forwards;
         }
+        /* The page shows and hides things with Tailwind's `hidden`; defined here too so
+           a blocked Tailwind CDN cannot leave e.g. the desktop warning over a phone. */
+        .hidden { display: none !important; }
         /* A whole slide always fits on screen: --slide-max-h is the height of the
            slides view (set from JS), which only binds on a phone in landscape. */
         #pdf-pages section { width: fit-content; margin-left: auto; margin-right: auto; }
@@ -714,6 +720,8 @@
       'More on [victorrentea.ro](https://victorrentea.ro)',
     ].join('\n');
     contentEl.innerHTML = marked.parse(dummy);
+    // Leaving the page would lose every slide seen so far: open links in a new tab.
+    contentEl.querySelectorAll('a[href]').forEach(function(a) { a.target = '_blank'; a.rel = 'noopener noreferrer'; });
   }
 
   // ── Live follow ───────────────────────────────────────────────────────────────
