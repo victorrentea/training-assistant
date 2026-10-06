@@ -384,7 +384,8 @@
     if (!deck || deck.slug !== slug) loadDeck(slug);
     const revisit = deck.pages.has(page);
     if (opts.scroll) {
-      target = { slug: slug, page: page, highlight: opts.highlight === true || (opts.highlight === 'revisit' && revisit) };
+      target = { slug: slug, page: page, instant: opts.instant === true,
+                 highlight: opts.highlight === true || (opts.highlight === 'revisit' && revisit) };
     }
     ensurePage(deck, page);
     jumpIfReady();
@@ -537,11 +538,15 @@
     if (!target || !deck || deck.slug !== target.slug || !deck.numPages) return;
     const entry = deck.pages.get(Math.min(target.page, deck.numPages));
     if (!entry || !entry.ready) return;  // renderEntry calls back once it is on screen
+    if (!scroller.getClientRects().length) return;  // view hidden (Speaker tab): jump when it is back
     const highlight = target.highlight;
+    const instant = target.instant;
     target = null;
     // A slide taller than the view (phone in landscape) shows from its title down.
     const tall = entry.section.offsetHeight > scroller.clientHeight;
-    entry.section.scrollIntoView({ behavior: 'smooth', block: tall ? 'start' : 'end' });
+    if (instant) scroller.style.scrollBehavior = 'auto';  // overrides the view's smooth scrolling
+    entry.section.scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: tall ? 'start' : 'end' });
+    if (instant) scroller.style.scrollBehavior = '';
     if (highlight) highlightWhenSettled(entry.section);
   }
 
@@ -601,25 +606,44 @@
       const annLayer = document.createElement('div');
       annLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
       section.appendChild(annLayer);
+      const W = viewport.width, H = viewport.height;
+      const boxes = [];  // web links only, in render pixels
       for (const ann of annotations) {
         // Web links only: a javascript: (or any other scheme) link in the PDF must not run on tap.
         const href = ann && ann.subtype === 'Link' ? (ann.url || ann.unsafeUrl || '') : '';
         if (!/^https?:\/\//i.test(href)) continue;
-        const rect = viewport.convertToViewportRectangle(ann.rect);
-        const left = Math.min(rect[0], rect[2]);
-        const top = Math.min(rect[1], rect[3]);
-        const width = Math.abs(rect[0] - rect[2]);
-        const height = Math.abs(rect[1] - rect[3]);
-        if (!(width > 0 && height > 0)) continue;
-        const leftPct = (left / viewport.width * 100).toFixed(3);
-        const topPct = (top / viewport.height * 100).toFixed(3);
-        const widthPct = (width / viewport.width * 100).toFixed(3);
-        const heightPct = (height / viewport.height * 100).toFixed(3);
+        const r = viewport.convertToViewportRectangle(ann.rect);
+        const box = { href: href, x: Math.min(r[0], r[2]), y: Math.min(r[1], r[3]), w: Math.abs(r[0] - r[2]), h: Math.abs(r[1] - r[3]) };
+        if (box.w > 0 && box.h > 0) boxes.push(box);
+      }
+      for (const b of boxes) {
+        // On a phone a link line is ~8 px tall: grow the tap area towards 44 px, but
+        // never past the slide edge or halfway to another link, so taps never land on
+        // the wrong one. (Of a diagonal neighbour, the axis with the wider gap.)
+        let gx = Math.min(b.x, W - b.x - b.w), gy = Math.min(b.y, H - b.y - b.h);
+        for (const o of boxes) {
+          if (o === b) continue;
+          const dx = o.x >= b.x ? o.x - b.x - b.w : b.x - o.x - o.w;  // < 0: overlap on x
+          const dy = o.y >= b.y ? o.y - b.y - b.h : b.y - o.y - o.h;
+          if (dx < 0 && dy < 0) { gx = 0; gy = 0; }
+          else if (dx < 0) gy = Math.min(gy, dy / 2);
+          else if (dy < 0) gx = Math.min(gx, dx / 2);
+          else if (dx >= dy) gx = Math.min(gx, dx / 2);
+          else gy = Math.min(gy, dy / 2);
+        }
+        // % of the section: top/height resolve against its height, left/width its width.
+        const pct = function(v, total) { return (v / total * 100).toFixed(3) + '%'; };
+        const padX = 'max(0px, min((44px - ' + pct(b.w, W) + ') / 2, ' + pct(gx, W) + '))';
+        const padY = 'max(0px, min((44px - ' + pct(b.h, H) + ') / 2, ' + pct(gy, H) + '))';
         const link = document.createElement('a');
-        link.href = href;
+        link.href = b.href;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        link.style.cssText = `position:absolute;left:${leftPct}%;top:${topPct}%;width:${widthPct}%;height:${heightPct}%;pointer-events:auto;cursor:pointer;background:transparent`;
+        // The plain box first: a browser without CSS min()/max() drops the padded one.
+        link.style.cssText = 'position:absolute;pointer-events:auto;cursor:pointer;background:transparent;'
+          + 'left:' + pct(b.x, W) + ';top:' + pct(b.y, H) + ';width:' + pct(b.w, W) + ';height:' + pct(b.h, H) + ';'
+          + 'left:calc(' + pct(b.x, W) + ' - ' + padX + ');top:calc(' + pct(b.y, H) + ' - ' + padY + ');'
+          + 'width:calc(' + pct(b.w, W) + ' + 2 * ' + padX + ');height:calc(' + pct(b.h, H) + ' + 2 * ' + padY + ')';
         annLayer.appendChild(link);
       }
     }
@@ -694,24 +718,19 @@
   // View names that have a tab button
   var _viewNames = ['speaker', 'slides'];
 
-  var _slidesScrollTop = 0;
   function showView(name) {
-    var slidesView = document.getElementById('view-slides');
-    // A hidden view forgets its scroll offset: keep it, so coming back shows the
-    // slide the reader left, not the first one scrolling down to the live one.
-    if (_activeView === 'slides' && name !== 'slides') _slidesScrollTop = slidesView.scrollTop;
     _viewNames.forEach(function(v) {
       var view = document.getElementById('view-' + v);
       if (view) view.classList.toggle('hidden', v !== name);
       var btn = document.getElementById('btn-' + v);
       if (btn) btn.classList.toggle('active', v === name);
     });
-    if (name === 'slides' && _activeView !== 'slides') slidesView.scrollTop = _slidesScrollTop;
     _activeView = name;
     _updateFab();
     if (name === 'speaker') _renderSpeaker();
-    // Back on the slides: catch up with wherever the trainer went meanwhile.
-    if (name === 'slides' && _following) _showLive(false);
+    // Back on the slides: catch up with wherever the trainer went meanwhile — at
+    // once, not a smooth scroll across every slide shown in between.
+    if (name === 'slides' && _following) _showLive(false, true);
   }
 
   function _renderSpeaker() {
@@ -763,10 +782,10 @@
     else showSlide(slug, page, { scroll: false });
   }
 
-  function _showLive(highlight) {
+  function _showLive(highlight, instant) {
     if (!_live) return;
     _userScrolled = false;
-    showSlide(_live.slug, _live.page, { scroll: true, highlight: highlight });
+    showSlide(_live.slug, _live.page, { scroll: true, highlight: highlight, instant: instant === true });
   }
 
   // "Current Slide 🎯" button: jump to the live slide and follow again.
@@ -1034,6 +1053,7 @@
       if (e.code === 1008) {
         // Session over / invalid. Normally the redirect frame already navigated;
         // if it got lost, land on the neutral page that explains it.
+        _redirecting = true;
         window.location.href = '/?error=invalid';
         return;
       }
@@ -1072,13 +1092,20 @@
     _syncState();
     _abandonSocketIfSilent(30000);
   });
-  // Network back (Wi-Fi rejoined, out of the lift): reconnect now, not at the end
-  // of a backoff wait of up to 15 s.
+  // Network back (Wi-Fi rejoined, out of the lift): reconnect within ~2 s, not at
+  // the end of a backoff wait of up to 15 s.
   window.addEventListener('online', function() {
-    if (!_ws || _redirecting) return;  // never connected yet: the first connect is pending
-    _syncState();
-    if (_ws.readyState === WebSocket.CONNECTING || _ws.readyState === WebSocket.OPEN) _abandonSocketIfSilent(30000);
-    else _connectWS();
+    // No socket: the first connect, or a reconnect scheduled here, is pending.
+    if (!_ws || _redirecting) return;
+    if (_ws.readyState === WebSocket.OPEN) { _syncState(); _abandonSocketIfSilent(30000); return; }
+    // Closed, or a connect begun while offline (it can hang for a minute). Jittered,
+    // so a room whose Wi-Fi comes back does not reconnect in the same instant; the
+    // new socket resyncs state once live.
+    var stale = _ws;
+    _ws = null;  // its late events, if any, are ignored
+    if (stale.readyState === WebSocket.CONNECTING) { try { stale.close(); } catch (e) {} }
+    clearTimeout(_reconnectTimer);
+    _reconnectTimer = setTimeout(_connectWS, 250 + Math.random() * 1500);
   });
 
   // If the slide module never loads (pdf.js from the CDN blocked, or a browser too
