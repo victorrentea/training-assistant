@@ -31,13 +31,16 @@ async def _broadcast_foreach(sender):
     Raising any exception signals a dead connection.
     """
     dead = []
-    for pid, ws in state.participants.items():
+    # Snapshot: clients join and leave while the sends below are awaited.
+    for pid, ws in list(state.participants.items()):
         try:
             await sender(pid, ws)
         except Exception:
-            dead.append(pid)
-    for pid in dead:
-        state.participants.pop(pid, None)
+            dead.append((pid, ws))
+    for pid, ws in dead:
+        # Only while it is still this socket: the phone may have reconnected meanwhile.
+        if state.participants.get(pid) is ws:
+            del state.participants[pid]
 
 
 async def broadcast(message: Union[BaseModel, dict], exclude: Optional[str] = None):

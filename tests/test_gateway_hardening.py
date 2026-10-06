@@ -43,6 +43,7 @@ from railway.features.ws.router import (
     _evict_all_clients_after_grace,
     _handle_set_session_id,
 )
+from railway.shared import rate_limit
 from railway.shared.rate_limit import TokenBucketLimiter, probe_limiter
 from railway.shared.state import state
 
@@ -76,7 +77,6 @@ def _populate_session_caches() -> None:
     state.upload_next_id = 7
     state.participant_history = {"u1"}
     state.participant_ips = {"u1": "1.2.3.4"}
-    state.participant_names = {"u1": "Alice"}
 
 
 def _assert_caches_cleared() -> None:
@@ -86,7 +86,6 @@ def _assert_caches_cleared() -> None:
     assert state.upload_next_id == 0
     assert state.participant_history == set()
     assert state.participant_ips == {}
-    assert state.participant_names == {}
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +202,13 @@ class TestDaemonReconnectNoStall:
 # Fix 3 — inbound IP rate-limiting
 # ---------------------------------------------------------------------------
 
+def _small_probe_budget(monkeypatch) -> None:
+    """Swap in a tiny bucket so a flood trips it within a few requests — these tests
+    pin the WIRING (which routes are throttled, in which order), not the budget."""
+    monkeypatch.delenv("GATEWAY_RATE_LIMIT_DISABLED", raising=False)
+    monkeypatch.setattr(rate_limit, "probe_limiter", TokenBucketLimiter(capacity=20, refill_per_sec=1))
+
+
 class TestRateLimiting:
     def test_token_bucket_allows_capacity_then_blocks_then_refills(self):
         """Deterministic bucket behaviour with an injected clock."""
@@ -219,14 +225,14 @@ class TestRateLimiting:
     def test_status_endpoint_trips_429_under_flood(self, monkeypatch):
         """A flood of status probes from one client IP eventually gets 429s while
         the first (legitimate) probes succeed, and a 429 carries Retry-After."""
-        monkeypatch.delenv("GATEWAY_RATE_LIMIT_DISABLED", raising=False)
+        _small_probe_budget(monkeypatch)
         client = TestClient(app)
 
         first = client.get("/api/status")
-        assert first.status_code == 200  # generous budget: real users are fine
+        assert first.status_code == 200  # real users are fine
 
         throttled = None
-        for _ in range(300):
+        for _ in range(60):
             r = client.get("/api/status")
             if r.status_code == 429:
                 throttled = r
@@ -235,17 +241,58 @@ class TestRateLimiting:
         assert throttled.headers.get("Retry-After") == "1"
 
         # Budget recovers once the limiter is reset (simulates refill over time).
-        probe_limiter.reset()
+        rate_limit.probe_limiter.reset()
         assert client.get("/api/status").status_code == 200
 
     def test_invalid_session_probe_is_rate_limited(self, monkeypatch):
         """The 200-vs-404 enumeration oracle: even invalid-session probes (which
         404) must be throttled — rate_limit_probe runs before require_valid_session."""
-        monkeypatch.delenv("GATEWAY_RATE_LIMIT_DISABLED", raising=False)
+        _small_probe_budget(monkeypatch)
         client = TestClient(app)
-        codes = {client.get("/zzzzzz/api/status").status_code for _ in range(300)}
+        codes = {client.get("/zzzzzz/api/status").status_code for _ in range(60)}
         assert 404 in codes, "expected 404 for an invalid session id"
         assert 429 in codes, "invalid-session enumeration was not throttled"
+
+    def test_default_budget_admits_a_conference_room_behind_one_ip(self):
+        """Venue NAT / carrier CGNAT: the whole room shares one public IP. 600
+        participant.html joins (page + /api/status = 2 tokens each) spread over
+        10 s — or all landing in the first second after the QR code appears —
+        must all pass the shared limiter's default budget."""
+        for window_s in (10.0, 1.0):
+            probe_limiter.reset()
+            joins = 600
+            granted = [
+                probe_limiter.allow("venue-nat", now=i * window_s / joins)
+                for i in range(joins)
+                for _ in range(2)
+            ]
+            assert all(granted), f"{granted.count(False)} join requests got 429 within {window_s}s"
+
+    def test_default_budget_still_throttles_a_sustained_flood(self):
+        """A 1500 req/s probe flood from one IP for 10 s gets no more than the
+        burst plus the refill — everything else is 429."""
+        rate, seconds = 1500, 10
+        granted = sum(
+            probe_limiter.allow("attacker", now=i / rate) for i in range(rate * seconds)
+        )
+        budget = probe_limiter.capacity + probe_limiter.refill_per_sec * seconds
+        assert granted <= budget + 1
+        assert granted < rate * seconds / 5, "flood was barely throttled"
+
+    def test_slide_downloads_are_never_rate_limited(self, monkeypatch):
+        """talk.html fetches /api/slides/download/{slug} with several HTTP Range
+        requests per slide per phone — all from the same venue IP. Those must
+        never burn the probe budget nor get 429, even once it is exhausted."""
+        _small_probe_budget(monkeypatch)
+        state.session_id = "sess01"
+        client = TestClient(app)
+        while client.get("/api/status").status_code != 429:
+            pass  # exhaust this client's probe budget
+
+        for _ in range(30):
+            r = client.get("/sess01/api/slides/download/deck", headers={"Range": "bytes=0-1023"})
+            assert r.status_code != 429
+            assert client.get("/sess01/api/slides").status_code != 429
 
 
 # ---------------------------------------------------------------------------

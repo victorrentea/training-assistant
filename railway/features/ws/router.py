@@ -58,13 +58,17 @@ def _spawn_background(coro) -> asyncio.Task:
 
 
 async def _kick_old_connection(pid: str):
-    if pid in state.participants:
-        old_ws = state.participants[pid]
-        try:
-            await old_ws.send_text(json.dumps({"type": "kicked"}))
-            await old_ws.close(code=1001)
-        except Exception:
-            pass
+    old_ws = state.participants.get(pid)
+    if old_ws is None:
+        return
+    try:
+        await old_ws.send_text(json.dumps({"type": "kicked"}))
+        await old_ws.close(code=1001)
+    except Exception:
+        pass
+    # The old socket's own handler may have removed it (or a newer one taken its
+    # place) while we awaited — only drop the entry if it is still the old socket.
+    if state.participants.get(pid) is old_ws:
         del state.participants[pid]
 
 
@@ -350,31 +354,32 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
 
     await websocket.accept()
 
+    # A reconnecting phone can get here before its previous socket's disconnect is
+    # detected: the new socket replaces the old one, and the old socket's late
+    # cleanup (finally below) must then leave the new entry alone.
     state.participants[pid] = websocket
-    if not is_host:
-        state.participant_history.add(pid)
-        forwarded = websocket.headers.get("x-forwarded-for", "")
-        ip = forwarded.split(",")[0].strip() if forwarded else (websocket.client.host if websocket.client else "")
-        state.participant_ips[pid] = ip
     ws_connections_active.labels(role=role).inc()
-
-    if is_host:
-        logger.info(f"Host connected ({len(state.participants)} total)")
-    else:
-        # Participant registered via daemon REST — broadcast presence.
-        # Display names live on the daemon (it owns participant identity); the
-        # gateway only knows uuids.
-        logger.info(f"WS connected: {pid} ({len(state.participants)} total)")
-        presence_msg: dict = {"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": True}
-        # Browser-reported IANA timezone — piggybacks on the WS join so the host
-        # sees a participant's local clock without requiring location sharing.
-        tz = websocket.query_params.get("tz", "").strip()[:64]
-        if tz:
-            presence_msg["tz"] = tz
-        await push_to_daemon(presence_msg)
-        broadcast_participant_update()
-
     try:
+        if is_host:
+            logger.info(f"Host connected ({len(state.participants)} total)")
+        else:
+            state.participant_history.add(pid)
+            forwarded = websocket.headers.get("x-forwarded-for", "")
+            ip = forwarded.split(",")[0].strip() if forwarded else (websocket.client.host if websocket.client else "")
+            state.participant_ips[pid] = ip
+            # Participant registered via daemon REST — broadcast presence.
+            # Display names live on the daemon (it owns participant identity); the
+            # gateway only knows uuids.
+            logger.info(f"WS connected: {pid} ({len(state.participants)} total)")
+            presence_msg: dict = {"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": True}
+            # Browser-reported IANA timezone — piggybacks on the WS join so the host
+            # sees a participant's local clock without requiring location sharing.
+            tz = websocket.query_params.get("tz", "").strip()[:64]
+            if tz:
+                presence_msg["tz"] = tz
+            await push_to_daemon(presence_msg)
+            broadcast_participant_update()
+
         while True:
             raw = await websocket.receive_text()
             data = json.loads(raw)
@@ -384,11 +389,18 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
             # All participant actions go through daemon REST — just keep the WS alive for broadcasts
 
     except WebSocketDisconnect:
-        state.participants.pop(pid, None)
-        state.participant_ips.pop(pid, None)
+        pass
+    finally:
+        # finally, not just the disconnect path: any other error must not leak the
+        # entry or the gauge either.
         ws_connections_active.labels(role=role).dec()
+        if state.participants.get(pid) is websocket:
+            del state.participants[pid]
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
-        if not is_host:
+        # Still connected through a newer socket → not offline. A socket that a
+        # broadcast already dropped is no longer listed, so it does report offline.
+        if not is_host and pid not in state.participants:
+            state.participant_ips.pop(pid, None)
             await push_to_daemon({"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": False})
             broadcast_participant_update()
 
