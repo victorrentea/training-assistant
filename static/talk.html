@@ -694,6 +694,39 @@
     }, { passive: true });
   })();
 
+  // A rotation (or any resize) reflows every slide, so the old scroll offset points
+  // somewhere else. Keep the reader's place: the live slide while following, the
+  // slide at the top of the view while paused.
+  (function _keepPlaceOnResize() {
+    var view = document.getElementById('view-slides');
+    var anchor = null;  // page at the top of the view, remembered while paused
+    var timer = null;
+    function topSection() {
+      var top = view.getBoundingClientRect().top;
+      var sections = view.querySelectorAll('#pdf-pages section');
+      for (var i = 0; i < sections.length; i++) {
+        if (sections[i].getBoundingClientRect().bottom > top + 1) return sections[i];
+      }
+      return null;
+    }
+    view.addEventListener('scroll', function() {
+      if (!_following) { var s = topSection(); anchor = s ? s.dataset.page : null; }
+    }, { passive: true });
+    window.addEventListener('resize', function() {
+      clearTimeout(timer);
+      timer = setTimeout(function() {
+        if (_activeView !== 'slides' || !_live) return;
+        if (_following) {
+          _userScrolled = false;
+          showSlide(_live.slug, _live.page, { scroll: true });
+        } else if (anchor) {
+          var s = view.querySelector('#pdf-pages section[data-page="' + anchor + '"]');
+          if (s) s.scrollIntoView({ block: 'start' });
+        }
+      }, 150);
+    });
+  })();
+
   // ── Emoji reactions ───────────────────────────────────────────────────────────
   // The daemon's catalog (delivered in /state) is the whitelist, so the bar only
   // offers emojis it accepts. A talk bar has 5 slots: these picks first (when the
