@@ -4877,6 +4877,8 @@ function _setDuplicateIndicator(isDup) {
       delete state.quiz_correct_indices;
     }
     _applyState(state);
+    _initialStateApplied = true;
+    if (_namesCatchUpPending) _catchUpNames();
     document.getElementById('loading-screen').style.display = 'none';
     _scheduleBreakReminders();
     initLocationMenuEntry();
@@ -5705,6 +5707,7 @@ function _handleWsMessage(msg) {
     case 'participant_names_updated': {
       // UUID-free roster names. Recompute the in-session duplicate indicator by
       // counting occurrences of our OWN name (>=2 => duplicate).
+      _namesWsSeq++;
       _participantNames = Array.isArray(msg.names) ? msg.names : [];
       _recomputeDuplicateIndicator();
       break;
@@ -5871,6 +5874,29 @@ async function _refetchInitialState() {
 // "reconnecting…" banner — so the page recovers on its own whenever the server
 // returns, without a manual refresh.
 var _WS_RECONNECT_DELAYS = [500, 500, 1000, 1000, 1500, 1500, 2000, 2000, 2500];
+// The first /state and the first socket run in parallel: a names broadcast sent
+// after the /state snapshot but before the socket is registered is lost (two
+// people entering the same name that very second: no duplicate flag). Whichever
+// of the two finishes second re-reads the names, and only the names — a full
+// state refetch could re-apply an older quiz over a quiz_opened just received.
+var _initialStateApplied = false;
+var _namesCatchUpPending = false;
+var _namesWsSeq = 0;
+async function _catchUpNames() {
+  _namesCatchUpPending = false;
+  var seq = _namesWsSeq;
+  try {
+    var r = await fetch('/' + _sessionId + '/api/participant/state', {
+      headers: { 'X-Participant-ID': _myUUID }
+    });
+    if (!r.ok) return;
+    var st = await r.json();
+    // A names broadcast that arrived meanwhile is at least as fresh: keep it.
+    if (_namesWsSeq !== seq || !Array.isArray(st.participant_names)) return;
+    _participantNames = st.participant_names;
+    _recomputeDuplicateIndicator();
+  } catch (e) { /* the next names broadcast reconciles */ }
+}
 var _wsReconnectAttempts = 0;
 // Set true once a `redirect` frame has been received / navigation is underway.
 // The gateway sends {type:redirect,url:...} immediately before close(1008) for a
@@ -5891,6 +5917,10 @@ function _connectWS() {
     if (_giveup) _giveup.style.display = 'none';
     if (!_firstConnect) {
       _refetchInitialState();
+    } else if (_initialStateApplied) {
+      _catchUpNames();
+    } else {
+      _namesCatchUpPending = true;
     }
     _firstConnect = false;
     // Show access duration toast 10 seconds after connecting
