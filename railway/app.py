@@ -1,5 +1,6 @@
 """Workshop Live Interaction Tool — FastAPI + WebSocket backend."""
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -87,7 +88,10 @@ async def lifespan(_: FastAPI):
     _RAILWAY_STARTED_AT_ISO = datetime.now(ZoneInfo("Europe/Bucharest")).isoformat()
     _stamp_version_js()
     _stamp_deploy_info()
+    from railway.shared.messaging import heartbeat_loop
+    heartbeat = asyncio.create_task(heartbeat_loop())
     yield
+    heartbeat.cancel()
 
 
 app = FastAPI(title="Workshop Tool", lifespan=lifespan)

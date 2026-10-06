@@ -460,6 +460,20 @@ def _resolve_presentation_slide_target(
             log.error("ppt", f"Failed reading slides catalog map: {e}")
 
     fallback_slug = _slugify(Path(presentation_name).stem)
+
+    # A talk deck picked with the host's "Drop pptx here" is in no catalog. The
+    # talk-presentation-path endpoint cached its PDF on Railway under the slug of
+    # its file stem, so follow PowerPoint when it presents that file. The add-on
+    # sends the file name ("Deck v1.2.pptx"); the bare-name form covers a deck
+    # name without the extension, whose dots Path.stem would otherwise eat.
+    talk_slug = misc_state.talk_presentation_slug
+    if talk_slug and talk_slug in (fallback_slug, _slugify(presentation_name)):
+        return {
+            "slug": talk_slug,
+            "url": f"{server_base}/api/slides/download/{talk_slug}",
+            "matched": True,
+        }
+
     return {
         "slug": fallback_slug,
         "url": f"{server_base}/api/slides/download/{fallback_slug}",
@@ -847,56 +861,10 @@ def run() -> None:
         lambda data: _handle_materials_zip(data, config),
     )
 
-    def _push_host_participant_list() -> None:
-        try:
-            import asyncio as _asyncio
-
-            from daemon.host_state_router import _build_host_participants_list
-            from daemon.loop import get_event_loop as _get_event_loop
-            from daemon.ws_messages import ParticipantListUpdatedMsg
-            from daemon.ws_publish import notify_host as _notify_host
-
-            _loop = _get_event_loop()
-            if _loop and _loop.is_running():
-                _asyncio.run_coroutine_threadsafe(
-                    _notify_host(
-                        ParticipantListUpdatedMsg(
-                            participants=_build_host_participants_list(),
-                        )
-                    ),
-                    _loop,
-                )
-        except Exception:
-            pass
-
-    def _broadcast_active_count(ps) -> None:
-        """Broadcast active (online named) participant count to Railway so participants see it."""
-        try:
-            from daemon.ws_messages import ActiveParticipantsCountUpdatedMsg
-            from daemon.ws_publish import broadcast as _broadcast
-            count = len([p for p in ps.online_participants
-                         if not p.startswith("__") and p in ps.participant_names])
-            _broadcast(ActiveParticipantsCountUpdatedMsg(count=count))
-        except Exception:
-            pass
-
-    def _handle_participant_presence(data: dict) -> None:
-        from daemon.participant.router import _apply_browser_tz
-        from daemon.participant.state import participant_state as _participant_state
-
-        pid = str(data.get("uuid", "")).strip()
-        if not pid or pid.startswith("__"):
-            return
-
-        if bool(data.get("online")):
-            _participant_state.online_participants.add(pid)
-            _apply_browser_tz(pid, data.get("tz"))
-        else:
-            _participant_state.online_participants.discard(pid)
-        _push_host_participant_list()
-        _broadcast_active_count(_participant_state)
-
-    ws_client.register_handler("participant_presence", _handle_participant_presence)
+    # Presence fan-out (host roster + active count) is throttled: a talk can have
+    # hundreds of people come online within a minute or two.
+    from daemon.participant import fanout as _fanout
+    ws_client.register_handler("participant_presence", _fanout.handle_participant_presence)
 
     # State push handler — daemon receives current state from Railway on connect
     from daemon.misc.state import misc_state
@@ -904,9 +872,8 @@ def run() -> None:
     def _handle_daemon_state_push(data):
         _apply_runtime_snapshot_restore(data)
         if "online_participants" in data:
-            from daemon.participant.state import participant_state as _ps
-            _push_host_participant_list()
-            _broadcast_active_count(_ps)
+            _fanout.host_roster.request_threadsafe()
+            _fanout.request_active_count_broadcast()
 
     ws_client.register_handler("daemon_state_push", _handle_daemon_state_push)
 
@@ -1602,7 +1569,11 @@ def run() -> None:
             except Exception as e:
                 # Keep daemon alive for unexpected transient errors; loop retries.
                 log.error("daemon", f"Unexpected error (will retry): {e}")
-            time.sleep(DAEMON_POLL_INTERVAL)
+            # Sleep one poll interval, but wake at once on a PowerPoint slide change
+            # (drained at the top of the loop). All periodic work above is
+            # time-based, so an early wake-up only runs it sooner, never twice.
+            _bridge.slide_wakeup.wait(DAEMON_POLL_INTERVAL)
+            _bridge.slide_wakeup.clear()
     finally:
         ws_client.stop()
 

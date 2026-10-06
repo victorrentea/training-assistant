@@ -28,3 +28,26 @@ def reset_quiz_state():
     quiz_state.clear()
     yield
     quiz_state.clear()
+
+
+@pytest.fixture(autouse=True)
+def reset_module_level_throttles():
+    """Module-level throttles and rate buckets remember wall-clock time, so one
+    test's burst would otherwise throttle the next. Only resets modules a test
+    already imported — the fixture itself must not pull in daemon modules."""
+    import sys
+
+    def _reset():
+        fanout = sys.modules.get("daemon.participant.fanout")
+        if fanout is not None:
+            for name in ("active_count", "host_roster"):
+                throttle = getattr(fanout, name, None)
+                if throttle is not None:
+                    throttle.reset()
+        emoji_router = sys.modules.get("daemon.emoji.router")
+        if emoji_router is not None:
+            emoji_router.emoji_global_bucket.reset()
+
+    _reset()
+    yield
+    _reset()

@@ -1,8 +1,10 @@
 # daemon/host_proxy.py
 """HTTP and WebSocket reverse proxy for host panel → Railway backend."""
 import asyncio
+import base64
 import json
 import logging
+import os
 
 import httpx
 from fastapi import Request, WebSocket, WebSocketDisconnect
@@ -62,6 +64,12 @@ async def proxy_http(request: Request, path: str, http_client: httpx.AsyncClient
 
 
 
+def _daemon_basic_auth() -> str:
+    user = os.environ.get("HOST_USERNAME", "host")
+    password = os.environ.get("HOST_PASSWORD", "")
+    return "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()
+
+
 async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
     """Proxy a WebSocket connection bidirectionally between client and backend."""
     import ssl
@@ -81,6 +89,12 @@ async def proxy_websocket(client_ws: WebSocket, path: str, backend_ws_url: str):
     # Forward auth header
     extra_headers = {}
     auth = client_ws.headers.get("authorization")
+    if is_host:
+        # The relay lets only a proven trainer hold the __host__ slot (an anonymous
+        # one would kick the real panel off). This panel is the local one — the
+        # caller checked Host and Origin — so vouch for it with the daemon's own
+        # credentials, the ones /ws/daemon uses.
+        auth = _daemon_basic_auth()
     if auth:
         extra_headers["Authorization"] = auth
 

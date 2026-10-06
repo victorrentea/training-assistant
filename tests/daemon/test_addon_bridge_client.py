@@ -79,3 +79,28 @@ def test_session_started_without_a_folder_is_url_only():
         "type": "session_started",
         "participant_url": "https://x/abc",
     }
+
+
+def test_slide_event_wakes_the_main_loop(monkeypatch):
+    """A PowerPoint slide change sets slide_wakeup, so the daemon's main loop stops
+    sleeping and forwards it at once instead of up to a poll interval later."""
+    import json
+
+    import websockets.sync.client as ws_client_mod
+
+    from daemon.addon_bridge_client import AddonBridgeClient
+
+    class _FakeWs:
+        def __iter__(self):
+            yield json.dumps({"type": "slides_viewed", "slides": [{"deck": "D", "slide": 1}]})
+            yield json.dumps({"type": "slide_presenting_now", "deck": "D.pptx", "slide": 7, "presenting": True})
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(ws_client_mod, "connect", lambda *a, **k: _FakeWs())
+    bridge = AddonBridgeClient()
+    assert not bridge.slide_wakeup.is_set()
+    bridge._connect_and_listen()
+    assert bridge.slide_wakeup.is_set()
+    assert [e["slide"] for e in bridge.drain_slides()] == [7]

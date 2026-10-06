@@ -33,6 +33,7 @@ from urllib.parse import urlparse
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from railway.app import app
 from railway.features.pages.router import _CSP
@@ -43,7 +44,9 @@ from railway.features.ws.router import (
     _evict_all_clients_after_grace,
     _handle_set_session_id,
 )
+from railway.shared import rate_limit
 from railway.shared.rate_limit import TokenBucketLimiter, probe_limiter
+from railway.shared.session_registry import session_registry
 from railway.shared.state import state
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -76,7 +79,6 @@ def _populate_session_caches() -> None:
     state.upload_next_id = 7
     state.participant_history = {"u1"}
     state.participant_ips = {"u1": "1.2.3.4"}
-    state.participant_names = {"u1": "Alice"}
 
 
 def _assert_caches_cleared() -> None:
@@ -86,7 +88,6 @@ def _assert_caches_cleared() -> None:
     assert state.upload_next_id == 0
     assert state.participant_history == set()
     assert state.participant_ips == {}
-    assert state.participant_names == {}
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +204,13 @@ class TestDaemonReconnectNoStall:
 # Fix 3 — inbound IP rate-limiting
 # ---------------------------------------------------------------------------
 
+def _small_probe_budget(monkeypatch) -> None:
+    """Swap in a tiny bucket so a flood trips it within a few requests — these tests
+    pin the WIRING (which routes are throttled, in which order), not the budget."""
+    monkeypatch.delenv("GATEWAY_RATE_LIMIT_DISABLED", raising=False)
+    monkeypatch.setattr(rate_limit, "probe_limiter", TokenBucketLimiter(capacity=20, refill_per_sec=1))
+
+
 class TestRateLimiting:
     def test_token_bucket_allows_capacity_then_blocks_then_refills(self):
         """Deterministic bucket behaviour with an injected clock."""
@@ -219,14 +227,14 @@ class TestRateLimiting:
     def test_status_endpoint_trips_429_under_flood(self, monkeypatch):
         """A flood of status probes from one client IP eventually gets 429s while
         the first (legitimate) probes succeed, and a 429 carries Retry-After."""
-        monkeypatch.delenv("GATEWAY_RATE_LIMIT_DISABLED", raising=False)
+        _small_probe_budget(monkeypatch)
         client = TestClient(app)
 
         first = client.get("/api/status")
-        assert first.status_code == 200  # generous budget: real users are fine
+        assert first.status_code == 200  # real users are fine
 
         throttled = None
-        for _ in range(300):
+        for _ in range(60):
             r = client.get("/api/status")
             if r.status_code == 429:
                 throttled = r
@@ -235,17 +243,58 @@ class TestRateLimiting:
         assert throttled.headers.get("Retry-After") == "1"
 
         # Budget recovers once the limiter is reset (simulates refill over time).
-        probe_limiter.reset()
+        rate_limit.probe_limiter.reset()
         assert client.get("/api/status").status_code == 200
 
     def test_invalid_session_probe_is_rate_limited(self, monkeypatch):
         """The 200-vs-404 enumeration oracle: even invalid-session probes (which
         404) must be throttled — rate_limit_probe runs before require_valid_session."""
-        monkeypatch.delenv("GATEWAY_RATE_LIMIT_DISABLED", raising=False)
+        _small_probe_budget(monkeypatch)
         client = TestClient(app)
-        codes = {client.get("/zzzzzz/api/status").status_code for _ in range(300)}
+        codes = {client.get("/zzzzzz/api/status").status_code for _ in range(60)}
         assert 404 in codes, "expected 404 for an invalid session id"
         assert 429 in codes, "invalid-session enumeration was not throttled"
+
+    def test_default_budget_admits_a_conference_room_behind_one_ip(self):
+        """Venue NAT / carrier CGNAT: the whole room shares one public IP. 600
+        participant.html joins (page + /api/status = 2 tokens each) spread over
+        10 s — or all landing in the first second after the QR code appears —
+        must all pass the shared limiter's default budget."""
+        for window_s in (10.0, 1.0):
+            probe_limiter.reset()
+            joins = 600
+            granted = [
+                probe_limiter.allow("venue-nat", now=i * window_s / joins)
+                for i in range(joins)
+                for _ in range(2)
+            ]
+            assert all(granted), f"{granted.count(False)} join requests got 429 within {window_s}s"
+
+    def test_default_budget_still_throttles_a_sustained_flood(self):
+        """A 1500 req/s probe flood from one IP for 10 s gets no more than the
+        burst plus the refill — everything else is 429."""
+        rate, seconds = 1500, 10
+        granted = sum(
+            probe_limiter.allow("attacker", now=i / rate) for i in range(rate * seconds)
+        )
+        budget = probe_limiter.capacity + probe_limiter.refill_per_sec * seconds
+        assert granted <= budget + 1
+        assert granted < rate * seconds / 5, "flood was barely throttled"
+
+    def test_slide_downloads_are_never_rate_limited(self, monkeypatch):
+        """talk.html fetches /api/slides/download/{slug} with several HTTP Range
+        requests per slide per phone — all from the same venue IP. Those must
+        never burn the probe budget nor get 429, even once it is exhausted."""
+        _small_probe_budget(monkeypatch)
+        state.session_id = "sess01"
+        client = TestClient(app)
+        while client.get("/api/status").status_code != 429:
+            pass  # exhaust this client's probe budget
+
+        for _ in range(30):
+            r = client.get("/sess01/api/slides/download/deck", headers={"Range": "bytes=0-1023"})
+            assert r.status_code != 429
+            assert client.get("/sess01/api/slides").status_code != 429
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +318,122 @@ class TestSessionResetAndStaleGating:
 
         state.daemon_ws = object()  # daemon reconnected (any non-None socket)
         assert client.get("/api/status").json()["session_active"] is True
+
+    def test_unknown_session_socket_retries_while_no_daemon(self, monkeypatch):
+        """Right after a Railway restart no session is known until the daemon
+        reconnects. A phone reconnecting first must be told to retry (1013), not
+        sent to the landing page (which would make the whole room re-scan)."""
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = None
+        state.daemon_ws = None
+        client = TestClient(app)
+        with client.websocket_connect("/ws/abc123/pax-uuid") as ws:
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()
+        assert closed.value.code == 1013
+
+    def test_unknown_session_socket_retries_while_daemon_connected_but_not_announced(self, monkeypatch):
+        """The daemon socket is accepted before it announces its session: a phone
+        retrying in that window must still be told to retry, not redirected."""
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = None
+        state.daemon_ws = object()
+        client = TestClient(app)
+        with client.websocket_connect("/ws/abc123/pax-uuid") as ws:
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()
+        assert closed.value.code == 1013
+
+    def test_ended_session_socket_is_redirected_even_with_no_session_active(self, monkeypatch):
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        session_registry.register("endedsess", "Old workshop")
+        session_registry.mark_ended("endedsess")
+        state.session_id = None
+        state.daemon_ws = None
+        client = TestClient(app)
+        try:
+            with client.websocket_connect("/ws/endedsess/pax-uuid") as ws:
+                assert json.loads(ws.receive_text()) == {"type": "redirect", "url": "/?error=invalid"}
+        finally:
+            session_registry._entries.pop("endedsess", None)
+
+    def test_host_socket_retries_too_after_a_railway_restart(self, monkeypatch):
+        """The trainer's panel is not bounced to /host while the relay has no
+        session yet; it reconnects and lands back on the announced session."""
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = None
+        state.daemon_ws = None
+        client = TestClient(app)
+        with client.websocket_connect("/ws/abc123/__host__") as ws:
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()
+        assert closed.value.code == 1013
+
+    def test_unknown_session_socket_still_redirected_when_daemon_present(self, monkeypatch):
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = "newsess"
+        state.daemon_ws = object()
+        client = TestClient(app)
+        with client.websocket_connect("/ws/oldsess/pax-uuid") as ws:
+            assert json.loads(ws.receive_text()) == {"type": "redirect", "url": "/?error=invalid"}
+
+    def test_daemon_grace_outlasts_a_laptop_wifi_blip(self):
+        assert ws_router._DAEMON_DISCONNECT_GRACE_SECONDS >= 30
+
+
+# ---------------------------------------------------------------------------
+# Host socket: only a proven trainer may take the __host__ slot
+# ---------------------------------------------------------------------------
+
+class TestHostSocketAuth:
+    """Connecting as __host__ kicks the current host socket, so an anonymous
+    claim would take the trainer's panel down (the repo is public)."""
+
+    def _client(self, monkeypatch) -> TestClient:
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = "sess01"
+        state.daemon_ws = object()
+        return TestClient(app)
+
+    def _assert_refused(self, client, url, headers=None):
+        panel = AsyncMock()  # the trainer's panel, already connected
+        state.participants["__host__"] = panel
+        with client.websocket_connect(url, headers=headers or {}) as ws:
+            # The kick runs before accept: checked here, a regression fails fast
+            # instead of hanging on the receive below.
+            panel.send_text.assert_not_called()
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()
+        assert closed.value.code == 1008
+        assert state.participants["__host__"] is panel
+        panel.close.assert_not_called()
+
+    def test_anonymous_host_socket_is_refused_and_kicks_nobody(self, monkeypatch):
+        self._assert_refused(self._client(monkeypatch), "/ws/sess01/__host__")
+
+    def test_padded_host_id_is_refused_too(self, monkeypatch):
+        self._assert_refused(self._client(monkeypatch), "/ws/sess01/%20__host__%20")
+
+    def test_wrong_credentials_are_refused(self, monkeypatch):
+        bad = base64.b64encode(b"host:nope").decode()
+        self._assert_refused(self._client(monkeypatch), "/ws/sess01/__host__", {"Authorization": f"Basic {bad}"})
+
+    def test_a_forged_cookie_is_refused(self, monkeypatch):
+        self._assert_refused(self._client(monkeypatch), "/ws/sess01/__host__", {"cookie": "is_host=1"})
+
+    def _assert_admitted(self, client, headers):
+        old_tab = AsyncMock()
+        state.participants["__host__"] = old_tab
+        with client.websocket_connect("/ws/sess01/__host__", headers=headers):
+            # A proven trainer takes over from an older panel tab, as before.
+            old_tab.send_text.assert_awaited_once_with(json.dumps({"type": "kicked"}))
+
+    def test_daemon_proxied_panel_with_credentials_is_admitted(self, monkeypatch):
+        self._assert_admitted(self._client(monkeypatch), _daemon_auth_headers())
+
+    def test_railway_served_panel_with_host_cookie_is_admitted(self, monkeypatch):
+        from railway.shared.auth import get_host_cookie_token
+        self._assert_admitted(self._client(monkeypatch), {"cookie": f"is_host={get_host_cookie_token()}"})
 
 
 # ---------------------------------------------------------------------------

@@ -21,8 +21,8 @@ from pydantic import BaseModel, Field
 from starlette.responses import Response
 
 from daemon.emoji.catalog import EMOJI_CATALOG, EmojiDef
-from daemon.host_state_router import _build_host_participants_list
 from daemon.misc.content_files import read_notes_updated_at, read_summary_payload
+from daemon.participant import fanout
 from daemon.participant.names import LOTR_NAMES, assign_conference_name
 from daemon.participant.purge import PurgeReport
 from daemon.participant.sanitize import (
@@ -40,12 +40,11 @@ from daemon.slides.models import CurrentSlide
 from daemon.wiki.publisher import wiki_updated_at
 from daemon.ws_messages import (
     AiSharePoint,
-    ParticipantListUpdatedMsg,
     ParticipantNamesUpdatedMsg,
     ScoresUpdatedMsg,
     SummaryScrollPosition,
 )
-from daemon.ws_publish import broadcast, notify_host
+from daemon.ws_publish import broadcast
 
 logger = logging.getLogger(__name__)
 # Server-side cap on participant display names; mirrored by maxlength="64" on
@@ -553,6 +552,11 @@ def _publish_names_if_changed() -> None:
     O(participants²) redundant messages and rewrite attendees.md for nothing.
     Clients only count occurrences of their own name, so the comparison is
     order-insensitive (sorted).
+
+    Talk mode skips the participant broadcast. The talk page ignores it (it has
+    no names and no duplicate indicator), and every join of a 500-person talk
+    changes the multiset, so it would cost O(N²) messages through Railway for
+    nothing. attendees.md is still regenerated.
     """
     ps = participant_state
     names = _participant_display_names()
@@ -560,23 +564,22 @@ def _publish_names_if_changed() -> None:
     if names_key == ps.last_broadcast_names:
         return
     ps.last_broadcast_names = names_key
-    broadcast(ParticipantNamesUpdatedMsg(names=names))
+    if ps.mode != "talk":
+        broadcast(ParticipantNamesUpdatedMsg(names=names))
     _regenerate_attendees()
 
 
 async def _notify_host_participant_list():
     """Push the roster to the host, and the UUID-free names to all participants.
 
-    The host payload keeps UUIDs (host is trusted) and goes out on every roster
-    change (join / rename / activity / location). The participant
-    names broadcast + attendees.md regen ride the same hook but only fire when
-    the set of names actually changed (join / rename), not on heartbeats.
+    The host payload keeps UUIDs (host is trusted) and goes out on roster changes
+    (join / rename / activity / location / presence), throttled to one push per
+    second with the final state always sent (see daemon/participant/fanout.py).
+    The participant names broadcast + attendees.md regen ride the same hook but
+    only fire when the set of names actually changed (join / rename), not on
+    heartbeats.
     """
-    await notify_host(
-        ParticipantListUpdatedMsg(
-            participants=_build_host_participants_list(),
-        )
-    )
+    await fanout.host_roster.request()
     _publish_names_if_changed()
 
 

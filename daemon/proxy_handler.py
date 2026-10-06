@@ -2,6 +2,7 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from http.cookiejar import CookieJar, DefaultCookiePolicy
 
 import httpx
 
@@ -10,7 +11,37 @@ from daemon.config import DAEMON_HOST_PORT
 
 logger = logging.getLogger(__name__)
 
-_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="proxy")
+# Enough workers that a few slow handlers (reverse geocoding, a cold slide /check
+# waiting 10-15 s for a Google Drive download) cannot starve the fast ones, such
+# as emoji reactions while hundreds of people join a talk.
+PROXY_WORKERS = 32
+_executor = ThreadPoolExecutor(max_workers=PROXY_WORKERS, thread_name_prefix="proxy")
+
+# One keep-alive connection pool to the local uvicorn, shared by every worker
+# (httpx.Client is thread-safe). A fresh httpx.request() per call paid a TCP
+# connect + teardown each time. Idle connections are dropped after 4 s, before
+# uvicorn's 5 s keep-alive timeout closes them from its side, so a request is
+# never sent on a socket the server is closing. trust_env=False: a loopback call
+# must never be routed through an HTTP(S)_PROXY taken from the environment.
+# The cookie jar refuses everything: a shared client would otherwise replay a
+# Set-Cookie from one participant's response on every other participant's call.
+_client = httpx.Client(
+    limits=httpx.Limits(
+        max_connections=PROXY_WORKERS,
+        max_keepalive_connections=PROXY_WORKERS,
+        keepalive_expiry=4.0,
+    ),
+    trust_env=False,
+    cookies=CookieJar(policy=DefaultCookiePolicy(allowed_domains=[])),
+)
+
+# Hop-by-hop headers (RFC 9110 §7.6.1) describe the participant's connection to
+# Railway, not this one. A forwarded "Connection: close" would also make uvicorn
+# close the pooled connection after every call.
+_HOP_BY_HOP_HEADERS = frozenset({
+    "connection", "keep-alive", "proxy-connection", "te", "trailer",
+    "transfer-encoding", "upgrade",
+})
 
 # Marker stamped on every request that arrived through Railway. Endpoints that
 # are only safe because they are loopback-only (daemon/host_machine/router.py)
@@ -83,7 +114,10 @@ def _process_proxy_request(data: dict, ws_client):
 
     # Stamp the request so loopback-only endpoints can tell it came from the
     # internet rather than from a browser on this machine.
-    headers = {k: v for k, v in headers.items() if k.lower() != RAILWAY_PROXY_MARKER}
+    headers = {
+        k: v for k, v in headers.items()
+        if k.lower() != RAILWAY_PROXY_MARKER and k.lower() not in _HOP_BY_HOP_HEADERS
+    }
     headers[RAILWAY_PROXY_MARKER] = "1"
 
     url = f"http://127.0.0.1:{DAEMON_HOST_PORT}{path}"
@@ -102,7 +136,7 @@ def _process_proxy_request(data: dict, ws_client):
         _propagate.inject(headers, context=_otel_ctx)
 
     try:
-        resp = httpx.request(
+        resp = _client.request(
             method=method,
             url=url,
             headers=headers,

@@ -22,9 +22,11 @@ from railway.features.ws.daemon_protocol import (
     push_to_daemon,
 )
 from railway.features.ws.proxy_bridge import handle_proxy_response
+from railway.shared.auth import get_host_cookie_token
 from railway.shared.messaging import (
     SPECIAL_PIDS,
     broadcast_participant_update,
+    fan_out,
 )
 from railway.shared.metrics import (
     ws_connections_active,
@@ -39,9 +41,12 @@ session_router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Grace period before kicking participants after a daemon WS drop. The daemon
-# reconnects in ~3s on transient network blips; only evict clients if the
-# daemon is still absent after this window.
-_DAEMON_DISCONNECT_GRACE_SECONDS = float(os.environ.get("DAEMON_DISCONNECT_GRACE_SECONDS", "5"))
+# reconnects in ~3s on a transient blip, but a trainer's laptop on conference
+# Wi-Fi can lose its uplink for longer, and the auto-update restart (kill, git
+# pull, cold start) takes several seconds: evicting a whole talk audience to the
+# landing page after 5 s would make hundreds of people re-scan the QR code.
+# While the daemon is away, phones stay connected and simply get no updates.
+_DAEMON_DISCONNECT_GRACE_SECONDS = float(os.environ.get("DAEMON_DISCONNECT_GRACE_SECONDS", "60"))
 _pending_kick_task: asyncio.Task | None = None
 
 # Strong references to fire-and-forget tasks so the event loop doesn't garbage
@@ -58,13 +63,17 @@ def _spawn_background(coro) -> asyncio.Task:
 
 
 async def _kick_old_connection(pid: str):
-    if pid in state.participants:
-        old_ws = state.participants[pid]
-        try:
-            await old_ws.send_text(json.dumps({"type": "kicked"}))
-            await old_ws.close(code=1001)
-        except Exception:
-            pass
+    old_ws = state.participants.get(pid)
+    if old_ws is None:
+        return
+    try:
+        await old_ws.send_text(json.dumps({"type": "kicked"}))
+        await old_ws.close(code=1001)
+    except Exception:
+        pass
+    # The old socket's own handler may have removed it (or a newer one taken its
+    # place) while we awaited — only drop the entry if it is still the old socket.
+    if state.participants.get(pid) is old_ws:
         del state.participants[pid]
 
 
@@ -86,6 +95,13 @@ def _is_host_authorized_for_ws(websocket: WebSocket) -> bool:
         secrets.compare_digest(username.encode(), expected_user.encode())
         and secrets.compare_digest(password.encode(), expected_pass.encode())
     )
+
+
+def _is_host_panel_authorized(websocket: WebSocket) -> bool:
+    cookie = websocket.cookies.get("is_host") or ""
+    if cookie and secrets.compare_digest(cookie.encode(), get_host_cookie_token().encode()):
+        return True
+    return _is_host_authorized_for_ws(websocket)
 
 
 async def _handle_code_timestamp(data: dict):
@@ -190,18 +206,20 @@ def _build_static_hashes() -> dict[str, str]:
 
 
 async def _handle_broadcast(data: dict):
-    """Fan out a daemon broadcast event to participants and host WSs."""
+    """Fan out a daemon broadcast event to participants and host WSs.
+
+    Awaited inline by the daemon receive loop — which keeps per-client order, but
+    also holds back every later daemon message (proxy_response included) until it
+    returns. fan_out bounds that to one send timeout, however many phones stall.
+    """
     event = data.get("event")
     if not event:
         return
-    msg = json.dumps(event)
-    for pid, ws in list(state.participants.items()):
-        if pid.startswith("__") and pid != "__host__":  # keep host, skip other special keys
-            continue
-        try:
-            await ws.send_text(msg)
-        except Exception:
-            pass
+    targets = [
+        (pid, ws) for pid, ws in state.participants.items()
+        if not pid.startswith("__") or pid == "__host__"  # keep host, skip other special keys
+    ]
+    await fan_out(json.dumps(event), targets)
 
 
 _DAEMON_MSG_HANDLERS = {
@@ -350,45 +368,58 @@ async def _handle_participant_connection(websocket: WebSocket, pid: str, is_host
 
     await websocket.accept()
 
+    # A reconnecting phone can get here before its previous socket's disconnect is
+    # detected: the new socket replaces the old one, and the old socket's late
+    # cleanup (finally below) must then leave the new entry alone.
     state.participants[pid] = websocket
-    if not is_host:
-        state.participant_history.add(pid)
-        forwarded = websocket.headers.get("x-forwarded-for", "")
-        ip = forwarded.split(",")[0].strip() if forwarded else (websocket.client.host if websocket.client else "")
-        state.participant_ips[pid] = ip
     ws_connections_active.labels(role=role).inc()
-
-    if is_host:
-        logger.info(f"Host connected ({len(state.participants)} total)")
-    else:
-        # Participant registered via daemon REST — broadcast presence.
-        # Display names live on the daemon (it owns participant identity); the
-        # gateway only knows uuids.
-        logger.info(f"WS connected: {pid} ({len(state.participants)} total)")
-        presence_msg: dict = {"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": True}
-        # Browser-reported IANA timezone — piggybacks on the WS join so the host
-        # sees a participant's local clock without requiring location sharing.
-        tz = websocket.query_params.get("tz", "").strip()[:64]
-        if tz:
-            presence_msg["tz"] = tz
-        await push_to_daemon(presence_msg)
-        broadcast_participant_update()
-
     try:
+        if is_host:
+            logger.info(f"Host connected ({len(state.participants)} total)")
+        else:
+            state.participant_history.add(pid)
+            forwarded = websocket.headers.get("x-forwarded-for", "")
+            ip = forwarded.split(",")[0].strip() if forwarded else (websocket.client.host if websocket.client else "")
+            state.participant_ips[pid] = ip
+            # Participant registered via daemon REST — broadcast presence.
+            # Display names live on the daemon (it owns participant identity); the
+            # gateway only knows uuids.
+            logger.info(f"WS connected: {pid} ({len(state.participants)} total)")
+            presence_msg: dict = {"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": True}
+            # Browser-reported IANA timezone — piggybacks on the WS join so the host
+            # sees a participant's local clock without requiring location sharing.
+            tz = websocket.query_params.get("tz", "").strip()[:64]
+            if tz:
+                presence_msg["tz"] = tz
+            await push_to_daemon(presence_msg)
+            broadcast_participant_update()
+
         while True:
             raw = await websocket.receive_text()
-            data = json.loads(raw)
+            try:
+                data = json.loads(raw)
+            except ValueError:
+                continue  # participants send nothing meaningful; ignore garbage frames
+            if not isinstance(data, dict):
+                continue
             msg_type = data.get("type")
             if msg_type:
                 ws_messages_total.labels(type=msg_type).inc()
             # All participant actions go through daemon REST — just keep the WS alive for broadcasts
 
     except WebSocketDisconnect:
-        state.participants.pop(pid, None)
-        state.participant_ips.pop(pid, None)
+        pass
+    finally:
+        # finally, not just the disconnect path: any other error must not leak the
+        # entry or the gauge either.
         ws_connections_active.labels(role=role).dec()
+        if state.participants.get(pid) is websocket:
+            del state.participants[pid]
         logger.info(f"Disconnected: {pid} ({len(state.participants)} remaining)")
-        if not is_host:
+        # Still connected through a newer socket → not offline. A socket that a
+        # broadcast already dropped is no longer listed, so it does report offline.
+        if not is_host and pid not in state.participants:
+            state.participant_ips.pop(pid, None)
             await push_to_daemon({"type": MSG_PARTICIPANT_PRESENCE, "uuid": pid, "online": False})
             broadcast_participant_update()
 
@@ -401,7 +432,18 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
     # either — its read-only ended page never tries to (it is script-free).
     if not is_active_session_id(session_id):
         is_host_attempt = participant_id.strip() == "__host__"
-        if is_host_attempt:
+        if state.session_id is None and session_registry.get(session_id) is None:
+            # No session announced yet and this id never seen by this process
+            # (Railway just restarted; the daemon reconnects ~3 s later and then
+            # announces its session): it cannot be judged yet. Ask the client to
+            # retry rather than send a live audience (or the trainer's panel) away;
+            # once the session is announced the same id connects again. An id that
+            # ended (it stays in the registry) still gets a redirect below. The
+            # reply does not depend on any other session, so the anti-hijack rule
+            # holds.
+            await websocket.accept()
+            await websocket.close(code=1013)
+        elif is_host_attempt:
             await websocket.accept()
             if state.session_id:
                 await websocket.send_text(json.dumps({"type": "redirect", "url": f"/host/{state.session_id}"}))
@@ -422,6 +464,13 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
     is_host = (pid == "__host__")
 
     if not is_host and (not pid or pid.startswith("__")):
+        await websocket.accept()
+        await websocket.close(code=1008)
+        return
+    if is_host and not _is_host_panel_authorized(websocket):
+        # Connecting as host kicks the current host socket: an anonymous claim
+        # would take the trainer's panel down. The panel proves itself — via the
+        # daemon's local proxy (Basic credentials) or the cookie /host sets.
         await websocket.accept()
         await websocket.close(code=1008)
         return

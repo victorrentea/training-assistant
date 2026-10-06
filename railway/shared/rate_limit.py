@@ -6,15 +6,14 @@ enumeration oracle for guessable session ids. Without any inbound throttling an
 attacker can probe them at ~1500 req/s to brute-force live session ids.
 
 This module implements a per-IP token bucket that blunts such floods while
-leaving a generous budget for legitimate participants (who poll status only
-every few seconds). It is deliberately simple (in-process, best-effort) — it is
-defense-in-depth, not a hard security boundary.
+leaving a generous budget for legitimate participants. It is deliberately simple
+(in-process, best-effort) — it is defense-in-depth, not a hard security boundary.
 
 Loopback peers (health checks, local e2e harness) are exempted so the real
 uvicorn test suite and internal probes are never throttled. Behind Railway's
 proxy real participants always present a non-loopback socket peer and are keyed
-by the leftmost X-Forwarded-For hop (their real client IP), so each participant
-gets an independent budget.
+by the leftmost X-Forwarded-For hop (their real client IP) — which a whole
+conference room often shares, hence the large burst budget below.
 """
 import os
 import threading
@@ -22,10 +21,17 @@ import time
 
 from fastapi import HTTPException, Request
 
-# Per-IP budget. Generous enough that a participant polling status a few times a
-# second never trips it, but a 1500 req/s flood is throttled to the refill rate.
-_CAPACITY = int(os.environ.get("RATE_LIMIT_CAPACITY", "60"))
-_REFILL_PER_SEC = float(os.environ.get("RATE_LIMIT_REFILL_PER_SEC", "15"))
+# Per-IP budget, sized for a conference room behind ONE public IP (venue NAT or
+# a carrier's CGNAT) all scanning the QR code at once. One join costs 1 token on
+# talk.html (just the page: its /api/participant/*, /api/slides and WS calls are
+# not limited) and 2 on participant.html (page + the /api/status deploy-age
+# probe); typing the code on the landing page adds 2 (/api/is-active-session and
+# /{id}/api/status). 600 participant.html joins within 10 s need 1200 tokens; the
+# bucket grants 1200 + 10 s x 60/s = 1800, leaving headroom for reloads (the
+# daemon's hot-deploy `reload` re-opens every page at once). A sustained flood is
+# still throttled to 60 req/s per IP: ~250 days to try every 6-char session id.
+_CAPACITY = int(os.environ.get("RATE_LIMIT_CAPACITY", "1200"))
+_REFILL_PER_SEC = float(os.environ.get("RATE_LIMIT_REFILL_PER_SEC", "60"))
 
 # Socket peers that are never rate-limited (internal / test harness). Note this
 # is the real TCP peer (request.client.host), which cannot be spoofed by an

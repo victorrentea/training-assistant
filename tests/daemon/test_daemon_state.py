@@ -2,6 +2,8 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from daemon.session_state import GLOBAL_STATE_FILENAME
 
 
@@ -279,6 +281,66 @@ def test_resolve_presentation_slide_target_fallback_when_not_mapped(tmp_path):
     )
     assert target["slug"] == "unmapped-deck"
     assert target["url"] == "http://localhost:8000/api/slides/download/unmapped-deck"
+    assert target["matched"] is False
+
+
+@pytest.mark.parametrize("deck_name", [
+    "Clean Code v2.1 - Bucharest.pptx",  # what the add-on sends: the file name
+    "Clean Code v2.1 - Bucharest",       # a bare deck name, dots and all
+])
+def test_resolve_presentation_slide_target_follows_the_dropped_talk_deck(
+    tmp_path, monkeypatch, deck_name
+):
+    """A talk deck dropped on the host panel is in no catalog, but its PDF is on
+    Railway under the slug the talk-presentation-path endpoint derived from the
+    file stem. PowerPoint presenting it must drive the phones' slide."""
+    from daemon.__main__ import _resolve_presentation_slide_target
+    from daemon.misc.state import misc_state
+    from daemon.session.router import _slugify as talk_endpoint_slugify
+
+    dropped = Path("/Users/victor/Talks/Clean Code v2.1 - Bucharest.pptx")
+    talk_slug = talk_endpoint_slugify(dropped.stem)  # exactly what the endpoint stores
+    monkeypatch.setattr(misc_state, "talk_presentation_slug", talk_slug)
+
+    target = _resolve_presentation_slide_target(
+        presentation_name=deck_name,
+        server_url="https://interact.victorrentea.ro",
+        catalog_file=tmp_path / "missing-catalog.json",
+    )
+    assert target["matched"] is True
+    assert target["slug"] == talk_slug == "clean-code-v2-1-bucharest"
+    assert target["url"] == f"https://interact.victorrentea.ro/api/slides/download/{talk_slug}"
+
+
+def test_resolve_presentation_slide_target_other_deck_still_unmatched_during_talk(
+    tmp_path, monkeypatch
+):
+    from daemon.__main__ import _resolve_presentation_slide_target
+    from daemon.misc.state import misc_state
+
+    monkeypatch.setattr(misc_state, "talk_presentation_slug", "my-talk")
+    target = _resolve_presentation_slide_target(
+        presentation_name="Some Other Deck.pptx",
+        server_url="http://localhost:8000",
+        catalog_file=tmp_path / "missing-catalog.json",
+    )
+    assert target["matched"] is False
+    assert target["slug"] == "some-other-deck"
+
+
+def test_resolve_presentation_slide_target_no_talk_deck_until_its_pdf_is_ready(
+    tmp_path, monkeypatch
+):
+    """talk_presentation_slug stays None until Railway has the PDF."""
+    from daemon.__main__ import _resolve_presentation_slide_target
+    from daemon.misc.state import misc_state
+
+    monkeypatch.setattr(misc_state, "talk_presentation_slug", None)
+    target = _resolve_presentation_slide_target(
+        presentation_name="My Talk.pptx",
+        server_url="http://localhost:8000",
+        catalog_file=tmp_path / "missing-catalog.json",
+    )
     assert target["matched"] is False
 
 

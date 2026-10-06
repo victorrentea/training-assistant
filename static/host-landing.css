@@ -125,13 +125,20 @@ body {
   transition: filter .15s, transform .1s;
 }
 
-.create-btn-workshop {
+.create-btn-workshop,
+.create-btn-talk {
   background: var(--danger);
   color: #fff;
   border: none;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0;
   height: 42px;
   flex-shrink: 0;
+}
+
+/* The talk button closes the row, so it carries the rounded corners. */
+.create-btn-talk {
+  border-left: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 0 8px 8px 0;
 }
 
 .create-btn:hover:not(:disabled) {

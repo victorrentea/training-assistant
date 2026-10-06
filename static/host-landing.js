@@ -38,6 +38,7 @@ function renderPage(folders) {
                oninput="onNameInput()"
                onkeydown="if(event.key==='Enter' && !document.getElementById('create-btn-workshop').disabled) doCreate('workshop');" />
         <button id="create-btn-workshop" class="create-btn create-btn-workshop" onclick="doCreate('workshop')" disabled data-tip="New workshop">▶</button>
+        <button id="create-btn-talk" class="create-btn create-btn-talk" onclick="doCreate('talk')" disabled data-tip="New talk">🎙️</button>
       </div>
       <div id="create-error" class="error-msg" style="display:none;"></div>
     </div>
@@ -125,6 +126,7 @@ function onNameInput() {
   const input = document.getElementById('session-name-input');
   const hasName = !!input.value.trim();
   document.getElementById('create-btn-workshop').disabled = !hasName;
+  document.getElementById('create-btn-talk').disabled = !hasName;
 }
 
 function showSessionBlocker(message) {
@@ -151,7 +153,7 @@ async function doCreate(type) {
 
   const btn = document.getElementById('create-btn-' + type);
   btn.disabled = true;
-  showSessionBlocker('Starting workshop…');
+  showSessionBlocker(type === 'talk' ? 'Starting talk…' : 'Starting workshop…');
 
   const errEl = document.getElementById('create-error');
   if (errEl) errEl.style.display = 'none';

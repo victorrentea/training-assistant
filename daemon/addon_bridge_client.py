@@ -78,6 +78,10 @@ class AddonBridgeClient:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._slide_queue: queue.Queue = queue.Queue()
+        # Set on every slide event, so the main loop wakes at once instead of
+        # finishing its poll-interval sleep: phones follow a slide change in
+        # milliseconds, not up to a second later.
+        self.slide_wakeup = threading.Event()
         self._slides_viewed_queue: queue.Queue = queue.Queue()
         self._on_connection_change: Callable[..., Any] | None = None
 
@@ -262,6 +266,7 @@ class AddonBridgeClient:
                     pass
                 if data.get("type") == "slide_presenting_now":
                     self._slide_queue.put(data)
+                    self.slide_wakeup.set()
                 elif data.get("type") == "slides_viewed":
                     slides = data.get("slides", [])
                     if slides:

@@ -33,7 +33,8 @@ from railway.features.ws.router import (
     _evict_all_clients_after_grace,
     _handle_set_session_id,
 )
-from railway.shared.rate_limit import probe_limiter
+from railway.shared import rate_limit
+from railway.shared.rate_limit import TokenBucketLimiter, probe_limiter
 from railway.shared.session_registry import REGISTRY_TTL_DAYS, session_registry
 from railway.shared.state import state
 
@@ -227,10 +228,12 @@ class TestReadOnlyRouting:
         runs at router level BEFORE require_valid_session. A route-level throttle
         would run AFTER the guard and never see an enumeration flood."""
         monkeypatch.delenv("GATEWAY_RATE_LIMIT_DISABLED", raising=False)
-        probe_limiter.reset()
+        # A tiny bucket so the flood trips within a few requests: this pins the
+        # dependency ORDER, not the (conference-sized) default budget.
+        monkeypatch.setattr(rate_limit, "probe_limiter", TokenBucketLimiter(capacity=20, refill_per_sec=1))
         state.session_id = "livesess"
         client = TestClient(app, follow_redirects=False)
-        codes = {client.get(path).status_code for _ in range(300)}
+        codes = {client.get(path).status_code for _ in range(60)}
         assert codes & {302, 307}, "expected redirects for an unknown session id"
         assert 429 in codes, f"page-probe enumeration via {path} was not throttled"
 
