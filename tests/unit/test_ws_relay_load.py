@@ -1,6 +1,8 @@
 """Gateway broadcasts and participant-socket lifecycle under conference load.
 
 Covers the relay fixes for a 400-500 phone talk:
+- one stalled phone must not delay a broadcast to everyone else (nor the daemon
+  messages queued behind it) by more than one send timeout, and is dropped;
 - Railway's own broadcasts iterate a snapshot, so joins/leaves mid-broadcast
   cannot raise "dictionary changed size during iteration";
 - a dropped or late-disconnecting socket never evicts a newer socket that the
@@ -18,11 +20,17 @@ from starlette.websockets import WebSocketDisconnect
 
 import railway.shared.messaging as messaging
 from railway.features.ws import router as ws_router
-from railway.features.ws.router import _handle_participant_connection, _kick_old_connection
+from railway.features.ws.router import (
+    _handle_broadcast,
+    _handle_participant_connection,
+    _kick_old_connection,
+)
 from railway.shared.messaging import broadcast
 from railway.shared.state import state
 
 pytestmark = pytest.mark.anyio
+
+SEND_TIMEOUT = 0.2
 
 
 class FakeSocket:
@@ -64,7 +72,8 @@ class FakeSocket:
 
 
 @pytest.fixture(autouse=True)
-def _clean_state():
+def _clean_state(monkeypatch):
+    monkeypatch.setattr(messaging, "SEND_TIMEOUT_SECONDS", SEND_TIMEOUT)
     state.reset()
     state.session_id = "sess01"
     yield
@@ -75,6 +84,76 @@ def _failing_socket() -> FakeSocket:
     ws = FakeSocket()
     ws.send_text = AsyncMock(side_effect=RuntimeError("connection reset"))
     return ws
+
+
+async def _settle_closes() -> None:
+    """Let the background closes of dropped sockets run."""
+    if messaging._closing_tasks:
+        await asyncio.gather(*list(messaging._closing_tasks))
+
+
+def _slide_event(page: int) -> dict:
+    return {"event": {"type": "current_slide_updated", "current_slide": {"slug": "talk", "page": page}}}
+
+
+# ---------------------------------------------------------------------------
+# Daemon broadcasts: concurrent fan-out with a per-client send timeout
+# ---------------------------------------------------------------------------
+
+async def test_a_stalled_phone_does_not_delay_the_others():
+    loop = asyncio.get_running_loop()
+    stalled = FakeSocket(stall=True)
+    healthy = [FakeSocket() for _ in range(5)]
+    # Stalled one FIRST: a sequential loop would never get past it.
+    state.participants = {"stalled": stalled, **{f"p{i}": ws for i, ws in enumerate(healthy)}}
+    state.participants["__host__"] = host = FakeSocket()
+
+    started = loop.time()
+    await asyncio.wait_for(_handle_broadcast(_slide_event(7)), timeout=3)
+    elapsed = loop.time() - started
+
+    expected = json.dumps(_slide_event(7)["event"])
+    for ws in [*healthy, host]:
+        assert ws.sent == [expected]
+        assert ws.sent_at[0] - started < SEND_TIMEOUT / 2, "healthy phone waited for the stalled one"
+    assert elapsed < SEND_TIMEOUT + 0.3, f"fan-out took {elapsed:.2f}s, not bounded by one send timeout"
+
+    # Dropped (so it stalls nothing else) and closed (so the phone reconnects).
+    assert "stalled" not in state.participants
+    await _settle_closes()
+    assert stalled.close_codes == [1013]
+
+    # The next broadcast no longer pays for it.
+    started = loop.time()
+    await asyncio.wait_for(_handle_broadcast(_slide_event(8)), timeout=3)
+    assert loop.time() - started < SEND_TIMEOUT / 2
+    assert all(len(ws.sent) == 2 for ws in healthy)
+
+
+async def test_a_failing_phone_is_dropped_and_closed():
+    good = FakeSocket()
+    bad = _failing_socket()
+    state.participants = {"good": good, "bad": bad}
+
+    await _handle_broadcast(_slide_event(1))
+
+    assert good.sent and "good" in state.participants
+    assert "bad" not in state.participants
+    await _settle_closes()
+    assert bad.close_codes == [1013]
+
+
+async def test_each_client_gets_broadcasts_in_order():
+    """Fan-outs are awaited one after another, so jittery sends cannot reorder."""
+    phones = [FakeSocket(delay=d) for d in (0.004, 0.0, 0.002, 0.001)]
+    state.participants = {f"p{i}": ws for i, ws in enumerate(phones)}
+
+    for page in range(1, 6):
+        await _handle_broadcast(_slide_event(page))
+
+    for ws in phones:
+        pages = [json.loads(m)["current_slide"]["page"] for m in ws.sent]
+        assert pages == [1, 2, 3, 4, 5]
 
 
 # ---------------------------------------------------------------------------
@@ -130,6 +209,8 @@ async def test_drop_spares_the_socket_the_phone_reconnected_with():
     await broadcast({"type": "emoji_counters_updated", "counters": {}})
 
     assert state.participants["phone"] is reconnected
+    await _settle_closes()
+    assert stale.close_codes == [1013]
 
 
 async def test_participant_count_update_skips_the_host():
@@ -196,14 +277,13 @@ async def test_late_disconnect_of_a_replaced_socket_keeps_the_new_one(daemon_pus
 
 
 async def test_a_socket_dropped_by_a_broadcast_reports_offline_when_it_ends(daemon_push):
-    ws = FakeSocket()
-    task = await _connect(ws, "phone")
-    ws.send_text = AsyncMock(side_effect=RuntimeError("connection reset"))
+    stalled = FakeSocket(stall=True)
+    task = await _connect(stalled, "phone")
 
-    await broadcast({"type": "decks_updated"})  # drops it
+    await _handle_broadcast(_slide_event(1))  # drops it
     assert "phone" not in state.participants
 
-    ws.disconnect()
+    stalled.disconnect()  # the close reached the phone
     await task
     assert _offline_pushes(daemon_push, "phone") == 1
 

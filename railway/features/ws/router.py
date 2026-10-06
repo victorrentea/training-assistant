@@ -25,6 +25,7 @@ from railway.features.ws.proxy_bridge import handle_proxy_response
 from railway.shared.messaging import (
     SPECIAL_PIDS,
     broadcast_participant_update,
+    fan_out,
 )
 from railway.shared.metrics import (
     ws_connections_active,
@@ -194,18 +195,20 @@ def _build_static_hashes() -> dict[str, str]:
 
 
 async def _handle_broadcast(data: dict):
-    """Fan out a daemon broadcast event to participants and host WSs."""
+    """Fan out a daemon broadcast event to participants and host WSs.
+
+    Awaited inline by the daemon receive loop — which keeps per-client order, but
+    also holds back every later daemon message (proxy_response included) until it
+    returns. fan_out bounds that to one send timeout, however many phones stall.
+    """
     event = data.get("event")
     if not event:
         return
-    msg = json.dumps(event)
-    for pid, ws in list(state.participants.items()):
-        if pid.startswith("__") and pid != "__host__":  # keep host, skip other special keys
-            continue
-        try:
-            await ws.send_text(msg)
-        except Exception:
-            pass
+    targets = [
+        (pid, ws) for pid, ws in state.participants.items()
+        if not pid.startswith("__") or pid == "__host__"  # keep host, skip other special keys
+    ]
+    await fan_out(json.dumps(event), targets)
 
 
 _DAEMON_MSG_HANDLERS = {
