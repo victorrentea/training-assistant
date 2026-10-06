@@ -460,6 +460,20 @@ def _resolve_presentation_slide_target(
             log.error("ppt", f"Failed reading slides catalog map: {e}")
 
     fallback_slug = _slugify(Path(presentation_name).stem)
+
+    # A talk deck picked with the host's "Drop pptx here" is in no catalog. The
+    # talk-presentation-path endpoint cached its PDF on Railway under the slug of
+    # its file stem, so follow PowerPoint when it presents that file. The add-on
+    # sends the file name ("Deck v1.2.pptx"); the bare-name form covers a deck
+    # name without the extension, whose dots Path.stem would otherwise eat.
+    talk_slug = misc_state.talk_presentation_slug
+    if talk_slug and talk_slug in (fallback_slug, _slugify(presentation_name)):
+        return {
+            "slug": talk_slug,
+            "url": f"{server_base}/api/slides/download/{talk_slug}",
+            "matched": True,
+        }
+
     return {
         "slug": fallback_slug,
         "url": f"{server_base}/api/slides/download/{fallback_slug}",
@@ -869,16 +883,9 @@ def run() -> None:
         except Exception:
             pass
 
-    def _broadcast_active_count(ps) -> None:
-        """Broadcast active (online named) participant count to Railway so participants see it."""
-        try:
-            from daemon.ws_messages import ActiveParticipantsCountUpdatedMsg
-            from daemon.ws_publish import broadcast as _broadcast
-            count = len([p for p in ps.online_participants
-                         if not p.startswith("__") and p in ps.participant_names])
-            _broadcast(ActiveParticipantsCountUpdatedMsg(count=count))
-        except Exception:
-            pass
+    # The active count goes to every participant; it is throttled because a talk
+    # can have hundreds of people come online within a minute or two.
+    from daemon.participant import fanout as _fanout
 
     def _handle_participant_presence(data: dict) -> None:
         from daemon.participant.router import _apply_browser_tz
@@ -894,7 +901,7 @@ def run() -> None:
         else:
             _participant_state.online_participants.discard(pid)
         _push_host_participant_list()
-        _broadcast_active_count(_participant_state)
+        _fanout.request_active_count_broadcast()
 
     ws_client.register_handler("participant_presence", _handle_participant_presence)
 
@@ -904,9 +911,8 @@ def run() -> None:
     def _handle_daemon_state_push(data):
         _apply_runtime_snapshot_restore(data)
         if "online_participants" in data:
-            from daemon.participant.state import participant_state as _ps
             _push_host_participant_list()
-            _broadcast_active_count(_ps)
+            _fanout.request_active_count_broadcast()
 
     ws_client.register_handler("daemon_state_push", _handle_daemon_state_push)
 

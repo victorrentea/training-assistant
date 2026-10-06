@@ -553,6 +553,11 @@ def _publish_names_if_changed() -> None:
     O(participants²) redundant messages and rewrite attendees.md for nothing.
     Clients only count occurrences of their own name, so the comparison is
     order-insensitive (sorted).
+
+    Talk mode skips the participant broadcast. The talk page ignores it (it has
+    no names and no duplicate indicator), and every join of a 500-person talk
+    changes the multiset, so it would cost O(N²) messages through Railway for
+    nothing. attendees.md is still regenerated.
     """
     ps = participant_state
     names = _participant_display_names()
@@ -560,7 +565,8 @@ def _publish_names_if_changed() -> None:
     if names_key == ps.last_broadcast_names:
         return
     ps.last_broadcast_names = names_key
-    broadcast(ParticipantNamesUpdatedMsg(names=names))
+    if ps.mode != "talk":
+        broadcast(ParticipantNamesUpdatedMsg(names=names))
     _regenerate_attendees()
 
 

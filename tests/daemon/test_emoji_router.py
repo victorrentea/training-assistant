@@ -220,3 +220,66 @@ class TestEmojiMasterSwitch:
         participant_state.emoji_global_enabled = True  # simulate a fresh process
         participant_state.sync_from_restore(snap)
         assert participant_state.emoji_global_enabled is False
+
+
+class TestEmojiGlobalCap:
+    """A leaked session link must not let anyone flood the projected screen by
+    rotating X-Participant-ID past the per-participant limit."""
+
+    @pytest.fixture
+    def tiny_bucket(self, monkeypatch):
+        from daemon.emoji import router as emoji_router
+        from daemon.emoji.rate_limit import TokenBucket
+        bucket = TokenBucket(burst=3, rate_per_s=0.001)
+        monkeypatch.setattr(emoji_router, "emoji_global_bucket", bucket)
+        return bucket
+
+    def _react(self, client, pid):
+        return client.post("/api/participant/emoji/reaction",
+                           json={"emoji": "❤️"},
+                           headers={"X-Participant-ID": pid})
+
+    def test_rotating_ids_are_capped_silently(self, emoji_client, mock_externals, tiny_bucket):
+        statuses = [self._react(emoji_client, f"rotating-{i}").status_code for i in range(10)]
+        assert statuses == [204] * 10  # indistinguishable from success
+        assert mock_externals["send_emoji"].call_count == 3
+        assert mock_externals["host"].call_count == 3
+
+    def test_capped_reactions_do_not_bump_talk_counters(self, emoji_client, tiny_bucket):
+        participant_state.mode = "talk"
+        with patch("daemon.emoji.router._emoji_throttle"):
+            for i in range(10):
+                self._react(emoji_client, f"rotating-{i}")
+        assert participant_state.emoji_counters.get("❤️", 0) == 3
+
+    def test_capped_reactions_log_at_most_one_line(self, emoji_client, tiny_bucket):
+        with patch("daemon.emoji.router.daemon_log") as dlog, \
+             patch("daemon.emoji.router._global_drop_logged_at", float("-inf")):
+            for i in range(10):
+                self._react(emoji_client, f"rotating-{i}")
+        lines = [c.args[1] for c in dlog.info.call_args_list]
+        assert sum("reacted" in line for line in lines) == 3  # the allowed ones
+        assert sum("global cap" in line for line in lines) == 1  # 7 drops, one line
+
+    def test_per_participant_429_does_not_drain_the_global_budget(
+        self, emoji_client, monkeypatch
+    ):
+        from daemon.emoji import router as emoji_router
+        from daemon.emoji.rate_limit import TokenBucket
+        bucket = TokenBucket(burst=16, rate_per_s=0.001)
+        monkeypatch.setattr(emoji_router, "emoji_global_bucket", bucket)
+        for _ in range(15):
+            assert self._react(emoji_client, "masher").status_code == 204
+        for _ in range(10):
+            assert self._react(emoji_client, "masher").status_code == 429
+        # The masher's 429s did not eat the last shared token.
+        assert self._react(emoji_client, "someone-else").status_code == 204
+        assert bucket.allow() is False
+
+    def test_env_parsing_falls_back_to_the_default(self, monkeypatch):
+        from daemon.emoji import router as emoji_router
+        monkeypatch.setenv("EMOJI_TEST_VALUE", "12.5")
+        assert emoji_router._env_float("EMOJI_TEST_VALUE", 1.0) == 12.5
+        for bad in ("", "abc", "0", "-3"):
+            monkeypatch.setenv("EMOJI_TEST_VALUE", bad)
+            assert emoji_router._env_float("EMOJI_TEST_VALUE", 1.0) == 1.0

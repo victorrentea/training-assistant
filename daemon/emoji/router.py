@@ -1,5 +1,7 @@
 """Daemon emoji reaction router — participant endpoint."""
 import logging
+import os
+import time
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
@@ -7,7 +9,7 @@ from pydantic import BaseModel
 
 from daemon import log as daemon_log
 from daemon.emoji.catalog import ALLOWED_EMOJI
-from daemon.emoji.rate_limit import SlidingWindowRateLimiter
+from daemon.emoji.rate_limit import SlidingWindowRateLimiter, TokenBucket
 from daemon.participant.state import participant_state
 from daemon.ws_messages import EmojiCountersUpdatedMsg, EmojiReactionMsg
 from daemon.ws_publish import broadcast, notify_host
@@ -33,6 +35,42 @@ class EmojiGlobalStateResponse(BaseModel):
 EMOJI_RATE_LIMIT = 15
 EMOJI_RATE_WINDOW_S = 60.0
 emoji_rate_limiter = SlidingWindowRateLimiter(EMOJI_RATE_LIMIT, EMOJI_RATE_WINDOW_S)
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        value = float(os.environ.get(name, ""))
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+# Global cap on the reactions that reach the projected screen, across ALL
+# participants. The per-participant limit above is keyed by X-Participant-ID,
+# which the caller chooses: anyone holding a leaked session link can rotate it
+# and flood the trainer's screen. One shared token bucket bounds the total.
+EMOJI_GLOBAL_BURST = _env_float("EMOJI_GLOBAL_BURST", 20.0)
+EMOJI_GLOBAL_RATE_PER_S = _env_float("EMOJI_GLOBAL_RATE_PER_S", 8.0)
+emoji_global_bucket = TokenBucket(EMOJI_GLOBAL_BURST, EMOJI_GLOBAL_RATE_PER_S)
+
+# Drops over the global cap are logged at most once per interval, with a count.
+_GLOBAL_DROP_LOG_INTERVAL_S = 30.0
+_global_drops = 0
+_global_drop_logged_at = float("-inf")
+
+
+def _note_global_drop() -> None:
+    global _global_drops, _global_drop_logged_at
+    _global_drops += 1
+    now = time.monotonic()
+    if now - _global_drop_logged_at >= _GLOBAL_DROP_LOG_INTERVAL_S:
+        daemon_log.info(
+            "emoji  ",
+            f"🛑 global cap (burst {EMOJI_GLOBAL_BURST:g}, {EMOJI_GLOBAL_RATE_PER_S:g}/s): "
+            f"dropped {_global_drops} reaction(s) since the last report",
+        )
+        _global_drops = 0
+        _global_drop_logged_at = now
 
 
 participant_router = APIRouter(prefix="/api/participant/emoji", tags=["emoji"])
@@ -71,6 +109,14 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     # a "__" prefix, so a crafted "__x" X-Participant-ID can't bypass the limit.
     if pid != "__host__" and not emoji_rate_limiter.allow(pid):
         return JSONResponse({"error": "Too many reactions"}, status_code=429)
+
+    # Over the global cap: same silent 204, and nothing else happens — no overlay,
+    # no host notify, no talk counter, no per-reaction log line. Checked after the
+    # per-participant limit, so one participant mashing the button past their own
+    # cap gets 429s that do not drain the room's shared budget.
+    if not emoji_global_bucket.allow():
+        _note_global_drop()
+        return Response(status_code=204)
 
     # Forward to desktop overlay via addons bridge WS — fire and forget. A stable
     # per-participant colour rides along so the overlay can halo each sender's

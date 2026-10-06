@@ -44,3 +44,34 @@ class SlidingWindowRateLimiter:
     def reset(self) -> None:
         """Forget all recorded hits — used by tests for isolation."""
         self._hits.clear()
+
+
+class TokenBucket:
+    """One shared bucket: up to ``burst`` events at once, refilled at ``rate_per_s``.
+
+    Caps the TOTAL rate across all keys, which a per-key limiter cannot do when
+    the keys are chosen by the caller.
+    """
+
+    def __init__(self, burst: float, rate_per_s: float):
+        self.burst = burst
+        self.rate_per_s = rate_per_s
+        self._tokens = float(burst)
+        self._updated: float | None = None
+
+    def allow(self, now: float | None = None) -> bool:
+        """Take one token if there is one. Returns False (and takes nothing) when empty."""
+        now = time.monotonic() if now is None else now
+        if self._updated is not None:
+            elapsed = max(0.0, now - self._updated)
+            self._tokens = min(float(self.burst), self._tokens + elapsed * self.rate_per_s)
+        self._updated = now
+        if self._tokens >= 1.0:
+            self._tokens -= 1.0
+            return True
+        return False
+
+    def reset(self) -> None:
+        """Refill the bucket — used by tests for isolation."""
+        self._tokens = float(self.burst)
+        self._updated = None
