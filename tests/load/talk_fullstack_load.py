@@ -64,7 +64,9 @@ import json
 import os
 import platform
 import random
+import signal
 import socket
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -72,16 +74,16 @@ import threading
 import time
 import uuid
 from collections import Counter, defaultdict
-import signal
-import ssl
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DECK_TITLE = "Agentic Engineering"
 DECK_PPTX = f"{DECK_TITLE}.pptx"
 DECK_SLUG = "agentic-engineering"  # the daemon derives it from the title
-RANGE_CHUNK = 128 * 1024          # talk.html: RANGE_CHUNK_BYTES = 131072
-INITIAL_CHUNKS = 32               # pdf.js reads on open (page dictionaries spread over the file)
+RANGE_CHUNK = 0                   # 0 = talk.html's model: ONE full download per phone, then
+                                  # every slide drawn from memory; >0 = pdf.js range loading
+INITIAL_FRACTION = 0.8            # pdf.js reads ~80% of a Google-Slides export on open
+                                  # (page dictionaries spread over the file; measured in Chromium)
 NAT_IP = "203.0.113.7"            # every phone behind one venue NAT
 HOST_USER, HOST_PASS = "host", "loadtest-pass"
 TALK_EMOJIS = ["👏", "❤️", "🔥", "🤯"]
@@ -398,6 +400,10 @@ class Bridge:
 
 # ── simulated phone ──────────────────────────────────────────────────────────
 
+def _n_chunks(size: int) -> int:
+    return (size + RANGE_CHUNK - 1) // RANGE_CHUNK if RANGE_CHUNK else 1
+
+
 class Ctx:
     def __init__(self, stack: Stack, m: Metrics, bridge: Bridge, sid: str, n_chunks: int):
         self.stack, self.m, self.bridge, self.sid = stack, m, bridge, sid
@@ -407,8 +413,9 @@ class Ctx:
         self.n_chunks = n_chunks
         self.stopping = False
         last = n_chunks - 1
-        spread = {round(i * last / (INITIAL_CHUNKS - 3)) for i in range(INITIAL_CHUNKS - 2)}
-        self.initial_chunks = sorted({last, last - 1, 0} | spread)
+        n_initial = max(3, round(INITIAL_FRACTION * n_chunks))
+        spread = {round(i * last / max(1, n_initial - 3)) for i in range(max(1, n_initial - 2))}
+        self.initial_chunks = sorted({last, max(0, last - 1), 0} | spread)
 
     async def req(self, http, ep: str, method: str, path: str, headers: dict, **kw):
         t = now()
@@ -465,7 +472,7 @@ class Phone:
     async def join(self):
         c, sid = self.ctx, self.ctx.sid
         t0 = now()
-        for attempt in range(6):  # a 429 on the page: the person hits reload after ~1 s
+        for _attempt in range(6):  # a 429 on the page: the person hits reload after ~1 s
             r = await self.req("page", "GET", f"/{sid}/", self.pdf_hdr)
             if r is not None and r.status_code == 200:
                 break
@@ -507,6 +514,9 @@ class Phone:
                 await self.open_deck(slug)
             if page not in self.pages:
                 self.pages.add(page)
+                if not RANGE_CHUNK:  # whole deck already in memory: no request per slide
+                    self.ready.set()
+                    return
                 n = self.ctx.n_chunks
                 first = min(n - 1, int((page - 1) / max(1, self.ctx.n_pages) * n))
                 for idx in range(first, min(n, first + random.choice((1, 2)))):
@@ -522,6 +532,14 @@ class Phone:
                 break
             await asyncio.sleep(1 + random.random() * min(15, 2 ** attempt))  # talk.html retryDelay
         url = c.stack.base + f"/{sid}/api/slides/download/{slug}"
+        if not RANGE_CHUNK:  # talk.html: one plain GET of the whole deck, retried until complete
+            for attempt in range(10):
+                r = await self.req("pdf_full", "GET", f"/{sid}/api/slides/download/{slug}", self.pdf_hdr, timeout=120.0)
+                if r is not None and r.status_code == 200:
+                    break
+                await asyncio.sleep(1 + random.random() * min(15, 2 ** attempt))
+            self.deck_opened = True
+            return
         # pdf.js: a plain GET first; with disableStream it cancels the body once the
         # headers say ranges are supported.
         t = now()
@@ -653,7 +671,7 @@ async def run_one(n: int, args, deck: Path, work: Path) -> dict:
                                    "generator": os.getpid(),
                                    "drive": stack.procs["drive"].pid})
             sampler.start()
-            ctx = Ctx(stack, m, bridge, sid, n_chunks=(deck.stat().st_size + RANGE_CHUNK - 1) // RANGE_CHUNK)
+            ctx = Ctx(stack, m, bridge, sid, n_chunks=_n_chunks(deck.stat().st_size))
             ctx.pdf_size = deck.stat().st_size
             ctx.n_pages = args.pages
             ctx.delivered = {}
@@ -846,7 +864,7 @@ def markdown(results: list[dict], meta: dict) -> str:
     if meta.get("uvicorn_args"):
         L.append(f"- Extra Railway uvicorn flags: `{meta['uvicorn_args']}`")
     L.append(f"- Commit `{meta['commit']}`; generator event loop: {meta['loop']}; deck {meta['deck_mb']:.1f} MB, "
-             f"{meta['pages']} pages, {meta['chunks']} × 128 KiB chunks")
+             f"{meta['pages']} pages, " + (f"{meta['chunks']} × {RANGE_CHUNK // 1024} KiB chunks" if RANGE_CHUNK else "one full download per phone"))
     L.append(f"- Phones join within {meta['join_window']:.0f} s from ONE IP (X-Forwarded-For {NAT_IP}, "
              f"non-loopback peer); {meta['slides']} slide changes {meta['slide_interval']:.0f} s apart; "
              f"2 jokes (40% of phones × 1–3 reactions in 2 s) + 1%/s trickle; 20% WS drop wave\n")
@@ -871,7 +889,7 @@ def markdown(results: list[dict], meta: dict) -> str:
     L.append("## Requests\n")
     L.append("| N | endpoint | statuses | p50 / p95 / max (ms) | avg body (KB) |")
     L.append("|---|---|---|---|---|")
-    order = ["page", "static", "register", "state", "check", "pdf_open_get", "pdf_range", "emoji"]
+    order = ["page", "static", "register", "state", "check", "pdf_full", "pdf_open_get", "pdf_range", "emoji"]
     for r in results:
         for ep in order + sorted(set(r["requests"]) - set(order)):
             if ep not in r["requests"]:
@@ -956,6 +974,8 @@ def parse_args(argv=None):
     ap.add_argument("--out-json", type=Path, default=None, help="write raw results as JSON")
     ap.add_argument("--out-md", type=Path, default=None, help="write the markdown report")
     ap.add_argument("--no-uvloop", action="store_true", help="use the default asyncio loop for the generator")
+    ap.add_argument("--range-chunk-kb", type=int, default=RANGE_CHUNK // 1024,
+                    help="0 (default, talk.html): one full download per phone; >0: pdf.js range chunk size in KiB")
     ap.add_argument("--uvicorn-arg", action="append", default=[],
                     help="extra uvicorn flag for Railway, e.g. --uvicorn-arg=--no-access-log (repeatable)")
     ap.add_argument("--private-slides-cache", action=argparse.BooleanOptionalAction,
@@ -966,7 +986,9 @@ def parse_args(argv=None):
 
 
 def main(argv=None):
+    global RANGE_CHUNK
     args = parse_args(argv)
+    RANGE_CHUNK = args.range_chunk_kb * 1024
     try:
         import httpx  # noqa: F401
         import psutil  # noqa: F401
@@ -992,7 +1014,7 @@ def main(argv=None):
                             capture_output=True, text=True).stdout.strip()
     meta = {"uvicorn_args": " ".join(args.uvicorn_arg), "cpu": cpu_model(), "cores": psutil.cpu_count(), "mem_gb": psutil.virtual_memory().total / 2**30,
             "commit": commit, "loop": loop_name, "deck_mb": args.deck.stat().st_size / 2**20,
-            "pages": args.pages, "chunks": (args.deck.stat().st_size + RANGE_CHUNK - 1) // RANGE_CHUNK,
+            "pages": args.pages, "chunks": _n_chunks(args.deck.stat().st_size),
             "join_window": args.join_window, "slides": args.slides, "slide_interval": args.slide_interval}
     print(f"machine: {meta['cpu']} × {meta['cores']}; loop {loop_name}; work dir {work_root}", flush=True)
     results = []
