@@ -30,9 +30,9 @@ class EmojiGlobalStateResponse(BaseModel):
     emoji_global_enabled: bool
 
 
-# Allow a burst of up to 15 reactions, but no more than 15 per rolling minute
+# Allow a burst of up to 25 reactions, but no more than 25 per rolling minute
 # from a single participant — keyed by participant id (the host is exempt).
-EMOJI_RATE_LIMIT = 15
+EMOJI_RATE_LIMIT = 25
 EMOJI_RATE_WINDOW_S = 60.0
 emoji_rate_limiter = SlidingWindowRateLimiter(EMOJI_RATE_LIMIT, EMOJI_RATE_WINDOW_S)
 
@@ -104,7 +104,7 @@ async def emoji_reaction(request: Request, body: EmojiReactionRequest):
     if not participant_state.emoji_global_enabled:
         return Response(status_code=204)
 
-    # Throttle bursts: cap each participant at 15 reactions/minute. Only the
+    # Throttle bursts: cap each participant at 25 reactions/minute. Only the
     # ONE legitimate host id is exempt — matching on the exact "__host__" id, not
     # a "__" prefix, so a crafted "__x" X-Participant-ID can't bypass the limit —
     # and only on the host's own local calls: through Railway the id is whatever

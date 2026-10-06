@@ -953,7 +953,7 @@
     }).catch(function(e) { console.warn('[talk] emoji send failed', e); });
   }
 
-  // Rate limited (15/min per participant): one small hint at most every 3 s,
+  // Rate limited (25/min per participant): one small hint at most every 3 s,
   // however fast they tap.
   var _throttleToastAt = 0;
   function _showThrottleToast() {
