@@ -11,8 +11,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <!-- Material Symbols -->
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<style>body{visibility:hidden}</style>
-<script>document.fonts.ready.then(function(){document.body.style.visibility='visible'})</script>
+<style>html:not(.fonts-ready) body{visibility:hidden}</style>
+<script>
+  // Hide the page until the icon font is in (no ligature-text flash), but never
+  // longer than 1.5 s: on a slow conference Wi-Fi the ~1 MB Material Symbols font
+  // must not leave the page blank.
+  (function() {
+    function reveal() { document.documentElement.classList.add('fonts-ready'); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(reveal, reveal);
+    setTimeout(reveal, 1500);
+  })();
+</script>
 <!-- Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script id="tailwind-config">
@@ -172,10 +181,17 @@
 </div>
 <script>
 (function() {
+  // Only a real desktop (precise pointer that can hover) AND a wide window gets
+  // the warning. Width alone would block phones in landscape (~850 px wide).
   var w = document.getElementById('desktop-warning');
-  function check() { w.classList.toggle('hidden', window.innerWidth <= 768); }
+  var desktopPointer = window.matchMedia ? window.matchMedia('(hover: hover) and (pointer: fine)') : null;
+  function check() {
+    var isDesktop = !!(desktopPointer && desktopPointer.matches) && window.innerWidth > 768;
+    w.classList.toggle('hidden', !isDesktop);
+  }
   check();
   window.addEventListener('resize', check);
+  if (desktopPointer && desktopPointer.addEventListener) desktopPointer.addEventListener('change', check);
 })();
 </script>
 <!-- TopAppBar Component -->
@@ -228,137 +244,302 @@
     </button>
   </div>
 </div>
-<!-- Desktop Quick Controls (Emoji Bar) -->
-<div class="hidden md:flex bg-surface-container rounded-xl p-6 items-center justify-between w-full">
-<div class="flex flex-col">
-<span class="text-on-surface-variant font-label text-xs uppercase tracking-widest font-bold">Express Yourself</span>
-<p class="text-on-surface text-sm mt-1">Tap an emoji to react in real-time</p>
-</div>
-<div class="flex gap-3">
-<button class="w-12 h-12 rounded-full bg-surface-container-high hover:bg-surface-container-highest transition-all flex items-center justify-center text-2xl hover:scale-110 active:scale-95">👏</button>
-<button class="w-12 h-12 rounded-full bg-surface-container-high hover:bg-surface-container-highest transition-all flex items-center justify-center text-2xl hover:scale-110 active:scale-95">❤️</button>
-<button class="w-12 h-12 rounded-full bg-surface-container-high hover:bg-surface-container-highest transition-all flex items-center justify-center text-2xl hover:scale-110 active:scale-95">🔥</button>
-<button class="w-12 h-12 rounded-full bg-surface-container-high hover:bg-surface-container-highest transition-all flex items-center justify-center text-2xl hover:scale-110 active:scale-95">🚀</button>
-</div>
-</div>
 </main>
-<!-- Emoji Reaction Bar -->
-<nav class="flex-none w-full z-50 flex justify-center items-center px-4 py-2 bg-[#140b36] border-t border-white/5">
-<div class="flex justify-around items-center w-full max-w-lg gap-1">
-<!-- Clap -->
-<button onclick="sendEmoji('👏', this)" class="flex flex-col items-center relative group">
-<div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">👏</div>
-<span id="emoji-count-clap" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
+<!-- Emoji Reaction Bar: these buttons are the fallback set; the script rebuilds
+     the bar from the daemon's emoji catalog (/state) by cloning the first button. -->
+<nav id="emoji-nav" class="flex-none w-full z-50 flex justify-center items-center px-4 py-2 bg-[#140b36] border-t border-white/5">
+<div id="emoji-bar" class="flex justify-around items-center w-full max-w-lg gap-1">
+<button type="button" data-emoji="👏" aria-label="👏" class="flex flex-col items-center relative group">
+<div class="emoji-glyph w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">👏</div>
+<span class="emoji-count absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
-<!-- Heart -->
-<button onclick="sendEmoji('❤️', this)" class="flex flex-col items-center relative group">
-<div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">❤️</div>
-<span id="emoji-count-heart" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
+<button type="button" data-emoji="❤️" aria-label="❤️" class="flex flex-col items-center relative group">
+<div class="emoji-glyph w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">❤️</div>
+<span class="emoji-count absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
-<!-- Fire -->
-<button onclick="sendEmoji('🔥', this)" class="flex flex-col items-center relative group">
-<div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">🔥</div>
-<span id="emoji-count-fire" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
+<button type="button" data-emoji="🔥" aria-label="🔥" class="flex flex-col items-center relative group">
+<div class="emoji-glyph w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">🔥</div>
+<span class="emoji-count absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
-<!-- Lightbulb -->
-<button onclick="sendEmoji('💡', this)" class="flex flex-col items-center relative group">
-<div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">💡</div>
-<span id="emoji-count-bulb" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
+<button type="button" data-emoji="💡" aria-label="💡" class="flex flex-col items-center relative group">
+<div class="emoji-glyph w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">💡</div>
+<span class="emoji-count absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
-<!-- Rocket -->
-<button onclick="sendEmoji('🚀', this)" class="flex flex-col items-center relative group">
-<div class="w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">🚀</div>
-<span id="emoji-count-rocket" class="absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
+<button type="button" data-emoji="🤯" aria-label="🤯" class="flex flex-col items-center relative group">
+<div class="emoji-glyph w-14 h-14 rounded-2xl bg-surface-container-high/50 flex items-center justify-center text-2xl transition-all group-active:scale-90 group-hover:bg-primary-container/20">🤯</div>
+<span class="emoji-count absolute -top-1 -right-1 bg-primary text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm hidden">0</span>
 </button>
 </div>
 </nav>
+<script>
+  // ── Slide display seam ────────────────────────────────────────────────────────
+  // The rest of the page reaches the slides ONLY through showSlide() and
+  // isSlideInView(). How slides are delivered and drawn lives in the module below,
+  // which hands over its implementation via window._resolveSlideDisplay — so the
+  // delivery can be swapped without touching follow, emoji, identity or reconnect.
+  var _slideDisplay = null;
+  var _slideDisplayReady = new Promise(function(resolve) {
+    window._resolveSlideDisplay = function(impl) { _slideDisplay = impl; resolve(impl); };
+  });
+  // Add `page` of deck `slug` to the slides on screen (loading the deck if
+  // needed). opts.scroll brings it into view; opts.highlight flashes it: true
+  // always, 'revisit' only when that slide was already on screen.
+  function showSlide(slug, page, opts) {
+    _slideDisplayReady.then(function(d) { d.show(slug, page, opts || {}); });
+  }
+  // true/false once that slide is on screen; null while unknown (not rendered
+  // yet, a jump still pending, or the slides view hidden).
+  function isSlideInView(slug, page) {
+    return _slideDisplay ? _slideDisplay.isPageInView(slug, page) : null;
+  }
+</script>
 <script type="module">
+  // ── Slide display: only the slides the trainer has shown, range-loaded ────────
+  // A deck is a large PDF (100+ pages), but a talk shows a subset of it, jumping
+  // around. pdf.js fetches the file with HTTP range requests (disableAutoFetch +
+  // disableStream) instead of downloading it whole up front. How much that saves
+  // depends on the PDF: on open pdf.js still reads every page dictionary, which
+  // Google-Slides exports spread across the file. It renders only pages the
+  // trainer has shown during this visit, stacked in the order they were FIRST
+  // shown (scrolling back follows the story), each once, each with its clickable
+  // link layer. Nothing outside this block knows slides are PDFs.
   import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
-  let _pdfDoc = null;
-  let _currentPdfUrl = null;
-  let _renderedPages = 0;
+  const RENDER_SCALE = 1.5;
+  const RANGE_CHUNK_BYTES = 131072;
+  const sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
+  const scroller = document.getElementById('view-slides');
+  const container = document.getElementById('pdf-pages');
+  const placeholder = document.getElementById('slide-placeholder');
+  const downloadBtn = document.getElementById('btn-download-slides');
 
-  window.renderPage = async function(url, pageNum) {
-    const container = document.getElementById('pdf-pages');
-    const placeholder = document.getElementById('slide-placeholder');
-    try {
-      if (_currentPdfUrl !== url) {
-        _pdfDoc = await pdfjsLib.getDocument(url).promise;
-        _currentPdfUrl = url;
-        window._currentPdfUrl = url;
-        var dlBtn = document.getElementById('btn-download-slides');
-        if (dlBtn) dlBtn.disabled = false;
-        container.innerHTML = '';
-        _renderedPages = 0;
-      }
-      pageNum = Math.max(1, Math.min(pageNum || 1, _pdfDoc.numPages));
-      // Render all pages on first load of this PDF
-      if (_renderedPages === 0) {
-        for (let i = 1; i <= _pdfDoc.numPages; i++) {
-          const page = await _pdfDoc.getPage(i);
-          const viewport = page.getViewport({ scale: 1.5 });
-          const section = document.createElement('section');
-          section.dataset.page = i;
-          section.style.cssText = 'position:relative;margin-bottom:7px;max-width:100%;overflow:hidden';
-          const canvas = document.createElement('canvas');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          canvas.className = 'w-full';
-          section.appendChild(canvas);
-          container.appendChild(section);
-          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-          const annotations = await page.getAnnotations({ intent: 'display' });
-          if (annotations && annotations.length) {
-            const annLayer = document.createElement('div');
-            annLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
-            section.appendChild(annLayer);
-            for (const ann of annotations) {
-              if (!ann || ann.subtype !== 'Link' || !(ann.url || ann.unsafeUrl)) continue;
-              const rect = viewport.convertToViewportRectangle(ann.rect);
-              const left = Math.min(rect[0], rect[2]);
-              const top = Math.min(rect[1], rect[3]);
-              const width = Math.abs(rect[0] - rect[2]);
-              const height = Math.abs(rect[1] - rect[3]);
-              if (!(width > 0 && height > 0)) continue;
-              const leftPct = (left / viewport.width * 100).toFixed(3);
-              const topPct = (top / viewport.height * 100).toFixed(3);
-              const widthPct = (width / viewport.width * 100).toFixed(3);
-              const heightPct = (height / viewport.height * 100).toFixed(3);
-              const link = document.createElement('a');
-              link.href = ann.url || ann.unsafeUrl;
-              link.target = '_blank';
-              link.rel = 'noopener noreferrer';
-              link.style.cssText = `position:absolute;left:${leftPct}%;top:${topPct}%;width:${widthPct}%;height:${heightPct}%;pointer-events:auto;cursor:pointer;background:transparent`;
-              annLayer.appendChild(link);
-            }
-          }
-        }
-        _renderedPages = _pdfDoc.numPages;
-        // Scroll to current slide after initial render
-        const initialTarget = container.querySelector(`section[data-page="${pageNum}"]`);
-        if (initialTarget) {
-          initialTarget.scrollIntoView({ block: 'end' });
-          initialTarget.classList.add('slide-highlight');
-        }
-      }
-      if (placeholder) placeholder.style.display = 'none';
-    } catch (e) {
-      console.error('[talk] PDF render error', e);
+  let deck = null;     // { slug, url, doc, numPages, opened, queue, pages: Map(page → {section, ready}) }
+  let target = null;   // { slug, page, highlight } — scroll there once that page is on screen
+
+  function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+  function retryDelay(attempt) {  // exponential backoff + jitter: a full room must not retry in lockstep
+    return 1000 + Math.random() * Math.min(15000, 1000 * Math.pow(2, attempt));
+  }
+
+  function show(slug, page, opts) {
+    page = Math.max(1, page | 0);
+    if (!deck || deck.slug !== slug) loadDeck(slug);
+    const revisit = deck.pages.has(page);
+    if (opts.scroll) {
+      target = { slug: slug, page: page, highlight: opts.highlight === true || (opts.highlight === 'revisit' && revisit) };
     }
-  };
+    ensurePage(deck, page);
+    jumpIfReady();
+  }
+
+  function isPageInView(slug, page) {
+    if (!deck || deck.slug !== slug || !deck.numPages) return null;
+    if (target && target.slug === slug) return null;  // a jump is still pending
+    const entry = deck.pages.get(Math.min(page, deck.numPages));
+    if (!entry || !entry.ready || !scroller.getClientRects().length) return null;  // not rendered / view hidden
+    const view = scroller.getBoundingClientRect();
+    const r = entry.section.getBoundingClientRect();
+    const visible = Math.min(r.bottom, view.bottom) - Math.max(r.top, view.top);
+    return visible >= 0.5 * Math.min(r.height, view.height);
+  }
+
+  function loadDeck(slug) {
+    if (deck && deck.doc) deck.doc.destroy().catch(function() {});
+    const url = '/' + sessionId + '/api/slides/download/' + encodeURIComponent(slug);
+    deck = { slug: slug, url: url, doc: null, numPages: 0, queue: Promise.resolve(), pages: new Map() };
+    deck.opened = openDeck(deck);
+    container.replaceChildren();
+    placeholder.style.display = '';
+    downloadBtn.disabled = true;
+    window._currentPdfUrl = null;
+  }
+
+  // Like participant.html, ask /check first: it makes Railway fetch and cache the
+  // PDF when missing. 404 means the daemon cannot fetch this deck itself (not in
+  // its catalog, e.g. a deck dropped for the talk) — Railway may still hold it, so
+  // try it anyway. Anything else that fails is retried until it works.
+  async function openDeck(d) {
+    for (let attempt = 0; deck === d; attempt++) {
+      try {
+        const check = await fetch('/' + sessionId + '/api/slides/check/' + encodeURIComponent(d.slug), {
+          cache: 'no-store', headers: { 'X-Participant-ID': window._uuid || '' }
+        });
+        if (deck !== d) return false;
+        if (check.ok || check.status === 404) {
+          const doc = await pdfjsLib.getDocument({
+            url: d.url, disableAutoFetch: true, disableStream: true, rangeChunkSize: RANGE_CHUNK_BYTES
+          }).promise;
+          if (deck !== d) { doc.destroy().catch(function() {}); return false; }
+          d.doc = doc;
+          d.numPages = doc.numPages;
+          window._currentPdfUrl = d.url;
+          downloadBtn.disabled = false;
+          return true;
+        }
+      } catch (e) {
+        console.warn('[talk] deck not ready yet', d.slug, e);
+      }
+      await sleep(retryDelay(attempt));
+    }
+    return false;
+  }
+
+  // Claims the page's slot at the bottom right away (first-shown order), then
+  // renders pages one at a time in that order — so a slide never grows above
+  // one already on screen.
+  function ensurePage(d, page) {
+    if (d.pages.has(page)) return;
+    const section = document.createElement('section');
+    section.dataset.page = page;
+    section.style.cssText = 'position:relative;margin-bottom:7px;max-width:100%;overflow:hidden';
+    const entry = { section: section, ready: false };
+    d.pages.set(page, entry);
+    container.appendChild(section);
+    d.queue = d.queue.then(function() { return renderEntry(d, page, entry); });
+  }
+
+  async function renderEntry(d, page, entry) {
+    if (!(await d.opened) || deck !== d) return;
+    if (page > d.numPages) {  // the cached PDF is shorter than the live deck: show its last page
+      entry.section.remove();
+      d.pages.delete(page);
+      ensurePage(d, d.numPages);
+      return;
+    }
+    try {
+      await renderPage(d.doc, page, entry.section);
+      if (deck !== d) return;
+      entry.ready = true;
+      placeholder.style.display = 'none';
+      jumpIfReady();
+    } catch (e) {
+      entry.section.remove();
+      d.pages.delete(page);  // a later show() of this page retries
+      console.error('[talk] page render error', page, e);
+    }
+  }
+
+  function jumpIfReady() {
+    if (!target || !deck || deck.slug !== target.slug || !deck.numPages) return;
+    const entry = deck.pages.get(Math.min(target.page, deck.numPages));
+    if (!entry || !entry.ready) return;  // renderEntry calls back once it is on screen
+    const highlight = target.highlight;
+    target = null;
+    // A slide taller than the view (phone in landscape) shows from its title down.
+    const tall = entry.section.offsetHeight > scroller.clientHeight;
+    entry.section.scrollIntoView({ behavior: 'smooth', block: tall ? 'start' : 'end' });
+    if (highlight) highlightWhenSettled(entry.section);
+  }
+
+  function highlightWhenSettled(section) {
+    let done = false;
+    let debounce = null;
+    function highlight() {
+      if (done) return;
+      done = true;
+      scroller.removeEventListener('scroll', onScroll);
+      section.classList.remove('slide-highlight');
+      void section.offsetWidth;  // restart the animation
+      section.classList.add('slide-highlight');
+    }
+    function onScroll() {
+      clearTimeout(debounce);
+      debounce = setTimeout(highlight, 150);
+    }
+    scroller.addEventListener('scroll', onScroll);
+    setTimeout(highlight, 600);
+  }
+
+  // Fills a page's <section>: the rendered canvas plus its clickable links.
+  async function renderPage(doc, pageNum, section) {
+    const page = await doc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: RENDER_SCALE });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.className = 'w-full';
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    section.appendChild(canvas);
+    const annotations = await page.getAnnotations({ intent: 'display' });
+    if (annotations && annotations.length) {
+      const annLayer = document.createElement('div');
+      annLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
+      section.appendChild(annLayer);
+      for (const ann of annotations) {
+        if (!ann || ann.subtype !== 'Link' || !(ann.url || ann.unsafeUrl)) continue;
+        const rect = viewport.convertToViewportRectangle(ann.rect);
+        const left = Math.min(rect[0], rect[2]);
+        const top = Math.min(rect[1], rect[3]);
+        const width = Math.abs(rect[0] - rect[2]);
+        const height = Math.abs(rect[1] - rect[3]);
+        if (!(width > 0 && height > 0)) continue;
+        const leftPct = (left / viewport.width * 100).toFixed(3);
+        const topPct = (top / viewport.height * 100).toFixed(3);
+        const widthPct = (width / viewport.width * 100).toFixed(3);
+        const heightPct = (height / viewport.height * 100).toFixed(3);
+        const link = document.createElement('a');
+        link.href = ann.url || ann.unsafeUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.cssText = `position:absolute;left:${leftPct}%;top:${topPct}%;width:${widthPct}%;height:${heightPct}%;pointer-events:auto;cursor:pointer;background:transparent`;
+        annLayer.appendChild(link);
+      }
+    }
+  }
+
+  window._resolveSlideDisplay({ show: show, isPageInView: isPageInView });
 </script>
 <script>
-  var _sessionId = null;
-  var _slidesCatalog = [];
-  var _ws = null;
-  var _currentPage = 1;
+  // Served at /{session_id}/ — read the id from the URL path, not from a public endpoint.
+  var _sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
   var _activeView = 'slides';
-  var _uuid = sessionStorage.getItem('talk_uuid') || (function() {
-    var u = crypto.randomUUID(); sessionStorage.setItem('talk_uuid', u); return u;
-  })();
 
+  // ── Identity ──────────────────────────────────────────────────────────────────
+  // One UUID per browser (localStorage), so a returning visitor stays the same
+  // participant. Talk mode never asks for or shows a name: registering without
+  // one lets the daemon auto-assign a (never displayed) conference name.
+  var UUID_KEY = 'talk_participant_uuid';
+  var _uuidIsNew = false;
+  var _uuid = (function() {
+    var uid = null;
+    try { uid = localStorage.getItem(UUID_KEY); } catch (e) {}
+    if (uid) return uid;
+    uid = crypto.randomUUID();
+    _uuidIsNew = true;
+    try { localStorage.setItem(UUID_KEY, uid); } catch (e) {}
+    return uid;
+  })();
+  var _registered = false;
+
+  function _participantFetch(path, init) {
+    init = init || {};
+    init.headers = Object.assign({ 'X-Participant-ID': _uuid }, init.headers || {});
+    return fetch('/' + _sessionId + '/api/participant/' + path, init);
+  }
+
+  function _postJson(path, body) {
+    return _participantFetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  }
+
+  // Same REST contract as participant.html: a stored UUID rejoins (lookup only);
+  // a new one — or a stored one this session has never seen (rejoin 404) —
+  // registers. Failures are retried on the next WS reconnect.
+  async function _ensureIdentity() {
+    if (_registered) return;
+    try {
+      if (!_uuidIsNew && (await _postJson('rejoin', {})).ok) { _registered = true; return; }
+      _registered = (await _postJson('register', {})).ok;
+    } catch (e) {
+      console.warn('[talk] identity', e);
+    }
+  }
+
+  // ── Views ─────────────────────────────────────────────────────────────────────
   // View names that have a tab button
   var _viewNames = ['speaker', 'slides'];
 
@@ -373,9 +554,11 @@
     if (fab) fab.classList.toggle('hidden', name !== 'slides');
     _activeView = name;
     if (name === 'speaker') _renderSpeaker();
+    // Back on the slides: catch up with wherever the trainer went meanwhile.
+    if (name === 'slides' && _following) _showLive(false);
   }
 
-function _renderSpeaker() {
+  function _renderSpeaker() {
     var contentEl = document.getElementById('speaker-content');
     if (!contentEl || contentEl._rendered) return;
     contentEl._rendered = true;
@@ -389,115 +572,225 @@ function _renderSpeaker() {
     contentEl.innerHTML = marked.parse(dummy);
   }
 
-  function scrollToCurrentSlide() {
-    var container = document.getElementById('view-slides');
-    var target = container && container.querySelector('section[data-page="' + _currentPage + '"]');
-    if (!target) return;
-    target.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    var done = false;
-    var fallbackTimer;
-    function highlight() {
-      if (done) return;
-      done = true;
-      container.removeEventListener('scroll', onScroll);
-      target.classList.remove('slide-highlight');
-      void target.offsetWidth;
-      target.classList.add('slide-highlight');
-    }
-    var debounceTimer;
-    function onScroll() {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(highlight, 150);
-    }
-    container.addEventListener('scroll', onScroll);
-    fallbackTimer = setTimeout(highlight, 600);
+  // ── Live follow ───────────────────────────────────────────────────────────────
+  // ON by default: every current_slide_updated adds the trainer's slide and
+  // scrolls to it. Scrolling away from it by hand pauses following (new slides
+  // are still added, without moving the reader); the "Current Slide" button
+  // jumps back and resumes it.
+  var _live = null;            // { slug, page } — the slide the trainer is showing
+  var _following = true;
+  var _userScrolled = false;   // a user gesture moved the slides since our last jump
+
+  function _onLiveSlide(sc) {
+    if (!sc || !sc.slug) return;
+    var slug = String(sc.slug);
+    var page = Math.max(1, parseInt(sc.page, 10) || 1);
+    var deckChanged = !_live || _live.slug !== slug;
+    var moved = deckChanged || _live.page !== page;
+    _live = { slug: slug, page: page };
+    // A different deck has no earlier position worth keeping: follow it.
+    if (deckChanged) _following = true;
+    if (_following) _showLive(deckChanged ? true : (moved ? 'revisit' : false));
+    else showSlide(slug, page, { scroll: false });
   }
 
-  var _emojiCounterIds = {
-    '👏': 'emoji-count-clap',
-    '❤️': 'emoji-count-heart',
-    '🔥': 'emoji-count-fire',
-    '💡': 'emoji-count-bulb',
-    '🚀': 'emoji-count-rocket',
-  };
+  function _showLive(highlight) {
+    if (!_live) return;
+    _userScrolled = false;
+    showSlide(_live.slug, _live.page, { scroll: true, highlight: highlight });
+  }
+
+  // "Current Slide 🎯" button: jump to the live slide and follow again.
+  function scrollToCurrentSlide() {
+    _following = true;
+    _showLive(true);
+  }
+
+  (function _pauseFollowOnManualScroll() {
+    var view = document.getElementById('view-slides');
+    var settle = null;
+    function gesture() { _userScrolled = true; }
+    view.addEventListener('touchmove', gesture, { passive: true });
+    view.addEventListener('wheel', gesture, { passive: true });
+    document.addEventListener('keydown', function(e) {
+      if (_activeView === 'slides' && /^(Arrow(Up|Down)|Page(Up|Down)|Home|End| )$/.test(e.key)) gesture();
+    });
+    view.addEventListener('scroll', function() {
+      if (!_userScrolled || !_following || !_live) return;
+      clearTimeout(settle);
+      settle = setTimeout(function() {
+        if (_userScrolled && _following && _live && isSlideInView(_live.slug, _live.page) === false) {
+          _following = false;
+        }
+      }, 150);
+    }, { passive: true });
+  })();
+
+  // ── Emoji reactions ───────────────────────────────────────────────────────────
+  // The daemon's catalog (delivered in /state) is the whitelist, so the bar only
+  // offers emojis it accepts. A talk bar has 5 slots: these picks first (when the
+  // catalog has them), topped up in catalog order. The static buttons in the
+  // markup are this same set — the fallback until /state arrives.
+  var TALK_EMOJI_SLOTS = 5;
+  var TALK_EMOJI_PREFERENCE = ['👏', '❤️', '🔥', '💡', '🤯'];
+  var _emojiBar = document.getElementById('emoji-bar');
+  var _emojiBtnProto = _emojiBar.querySelector('button').cloneNode(true);
+  var _emojiCounters = {};
+
+  function _pickTalkEmojis(catalog) {
+    var byEmoji = {};
+    catalog.forEach(function(d) { if (d && d.emoji) byEmoji[d.emoji] = d; });
+    var picked = TALK_EMOJI_PREFERENCE.filter(function(e) { return byEmoji[e]; });
+    catalog.forEach(function(d) {
+      // The workshop-only "can't see your screen" signal has no place in a talk.
+      if (picked.length < TALK_EMOJI_SLOTS && d && d.emoji && d.section !== 'signal' && picked.indexOf(d.emoji) < 0) {
+        picked.push(d.emoji);
+      }
+    });
+    return picked.slice(0, TALK_EMOJI_SLOTS).map(function(e) { return byEmoji[e]; });
+  }
+
+  function _renderEmojiBar(catalog) {
+    if (!Array.isArray(catalog) || !catalog.length) return;  // keep the fallback buttons
+    var defs = _pickTalkEmojis(catalog);
+    if (!defs.length) return;
+    _emojiBar.replaceChildren();
+    defs.forEach(function(def) {
+      var btn = _emojiBtnProto.cloneNode(true);
+      btn.dataset.emoji = def.emoji;
+      btn.setAttribute('aria-label', def.title || def.emoji);
+      btn.querySelector('.emoji-glyph').textContent = def.emoji;
+      _emojiBar.appendChild(btn);
+    });
+    _applyEmojiCounters(_emojiCounters);
+  }
 
   function _applyEmojiCounters(counters) {
-    for (var emoji in _emojiCounterIds) {
-      var span = document.getElementById(_emojiCounterIds[emoji]);
-      if (!span) continue;
-      var count = (counters && counters[emoji]) || 0;
+    _emojiCounters = counters || {};
+    Array.prototype.forEach.call(_emojiBar.children, function(btn) {
+      var badge = btn.querySelector('.emoji-count');
+      var count = _emojiCounters[btn.dataset.emoji] || 0;
       if (count > 0) {
-        span.textContent = count >= 1000 ? (count / 1000).toFixed(1).replace('.0', '') + 'k' : count;
-        span.classList.remove('hidden');
+        badge.textContent = count >= 1000 ? (count / 1000).toFixed(1).replace('.0', '') + 'k' : count;
+        badge.classList.remove('hidden');
       } else {
-        span.classList.add('hidden');
+        badge.classList.add('hidden');
       }
-    }
+    });
   }
+
+  _emojiBar.addEventListener('click', function(e) {
+    var btn = e.target.closest('button[data-emoji]');
+    if (btn) sendEmoji(btn.dataset.emoji, btn);
+  });
 
   function sendEmoji(emoji, btn) {
     if (window.showDesktopEmojiFloat) showDesktopEmojiFloat(emoji, btn);
     if (!_sessionId) return;
-    fetch('/' + _sessionId + '/api/participant/emoji/reaction', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _uuid },
-      body: JSON.stringify({ emoji: emoji })
-    }).catch(function() {});
+    _postJson('emoji/reaction', { emoji: emoji }).then(function(r) {
+      if (r.status === 429) _showThrottleToast();
+    }).catch(function(e) { console.warn('[talk] emoji send failed', e); });
   }
 
-  function _getPage(sc) { return sc.page ?? sc.current_page ?? sc.slide ?? 1; }
-
-  function _findSlide(slug) {
-    return _slidesCatalog.find(function(s) { return s.slug === slug; }) || null;
+  // Rate limited (15/min per participant): one small hint at most every 3 s,
+  // however fast they tap.
+  var _throttleToastAt = 0;
+  function _showThrottleToast() {
+    var now = Date.now();
+    if (now - _throttleToastAt < 3000) return;
+    _throttleToastAt = now;
+    var nav = document.getElementById('emoji-nav');
+    var t = document.createElement('div');
+    t.id = 'throttle-toast';
+    t.textContent = 'Slow down 🐢';
+    t.setAttribute('role', 'status');
+    t.style.cssText = 'position:fixed;left:1rem;bottom:' + ((nav ? nav.offsetHeight : 72) + 12) + 'px;'
+      + 'background:#271c53;color:#e9e1ff;padding:.5rem 1.1rem;border-radius:999px;font-weight:600;'
+      + 'font-size:.875rem;z-index:9999;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:opacity .4s';
+    document.body.appendChild(t);
+    setTimeout(function() {
+      t.style.opacity = '0';
+      setTimeout(function() { t.remove(); }, 400);
+    }, 1600);
   }
 
-  function _slideUrl(slug) {
-    var slide = _findSlide(slug);
-    return (slide && slide.url) || ('/' + _sessionId + '/api/slides/download/' + encodeURIComponent(slug));
+  function _applyPaxCount(count) {
+    document.getElementById('pax-count').textContent = count;
+    var box = document.getElementById('pax-count-display');
+    box.classList.remove('hidden');
+    box.classList.add('flex');
   }
 
-  async function _applySlidesCurrent(sc) {
-    if (!sc || !sc.slug) return;
-    _currentPage = _getPage(sc);
-    if (window.renderPage) await window.renderPage(_slideUrl(sc.slug), _currentPage);
+  // ── State sync + live updates ─────────────────────────────────────────────────
+  // Exponential backoff with full jitter: after a server restart, 500 phones must
+  // not come back in lockstep.
+  var BACKOFF_BASE_MS = 500;
+  var BACKOFF_MAX_MS = 15000;
+  function _backoffDelay(attempt) {
+    var ceiling = Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * Math.pow(2, attempt));
+    return 250 + Math.round(Math.random() * ceiling);
   }
 
-  async function _loadCatalog() {
+  var _syncTimer = null;
+  var _syncAttempts = 0;
+  async function _syncState() {
+    clearTimeout(_syncTimer);
     try {
-      var data = await fetch('/' + _sessionId + '/api/slides', { cache: 'no-store' }).then(function(r) { return r.ok ? r.json() : null; });
-      var seen = new Set();
-      _slidesCatalog = (data && data.slides || []).filter(function(raw) {
-        if (!raw || typeof raw !== 'object') return false;
-        var slug = String(raw.slug || '').trim() || 'slide';
-        var url = String(raw.url || '').trim() || ('/' + _sessionId + '/api/slides/download/' + encodeURIComponent(slug));
-        var key = slug + '|' + url;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        raw.slug = slug; raw.url = url;
-        return true;
-      });
-    } catch (e) { console.error('[talk] catalog error', e); }
+      var r = await _participantFetch('state');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var state = await r.json();
+      _syncAttempts = 0;
+      _renderEmojiBar(state.emoji_catalog);
+      if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
+      var sc = state.slides_current || (state.talk_presentation_slug ? { slug: state.talk_presentation_slug, page: 1 } : null);
+      if (sc) _onLiveSlide(sc);
+    } catch (e) {
+      console.warn('[talk] state fetch failed', e);
+      _syncTimer = setTimeout(_syncState, _backoffDelay(_syncAttempts++));
+    }
   }
+
+  function _handleMessage(msg) {
+    switch (msg.type) {
+      case 'redirect': _redirecting = true; window.location.href = msg.url || '/'; break;
+      case 'current_slide_updated': _onLiveSlide(msg.current_slide); break;
+      case 'talk_pdf_ready': if (msg.slug) _onLiveSlide({ slug: msg.slug, page: 1 }); break;
+      case 'emoji_counters_updated': if (msg.counters) _applyEmojiCounters(msg.counters); break;
+      case 'active_participants_count_updated': _applyPaxCount(msg.count); break;
+    }
+  }
+
+  var _wsAttempts = 0;
+  var _wsEverOpened = false;
+  // Set once a `redirect` frame arrived: the gateway sends it right before
+  // close(1008), and onclose must not override where it sent us.
+  var _redirecting = false;
 
   function _connectWS() {
     var proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    _ws = new WebSocket(proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_uuid));
-    _ws.onopen = function() { _ws.send(JSON.stringify({ type: 'set_name', name: 'Viewer' })); };
-    _ws.onmessage = function(e) {
-      try {
-        var msg = JSON.parse(e.data);
-        if (msg.type === 'slides_current' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
-        if (msg.type === 'announce' && msg.slides_current) _applySlidesCurrent(msg.slides_current).catch(function() {});
-        if (msg.type === 'talk_pdf_ready' && msg.slug) _loadCatalog().then(function() { _applySlidesCurrent({ slug: msg.slug, page: 1 }).catch(function() {}); });
-        if (msg.type === 'emoji_counters_updated' && msg.counters) _applyEmojiCounters(msg.counters);
-        if (msg.type === 'active_participants_count_updated') {
-          document.getElementById('pax-count').textContent = msg.count;
-          document.getElementById('pax-count-display').classList.remove('hidden');
-          document.getElementById('pax-count-display').classList.add('flex');
-        }
-      } catch (_) {}
+    var ws = new WebSocket(proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_uuid));
+    ws.onopen = function() {
+      var reconnected = _wsEverOpened || _wsAttempts > 0;
+      _wsAttempts = 0;
+      _wsEverOpened = true;
+      // Broadcasts sent while we were away are lost: catch up from /state.
+      if (reconnected) _ensureIdentity().then(_syncState);
     };
-    _ws.onclose = function(e) { if (e.code === 1008) return; setTimeout(_connectWS, 3000); };
+    ws.onmessage = function(e) {
+      var msg;
+      try { msg = JSON.parse(e.data); } catch (_) { return; }
+      _handleMessage(msg);
+    };
+    ws.onclose = function(e) {
+      if (_redirecting) return;
+      if (e.code === 1008) {
+        // Session over / invalid. Normally the redirect frame already navigated;
+        // if it got lost, land on the neutral page that explains it.
+        window.location.href = '/?error=invalid';
+        return;
+      }
+      setTimeout(_connectWS, _backoffDelay(_wsAttempts++));
+    };
   }
 
   document.getElementById('btn-download-slides').addEventListener('click', function() {
@@ -513,25 +806,10 @@ function _renderSpeaker() {
   });
 
   (async function init() {
-    try {
-      // Served at /{session_id}/ — read the id from the URL path, not from a public endpoint.
-      _sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
-      if (!_sessionId) return;
-      await fetch('/' + _sessionId + '/api/participant/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _uuid },
-        body: JSON.stringify({ name: 'Viewer' })
-      }).catch(function() {});
-      await _loadCatalog();
-      _connectWS();
-      var state = await fetch('/' + _sessionId + '/api/participant/state', {
-        headers: { 'X-Participant-ID': _uuid }
-      }).then(function(r) { return r.json(); }).catch(function() { return {}; });
-      console.log('[talk] state:', state);
-      var sc = state.slides_current || (state.talk_presentation_slug ? { slug: state.talk_presentation_slug, page: 1 } : null);
-      if (sc) await _applySlidesCurrent(sc);
-      if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
-    } catch (e) { console.error('[talk] init error', e); }
+    if (!_sessionId) return;
+    await _ensureIdentity();
+    _connectWS();
+    _syncState();
   })();
 </script>
 <script src="/static/tooltip.js"></script>
