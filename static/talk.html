@@ -199,6 +199,14 @@
                        height: 100% !important; justify-content: space-evenly !important; }
           #emoji-nav .emoji-glyph { width: 3rem !important; height: 3rem !important; font-size: 1.5rem !important; }
         }
+        /* Portrait only: a short hint that a sideways phone shows the slide bigger. */
+        #rotate-hint { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 90;
+          display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 22px;
+          border-radius: 18px; background: rgba(23, 15, 52, 0.92); color: #e6e3ff; font-size: 15px;
+          box-shadow: 0 10px 30px rgba(0,0,0,.45); pointer-events: none; opacity: 0; transition: opacity .3s; }
+        #rotate-hint.show { opacity: 1; }
+        #rotate-hint .material-symbols-outlined { font-size: 44px; animation: rotate-hint-turn 1.2s ease-in-out .2s 2 alternate; }
+        @keyframes rotate-hint-turn { from { transform: rotate(0deg); } to { transform: rotate(-90deg); } }
     </style>
 <script src="/static/emoji-float.js"></script>
 </head>
@@ -1067,16 +1075,57 @@
     };
   }
 
-  document.getElementById('btn-download-slides').addEventListener('click', function() {
-    var url = window._currentPdfUrl;
-    if (!url) return;
-    if (url.indexOf('?') === -1) url += '?download=1'; else url += '&download=1';
+  function _clickDownloadLink(href, name) {
     var a = document.createElement('a');
-    a.href = url;
-    a.download = '';
+    a.href = href;
+    a.download = name || '';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  }
+
+  function _downloadFullDeck(url) {
+    _clickDownloadLink(url + (url.indexOf('?') === -1 ? '?download=1' : '&download=1'));
+  }
+
+  // Download only the slides shown so far, in the order they appear on the page.
+  // Pages are copied (not rasterized) with pdf-lib, so their links keep working.
+  // Anything going wrong falls back to the full deck.
+  async function _downloadShownSlides(url, btn) {
+    var pages = [];
+    document.querySelectorAll('#pdf-pages section').forEach(function(s) {
+      var p = parseInt(s.dataset.page, 10);
+      if (p > 0 && pages.indexOf(p) < 0) pages.push(p);
+    });
+    if (!pages.length) return _downloadFullDeck(url);
+    btn.disabled = true;
+    try {
+      var PDFLib = await import('https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm');
+      var resp = await fetch(url, { cache: 'no-cache' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var src = await PDFLib.PDFDocument.load(await resp.arrayBuffer(), { ignoreEncryption: true });
+      var indices = pages.filter(function(p) { return p <= src.getPageCount(); }).map(function(p) { return p - 1; });
+      if (!indices.length) throw new Error('no shown page in this PDF');
+      var out = await PDFLib.PDFDocument.create();
+      (await out.copyPages(src, indices)).forEach(function(page) { out.addPage(page); });
+      var blob = new Blob([await out.save()], { type: 'application/pdf' });
+      var slug = decodeURIComponent(url.split('?')[0].split('/').pop());
+      var deckName = slug.replace(/[-_]+/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      var href = URL.createObjectURL(blob);
+      _clickDownloadLink(href, deckName + ' - talk slides.pdf');
+      setTimeout(function() { URL.revokeObjectURL(href); }, 60000);
+    } catch (e) {
+      console.warn('[talk] partial download failed, downloading the full deck', e);
+      _downloadFullDeck(url);
+    } finally {
+      btn.disabled = !window._currentPdfUrl;
+    }
+  }
+
+  document.getElementById('btn-download-slides').addEventListener('click', function() {
+    var url = window._currentPdfUrl;
+    if (!url || this.disabled) return;
+    _downloadShownSlides(url, this);
   });
 
   // A socket that died silently (network switch while the phone was in a pocket)
@@ -1137,4 +1186,21 @@
   })();
 </script>
 <script src="/static/tooltip.js"></script>
+<div id="rotate-hint" aria-hidden="true"><span class="material-symbols-outlined">smartphone</span><span>Rotate your phone for a bigger slide</span></div>
+<script>
+  // 1 s after entering, a phone held upright gets a hint (gone within 3 s) that
+  // turning it sideways shows the slide bigger. Once per visit.
+  (function() {
+    var shown = false;
+    try { shown = sessionStorage.getItem('talk_rotate_hint') === '1'; } catch (e) {}
+    if (shown || !window.matchMedia('(orientation: portrait)').matches || window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    setTimeout(function() {
+      var hint = document.getElementById('rotate-hint');
+      if (!hint || !window.matchMedia('(orientation: portrait)').matches) return;
+      try { sessionStorage.setItem('talk_rotate_hint', '1'); } catch (e) {}
+      hint.classList.add('show');
+      setTimeout(function() { hint.classList.remove('show'); }, 2700);
+    }, 1000);
+  })();
+</script>
 </body></html>
