@@ -173,14 +173,25 @@
            slides view (set from JS), which only binds on a phone in landscape. */
         #pdf-pages section { width: fit-content; margin-left: auto; margin-right: auto; }
         #pdf-pages canvas { display: block; width: auto; max-width: 100%; max-height: var(--slide-max-h, none); }
-        /* Phone in landscape: compact tab bar (icons only) and emoji bar leave the slide more room. */
+        /* Phone in landscape: the tab bar becomes a column on the left short side and
+           the emoji bar a column on the right one, so the slide gets the full height.
+           !important: the Tailwind utilities on these elements (w-full, px-4, py-3, ...)
+           are class selectors that would otherwise win over these element selectors. */
         @media (orientation: landscape) and (max-height: 500px) {
-          header { padding-top: 4px; padding-bottom: 4px; }
-          header .tab-btn { flex-direction: row; padding: 4px 12px; min-width: 0; }
+          body { flex-direction: row !important; }
+          body > header { flex-direction: column !important; width: auto !important; height: 100% !important;
+                          padding: 8px 6px !important; padding-left: max(6px, env(safe-area-inset-left)) !important; }
+          body > header > div:first-child { flex-direction: column !important; overflow-x: hidden !important; overflow-y: auto !important; }
+          header .tab-btn { padding: 8px !important; min-width: 0 !important; }
           header .tab-btn > span:last-child { display: none; }
-          #pax-count-display { flex-direction: row; padding: 4px 10px; min-width: 0; }
-          #emoji-nav { padding-top: 2px; padding-bottom: 2px; }
-          #emoji-nav .emoji-glyph { width: 2.75rem; height: 2.75rem; font-size: 1.25rem; }
+          #pax-count-display { padding: 4px !important; min-width: 0 !important; }
+          body > main { min-width: 0; }
+          #emoji-nav { width: auto !important; height: 100% !important; padding: 6px !important;
+                       padding-right: max(6px, env(safe-area-inset-right)) !important;
+                       border-top: 0 !important; border-left: 1px solid rgba(255,255,255,0.05); }
+          #emoji-bar { flex-direction: column !important; width: auto !important; max-width: none !important;
+                       height: 100% !important; justify-content: space-evenly !important; }
+          #emoji-nav .emoji-glyph { width: 3rem !important; height: 3rem !important; font-size: 1.5rem !important; }
         }
     </style>
 <script src="/static/emoji-float.js"></script>
@@ -251,7 +262,7 @@
     <div id="speaker-content" class="md-content text-sm"></div>
   </div>
   <!-- Floating Action Button (inside relative container) -->
-  <div id="fab-current-slide" class="absolute bottom-4 right-4 z-40" style="pointer-events:auto">
+  <div id="fab-current-slide" class="hidden absolute bottom-4 right-4 z-40" style="pointer-events:auto">
     <button onclick="scrollToCurrentSlide()" class="kinetic-gradient text-on-primary font-bold py-3 px-5 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(163,166,255,0.4)] hover:scale-105 active:scale-95 transition-transform">
       <span class="text-lg">Current Slide 🎯</span>
     </button>
@@ -319,7 +330,10 @@
   import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.min.mjs';
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
-  const RENDER_SCALE = 1.5;
+  // Every slide is drawn 1440 px wide, whatever the PDF's page size: crisp on a
+  // phone screen and under a moderate pinch-zoom, at ~4.7 MB of canvas per shown
+  // slide, fine for the 10-20 slides of a talk.
+  const RENDER_WIDTH_PX = 1440;
   const RANGE_CHUNK_BYTES = 131072;
   const sessionId = (location.pathname.split('/')[1] || '').toLowerCase();
   const scroller = document.getElementById('view-slides');
@@ -474,7 +488,7 @@
   // Fills a page's <section>: the rendered canvas plus its clickable links.
   async function renderPage(doc, pageNum, section) {
     const page = await doc.getPage(pageNum);
-    const viewport = page.getViewport({ scale: RENDER_SCALE });
+    const viewport = page.getViewport({ scale: RENDER_WIDTH_PX / page.getViewport({ scale: 1 }).width });
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
@@ -570,9 +584,8 @@
       var btn = document.getElementById('btn-' + v);
       if (btn) btn.classList.toggle('active', v === name);
     });
-    var fab = document.getElementById('fab-current-slide');
-    if (fab) fab.classList.toggle('hidden', name !== 'slides');
     _activeView = name;
+    _updateFab();
     if (name === 'speaker') _renderSpeaker();
     // Back on the slides: catch up with wherever the trainer went meanwhile.
     if (name === 'slides' && _following) _showLive(false);
@@ -601,6 +614,17 @@
   var _following = true;
   var _userScrolled = false;   // a user gesture moved the slides since our last jump
 
+  // The button is only useful (and only shown) while following is paused; while
+  // following, the reader already sits on the live slide and it would cover it.
+  function _setFollowing(on) {
+    _following = on;
+    _updateFab();
+  }
+  function _updateFab() {
+    var fab = document.getElementById('fab-current-slide');
+    if (fab) fab.classList.toggle('hidden', _activeView !== 'slides' || _following);
+  }
+
   function _onLiveSlide(sc) {
     if (!sc || !sc.slug) return;
     var slug = String(sc.slug);
@@ -609,7 +633,7 @@
     var moved = deckChanged || _live.page !== page;
     _live = { slug: slug, page: page };
     // A different deck has no earlier position worth keeping: follow it.
-    if (deckChanged) _following = true;
+    if (deckChanged) _setFollowing(true);
     if (_following) _showLive(deckChanged ? true : (moved ? 'revisit' : false));
     else showSlide(slug, page, { scroll: false });
   }
@@ -622,7 +646,7 @@
 
   // "Current Slide 🎯" button: jump to the live slide and follow again.
   function scrollToCurrentSlide() {
-    _following = true;
+    _setFollowing(true);
     _showLive(true);
   }
 
@@ -640,7 +664,7 @@
       clearTimeout(settle);
       settle = setTimeout(function() {
         if (_userScrolled && _following && _live && isSlideInView(_live.slug, _live.page) === false) {
-          _following = false;
+          _setFollowing(false);
         }
       }, 150);
     }, { passive: true });
@@ -724,7 +748,12 @@
     t.id = 'throttle-toast';
     t.textContent = 'Slow down 🐢';
     t.setAttribute('role', 'status');
-    t.style.cssText = 'position:fixed;left:1rem;bottom:' + ((nav ? nav.offsetHeight : 72) + 12) + 'px;'
+    // Above the emoji bar when it runs along the bottom; near the bottom edge when it
+    // is a side column (phone in landscape).
+    var navRect = nav ? nav.getBoundingClientRect() : null;
+    var navAtBottom = navRect && navRect.width > navRect.height;
+    var bottom = navAtBottom ? window.innerHeight - navRect.top + 12 : (nav ? 12 : 84);
+    t.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:' + bottom + 'px;'
       + 'background:#271c53;color:#e9e1ff;padding:.5rem 1.1rem;border-radius:999px;font-weight:600;'
       + 'font-size:.875rem;z-index:9999;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:opacity .4s';
     document.body.appendChild(t);
