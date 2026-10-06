@@ -97,9 +97,14 @@ _HEARTBEAT_FRAME = json.dumps({"type": "heartbeat"})
 async def heartbeat_loop() -> None:
     while True:
         await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
-        targets = [(pid, ws) for pid, ws in state.participants.items() if pid not in SPECIAL_PIDS]
-        if targets:
-            await fan_out(_HEARTBEAT_FRAME, targets)
+        try:
+            targets = [(pid, ws) for pid, ws in state.participants.items() if pid not in SPECIAL_PIDS]
+            if targets:
+                await fan_out(_HEARTBEAT_FRAME, targets)
+        except Exception:
+            # Never let the loop die: phones that saw a heartbeat would then all
+            # reconnect every minute.
+            logger.exception("heartbeat fan-out failed")
 
 
 async def broadcast(message: Union[BaseModel, dict], exclude: Optional[str] = None):

@@ -357,6 +357,18 @@ class TestSessionResetAndStaleGating:
         finally:
             session_registry._entries.pop("endedsess", None)
 
+    def test_host_socket_retries_too_after_a_railway_restart(self, monkeypatch):
+        """The trainer's panel is not bounced to /host while the relay has no
+        session yet; it reconnects and lands back on the announced session."""
+        monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
+        state.session_id = None
+        state.daemon_ws = None
+        client = TestClient(app)
+        with client.websocket_connect("/ws/abc123/__host__") as ws:
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()
+        assert closed.value.code == 1013
+
     def test_unknown_session_socket_still_redirected_when_daemon_present(self, monkeypatch):
         monkeypatch.setenv("GATEWAY_RATE_LIMIT_DISABLED", "1")
         state.session_id = "newsess"

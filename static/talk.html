@@ -404,6 +404,9 @@
     deck.opened = openDeck(deck);
     container.replaceChildren();
     placeholder.style.display = '';
+    placeholder.querySelector('.text-sm').textContent = 'Loading slides…';  // undo a "can't be shown"
+    const spinner = placeholder.querySelector('.material-symbols-outlined');
+    if (spinner) spinner.style.animation = 'spin 1s linear infinite';
     downloadBtn.disabled = true;
     window._currentPdfUrl = null;
   }
@@ -585,6 +588,7 @@
     img.height = viewport.height;
     img.src = URL.createObjectURL(blob);
     await img.decode().catch(function() {});
+    if (!section.isConnected) { URL.revokeObjectURL(img.src); return; }  // the deck was switched meanwhile
     section.replaceChildren(img);  // a retried render never stacks a second slide
     const annotations = await page.getAnnotations({ intent: 'display' });
     if (annotations && annotations.length) {
@@ -932,7 +936,12 @@
 
   var _syncTimer = null;
   var _syncAttempts = 0;
-  async function _syncState() {
+  var _syncInFlight = null;  // one /state fetch at a time, however many callers
+  function _syncState() {
+    if (!_syncInFlight) _syncInFlight = _doSyncState().finally(function() { _syncInFlight = null; });
+    return _syncInFlight;
+  }
+  async function _doSyncState() {
     clearTimeout(_syncTimer);
     _ensureIdentity();  // no-op once registered; retries a register that hit a daemon blip
     try {
@@ -966,6 +975,7 @@
   var _wsEverOpened = false;
   var _lastStateAt = 0;
   var _ws = null;               // the current socket; frames from an abandoned one are ignored
+  var _reconnectTimer = null;   // one pending reconnect at most
   var _lastFrameAt = 0;
   var _heartbeatSeen = false;   // the relay sends one every 25 s; the watchdog relies on it
   var WS_SILENCE_MS = 60000;
@@ -974,6 +984,7 @@
   var _redirecting = false;
 
   function _connectWS() {
+    clearTimeout(_reconnectTimer);  // a watchdog reconnect supersedes a pending backoff one
     var proto = location.protocol === 'https:' ? 'wss' : 'ws';
     var ws = new WebSocket(proto + '://' + location.host + '/ws/' + _sessionId + '/' + encodeURIComponent(_uuid));
     _ws = ws;
@@ -1012,7 +1023,7 @@
         window.location.href = '/?error=invalid';
         return;
       }
-      setTimeout(_connectWS, _backoffDelay(_wsAttempts++));
+      _reconnectTimer = setTimeout(_connectWS, _backoffDelay(_wsAttempts++));
     };
   }
 
@@ -1033,6 +1044,8 @@
   // means a dead socket: drop it and connect afresh (the new socket resyncs state).
   function _abandonSocketIfSilent(maxSilenceMs) {
     if (!_ws || !_heartbeatSeen || Date.now() - _lastFrameAt <= maxSilenceMs) return;
+    // A socket already closing or closed is on the onclose path, which reconnects.
+    if (_ws.readyState !== WebSocket.CONNECTING && _ws.readyState !== WebSocket.OPEN) return;
     var dead = _ws;
     _ws = null;  // its late events, if any, are ignored
     try { dead.close(); } catch (e) {}

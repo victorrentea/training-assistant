@@ -424,23 +424,24 @@ async def session_websocket_endpoint(websocket: WebSocket, session_id: str, part
     # either — its read-only ended page never tries to (it is script-free).
     if not is_active_session_id(session_id):
         is_host_attempt = participant_id.strip() == "__host__"
-        if is_host_attempt:
+        if state.session_id is None and session_registry.get(session_id) is None:
+            # No session announced yet and this id never seen by this process
+            # (Railway just restarted; the daemon reconnects ~3 s later and then
+            # announces its session): it cannot be judged yet. Ask the client to
+            # retry rather than send a live audience (or the trainer's panel) away;
+            # once the session is announced the same id connects again. An id that
+            # ended (it stays in the registry) still gets a redirect below. The
+            # reply does not depend on any other session, so the anti-hijack rule
+            # holds.
+            await websocket.accept()
+            await websocket.close(code=1013)
+        elif is_host_attempt:
             await websocket.accept()
             if state.session_id:
                 await websocket.send_text(json.dumps({"type": "redirect", "url": f"/host/{state.session_id}"}))
             else:
                 await websocket.send_text(json.dumps({"type": "redirect", "url": "/host"}))
             await websocket.close(code=1000)
-        elif state.session_id is None and session_registry.get(session_id) is None:
-            # No session announced yet and this id never seen by this process
-            # (Railway just restarted; the daemon reconnects ~3 s later and then
-            # announces its session): it cannot be judged yet. Ask the client to
-            # retry rather than send a live audience to the landing page; once the
-            # session is announced the same id connects again. An id that ended
-            # (it stays in the registry) still gets the redirect below. The reply
-            # does not depend on any other session, so the anti-hijack rule holds.
-            await websocket.accept()
-            await websocket.close(code=1013)
         else:
             await websocket.accept()
             # SECURITY: never steer a stale/unknown session onto the active one —
