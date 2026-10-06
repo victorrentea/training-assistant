@@ -9,9 +9,13 @@
 // the pane goes away, uncovering the rest of the graph. The next click on a dot opens
 // a note again. Neither moves the graph: only a render (page load, window resize,
 // Reset layout) centres it, on the part of the window the pane leaves free.
+// Holding ⌘ (Ctrl off a Mac) over a dot previews its note in a popover by the cursor,
+// like Obsidian's page preview, without touching the pane: the mouse can move into
+// it to scroll, and it goes away once the mouse leaves both the dot and the popover.
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes the
-// full graph register here (connectGraph) and call toggleNote() on a click.
+// full graph register here (connectGraph), call toggleNote() on a click and
+// hoverDot() on hover.
 import {
   SimpleSlug,
   getFullSlug,
@@ -217,6 +221,11 @@ export async function selectNote(slug: SimpleSlug) {
   const body = pane.querySelector(".note-pane-body") as HTMLElement
   const elts = await loadNote(slug).catch(() => null)
   if (selected !== slug) return // another note was picked meanwhile
+  showNote(title, body, elts)
+}
+
+// Into the pane or the ⌘-hover popover, which share the same head-and-body shape.
+function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | null) {
   body.scrollTop = 0
   if (!elts || elts.length === 0) {
     title.textContent = ""
@@ -224,7 +233,7 @@ export async function selectNote(slug: SimpleSlug) {
     return
   }
   const note = elts.map((e) => e.cloneNode(true) as HTMLElement)
-  // The note's own H1 moves up into the pane's head, which stays put while the body scrolls.
+  // The note's own H1 moves up into the head, which stays put while the body scrolls.
   const h1 = note.map((e) => (e.tagName === "H1" ? e : e.querySelector("h1"))).find(Boolean)
   title.innerHTML = h1?.innerHTML ?? ""
   h1?.remove()
@@ -233,6 +242,105 @@ export async function selectNote(slug: SimpleSlug) {
     a.classList.toggle("seen", isSeen(simplifySlug(a.dataset.slug as never)))
   })
 }
+
+// ── ⌘-hover preview ──
+let mouseX = 0
+let mouseY = 0
+let modifierDown = false // ⌘, or Ctrl off a Mac
+let dot: SimpleSlug | null = null // the dot under the mouse
+let peek: HTMLElement | null = null
+let peeked: SimpleSlug | null = null // the note the popover shows
+let hideTimer = 0
+
+function ensurePeek(): HTMLElement {
+  if (peek) return peek
+  peek = document.createElement("div")
+  peek.className = "note-peek"
+  peek.innerHTML = `
+    <h2 class="note-peek-title" title="Open in the side pane"></h2>
+    <div class="note-peek-body"></div>`
+  // The mouse in the popover has not "left the dot": it stays, to be scrolled.
+  peek.addEventListener("mouseenter", () => clearTimeout(hideTimer))
+  peek.addEventListener("mouseleave", scheduleHide)
+  // Its title, or a link in it, opens that note in the pane, like a click on its dot.
+  peek.addEventListener("click", (e) => {
+    const onTitle = !!(e.target as Element | null)?.closest?.(".note-peek-title")
+    const slug = linkSlug(e.target) ?? (onTitle ? peeked : null)
+    if (slug) {
+      e.preventDefault()
+      e.stopPropagation()
+      hidePeek()
+      void selectNote(slug)
+      return
+    }
+    const img = (e.target as Element | null)?.closest?.("img")
+    if (img) {
+      e.preventDefault()
+      e.stopPropagation()
+      zoomImage(img as HTMLImageElement)
+    }
+  })
+  document.body.appendChild(peek)
+  return peek
+}
+
+// Beside the cursor, flipped to its left where it would overflow the window.
+function placePeek(el: HTMLElement) {
+  const gap = 16
+  let x = mouseX + gap
+  if (x + el.offsetWidth > innerWidth - 8) x = Math.max(8, mouseX - gap - el.offsetWidth)
+  const y = Math.max(8, Math.min(mouseY + gap, innerHeight - 8 - el.offsetHeight))
+  el.style.left = `${x}px`
+  el.style.top = `${y}px`
+}
+
+async function showPeek(slug: SimpleSlug) {
+  clearTimeout(hideTimer)
+  if (slug === peeked) return
+  peeked = slug
+  const el = ensurePeek()
+  const elts = await loadNote(slug).catch(() => null)
+  if (peeked !== slug) return // the mouse moved on meanwhile
+  showNote(
+    el.querySelector(".note-peek-title") as HTMLElement,
+    el.querySelector(".note-peek-body") as HTMLElement,
+    elts,
+  )
+  el.classList.add("open")
+  placePeek(el)
+  markSeen(slug)
+  graph?.select(selected) // repaints its dot, now seen
+}
+
+function hidePeek() {
+  clearTimeout(hideTimer)
+  peeked = null
+  peek?.classList.remove("open")
+}
+
+// A short grace, for the mouse to travel from the dot into the popover.
+function scheduleHide() {
+  clearTimeout(hideTimer)
+  hideTimer = window.setTimeout(hidePeek, 300)
+}
+
+export function hoverDot(slug: SimpleSlug | null) {
+  dot = slug
+  if (slug && modifierDown) void showPeek(slug)
+  else if (peeked) scheduleHide()
+}
+
+document.addEventListener("pointermove", (e) => {
+  mouseX = e.clientX
+  mouseY = e.clientY
+  modifierDown = e.metaKey || e.ctrlKey
+})
+// ⌘ pressed while already resting on a dot previews it too, as in Obsidian.
+document.addEventListener("keydown", (e) => {
+  modifierDown = e.metaKey || e.ctrlKey
+  if (modifierDown && dot) void showPeek(dot)
+})
+document.addEventListener("keyup", (e) => (modifierDown = e.metaKey || e.ctrlKey))
 
 // A page load (or back/forward) selects the page in the URL; the site root is a copy
 // of Home (builder._use_home_as_landing_page), so it selects the Home dot.
@@ -247,5 +355,6 @@ document.addEventListener("keydown", (e) => {
   const target = e.target as HTMLElement | null
   if (target?.closest?.("input, textarea, [contenteditable]")) return
   if (zoomed) unzoom() // a zoomed picture goes first, the note stays
+  else if (peeked) hidePeek()
   else closeNote()
 })

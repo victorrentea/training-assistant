@@ -100,10 +100,12 @@ PATCHES = [
      "  let selectedNodeId: string | null = null\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, paneCover, toggleNote, warmNote } from "./note-pane"'),
+     'import { PaneGraph, connectGraph, disconnectGraph, hoverDot, isSeen, paneCover, toggleNote, warmNote } from "./note-pane"'),
+    # ...and, with ⌘/Ctrl held, previews it in a popover by the cursor (note-pane.ts).
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
-     "    if (newHoveredId !== null) warmNote(newHoveredId as SimpleSlug)\n"),
+     "    if (newHoveredId !== null) warmNote(newHoveredId as SimpleSlug)\n"
+     "    hoverDot(newHoveredId as SimpleSlug | null)\n"),
     # A click selects the note into the pane, or closes the pane when the dot is the
     # selected one; the graph stays where it is.
     ("""            const targ = resolveRelative(fullSlug, node.id)

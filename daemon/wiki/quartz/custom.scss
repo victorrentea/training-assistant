@@ -100,11 +100,70 @@ body {
   }
 }
 
+// ⌘-hover over a dot (note-pane.ts): the note in a popover by the cursor, like
+// Obsidian's page preview. Above the pane, which it may overlap; scrolls on its own.
+.note-peek {
+  position: fixed;
+  z-index: 10000;
+  width: min(30rem, calc(100vw - 16px));
+  max-height: min(34rem, calc(100vh - 16px));
+  display: none;
+  flex-direction: column;
+  box-sizing: border-box;
+  border: 1px solid var(--lightgray);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  background: var(--light);
+  font-family: var(--bodyFont);
+  font-size: 0.9rem;
+  color: var(--darkgray);
+
+  &.open {
+    display: flex;
+  }
+
+  .note-peek-title {
+    margin: 0;
+    padding: 0.8rem 1.1rem 0.2rem;
+    font-size: 1.5rem;
+    line-height: 1.2;
+    cursor: pointer;
+
+    &:hover {
+      color: #8b5cf6;
+    }
+  }
+
+  .note-peek-body {
+    flex: 1;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 0 1.1rem 0.9rem;
+
+    article > p:first-child {
+      font-size: 1.15em;
+      line-height: 1.35;
+    }
+
+    img {
+      cursor: zoom-in;
+    }
+
+    a.internal {
+      color: var(--wiki-unseen);
+
+      &.seen {
+        color: var(--wiki-seen);
+      }
+    }
+  }
+}
+
 // A picture clicked in the note (note-pane.ts), over the whole window, as large as fits.
 .note-pane-zoom {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: 10001;
   display: flex;
   align-items: center;
   justify-content: center;
