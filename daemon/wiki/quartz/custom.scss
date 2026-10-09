@@ -196,3 +196,15 @@ body {
     border-color: #8b5cf6;
   }
 }
+
+// Badges on the graph's dots (graph-badges.ts): a picture when the note shows a slide
+// or a screenshot, and its count of external links.
+:root {
+  --wiki-badge-img: #d97706;
+  --wiki-badge-link: #2563eb;
+}
+
+:root[saved-theme="dark"] {
+  --wiki-badge-img: #fbbf24;
+  --wiki-badge-link: #60a5fa;
+}

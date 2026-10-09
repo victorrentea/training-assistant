@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+from html.parser import HTMLParser
 from pathlib import Path
 
 ASSETS_DIR = Path(__file__).parent / "quartz"
@@ -77,7 +78,8 @@ def _prepare_quartz(qdir: Path) -> None:
     shutil.copy(ASSETS_DIR / "quartz.config.ts", qdir)
     shutil.copy(ASSETS_DIR / "quartz.layout.ts", qdir)
     shutil.copy(ASSETS_DIR / "custom.scss", qdir / "quartz" / "styles" / "custom.scss")
-    shutil.copy(ASSETS_DIR / "note-pane.ts", qdir / "quartz" / "components" / "scripts" / "note-pane.ts")
+    for script in ("note-pane.ts", "graph-badges.ts"):
+        shutil.copy(ASSETS_DIR / script, qdir / "quartz" / "components" / "scripts" / script)
     patch = subprocess.run(
         [sys.executable, str(ASSETS_DIR / "patch-graph.py"),
          str(qdir / "quartz" / "components" / "scripts" / "graph.inline.ts")],
@@ -111,6 +113,57 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
         tail = "\n".join((result.stderr or result.stdout).strip().splitlines()[-15:])
         raise WikiBuildError(f"Quartz build failed:\n{tail}")
     _use_home_as_landing_page(wiki_dir, out_dir)
+    write_note_badges(out_dir)
+
+
+BADGES_FILE = "note-badges.json"
+
+
+class _NoteScan(HTMLParser):
+    """Counts pictures and external links in a page's note (<article class="popover-hint">).
+
+    Only the note: the page chrome around it (sidebar, footer) is the same on every page.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.depth = 0  # >0 while inside the note's <article>
+        self.img = False
+        self.links = 0
+
+    def handle_starttag(self, tag, attrs):
+        classes = (dict(attrs).get("class") or "").split()
+        if self.depth:
+            self.depth += tag == "article"
+            self.img = self.img or tag == "img"
+            self.links += tag == "a" and "external" in classes
+        elif tag == "article" and "popover-hint" in classes:
+            self.depth = 1
+
+    def handle_endtag(self, tag):
+        if self.depth and tag == "article":
+            self.depth -= 1
+
+
+def write_note_badges(out_dir: Path) -> None:
+    """Write {slug: {img, links}} for the graph's badges on its dots (patch-graph.py).
+
+    The graph marks the notes worth opening: one with a picture (a slide, a screenshot)
+    and how many external links it holds. Slugs are Quartz's full slugs (the path
+    without .html, as in static/contentIndex.json), which the graph simplifies like its
+    node ids. Notes with neither are left out. index.html is listed too: either it is
+    the vault's own index note (node id "/"), or a copy of Home that no dot asks for.
+    """
+    badges = {}
+    for page in sorted(out_dir.rglob("*.html")):
+        slug = page.relative_to(out_dir).with_suffix("").as_posix()
+        if slug == "404":
+            continue
+        scan = _NoteScan()
+        scan.feed(page.read_text(encoding="utf-8", errors="replace"))
+        if scan.img or scan.links:
+            badges[slug] = {"img": scan.img, "links": scan.links}
+    (out_dir / BADGES_FILE).write_text(json.dumps(badges, ensure_ascii=False), encoding="utf-8")
 
 
 def _write_fallback_index(content: Path, title: str) -> None:

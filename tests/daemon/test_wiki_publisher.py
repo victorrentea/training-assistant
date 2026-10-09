@@ -1,3 +1,4 @@
+import json
 import os
 import threading
 from pathlib import Path
@@ -241,3 +242,25 @@ def test_reconnect_retries_a_publish_that_failed_while_railway_was_down(h):
     h.publisher.invalidate()
     h.tick()
     assert h.builds == ["AI@Rabo"]
+
+
+def test_note_badges_count_pictures_and_external_links_in_the_note_only(tmp_path):
+    chrome = '<div class="sidebar"><img src="logo.png"><a class="external" href="https://x">x</a></div>'
+    (tmp_path / "Skills.html").write_text(
+        f'{chrome}<article class="popover-hint"><p><img src="./assets/slide-3.png"></p>'
+        '<a href="https://a" class="external" target="_blank">a</a>'
+        '<a href="./Hooks" class="internal">Hooks</a>'
+        '<a href="https://b" class="external" target="_blank">b</a></article>'
+    )
+    (tmp_path / "Hooks.html").write_text(f'{chrome}<article class="popover-hint"><p>plain</p></article>')
+    (tmp_path / "talks").mkdir()
+    (tmp_path / "talks" / "Demo.html").write_text(
+        '<article class="popover-hint"><a class="external" href="https://c">c</a></article>'
+    )
+    (tmp_path / "404.html").write_text('<article class="popover-hint"><img src="x.png"></article>')
+    builder.write_note_badges(tmp_path)
+    badges = json.loads((tmp_path / builder.BADGES_FILE).read_text())
+    assert badges == {
+        "Skills": {"img": True, "links": 2},
+        "talks/Demo": {"img": False, "links": 1},
+    }

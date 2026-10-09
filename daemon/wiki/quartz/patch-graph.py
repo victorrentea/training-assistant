@@ -41,11 +41,41 @@ PATCHES = [
       alpha: 1,
       active: false,
       radius: nodeRadius(n),
+      badge,
     }
 
     nodeRenderData.push(nodeRenderDatum)"""),
     ("n.label.position.set(x + width / 2, y + height / 2)",
      "n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)"),
+    # Badges on the dots (graph-badges.ts): a picture, and the count of external links,
+    # so the notes worth opening stand out. In a container of their own, above the dots:
+    # the zoom handler fades every label when zoomed out, and the badges must stay.
+    ("""  stage.addChild(nodesContainer, labelsContainer, linkContainer)
+""",
+     """  stage.addChild(nodesContainer, labelsContainer, linkContainer)
+  const badgesContainer = new Container<NoteBadge>({ zIndex: 4, isRenderGroup: true, eventMode: "none" })
+  stage.addChild(badgesContainer)
+  const noteBadges = await loadBadges(fullSlug)
+  const badgeColors: BadgeColors = {
+    img: computedStyleMap["--wiki-badge-img"],
+    link: computedStyleMap["--wiki-badge-link"],
+    halo: computedStyleMap["--light"],
+    font: computedStyleMap["--bodyFont"],
+  }
+"""),
+    ("""    labelsContainer.addChild(label)
+""",
+     """    labelsContainer.addChild(label)
+    const badge = makeBadge(noteBadges.get(nodeId), badgeColors)
+    if (badge) badgesContainer.addChild(badge)
+"""),
+    ("""        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
+      }
+""",
+     """        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
+      }
+      n.badge?.place(x + width / 2, y + height / 2, n.radius)
+"""),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
      "forceCollide<NodeData>((n) => nodeRadius(n) + 14)"),
@@ -56,6 +86,8 @@ PATCHES = [
     "--bodyFont",
     "--wiki-seen",
     "--wiki-unseen",
+    "--wiki-badge-img",
+    "--wiki-badge-link",
   ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k. A lit edge
@@ -84,6 +116,7 @@ PATCHES = [
      "  let selectedNodeId: string | null = null\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
+     'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, hoverDot, isSeen, toggleNote, warmNote } from "./note-pane"'),
     # Hovering a dot previews its note in a popover by the cursor (note-pane.ts).
     ("    hoveredNodeId = newHoveredId\n",
