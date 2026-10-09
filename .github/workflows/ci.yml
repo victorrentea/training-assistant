@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install fastapi "uvicorn[standard]" websockets python-multipart httpx \
-                      pytest pytest-anyio pytest-playwright anthropic \
+                      pytest pytest-anyio requests pytest-playwright anthropic \
                       prometheus-fastapi-instrumentator
 
       - name: Unit tests
@@ -61,7 +61,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install fastapi "uvicorn[standard]" websockets python-multipart httpx \
-                      pytest pytest-anyio pytest-playwright anthropic \
+                      pytest pytest-anyio requests pytest-playwright anthropic \
                       prometheus-fastapi-instrumentator pypdf
 
       - name: Install Playwright browsers
