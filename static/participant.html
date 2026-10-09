@@ -996,6 +996,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <span class="material-symbols-outlined">hub</span>
 <span class="text-base">Wiki</span>
 <span id="wiki-badge" class="badge-new" style="display:none"></span>
+<span id="wiki-nav-open" role="link" data-tip="Open the wiki in a new tab" onclick="event.stopPropagation(); window.open(_wikiUrl(), '_blank', 'noopener')" class="material-symbols-outlined flex-shrink-0 cursor-pointer" style="display:none;font-size:1rem;opacity:0.5">open_in_new</span>
 </a>
 <div id="gdrive-row" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all" style="display:none">
 <a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="flex items-center gap-3 flex-1 cursor-pointer">
@@ -4392,6 +4393,7 @@ function _applyWiki(updatedAt) {
   if (!_wikiUpdatedAt && onWiki) showView('activity');
   var badge = document.getElementById('wiki-badge');
   badge.style.display = _wikiUpdatedAt ? '' : 'none';
+  document.getElementById('wiki-nav-open').style.display = _wikiUpdatedAt ? '' : 'none';
   if (!_wikiUpdatedAt) return;
   badge.textContent = _formatRelativeTime(_wikiUpdatedAt);
   _startTimestampUpdates();
