@@ -8,6 +8,7 @@ session, from that session's folder only — nothing from other sessions can lea
 from __future__ import annotations
 
 import io
+import json
 import os
 import shutil
 import subprocess
@@ -93,6 +94,7 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="wiki-content-") as tmp:
         content = Path(tmp) / "content"
         shutil.copytree(wiki_dir, content, ignore=_IGNORED)
+        _write_fallback_index(content, title)
         try:
             result = subprocess.run(
                 # nice: the build must never make the trainer's machine stutter mid-demo
@@ -109,6 +111,22 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
         tail = "\n".join((result.stderr or result.stdout).strip().splitlines()[-15:])
         raise WikiBuildError(f"Quartz build failed:\n{tail}")
     _use_home_as_landing_page(wiki_dir, out_dir)
+
+
+def _write_fallback_index(content: Path, title: str) -> None:
+    """Without index.md or Home.md the site root is Quartz's 404 page.
+
+    The summarizer writes Home.md last (or not at all on a partial run), so a vault
+    published mid-run would show participants a 404. List every page instead.
+    """
+    if (content / "index.md").exists() or (content / "Home.md").exists():
+        return
+    pages = sorted(
+        (p.relative_to(content).with_suffix("").as_posix() for p in content.rglob("*.md")),
+        key=str.lower,
+    )
+    links = "\n".join(f"- [[{page}]]" for page in pages)
+    (content / "index.md").write_text(f"---\ntitle: {json.dumps(title)}\n---\n\n{links}\n", encoding="utf-8")
 
 
 def _use_home_as_landing_page(wiki_dir: Path, out_dir: Path) -> None:

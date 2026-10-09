@@ -191,6 +191,21 @@ def test_home_page_becomes_the_landing_page(tmp_path):
     assert (out / "index.html").read_text() == "home"
 
 
+def test_vault_without_home_gets_a_generated_index(tmp_path):
+    (tmp_path / "Skills.md").write_text("# Skills")
+    (tmp_path / "Hooks.md").write_text("# Hooks")
+    builder._write_fallback_index(tmp_path, "AI@JAX")
+    index = (tmp_path / "index.md").read_text()
+    assert 'title: "AI@JAX"' in index
+    assert index.index("[[Hooks]]") < index.index("[[Skills]]")
+
+
+def test_vault_with_home_gets_no_generated_index(tmp_path):
+    (tmp_path / "Home.md").write_text("# Home")
+    builder._write_fallback_index(tmp_path, "AI@JAX")
+    assert not (tmp_path / "index.md").exists()
+
+
 def test_explicit_index_is_left_alone(tmp_path):
     wiki_dir, out = tmp_path / "wiki", tmp_path / "out"
     wiki_dir.mkdir()
