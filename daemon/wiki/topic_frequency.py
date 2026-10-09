@@ -3,7 +3,7 @@
 The graph gives every dot a glow in proportion (graph-glow.ts): a staple of his
 trainings glows strongly, a topic that is new today does not glow at all.
 
-The past is every earlier session folder next to this one that holds a wiki/ vault.
+The past is every earlier AI session folder next to this one that holds a wiki/ vault.
 Note titles differ across sessions for the same idea (and some vaults are in
 Romanian), so Claude Haiku does the matching: it gets every past note (title + lead
 sentence, deduped by title) and the current notes, and returns, per current note, the
@@ -107,8 +107,18 @@ def session_date(name: str) -> date | None:
         return None
 
 
+# Only AI sessions count: a Spring or testing workshop's wiki would just make every AI
+# topic look rarer (Victor, 2026-10-10). Recognised by name: "AI@Kambi",
+# "Agentic.how", "Gray Factory @ devoxx", "Agentic Reconversion keynote @ devoxx".
+_AI_SESSION = re.compile(r"\bAI\b|(?i:agentic|factory)")
+
+
+def is_ai_session(name: str) -> bool:
+    return bool(_AI_SESSION.search(name))
+
+
 def past_sessions(session_folder: Path) -> list[Path]:
-    """Earlier sessions (by the date in the folder name) next to this one that have a wiki."""
+    """Earlier AI sessions (by the date in the folder name) next to this one that have a wiki."""
     current = session_date(session_folder.name)
     if current is None:
         return []
@@ -119,7 +129,13 @@ def past_sessions(session_folder: Path) -> list[Path]:
     past = []
     for folder in siblings:
         day = session_date(folder.name)
-        if day is not None and day < current and folder != session_folder and (folder / "wiki").is_dir():
+        if (
+            day is not None
+            and day < current
+            and folder != session_folder
+            and is_ai_session(folder.name)
+            and (folder / "wiki").is_dir()
+        ):
             past.append((day, folder.name, folder))
     return [folder for _, _, folder in sorted(past)]
 

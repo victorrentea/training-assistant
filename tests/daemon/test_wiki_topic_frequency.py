@@ -14,7 +14,7 @@ def _note(session: Path, name: str, text: str) -> None:
 
 @pytest.fixture
 def root(tmp_path, monkeypatch):
-    """Three past sessions, today's, and a later one that must not count."""
+    """Three past AI sessions, a non-AI one and a later one that must not count, and today's."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setenv("TRAINING_ASSISTANTS_SECRETS_FILE", str(tmp_path / "no-secrets.env"))
     monkeypatch.delenv("LLM_ADAPTER", raising=False)
@@ -22,7 +22,8 @@ def root(tmp_path, monkeypatch):
     _note(tmp_path / "2026-06-22+25 AI@Kambi", "Home.md", "# Home\n\n[[Skills]]\n")
     _note(tmp_path / "2026-07-01 AI@CodeLab", "skills.md", "Skills load on demand.\n")
     _note(tmp_path / "2026-07-01 AI@CodeLab", "Hooks.md", "Hooks run on agent events.\n")
-    _note(tmp_path / "2026-09-10..11 Testing@DB", "Skill-uri.md", "Un skill se încarcă la nevoie.\n")
+    _note(tmp_path / "2026-09-10..11 AI@Ezugi", "Skill-uri.md", "Un skill se încarcă la nevoie.\n")
+    _note(tmp_path / "2026-09-12 Testing@DB", "Skills.md", "Test skills.\n")
     (tmp_path / "2026-08-01 AI@NoWiki").mkdir()
     _note(tmp_path / "2026-10-20 AI@Later", "Brand new.md", "Later.\n")
     today = tmp_path / "2026-10-09 AI@JAX.London"
@@ -162,3 +163,19 @@ def test_session_date_is_the_first_day(name, day):
 def test_cost_uses_haiku_prices():
     usage = {"input": 1_000_000, "cache_write": 1_000_000, "cache_read": 1_000_000, "output": 1_000_000}
     assert tf.cost_usd(usage) == pytest.approx(0.10 + 0.125 + 0.01 + 0.50)
+
+
+@pytest.mark.parametrize(
+    "name, ai",
+    [
+        ("2026-06-22+25 AI@Kambi", True),
+        ("2026-09-18 Agentic.how", True),
+        ("2026-10-06 Gray Factory @ devoxx", True),
+        ("2026-10-07 Agentic Reconversion keynote @ devoxx", True),
+        ("2026-07-27..29 Spring+Quarkus@DB", False),
+        ("2026-09-10..11 Testing@DB", False),
+        ("2026-09-21..23 Arch@DB", False),
+    ],
+)
+def test_only_ai_sessions_count_as_past(name, ai):
+    assert tf.is_ai_session(name) is ai
