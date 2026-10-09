@@ -129,7 +129,7 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { loadGlow, makeGlow } from "./graph-glow"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
+     'import { PaneGraph, connectGraph, disconnectGraph, hidePeek, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
     # Hovering a dot fetches its note ahead of the click (note-pane.ts).
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
@@ -224,6 +224,15 @@ PATCHES = [
     })
     container.append(reset, home)
   }
+"""),
+    # Panning or scroll-zooming closes the open note: its dot moves away from the
+    # popover (sourceEvent is null only for a zoom set from code).
+    ("""        .on("zoom", ({ transform }) => {
+          currentTransform = transform
+""",
+     """        .on("zoom", ({ transform, sourceEvent }) => {
+          if (sourceEvent) hidePeek()
+          currentTransform = transform
 """),
     # Without Home, which tied every note to the middle, the notes drift past the
     # window's edges: a light pull towards the centre keeps the whole graph in view.

@@ -247,7 +247,9 @@ function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | n
   })
 }
 
-function hidePeek() {
+// Also on a pan or scroll-zoom of the graph (patch-graph.py): its dot moves away from
+// the popover, which would be left pointing at nothing.
+export function hidePeek() {
   peeked = null
   highlight(null)
   graph?.select(null)
