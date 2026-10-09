@@ -15,7 +15,7 @@ PATCHES = [
     ("return 2 + Math.sqrt(numLinks)",
      "return 3 + Math.log2(1 + numLinks)"),
     # One neutral node colour like Obsidian; the current page keeps the accent.
-    # Seen/unseen instead of Quartz's teal "visited": a note never opened in the pane
+    # Seen/unseen instead of Quartz's teal "visited": a note never opened
     # on this browser is the high-contrast grey, one already read the dim one
     # (note-pane.ts keeps the list), so what is left to read stands out.
     ("""    } else if (visited.has(d.id) || d.id.startsWith("tags/")) {
@@ -45,22 +45,7 @@ PATCHES = [
 
     nodeRenderData.push(nodeRenderDatum)"""),
     ("n.label.position.set(x + width / 2, y + height / 2)",
-     "n.label.position.set(x + centerX, y + height / 2 + n.radius + 2)"),
-    # The note pane floats over the full graph's right side (note-pane.ts), so the
-    # graph centres itself on the part left free, not on the whole window.
-    ("""  const width = graph.offsetWidth
-""",
-     """  const width = graph.offsetWidth
-  const centerX = graph.classList.contains("global-graph-container")
-    ? Math.max((width - paneCover()) / 2, width / 4)
-    : width / 2
-"""),
-    ("n.gfx.position.set(x + width / 2, y + height / 2)",
-     "n.gfx.position.set(x + centerX, y + height / 2)"),
-    ("l.gfx.moveTo(linkData.source.x! + width / 2, linkData.source.y! + height / 2)",
-     "l.gfx.moveTo(linkData.source.x! + centerX, linkData.source.y! + height / 2)"),
-    (".lineTo(linkData.target.x! + width / 2, linkData.target.y! + height / 2)",
-     ".lineTo(linkData.target.x! + centerX, linkData.target.y! + height / 2)"),
+     "n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)"),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
      "forceCollide<NodeData>((n) => nodeRadius(n) + 14)"),
@@ -74,7 +59,7 @@ PATCHES = [
   ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k. A lit edge
-    # (hovered dot, or a link hovered in the note pane) is thicker, to stand out.
+    # (hovered dot, or a link hovered in the note popover) is thicker, to stand out.
     (".stroke({ alpha: l.alpha, width: 1, color: l.color })",
      ".stroke({ alpha: l.alpha * (l.active ? 1 : 0.6), width: (l.active ? 1.6 : 0.6) / currentTransform.k, color: l.color })"),
     # Hover: the node and its links turn purple; the rest keep their look, without the
@@ -92,22 +77,21 @@ PATCHES = [
     # Labels stay fully visible at normal zoom and fade out only when zoomed far out.
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
-    # Note pane (note-pane.ts): the full graph is the wiki's main screen, with the
-    # selected note in a pane beside it. The selected dot stays purple (selectedNodeId)
-    # until another one is picked; hovering a dot fetches its note ahead of the click.
+    # Note popover (note-pane.ts): the full graph is the wiki's main screen. The dot
+    # whose note is pinned stays purple (selectedNodeId) until the popover closes.
     ("  let hoveredNodeId: string | null = null\n",
      "  let hoveredNodeId: string | null = null\n"
      "  let selectedNodeId: string | null = null\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, hoverDot, isSeen, paneCover, toggleNote, warmNote } from "./note-pane"'),
-    # ...and, with ⌘/Ctrl held, previews it in a popover by the cursor (note-pane.ts).
+     'import { PaneGraph, connectGraph, disconnectGraph, hoverDot, isSeen, toggleNote, warmNote } from "./note-pane"'),
+    # Hovering a dot previews its note in a popover by the cursor (note-pane.ts).
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
      "    if (newHoveredId !== null) warmNote(newHoveredId as SimpleSlug)\n"
      "    hoverDot(newHoveredId as SimpleSlug | null)\n"),
-    # A click selects the note into the pane, or closes the pane when the dot is the
-    # selected one; the graph stays where it is.
+    # A click pins the dot's note in the popover, or closes it on the pinned dot;
+    # the graph stays where it is.
     ("""            const targ = resolveRelative(fullSlug, node.id)
             window.spaNavigate(new URL(targ, window.location.toString()))""",
      """            toggleNote(node.id)"""),
@@ -116,7 +100,7 @@ PATCHES = [
         window.spaNavigate(new URL(targ, window.location.toString()))""",
      """      node.gfx.on("click", () => {
         toggleNote(node.simulationData.id)"""),
-    # The full graph answers the pane: which dot is selected, and which one a link in
+    # The full graph answers the popover: which dot is pinned, and which one a link in
     # the note points at. That one lights up with the selected dot and the edge
     # between them, as when hovering a dot.
     ("""  let stopAnimation = false
@@ -153,7 +137,7 @@ PATCHES = [
     app.destroy()
   }"""),
     # The full graph is always open: rendered on every page load, re-rendered to fit a
-    # resized window (not when the note pane opens or closes: it floats over the graph), and neither Esc, a click outside it nor Ctrl+G closes it.
+    # resized window, and neither Esc, a click outside it nor Ctrl+G closes it.
     ("      registerEscapeHandler(container, hideGlobalGraph)\n", ""),
     ("anyGlobalGraphOpen ? hideGlobalGraph() : renderGlobalGraph()",
      "if (!anyGlobalGraphOpen) void renderGlobalGraph()"),

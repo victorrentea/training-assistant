@@ -1,14 +1,8 @@
 @use "./base.scss";
 
 // The wiki is its graph (note-pane.ts): the full graph covers the whole window for
-// good, and the selected note floats over its right third. Together they cover the
-// whole Quartz page, which never shows, so the page itself must not scroll.
-// Opening or closing the note never resizes the graph: re-fitting it on every click
-// rearranged the dots under the reader's eyes (Victor, 2026-10-02). For the same
-// reason the note stays over the graph on a narrow window (or a zoomed-in browser),
-// instead of stacking under it; it just keeps a readable width.
-$pane-width: max(33.333vw, min(100vw, 22rem));
-
+// good, and notes are read only in a popover over it. The Quartz page underneath
+// never shows, so it must not scroll.
 html,
 body {
   overflow: hidden;
@@ -31,41 +25,46 @@ body {
   }
 }
 
-.note-pane {
+// Hovering or clicking a dot (note-pane.ts): the note in a popover by the cursor,
+// like Obsidian's page preview; scrolls on its own.
+.note-peek {
   position: fixed;
-  top: 0;
-  right: 0;
-  z-index: 9999;
-  width: $pane-width;
-  height: 100vh;
-  display: flex;
+  z-index: 10000;
+  width: min(30rem, calc(100vw - 16px));
+  max-height: min(34rem, calc(100vh - 16px));
+  display: none;
   flex-direction: column;
   box-sizing: border-box;
-  border-left: 1px solid var(--lightgray);
-  box-shadow: -6px 0 18px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--lightgray);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   background: var(--light);
   font-family: var(--bodyFont);
+  font-size: 0.9rem;
   color: var(--darkgray);
 
-  .note-pane-title {
-    margin: 0;
-    padding: 1rem 1.5rem 0.25rem;
-    font-size: 2.5rem;
-    line-height: 1.15;
+  &.open {
+    display: flex;
   }
 
-  .note-pane-body {
+  .note-peek-title {
+    margin: 0;
+    padding: 0.8rem 1.1rem 0.2rem;
+    font-size: 1.5rem;
+    line-height: 1.2;
+  }
+
+  .note-peek-body {
     flex: 1;
     overflow: auto;
     overscroll-behavior: contain;
-    padding: 0 1.5rem 1.25rem;
+    padding: 0 1.1rem 0.9rem;
 
     // The note's lead sentence (its first paragraph) is what the reader takes away;
-    // larger, it holds the eye before the bullets underneath. 1.6em, not 2em: at
-    // twice the size it outshouted the title above it (Victor, 2026-10-01).
+    // larger, it holds the eye before the bullets underneath.
     article > p:first-child {
-      font-size: 1.6em;
-      line-height: 1.3;
+      font-size: 1.15em;
+      line-height: 1.35;
     }
 
     // Always visible and three times macOS's overlay thumb, so the reader sees at a
@@ -97,57 +96,6 @@ body {
     img {
       cursor: zoom-in;
     }
-  }
-}
-
-// ⌘-hover over a dot (note-pane.ts): the note in a popover by the cursor, like
-// Obsidian's page preview. Above the pane, which it may overlap; scrolls on its own.
-.note-peek {
-  position: fixed;
-  z-index: 10000;
-  width: min(30rem, calc(100vw - 16px));
-  max-height: min(34rem, calc(100vh - 16px));
-  display: none;
-  flex-direction: column;
-  box-sizing: border-box;
-  border: 1px solid var(--lightgray);
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  background: var(--light);
-  font-family: var(--bodyFont);
-  font-size: 0.9rem;
-  color: var(--darkgray);
-
-  &.open {
-    display: flex;
-  }
-
-  .note-peek-title {
-    margin: 0;
-    padding: 0.8rem 1.1rem 0.2rem;
-    font-size: 1.5rem;
-    line-height: 1.2;
-    cursor: pointer;
-
-    &:hover {
-      color: #8b5cf6;
-    }
-  }
-
-  .note-peek-body {
-    flex: 1;
-    overflow: auto;
-    overscroll-behavior: contain;
-    padding: 0 1.1rem 0.9rem;
-
-    article > p:first-child {
-      font-size: 1.15em;
-      line-height: 1.35;
-    }
-
-    img {
-      cursor: zoom-in;
-    }
 
     a.internal {
       color: var(--wiki-unseen);
@@ -160,7 +108,7 @@ body {
 }
 
 // A picture clicked in the note (note-pane.ts), over the whole window, as large as fits.
-.note-pane-zoom {
+.note-zoom {
   position: fixed;
   inset: 0;
   z-index: 10001;
@@ -179,10 +127,6 @@ body {
     margin: 0;
     border-radius: 0;
   }
-}
-
-html.note-closed .note-pane {
-  display: none;
 }
 
 .graph > .graph-outer {
@@ -219,9 +163,9 @@ html.note-closed .note-pane {
   display: none;
 }
 
-// Seen/unseen (note-pane.ts): a note not yet opened in the pane on this browser is
-// at full contrast, one already read is dimmed - its dot in the graph and every
-// link to it in the pane alike. The dim grey still has to read as link text.
+// Seen/unseen (note-pane.ts): a note not yet opened on this browser is at full
+// contrast, one already read is dimmed - its dot in the graph and every link to it
+// in the popover alike. The dim grey still has to read as link text.
 :root {
   --wiki-unseen: #000000;
   --wiki-seen: #a3adb5;
@@ -230,14 +174,6 @@ html.note-closed .note-pane {
 :root[saved-theme="dark"] {
   --wiki-unseen: #ffffff;
   --wiki-seen: #6f7a84;
-}
-
-.note-pane-body a.internal {
-  color: var(--wiki-unseen);
-
-  &.seen {
-    color: var(--wiki-seen);
-  }
 }
 
 // Bottom-left of the full graph (patch-graph.py): back to the layout it opened with.
