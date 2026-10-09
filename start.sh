@@ -165,14 +165,19 @@ while true; do
         break
       elif [ "$DAEMON_EXIT" -eq 43 ]; then
         # daemon/lock.py ALREADY_RUNNING_EXIT_CODE: another healthy daemon holds the lock
-        # (often an orphaned start.sh whose terminal was closed). Restarting would loop forever.
-        OTHER_PID=$(python3 -c 'import json;print(json.load(open("/tmp/training_daemon.lock"))["pid"])' 2>/dev/null || echo "?")
-        OTHER_LAUNCHER=$(ps -o ppid= -p "$OTHER_PID" 2>/dev/null | tr -d ' ')
-        _log "start" "error" "🛑 another daemon is already running (pid $OTHER_PID, launcher pid ${OTHER_LAUNCHER:-?}) — not starting a second one"
-        _log "start" "error" "   to take over from here: kill ${OTHER_LAUNCHER:-$OTHER_PID} $OTHER_PID && ./start.sh"
-        afplay /System/Library/Sounds/Basso.aiff &
-        EXIT_REASON="another daemon already running (pid $OTHER_PID)"
-        exit 1
+        # (often an orphaned start.sh whose terminal was closed). Keep retrying quietly,
+        # so this launcher takes over as soon as the other one goes away.
+        if [ -z "$ALREADY_RUNNING_WARNED" ]; then
+          OTHER_PID=$(python3 -c 'import json;print(json.load(open("/tmp/training_daemon.lock"))["pid"])' 2>/dev/null || echo "?")
+          OTHER_LAUNCHER=$(ps -o ppid= -p "$OTHER_PID" 2>/dev/null | tr -d ' ')
+          _log "start" "error" "🛑 another daemon is already running (pid $OTHER_PID, launcher pid ${OTHER_LAUNCHER:-?}) — retrying every 5s until it stops"
+          _log "start" "error" "   to take over now: kill ${OTHER_LAUNCHER:-$OTHER_PID}"
+          afplay /System/Library/Sounds/Basso.aiff &
+          ALREADY_RUNNING_WARNED=1
+        fi
+        sleep 5
+        RESTART_REASON="already-running"
+        break
       else
         _log "start" "error" "🔴 daemon crashed (exit $DAEMON_EXIT)"
         RESTART_REASON="daemon-crash"
@@ -189,6 +194,8 @@ while true; do
   done
 
   stop_all_processes
+  [ "$RESTART_REASON" = "already-running" ] && continue
+  ALREADY_RUNNING_WARNED=""
   pull_and_rebuild
 
   if [ "$RESTART_REASON" = "git-update" ]; then
