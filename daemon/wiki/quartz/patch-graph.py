@@ -42,6 +42,7 @@ PATCHES = [
       active: false,
       radius: nodeRadius(n),
       badge,
+      glow,
     }
 
     nodeRenderData.push(nodeRenderDatum)"""),
@@ -62,12 +63,20 @@ PATCHES = [
     halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
   }
+  // The glow (graph-glow.ts): under the edges and the dots, as strong as the note's
+  // topic is common in the trainer's past sessions.
+  const glowContainer = new Container({ zIndex: 0, isRenderGroup: true, eventMode: "none" })
+  stage.addChild(glowContainer)
+  const noteGlow = await loadGlow(fullSlug)
+  const glowColor = computedStyleMap["--wiki-glow"]
 """),
     ("""    labelsContainer.addChild(label)
 """,
      """    labelsContainer.addChild(label)
     const badge = makeBadge(noteBadges.get(nodeId), badgeColors)
     if (badge) badgesContainer.addChild(badge)
+    const glow = makeGlow(noteGlow.get(nodeId), nodeRadius(n), glowColor)
+    if (glow) glowContainer.addChild(glow)
 """),
     ("""        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
       }
@@ -75,6 +84,7 @@ PATCHES = [
      """        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
       }
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
+      n.glow?.position.set(x + width / 2, y + height / 2)
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
@@ -88,6 +98,7 @@ PATCHES = [
     "--wiki-unseen",
     "--wiki-badge-img",
     "--wiki-badge-link",
+    "--wiki-glow",
   ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k. A lit edge
@@ -117,6 +128,7 @@ PATCHES = [
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
+     'import { loadGlow, makeGlow } from "./graph-glow"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
     # Hovering a dot fetches its note ahead of the click (note-pane.ts).
     ("    hoveredNodeId = newHoveredId\n",

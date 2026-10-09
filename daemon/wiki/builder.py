@@ -18,6 +18,8 @@ import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 
+from daemon.wiki.topic_frequency import write_note_glow
+
 ASSETS_DIR = Path(__file__).parent / "quartz"
 BUILD_TIMEOUT_S = 300
 
@@ -78,7 +80,7 @@ def _prepare_quartz(qdir: Path) -> None:
     shutil.copy(ASSETS_DIR / "quartz.config.ts", qdir)
     shutil.copy(ASSETS_DIR / "quartz.layout.ts", qdir)
     shutil.copy(ASSETS_DIR / "custom.scss", qdir / "quartz" / "styles" / "custom.scss")
-    for script in ("note-pane.ts", "graph-badges.ts"):
+    for script in ("note-pane.ts", "graph-badges.ts", "graph-glow.ts"):
         shutil.copy(ASSETS_DIR / script, qdir / "quartz" / "components" / "scripts" / script)
     patch = subprocess.run(
         [sys.executable, str(ASSETS_DIR / "patch-graph.py"),
@@ -114,6 +116,8 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
         raise WikiBuildError(f"Quartz build failed:\n{tail}")
     _use_home_as_landing_page(wiki_dir, out_dir)
     write_note_badges(out_dir)
+    # After the build, so a failed build never spends an LLM call.
+    write_note_glow(wiki_dir, out_dir)
 
 
 BADGES_FILE = "note-badges.json"

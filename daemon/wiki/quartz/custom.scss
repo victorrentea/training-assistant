@@ -218,3 +218,13 @@ body {
   --wiki-badge-img: #fbbf24;
   --wiki-badge-link: #60a5fa;
 }
+
+// Glow behind a dot (graph-glow.ts), as strong as its topic is common in past sessions.
+// Teal: apart from the purple selection and the amber/blue badges.
+:root {
+  --wiki-glow: #14b8a6;
+}
+
+:root[saved-theme="dark"] {
+  --wiki-glow: #2dd4bf;
+}

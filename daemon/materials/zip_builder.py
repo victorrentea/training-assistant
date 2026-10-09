@@ -18,7 +18,8 @@ MAX_ZIP_BYTES = 25 * 1024 * 1024
 # `ls` both render it as "Icon".
 EXCLUDED_NAMES = frozenset({"session-state.json", "attendees.md", "Icon", "Icon\r"})
 EXCLUDED_GLOBS = ("~$*", "*.zip")
-EXCLUDED_DIRS = frozenset({".obsidian"})
+# wiki-cache/: the wiki builder's LLM scores (daemon/wiki/topic_frequency.py), not material.
+EXCLUDED_DIRS = frozenset({".obsidian", "wiki-cache"})
 
 
 class ZipTooLargeError(RuntimeError):
