@@ -890,6 +890,54 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 #dup-indicator .dup-change-link { text-decoration: underline; cursor: pointer; font-weight: 600; }
 </style>
 <link rel="stylesheet" href="/static/participant-theme.css"/>
+<style>
+/* ── Phone / tablet layout (under 900px) ──
+   The sidebar is a fixed 16rem column: on a phone it left the slides about a third of
+   the screen. Here it becomes a drawer that slides in from the left, opened by the
+   ☰ in a slim top bar; the content gets the full width. */
+#mobile-bar, #nav-backdrop { display: none; }
+@media (max-width: 899px) {
+  #app-shell { flex-direction: column; height: 100vh; height: 100dvh; }
+  #mobile-bar {
+    display: flex; align-items: center; gap: .5rem; flex-shrink: 0;
+    height: 3rem; padding: 0 .5rem; z-index: 5;
+    background: var(--color-surface-container); color: var(--color-on-surface);
+    border-bottom: 1px solid var(--color-outline-variant);
+  }
+  #mobile-bar button {
+    width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 9999px; background: none; color: inherit; cursor: pointer;
+  }
+  #mobile-bar-title { flex: 1; min-width: 0; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #mobile-bar-org { color: var(--color-primary); font-weight: 500; }
+  #app-shell > aside {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
+    max-width: 85vw; overflow-y: auto;
+    transform: translateX(-100%); transition: transform .25s ease;
+    box-shadow: 0 0 30px rgba(0,0,0,.35);
+  }
+  body.nav-open #app-shell > aside { transform: none; }
+  #nav-backdrop { position: fixed; inset: 0; z-index: 45; background: rgba(0,0,0,.45); }
+  body.nav-open #nav-backdrop { display: block; }
+  #app-shell > main { flex: 1; min-height: 0; height: auto; }
+  /* Toasts pinned to the top would cover the ☰: they start under the bar instead. */
+  #access-duration-toast { top: 3.5rem; right: .5rem; left: .5rem; max-width: none; }
+  #notes-toasts { top: 3.5rem; }
+}
+/* Phones: the desktop gutters (4rem a side) would eat a third of the width. */
+@media (max-width: 599px) {
+  main .px-16, main .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  main .py-12, main .pt-12 { padding-top: 1.25rem !important; }
+  main .py-12 { padding-bottom: 1.25rem !important; }
+  #pdf-pages, #pdf-pages-buf { padding: .75rem .5rem 6rem !important; }
+  /* The floating toolbars (Notes, Summary, Wiki, Slides) move into the corner, and the
+     text starts below them instead of under them. */
+  main .absolute.top-6.right-6, main .absolute.top-4.right-6 { top: .5rem; right: .5rem; }
+  #notes-scroll, #summary-scroll { padding-top: 4.25rem !important; }
+  #floating-reactions { right: .5rem; left: .5rem; bottom: .75rem; }
+  #emoji-main-bar { gap: .25rem; padding: .3rem; max-width: 100%; }
+}
+</style>
 </head>
 <body class="bg-surface text-on-surface overflow-hidden">
 <div id="loading-screen" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--color-surface,#f5f5f5)">
@@ -921,7 +969,13 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   Connection lost &mdash; reconnecting…
   <button onclick="location.reload()" style="margin-left:.75rem;background:#fff;color:#b91c1c;border:none;border-radius:999px;padding:.35rem 1.1rem;font-weight:700;cursor:pointer">Refresh</button>
 </div>
-<div class="flex h-screen w-full">
+<div id="app-shell" class="flex h-screen w-full">
+<!-- Phones and tablets only (see the max-width: 899px styles): the ☰ opens the sidebar as a drawer. -->
+<header id="mobile-bar">
+  <button type="button" onclick="toggleNavDrawer()" aria-label="Menu"><span class="material-symbols-outlined">menu</span></button>
+  <div id="mobile-bar-title"></div>
+</header>
+<div id="nav-backdrop" onclick="toggleNavDrawer(false)"></div>
 <!-- SIDEBAR (20%) -->
 <aside class="w-64 shrink-0 h-full bg-surface-container flex flex-col px-4 pb-0 space-y-2 z-10 relative" style="width: calc(16rem * 1.03); padding-top: 1rem;">
 <!-- Header Section -->
@@ -2229,6 +2283,39 @@ var _activeSlideSlug = null;
 var _historySelectedRowEl = null;
 var _hostSlidesCurrent = null;
 var _lastHostSlidesCurrentKey = '';
+
+// ── Phone / tablet drawer (styles: max-width 899px) ──
+function toggleNavDrawer(open) {
+  if (open === undefined) open = !document.body.classList.contains('nav-open');
+  document.body.classList.toggle('nav-open', open);
+}
+// Picking a tab or a slide deck closes the drawer, so the reader lands on it; the
+// Slides row only unfolds its list of decks, so the drawer stays open for the pick.
+document.addEventListener('click', function (e) {
+  if (!document.body.classList.contains('nav-open')) return;
+  var el = e.target.closest && e.target.closest('[data-nav], .topic-item');
+  if (el && el.getAttribute('data-nav') !== 'slides') toggleNavDrawer(false);
+});
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') toggleNavDrawer(false); });
+// The top bar repeats the session title from the sidebar, which is hidden on a phone.
+(function mirrorSessionTitle() {
+  var src = document.getElementById('session-title'), org = document.getElementById('session-org');
+  var dst = document.getElementById('mobile-bar-title');
+  if (!src || !dst) return;
+  var sync = function () {
+    dst.textContent = src.textContent;
+    if (org && org.textContent) {
+      var o = document.createElement('span');
+      o.id = 'mobile-bar-org';
+      o.textContent = ' · ' + org.textContent;
+      dst.appendChild(o);
+    }
+  };
+  sync();
+  var watch = { childList: true, characterData: true, subtree: true };
+  new MutationObserver(sync).observe(src, watch);
+  if (org) new MutationObserver(sync).observe(org, watch);
+})();
 
 function setActive(name) {
   document.querySelectorAll('.nav-item').forEach(function(el) { el.classList.remove('nav-active'); });
