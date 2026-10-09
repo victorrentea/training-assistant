@@ -1,6 +1,7 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
 // opening: a tiny picture at the dot's top-right when the note shows a slide or a
-// screenshot, and at its top-left how many external links it holds (none: no badge).
+// screenshot, and at its top-left 🔗 with how many external links it holds (none: no
+// badge).
 //
 // daemon/wiki/builder.py scans the built pages into note-badges.json at the site
 // root and copies this file next to graph.inline.ts; patch-graph.py makes the graph
@@ -64,7 +65,7 @@ function picture(colors: BadgeColors): Graphics {
 function linkCount(n: number, colors: BadgeColors): Text {
   return new Text({
     eventMode: "none",
-    text: `${n}`,
+    text: `🔗${n}`,
     anchor: { x: 1, y: 1 },
     style: {
       fontSize: LINK_FONT,

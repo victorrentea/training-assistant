@@ -110,20 +110,19 @@ PATCHES = [
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
     # Note popover (note-pane.ts): the full graph is the wiki's main screen. The dot
-    # whose note is pinned stays purple (selectedNodeId) until the popover closes.
+    # whose note is open stays purple (selectedNodeId) until the popover closes.
     ("  let hoveredNodeId: string | null = null\n",
      "  let hoveredNodeId: string | null = null\n"
      "  let selectedNodeId: string | null = null\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, hoverDot, isSeen, toggleNote, warmNote } from "./note-pane"'),
-    # Hovering a dot previews its note in a popover by the cursor (note-pane.ts).
+     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
+    # Hovering a dot fetches its note ahead of the click (note-pane.ts).
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
-     "    if (newHoveredId !== null) warmNote(newHoveredId as SimpleSlug)\n"
-     "    hoverDot(newHoveredId as SimpleSlug | null)\n"),
-    # A click pins the dot's note in the popover, or closes it on the pinned dot;
+     "    if (newHoveredId !== null) warmNote(newHoveredId as SimpleSlug)\n"),
+    # A click opens the dot's note in the popover, or closes it on the open dot;
     # the graph stays where it is.
     ("""            const targ = resolveRelative(fullSlug, node.id)
             window.spaNavigate(new URL(targ, window.location.toString()))""",
@@ -133,7 +132,7 @@ PATCHES = [
         window.spaNavigate(new URL(targ, window.location.toString()))""",
      """      node.gfx.on("click", () => {
         toggleNote(node.simulationData.id)"""),
-    # The full graph answers the popover: which dot is pinned, and which one a link in
+    # The full graph answers the popover: which dot is open, and which one a link in
     # the note points at. That one lights up with the selected dot and the edge
     # between them, as when hovering a dot.
     ("""  let stopAnimation = false
@@ -199,8 +198,45 @@ PATCHES = [
       cleanupGlobalGraphs()
       void renderGlobalGraph()
     })
-    container.append(reset)
+    // Next to it, the Home pill shows or hides the Home dot: it links to every note,
+    // so it pulls the graph into a star and hides the clusters (Victor, 2026-10-09).
+    const home = document.createElement("button")
+    home.className = "graph-reset graph-home"
+    home.textContent = "⌂ Home"
+    home.classList.toggle("on", showHome())
+    home.addEventListener("click", () => {
+      setShowHome(!showHome())
+      home.classList.toggle("on", showHome())
+      cleanupGlobalGraphs()
+      void renderGlobalGraph()
+    })
+    container.append(reset, home)
   }
+"""),
+    # Without Home, which tied every note to the middle, the notes drift past the
+    # window's edges: a light pull towards the centre keeps the whole graph in view.
+    ("""    .force("collide", forceCollide<NodeData>((n) => nodeRadius(n) + 14).iterations(3))
+""",
+     """    .force("collide", forceCollide<NodeData>((n) => nodeRadius(n) + 14).iterations(3))
+  if (graph.classList.contains("global-graph-container") && !showHome()) {
+    simulation.force("x", forceX<NodeData>().strength(0.12)).force("y", forceY<NodeData>().strength(0.12))
+  }
+"""),
+    ("""  forceRadial,
+  zoomIdentity,""",
+     """  forceRadial,
+  forceX,
+  forceY,
+  zoomIdentity,"""),
+    # Home off (the default): the full graph leaves out its dot and every edge to it.
+    ("""  const links: SimpleLinkData[] = []
+  const tags: SimpleSlug[] = []
+""",
+     """  if (graph.classList.contains("global-graph-container") && !showHome()) {
+    data.delete("Home" as SimpleSlug)
+  }
+  const links: SimpleLinkData[] = []
+  const tags: SimpleSlug[] = []
 """),
 ]
 

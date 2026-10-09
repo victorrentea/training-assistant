@@ -197,6 +197,16 @@ body {
   }
 }
 
+// Right of Reset layout: shows or hides the Home dot; purple while it shows.
+.graph-home {
+  left: 8.6rem;
+
+  &.on {
+    color: #8b5cf6;
+    border-color: #8b5cf6;
+  }
+}
+
 // Badges on the graph's dots (graph-badges.ts): a picture when the note shows a slide
 // or a screenshot, and its count of external links.
 :root {

@@ -1,18 +1,16 @@
 // The wiki is its graph: the full graph fills the whole window for good, and a note
-// is only ever read in a popover by the cursor, like Obsidian's page preview. There
-// is no side pane: it covered a third of the graph (Victor, 2026-10-09).
-// Hovering a dot previews its note; the mouse can move into the popover to scroll it,
-// and it goes away once the mouse leaves both the dot and the popover. A click on the
-// dot pins it instead: its dot turns purple and the popover stays until Esc, a second
-// click on that dot, or the next dot hovered. A link inside the note swaps the popover
-// to that note in place (pinned), without ever leaving the graph; hovering one lights
-// up its dot and the edge to it from the note shown.
+// is only ever read in a popover by the cursor. There is no side pane: it covered a
+// third of the graph (Victor, 2026-10-09). Only a click on a dot opens its note -
+// popping up on hover got in the way of just looking at the graph (same day). Its dot
+// turns purple and the popover stays until Esc, a second click on that dot, or a
+// click on another dot. A link inside the note swaps the popover to that note in
+// place, without ever leaving the graph; hovering one lights up its dot and the edge
+// to it from the note shown.
 // Every note shown counts as seen on this browser: its dot and the links to it dim,
 // so what is left to read stands out.
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes the
-// full graph register here (connectGraph), call toggleNote() on a click and
-// hoverDot() on hover.
+// full graph register here (connectGraph) and call toggleNote() on a click.
 import {
   SimpleSlug,
   getFullSlug,
@@ -62,6 +60,24 @@ function markSeen(slug: SimpleSlug) {
   } catch {}
 }
 
+// Whether the full graph shows the Home dot (patch-graph.py's pill), remembered on
+// this browser. Off by default: Home links to every note and hides the clusters.
+const homeKey = "wiki-show-home"
+
+export function showHome(): boolean {
+  try {
+    return localStorage.getItem(homeKey) === "1"
+  } catch {
+    return false
+  }
+}
+
+export function setShowHome(show: boolean) {
+  try {
+    localStorage.setItem(homeKey, show ? "1" : "0")
+  } catch {}
+}
+
 function noteUrl(slug: SimpleSlug): URL {
   return new URL(resolveRelative(getFullSlug(window), slug), window.location.toString())
 }
@@ -101,7 +117,7 @@ export function warmNote(slug: SimpleSlug) {
 
 export function connectGraph(g: PaneGraph) {
   graph = g
-  g.select(pinned ? peeked : null)
+  g.select(peeked)
 }
 
 export function disconnectGraph(g: PaneGraph) {
@@ -147,11 +163,8 @@ function paragraph(text: string) {
 
 let mouseX = 0
 let mouseY = 0
-let dot: SimpleSlug | null = null // the dot under the mouse
 let peek: HTMLElement | null = null
 let peeked: SimpleSlug | null = null // the note the popover shows
-let pinned = false // clicked: stays when the mouse leaves
-let hideTimer = 0
 
 function ensurePeek(): HTMLElement {
   if (peek) return peek
@@ -161,12 +174,7 @@ function ensurePeek(): HTMLElement {
     <h2 class="note-peek-title"></h2>
     <div class="note-peek-body"></div>`
   const body = peek.querySelector(".note-peek-body") as HTMLElement
-  // The mouse in the popover has not "left the dot": it stays, to be scrolled.
-  peek.addEventListener("mouseenter", () => clearTimeout(hideTimer))
-  peek.addEventListener("mouseleave", () => {
-    highlight(null)
-    scheduleHide()
-  })
+  peek.addEventListener("mouseleave", () => highlight(null))
   // A link to another note swaps the popover to it instead of navigating away from
   // the graph. Stopped before it bubbles up to Quartz's SPA router, on window.
   body.addEventListener("click", (e) => {
@@ -174,7 +182,7 @@ function ensurePeek(): HTMLElement {
     if (slug) {
       e.preventDefault()
       e.stopPropagation()
-      void showPeek(slug, true)
+      void showPeek(slug, false)
       return
     }
     const img = (e.target as Element | null)?.closest?.("img")
@@ -199,27 +207,26 @@ function placePeek(el: HTMLElement) {
   el.style.top = `${y}px`
 }
 
-async function showPeek(slug: SimpleSlug, pin: boolean) {
-  clearTimeout(hideTimer)
+// By the cursor for a clicked dot; a link followed inside the popover keeps it where
+// it is, under the mouse.
+async function showPeek(slug: SimpleSlug, place: boolean) {
   const el = ensurePeek()
-  const wasOpen = el.classList.contains("open")
-  pinned = pin
-  graph?.select(pin ? slug : null)
+  graph?.select(slug)
   if (slug === peeked) return
   peeked = slug
   highlight(null)
   const elts = await loadNote(slug).catch(() => null)
-  if (peeked !== slug) return // the mouse moved on meanwhile
+  if (peeked !== slug) return // another note was picked meanwhile
   showNote(
     el.querySelector(".note-peek-title") as HTMLElement,
     el.querySelector(".note-peek-body") as HTMLElement,
     elts,
   )
+  const wasOpen = el.classList.contains("open")
   el.classList.add("open")
-  // A link followed inside the popover keeps it where it is, under the mouse.
-  if (!wasOpen || dot === slug) placePeek(el)
+  if (place || !wasOpen) placePeek(el)
   markSeen(slug)
-  graph?.select(pinned ? slug : null) // repaints its dot, now seen
+  graph?.select(slug) // repaints its dot, now seen
 }
 
 function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | null) {
@@ -241,29 +248,15 @@ function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | n
 }
 
 function hidePeek() {
-  clearTimeout(hideTimer)
   peeked = null
-  pinned = false
   highlight(null)
   graph?.select(null)
   peek?.classList.remove("open")
 }
 
-// A short grace, for the mouse to travel from the dot into the popover.
-function scheduleHide() {
-  clearTimeout(hideTimer)
-  if (!pinned) hideTimer = window.setTimeout(hidePeek, 300)
-}
-
-export function hoverDot(slug: SimpleSlug | null) {
-  dot = slug
-  if (slug && slug !== peeked) void showPeek(slug, false)
-  else if (!slug && peeked) scheduleHide()
-}
-
-// A click on a dot pins its note; on the pinned one, closes it.
+// A click on a dot opens its note; on the open one, closes it.
 export function toggleNote(slug: SimpleSlug) {
-  if (pinned && slug === peeked) hidePeek()
+  if (slug === peeked) hidePeek()
   else void showPeek(slug, true)
 }
 
