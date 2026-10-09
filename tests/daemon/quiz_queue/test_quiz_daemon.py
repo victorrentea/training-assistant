@@ -35,3 +35,14 @@ class TestLockFile:
         from daemon.lock import _is_process_alive
         # PID 99999999 almost certainly doesn't exist
         assert _is_process_alive(99999999) is False
+
+    def test_healthy_instance_makes_second_exit_with_already_running_code(self, tmp_path, monkeypatch):
+        # start.sh restarts on exit 0; a distinct code is what stops a second launcher looping
+        import daemon.lock as lock
+        lock_file = tmp_path / "test.lock"
+        monkeypatch.setattr(lock, "_LOCK_FILE", lock_file)
+        other = os.getppid()  # a live process that is not us
+        lock_file.write_text(json.dumps({"pid": other, "heartbeat": time.time()}))
+        with pytest.raises(SystemExit) as excinfo:
+            lock.check_and_acquire_lock()
+        assert excinfo.value.code == lock.ALREADY_RUNNING_EXIT_CODE != 0

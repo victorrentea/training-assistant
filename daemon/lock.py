@@ -12,6 +12,9 @@ from daemon import log
 _LOCK_FILE = Path("/tmp/training_daemon.lock")
 _HEARTBEAT_INTERVAL = float(os.environ.get("DAEMON_HEARTBEAT_INTERVAL_SECONDS", "1.0"))  # seconds between heartbeat writes
 _HEARTBEAT_STALE_THRESHOLD = 10.0  # seconds before heartbeat is considered stale
+# start.sh stops (instead of restarting) on this exit code: a second launcher must
+# not loop forever re-spawning a daemon that the healthy first instance turns away.
+ALREADY_RUNNING_EXIT_CODE = 43
 
 
 def read_lock() -> tuple[int | None, float | None]:
@@ -55,8 +58,8 @@ def check_and_acquire_lock() -> None:
 
     if alive and heartbeat_age <= _HEARTBEAT_STALE_THRESHOLD:
         # Previous instance is healthy — abort
-        log.info("daemon", f"Another instance is already running (PID {pid}, heartbeat {heartbeat_age:.1f}s ago). Exiting.")
-        sys.exit(0)
+        log.error("daemon", f"Another instance is already running (PID {pid}, heartbeat {heartbeat_age:.1f}s ago). Exiting.")
+        sys.exit(ALREADY_RUNNING_EXIT_CODE)
 
     if alive and heartbeat_age > _HEARTBEAT_STALE_THRESHOLD:
         # Process exists but heartbeat is stale — something is wrong
