@@ -226,11 +226,13 @@ body {
   }
 }
 
-// Under 900px the participant page's emoji bar floats over the bottom of the wiki:
-// the pills sit above it, and are thumb-sized.
+// Under 900px the participant page's emoji bar and feedback card float over the bottom
+// of the wiki: the pills move to its top-left corner (a note popover keeps that band
+// free), and are thumb-sized.
 @media (max-width: 899px) {
   .graph-reset {
-    bottom: 5.75rem;
+    top: 0.6rem;
+    bottom: auto;
     min-height: 2.5rem;
     padding: 0.45rem 0.9rem;
     font-size: 0.9rem;
