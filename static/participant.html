@@ -6224,6 +6224,34 @@ async function _catchUpNames() {
     _recomputeDuplicateIndicator();
   } catch (e) { /* the next names broadcast reconciles */ }
 }
+// A page that slept through a deploy draws the new daemon's data with its old code
+// (10 Oct 2026: a phone tab restored after the stacked emoji bar shipped showed all
+// 13 emoji in one row). Phones freeze background tabs, so the `reload` broadcast
+// never reaches them, and a restored tab may come back from the browser's cache.
+// This page's own Last-Modified is its version: ask for one byte of the same URL and
+// reload when the server's copy is newer. On load, on coming back to the tab and on
+// every reconnect; at most once per version, in case a cache keeps serving the old one.
+var _PAGE_MODIFIED_AT = Date.parse(document.lastModified);
+var _pageFreshCheckAt = 0;
+function _reloadIfPageStale() {
+  if (isNaN(_PAGE_MODIFIED_AT) || Date.now() - _pageFreshCheckAt < 15000) return;
+  _pageFreshCheckAt = Date.now();
+  fetch(location.pathname, { cache: 'no-store', headers: { Range: 'bytes=0-0' } })
+    .then(function(r) {
+      var served = r.headers.get('Last-Modified');
+      if (r.body) r.body.cancel();
+      var servedAt = served ? Date.parse(served) : NaN;
+      if (isNaN(servedAt) || servedAt <= _PAGE_MODIFIED_AT + 1000) return;
+      if (sessionStorage.getItem('_reloaded_for_page') === served) return;
+      sessionStorage.setItem('_reloaded_for_page', served);
+      location.reload();
+    })
+    .catch(function() { /* offline: the reconnect checks again */ });
+}
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') _reloadIfPageStale();
+});
+_reloadIfPageStale();
 var _wsReconnectAttempts = 0;
 // Set true once a `redirect` frame has been received / navigation is underway.
 // The gateway sends {type:redirect,url:...} immediately before close(1008) for a
@@ -6243,6 +6271,7 @@ function _connectWS() {
     var _giveup = document.getElementById('reconnect-giveup');
     if (_giveup) _giveup.style.display = 'none';
     if (!_firstConnect) {
+      _reloadIfPageStale();
       _refetchInitialState();
     } else if (_initialStateApplied) {
       _catchUpNames();
