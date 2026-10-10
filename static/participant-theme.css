@@ -78,15 +78,24 @@
 }
 
 /* ── Emoji bar surface (replaces hardcoded inline rgba styles) ── */
+/* Near-opaque: on phones the bar floats over text, which bled through the old
+   .4/.6 alpha. The blur softens the little that remains. */
 .emoji-bar-surface {
-  background: rgba(247, 249, 251, 0.4);
+  background: rgba(247, 249, 251, 0.96);
   border: 1.5px solid rgba(150, 160, 165, 0.6);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
+/* The emoji stacks open inside the bar, and the bar's backdrop-filter makes it
+   their backdrop root: a blur of their own would sample nothing, and white text
+   under them stayed readable. So they are plainly opaque. */
+.emoji-bar-surface.emoji-stack-list { background: rgb(247, 249, 251); }
 @media (prefers-color-scheme: dark) {
   .emoji-bar-surface {
-    background: rgba(18, 21, 26, 0.6);
+    background: rgba(18, 21, 26, 0.96);
     border: 1.5px solid rgba(60, 72, 77, 0.7);
   }
+  .emoji-bar-surface.emoji-stack-list { background: rgb(18, 21, 26); }
 }
 
 /* ── Prose (agenda) dark overrides ──────────────────────────────

@@ -2607,9 +2607,14 @@ components:
           type: string
           enum:
           - primary
+          - stacked
           - signal
-          - overflow
           title: Section
+        stack_of:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Stack Of
         badge:
           anyOf:
           - type: string
@@ -2621,18 +2626,16 @@ components:
       - title
       - section
       title: EmojiDef
-      description: 'One reaction the UI offers.
-
-
-        ``emoji`` is the value that is sent and validated. ``title`` is the hover
-
-        tooltip — an empty string means the glyph speaks for itself and the UI shows
-
-        no tooltip. ``section`` drives placement in the participant bar; ``badge``
-
-        is a presentation-only overlay glyph (the "can''t see your screen" button
-
-        shows 🖥️ with a small ❌, but sends plain 🖥️).'
+      description: "One reaction the UI offers.\n\n``emoji`` is the value that is\
+        \ sent and validated. ``title`` is the hover\ntooltip — an empty string means\
+        \ the glyph speaks for itself and the UI shows\nno tooltip. ``section`` drives\
+        \ placement in the participant bar:\n\n- ``primary`` — a base button on the\
+        \ bar;\n- ``stacked`` — hidden in the vertical stack that opens above its\
+        \ base\n  button (hover on desktop, press-and-hold on phones); ``stack_of``\
+        \ names\n  that base (a ``primary`` emoji). Stack order is catalog order,\
+        \ bottom→top;\n- ``signal`` — a stand-alone button after the separator.\n\n\
+        ``badge`` is a presentation-only overlay glyph (the \"can't see your screen\"\
+        \nbutton shows \U0001F5A5️ with a small ❌, but sends plain \U0001F5A5️)."
     EmojiGlobalStateResponse:
       properties:
         emoji_global_enabled:

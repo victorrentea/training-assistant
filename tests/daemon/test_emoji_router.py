@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from starlette.testclient import TestClient
 from fastapi import FastAPI
 
-from daemon.emoji.router import host_router, participant_router
+from daemon.emoji.router import EMOJI_RATE_LIMIT, host_router, participant_router
 from daemon.participant.state import participant_state
 
 
@@ -117,9 +117,9 @@ class TestEmojiReaction:
                            headers={"X-Participant-ID": "uuid1"})
         mock_externals["send_emoji"].assert_called_once_with("❤️", color_for_participant("uuid1"))
 
-    def test_rate_limit_blocks_sixteenth_per_minute(self, emoji_client):
-        """A burst of 15 is allowed; the 16th within the minute is throttled."""
-        for _ in range(15):
+    def test_rate_limit_blocks_one_past_the_limit_per_minute(self, emoji_client):
+        """A burst up to EMOJI_RATE_LIMIT is allowed; the next one within the minute is throttled."""
+        for _ in range(EMOJI_RATE_LIMIT):
             resp = emoji_client.post("/api/participant/emoji/reaction",
                                       json={"emoji": "❤️"},
                                       headers={"X-Participant-ID": "burst-uuid"})
@@ -131,7 +131,7 @@ class TestEmojiReaction:
 
     def test_rate_limit_is_per_participant(self, emoji_client):
         """One participant hitting the limit does not throttle another."""
-        for _ in range(15):
+        for _ in range(EMOJI_RATE_LIMIT):
             emoji_client.post("/api/participant/emoji/reaction",
                               json={"emoji": "❤️"},
                               headers={"X-Participant-ID": "p1"})
@@ -142,7 +142,7 @@ class TestEmojiReaction:
 
     def test_host_is_exempt_from_rate_limit(self, emoji_client):
         """Host reactions (__host__) are never throttled."""
-        for _ in range(20):
+        for _ in range(EMOJI_RATE_LIMIT + 5):
             resp = emoji_client.post("/api/participant/emoji/reaction",
                                       json={"emoji": "❤️"},
                                       headers={"X-Participant-ID": "__host__"})
@@ -153,7 +153,7 @@ class TestEmojiReaction:
         participant typing X-Participant-ID: __host__ arrives through Railway (proxy
         marker set) and is throttled like anyone else."""
         headers = {"X-Participant-ID": "__host__", "x-railway-proxied": "1"}
-        for _ in range(15):
+        for _ in range(EMOJI_RATE_LIMIT):
             r = emoji_client.post("/api/participant/emoji/reaction", json={"emoji": "❤️"}, headers=headers)
             assert r.status_code == 204
         r = emoji_client.post("/api/participant/emoji/reaction", json={"emoji": "❤️"}, headers=headers)
@@ -166,7 +166,7 @@ class TestEmojiReaction:
         limit via the old startswith("__") check — it must now be throttled like
         any other participant.
         """
-        for _ in range(15):
+        for _ in range(EMOJI_RATE_LIMIT):
             r = emoji_client.post("/api/participant/emoji/reaction",
                                   json={"emoji": "❤️"},
                                   headers={"X-Participant-ID": "__x"})
@@ -277,9 +277,9 @@ class TestEmojiGlobalCap:
     ):
         from daemon.emoji import router as emoji_router
         from daemon.emoji.rate_limit import TokenBucket
-        bucket = TokenBucket(burst=16, rate_per_s=0.001)
+        bucket = TokenBucket(burst=EMOJI_RATE_LIMIT + 1, rate_per_s=0.001)
         monkeypatch.setattr(emoji_router, "emoji_global_bucket", bucket)
-        for _ in range(15):
+        for _ in range(EMOJI_RATE_LIMIT):
             assert self._react(emoji_client, "masher").status_code == 204
         for _ in range(10):
             assert self._react(emoji_client, "masher").status_code == 429

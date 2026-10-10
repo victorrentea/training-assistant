@@ -365,6 +365,55 @@ assert('a stored tab is returned verbatim', makeLS({ 'new:current_view': 'notes'
   assert('clearView forgets the remembered tab', !('new:current_view' in store));
 }
 
+// ── Emoji bar: groups (base + stack above) and the touch hit test ───────────
+
+console.log('\nemoji bar groups');
+const emojiGroups = new Function(
+  extractFunction(PARTICIPANT_HTML, '_emojiGroups') + '; return _emojiGroups;'
+)();
+{
+  const catalog = [
+    { emoji: '❤️', title: '', section: 'primary' },
+    { emoji: '🔥', title: '', section: 'stacked', stack_of: '❤️' },
+    { emoji: '☕', title: 'break', section: 'primary' },
+    { emoji: '👏', title: 'Applause!', section: 'stacked', stack_of: '❤️' },
+    { emoji: '🖥️', title: 'screen', section: 'signal', badge: '❌' },
+    { emoji: '🍕', title: 'Pizza', section: 'stacked', stack_of: '☕' },
+    { emoji: '😢', title: 'orphan', section: 'stacked', stack_of: '🤔' },
+    { emoji: '🎉', title: 'stale', section: 'overflow' },
+  ];
+  const r = emojiGroups(catalog);
+  assert('bases render in catalog order', r.groups.map((g) => g.base.emoji).join() === '❤️,☕');
+  assert('a stack keeps catalog order (first = closest to its base)',
+    r.groups[0].stack.map((d) => d.emoji).join() === '🔥,👏');
+  assert('a stacked emoji listed after another base still lands on its own base',
+    r.groups[1].stack.map((d) => d.emoji).join() === '🍕');
+  assert('signals stay separate', r.signals.map((d) => d.emoji).join() === '🖥️');
+  assert('a stacked emoji whose base is missing is dropped, not promoted',
+    !JSON.stringify(r).includes('orphan'));
+  assert('an unknown (e.g. stale "overflow") section is ignored', !JSON.stringify(r).includes('stale'));
+}
+
+console.log('\nemoji stack touch hit test');
+const emojiStackHit = new Function(
+  extractFunction(PARTICIPANT_HTML, '_emojiStackHit') + '; return _emojiStackHit;'
+)();
+{
+  // A column of three 48px buttons, bottom one first (as the stack renders).
+  const rects = [
+    { left: 100, right: 148, top: 600, bottom: 648 },
+    { left: 100, right: 148, top: 552, bottom: 600 },
+    { left: 100, right: 148, top: 504, bottom: 552 },
+  ];
+  assert('finger on the bottom button picks it', emojiStackHit(rects, 124, 630) === 0);
+  assert('finger on the top button picks it', emojiStackHit(rects, 124, 510) === 2);
+  assert('a finger slightly beside the column still counts', emojiStackHit(rects, 165, 575) === 1);
+  assert('slightly above the top still picks the top one', emojiStackHit(rects, 124, 490) === 2);
+  assert('far to the side cancels', emojiStackHit(rects, 220, 575) === -1);
+  assert('back down on the base (below the stack) cancels', emojiStackHit(rects, 124, 680) === -1);
+  assert('no stack, no hit', emojiStackHit([], 124, 600) === -1);
+}
+
 // ── Host-machine auto session switch ────────────────────────────────────────
 // The security boundary is "can this browser reach the trainer's 127.0.0.1:1234".
 // These tests pin the client half: no traffic at all without the cookie, no

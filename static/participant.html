@@ -212,6 +212,50 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
             background: rgba(247, 249, 251, 0.8);
             backdrop-filter: blur(20px);
         }
+/* ── Reaction bar: each base emoji has a stack of related ones above it ──────
+   Mouse: hovering the base slides its stack up. Touch: press-and-hold opens it,
+   slide up, release on one to send it (see _wireEmojiGroup). */
+.emoji-group { position: relative; display: flex; }
+.emoji-base {
+  position: relative;
+  touch-action: none;              /* a press on the bar never scrolls the page */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* The hint that there is more above: a small chevron at the top edge. */
+.emoji-group.has-stack > .emoji-base::before {
+  content: '';
+  position: absolute; top: .2rem; left: 50%;
+  width: .38rem; height: .38rem; margin-left: -.19rem;
+  border-left: 2px solid currentColor; border-top: 2px solid currentColor;
+  transform: rotate(45deg);
+  color: var(--color-on-surface-variant);
+  opacity: .3;
+  transition: opacity .15s ease, transform .15s ease;
+  pointer-events: none;
+}
+.emoji-group.has-stack:hover > .emoji-base::before,
+.emoji-group.stack-open > .emoji-base::before { opacity: .75; transform: translateY(-2px) rotate(45deg); }
+.emoji-stack {
+  position: absolute; left: 50%; bottom: 100%;
+  padding-bottom: .7rem;           /* transparent bridge: the mouse crosses the gap inside the group */
+  transform: translate(-50%, .6rem);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+}
+.emoji-group.stack-open > .emoji-stack {
+  transform: translate(-50%, 0);
+  opacity: 1; visibility: visible; pointer-events: auto;
+  transition: opacity .16s ease, transform .16s ease, visibility 0s;
+}
+.emoji-stack-list {
+  display: flex; flex-direction: column-reverse; align-items: center;
+  gap: .25rem; padding: .3rem; border-radius: 9999px;
+}
+.emoji-stack .emoji-stack-btn { -webkit-user-select: none; user-select: none; transition: transform .1s ease, background-color .1s ease; }
+/* Touch: the emoji under the sliding finger grows, like an accent picker. */
+.emoji-stack .emoji-stack-btn.is-target { transform: scale(1.35); background: var(--color-surface-container); }
         /* ── Summary download control ─────────────────────────────
            Collapsed to a PDF download icon; on hover the pill expands
            leftward to reveal the .md button and the .pdf label.
@@ -904,7 +948,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 #dup-indicator.show { display: block; }
 #dup-indicator .dup-change-link { text-decoration: underline; cursor: pointer; font-weight: 600; }
 </style>
-<link rel="stylesheet" href="/static/participant-theme.css"/>
+<link rel="stylesheet" href="/static/participant-theme.css?v=681cffbc"/>
 <style>
 /* ── Phone / tablet layout (under 900px) ──
    The sidebar is a fixed 16rem column: on a phone it left the slides about a third of
@@ -968,6 +1012,10 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   #notes-scroll, #summary-scroll { padding-top: 4.25rem !important; }
   #floating-reactions { right: .5rem; left: .5rem; bottom: .75rem; }
   #emoji-main-bar { gap: .25rem; padding: .3rem; max-width: 100%; }
+  /* Five buttons (six with the bell) must fit a 360px phone. */
+  #emoji-main-bar > button, #emoji-main-bar .emoji-group > button,
+  .emoji-stack .emoji-stack-btn { width: 3rem; height: 3rem; }
+  .emoji-stack { padding-bottom: .55rem; }
   /* A stray tap target over the reaction bar's corner; the drawer footer is enough. */
   #deploy-age-line { display: none; }
   #access-duration-toast { font-size: .85rem; padding: .6rem .8rem; }
@@ -1510,28 +1558,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <!-- Floating Reaction UI (Bottom Right) — always on top across all views -->
 <div id="floating-reactions" class="absolute bottom-6 right-6 flex flex-col items-end gap-4 z-30">
 <div id="emoji-main-bar" class="flex items-center gap-2 p-2 whisper-shadow rounded-full emoji-bar-surface">
-<!-- primary reaction buttons injected before this separator by renderEmojiBar() -->
+<!-- emoji groups (a base button + the stack that opens above it) injected before this separator by renderEmojiBar() -->
 <div id="emoji-tv-sep" class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
-<!-- signal buttons injected before this separator by renderEmojiBar() -->
-<div id="emoji-plus-sep" class="w-[1px] h-6 bg-outline-variant opacity-20"></div>
-<!-- Plus button with hover overflow popup -->
-<div class="relative" id="emoji-more-wrap">
-<button
-  class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary rounded-full hover:bg-primary-dim transition-all shadow-lg shadow-primary/20"
-  onmouseenter="document.getElementById('emoji-overflow').classList.remove('opacity-0','pointer-events-none','translate-y-1')"
-  onmouseleave="scheduleHideOverflow()">
-  <span class="material-symbols-outlined">add</span>
-</button>
-<!-- Overflow leaf popup -->
-<div id="emoji-overflow"
-  class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 opacity-0 pointer-events-none translate-y-1 transition-all duration-200"
-  onmouseenter="clearTimeout(window._emojiHideTimer)"
-  onmouseleave="scheduleHideOverflow()">
-  <div id="emoji-overflow-list" class="flex flex-col-reverse items-center gap-2 p-2 whisper-shadow rounded-full emoji-bar-surface">
-    <!-- overflow reaction buttons injected by renderEmojiBar() -->
-  </div>
-</div>
-</div>
+<!-- signal buttons appended after this separator by renderEmojiBar() -->
 </div>
 </div>
 </main>
@@ -2209,7 +2238,6 @@ var _summaryRawMarkdown = '';
 var _agendaDirty = true;
 // ── Local-storage namespace ───────────────────────────────────────────────────
 var LS = {
-  EMOJI_PROMOTED: 'new:emoji_bar_promoted',
   VIEW: 'new:current_view',
   FOLLOW: 'new:slides_follow',
   SUMMARY_FOLLOW: 'new:summary_follow',
@@ -2236,7 +2264,6 @@ var LS = {
     }
     toRemove.forEach(function(k) { localStorage.removeItem(k); });
   },
-  getEmoji:  function()     { return JSON.parse(localStorage.getItem(LS.EMOJI_PROMOTED) || '[]'); },
   // Which notes chapters this reader collapsed, by line key (= hash of the line
   // text). Keyed by text, not by line number, so folds survive the trainer
   // inserting lines above them; a line that is itself edited loses its fold.
@@ -2245,7 +2272,6 @@ var LS = {
     catch (e) { return []; }
   },
   setNotesFolds: function(keys) { localStorage.setItem(LS.NOTES_FOLDS, JSON.stringify(keys.slice(-400))); },
-  setEmoji:  function(arr)  { localStorage.setItem(LS.EMOJI_PROMOTED, JSON.stringify(arr)); },
   getScroll: function(view) { return localStorage.getItem(LS.scrollKey(view)); },
   setScroll: function(view, val) { localStorage.setItem(LS.scrollKey(view), val); },
   // Whether the user was parked at the very bottom of a view's scroll. Shares the
@@ -2299,7 +2325,6 @@ var LS = {
     localStorage.setItem(LS.ACCESS_TOAST_DISMISSED, LS._todayLocalDate());
   },
   clear:     function()     {
-    localStorage.removeItem(LS.EMOJI_PROMOTED);
     localStorage.removeItem(LS.VIEW);
     localStorage.removeItem(LS.FOLLOW);
     localStorage.removeItem(LS.SUMMARY_FOLLOW);
@@ -3501,8 +3526,7 @@ function downloadTopic(url, name) {
   a.click();
   a.remove();
 }
-// Shared reaction-button styling — defined once so the catalog-driven bar and
-// the promote-to-bar path stay visually identical.
+// Shared reaction-button styling — one look for the bar, the stacks and the bell.
 var EMOJI_BTN_CLASS = 'w-[3.25rem] h-[3.25rem] flex items-center justify-center hover:bg-surface-container rounded-full text-[1.625rem] transition-transform hover:scale-110';
 // Reaction buttons use the shared tooltip component (static/tooltip.js);
 // this only sets the attribute it reads, plus an aria-label for a11y.
@@ -3510,86 +3534,236 @@ function applyEmojiTip(btn, text) {
   btn.dataset.tip = text || '';
   if (text) btn.setAttribute('aria-label', text);
 }
+// Split the catalog into bar groups — a base emoji plus the stack of related
+// ones that opens above it — and the stand-alone signals. Stack order is
+// catalog order, first entry closest to the base. Unknown sections and stacked
+// entries whose base is missing are dropped rather than guessed at.
+function _emojiGroups(catalog) {
+  var groups = [], byBase = {}, signals = [];
+  catalog.forEach(function(def) {
+    if (!def || !def.emoji) return;
+    if (def.section === 'primary') {
+      var g = { base: def, stack: [] };
+      groups.push(g);
+      byBase[def.emoji] = g;
+    } else if (def.section === 'signal') {
+      signals.push(def);
+    }
+  });
+  catalog.forEach(function(def) {
+    if (def && def.emoji && def.section === 'stacked' && byBase[def.stack_of]) byBase[def.stack_of].stack.push(def);
+  });
+  return { groups: groups, signals: signals };
+}
+// Which stacked emoji is under the finger? Forgiving on purpose: a finger is
+// wider than the column, so anywhere in a widened band over the stack counts
+// and the button nearest in height wins. Returns its index, or -1 (= release
+// there cancels). `rects` are the stack buttons' client rects.
+function _emojiStackHit(rects, x, y) {
+  if (!rects || !rects.length) return -1;
+  var SLACK_X = 24, SLACK_TOP = 24, SLACK_BOTTOM = 4;
+  var top = Infinity, bottom = -Infinity, left = Infinity, right = -Infinity;
+  rects.forEach(function(r) {
+    top = Math.min(top, r.top); bottom = Math.max(bottom, r.bottom);
+    left = Math.min(left, r.left); right = Math.max(right, r.right);
+  });
+  if (x < left - SLACK_X || x > right + SLACK_X || y < top - SLACK_TOP || y > bottom + SLACK_BOTTOM) return -1;
+  var best = -1, bestDist = Infinity;
+  rects.forEach(function(r, i) {
+    var d = Math.abs(y - (r.top + r.bottom) / 2);
+    if (d < bestDist) { bestDist = d; best = i; }
+  });
+  return best;
+}
 // Build the reaction bar from the daemon's emoji catalog (the single source of
 // truth — there is deliberately no hardcoded emoji list here). Runs once; the
 // catalog is static for the life of the page.
 function renderEmojiBar(catalog) {
   if (window._emojiBarRendered || !Array.isArray(catalog) || !catalog.length) return;
   window._emojiBarRendered = true;
+  var bar = document.getElementById('emoji-main-bar');
   var tvSep = document.getElementById('emoji-tv-sep');
-  var plusSep = document.getElementById('emoji-plus-sep');
-  var overflowList = document.getElementById('emoji-overflow-list');
-  catalog.forEach(function(def) {
+  var parts = _emojiGroups(catalog);
+  parts.groups.forEach(function(g) {
+    var group = document.createElement('div');
+    group.className = 'emoji-group' + (g.stack.length ? ' has-stack' : '');
+    var base = document.createElement('button');
+    base.type = 'button';
+    base.className = EMOJI_BTN_CLASS + ' emoji-base';
+    base.dataset.emoji = g.base.emoji;
+    base.textContent = g.base.emoji;
+    applyEmojiTip(base, g.base.title || '');
+    group.appendChild(base);
+    if (g.stack.length) {
+      // Above the base the tooltip would cover the stack: show it to the side.
+      base.dataset.tipSide = '';
+      base.setAttribute('aria-haspopup', 'true');
+      base.setAttribute('aria-expanded', 'false');
+      var stack = document.createElement('div');
+      stack.className = 'emoji-stack';
+      var list = document.createElement('div');
+      list.className = 'emoji-stack-list whisper-shadow emoji-bar-surface';
+      g.stack.forEach(function(def) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = EMOJI_BTN_CLASS + ' emoji-stack-btn';
+        b.dataset.emoji = def.emoji;
+        b.dataset.tipSide = '';
+        b.textContent = def.emoji;
+        applyEmojiTip(b, def.title || '');
+        list.appendChild(b);
+      });
+      stack.appendChild(list);
+      group.appendChild(stack);
+    }
+    bar.insertBefore(group, tvSep);
+    _wireEmojiGroup(group);
+  });
+  parts.signals.forEach(function(def) {
+    // Composite glyph (e.g. 🖥️ with a small ❌ badge); sends the plain emoji.
     var btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = EMOJI_BTN_CLASS;
     applyEmojiTip(btn, def.title || '');
-    if (def.section === 'overflow') {
-      btn.textContent = def.emoji;
-      btn.setAttribute('onclick', 'addEmojiToBar(this)');
-      overflowList.appendChild(btn);
-    } else if (def.section === 'signal') {
-      // Composite glyph (e.g. 🖥️ with a small ❌ badge); sends the plain emoji.
-      btn.dataset.emoji = def.emoji;
-      btn.setAttribute('onclick', 'sendEmoji(this.dataset.emoji, this)');
-      var wrap = document.createElement('span');
-      wrap.style.cssText = 'position:relative;display:inline-block;';
-      wrap.textContent = def.emoji;
-      if (def.badge) {
-        var badge = document.createElement('span');
-        badge.style.cssText = 'position:absolute;font-size:0.55em;top:50%;left:50%;transform:translate(-50%,-50%);line-height:1;pointer-events:none;';
-        badge.textContent = def.badge;
-        wrap.appendChild(badge);
-      }
-      btn.appendChild(wrap);
-      tvSep.parentNode.insertBefore(btn, plusSep);
-    } else { // primary
-      btn.textContent = def.emoji;
-      btn.setAttribute('onclick', 'sendEmoji(this.textContent.trim(), this)');
-      tvSep.parentNode.insertBefore(btn, tvSep);
+    btn.dataset.emoji = def.emoji;
+    btn.setAttribute('onclick', 'sendEmoji(this.dataset.emoji, this)');
+    var wrap = document.createElement('span');
+    wrap.style.cssText = 'position:relative;display:inline-block;';
+    wrap.textContent = def.emoji;
+    if (def.badge) {
+      var badge = document.createElement('span');
+      badge.style.cssText = 'position:absolute;font-size:0.55em;top:50%;left:50%;transform:translate(-50%,-50%);line-height:1;pointer-events:none;';
+      badge.textContent = def.badge;
+      wrap.appendChild(badge);
     }
+    btn.appendChild(wrap);
+    bar.appendChild(btn);
   });
-  // Re-apply the participant's previously promoted overflow emoji now that the
-  // overflow buttons exist.
-  restorePromotedEmojis();
 }
-function _promoteEmoji(emoji, title, animate, sourceBtn) {
-  var newBtn = document.createElement('button');
-  newBtn.textContent = emoji;
-  applyEmojiTip(newBtn, title);
-  newBtn.className = EMOJI_BTN_CLASS;
-  newBtn.setAttribute('onclick', 'sendEmoji(this.textContent.trim(), this)');
-  var sep = document.getElementById('emoji-tv-sep');
-  sep.parentNode.insertBefore(newBtn, sep);
-  if (animate && sourceBtn) showDesktopEmojiFloat(emoji, sourceBtn);
-  // remove from overflow
-  var overflow = document.getElementById('emoji-overflow');
-  overflow.querySelectorAll('button').forEach(function(b) {
-    if (b.textContent.trim() === emoji) b.parentNode.removeChild(b);
+// ── Emoji stacks: hover (mouse) / press-and-hold-and-slide (touch) ─────────────
+var EMOJI_HOLD_MS = 300;          // touch: holding this long opens the stack
+var EMOJI_HOVER_GRACE_MS = 220;   // mouse: crossing the gap to the stack keeps it open
+var EMOJI_TAP_SLOP_PX = 12;       // touch: a finger drifting further is not a tap
+var _openEmojiGroup = null;
+// A touch press is handled entirely by the pointer handlers below; the click the
+// browser synthesises after it must not send a second emoji.
+var _emojiClickBlockedUntil = 0;
+function _emojiClickBlocked() { return Date.now() < _emojiClickBlockedUntil; }
+function _openEmojiStack(group) {
+  if (_openEmojiGroup && _openEmojiGroup !== group) _closeEmojiStack(_openEmojiGroup);
+  clearTimeout(group._closeTimer);
+  group.classList.add('stack-open');
+  group.querySelector('.emoji-base').setAttribute('aria-expanded', 'true');
+  _openEmojiGroup = group;
+}
+function _closeEmojiStack(group) {
+  clearTimeout(group._closeTimer);
+  group.classList.remove('stack-open');
+  group.querySelector('.emoji-base').setAttribute('aria-expanded', 'false');
+  _setEmojiStackTarget(group, null);
+  if (_openEmojiGroup === group) _openEmojiGroup = null;
+}
+function _setEmojiStackTarget(group, btn) {
+  if (group._stackTarget === btn) return;
+  if (group._stackTarget) group._stackTarget.classList.remove('is-target');
+  group._stackTarget = btn || null;
+  if (btn) btn.classList.add('is-target');
+}
+function _wireEmojiGroup(group) {
+  var base = group.querySelector('.emoji-base');
+  var stackBtns = Array.prototype.slice.call(group.querySelectorAll('.emoji-stack-btn'));
+  var hasStack = stackBtns.length > 0;
+
+  // Mouse + keyboard: a click sends whatever was clicked.
+  base.addEventListener('click', function() {
+    if (_emojiClickBlocked()) return;
+    sendEmoji(base.dataset.emoji, base);
   });
-  // hide + and separator if overflow is now empty
-  if (!overflow.querySelector('button')) {
-    document.getElementById('emoji-plus-sep').style.display = 'none';
-    document.getElementById('emoji-more-wrap').style.display = 'none';
+  stackBtns.forEach(function(b) {
+    b.addEventListener('click', function() {
+      if (_emojiClickBlocked()) return;
+      sendEmoji(b.dataset.emoji, b);
+    });
+  });
+
+  if (hasStack) {
+    // Mouse: hovering the base (or the open stack — it is a child of the group)
+    // shows the stack; leaving hides it after a short grace, like a menu.
+    group.addEventListener('pointerenter', function(e) {
+      if (e.pointerType === 'mouse') _openEmojiStack(group);
+    });
+    group.addEventListener('pointerleave', function(e) {
+      if (e.pointerType !== 'mouse') return;
+      clearTimeout(group._closeTimer);
+      group._closeTimer = setTimeout(function() { _closeEmojiStack(group); }, EMOJI_HOVER_GRACE_MS);
+    });
+    // Keyboard: tabbing onto the base opens its stack so Tab can walk into it.
+    // Only for visible focus — a tap focuses the button too, and must not open it.
+    group.addEventListener('focusin', function(e) {
+      var t = e.target;
+      if (t && t.matches && t.matches(':focus-visible')) _openEmojiStack(group);
+    });
+    group.addEventListener('focusout', function(e) {
+      if (!group.contains(e.relatedTarget) && !group.matches(':hover')) _closeEmojiStack(group);
+    });
   }
-}
-function addEmojiToBar(btn) {
-  var emoji = btn.textContent.trim();
-  var promoted = LS.getEmoji();
-  if (!promoted.find(function(e) { return e.emoji === emoji; })) {
-    promoted.push({ emoji: emoji, title: btn.dataset.tip || '' });
-    LS.setEmoji(promoted);
+
+  // Touch / pen: quick tap sends the base; press-and-hold opens the stack, the
+  // finger slides up over it (the emoji under it grows), and releasing sends
+  // that one — releasing anywhere else cancels. Like an iOS accent picker.
+  function beginHold(press) {
+    if (press.holding || group._press !== press) return;
+    press.holding = true;
+    clearTimeout(press.timer);
+    _openEmojiStack(group);
+    try { if (navigator.vibrate) navigator.vibrate(8); } catch (_) {}
   }
-  _promoteEmoji(emoji, btn.dataset.tip || '', true, btn);
-  scheduleHideOverflow();
-}
-function restorePromotedEmojis() {
-  LS.getEmoji().forEach(function(e) { _promoteEmoji(e.emoji, e.title, false, null); });
-}
-function scheduleHideOverflow() {
-  window._emojiHideTimer = setTimeout(function() {
-    var el = document.getElementById('emoji-overflow');
-    el.classList.add('opacity-0', 'pointer-events-none', 'translate-y-1');
-  }, 120);
+  function endPress(e, cancel) {
+    var press = group._press;
+    if (!press || press.id !== e.pointerId) return;
+    group._press = null;
+    clearTimeout(press.timer);
+    _emojiClickBlockedUntil = Date.now() + 700;
+    if (press.holding) {
+      var target = cancel ? null : group._stackTarget;
+      if (target) sendEmoji(target.dataset.emoji, target);
+      _closeEmojiStack(group);
+    } else if (!cancel && !press.moved) {
+      sendEmoji(base.dataset.emoji, base);
+    }
+  }
+  base.addEventListener('pointerdown', function(e) {
+    if (e.pointerType === 'mouse') return;
+    e.preventDefault();  // no text selection, no focus ring, no emulated mouse events
+    try { base.setPointerCapture(e.pointerId); } catch (_) {}
+    var press = { id: e.pointerId, x: e.clientX, y: e.clientY, holding: false, moved: false, timer: null };
+    group._press = press;
+    if (hasStack) press.timer = setTimeout(function() { beginHold(press); }, EMOJI_HOLD_MS);
+  });
+  base.addEventListener('pointermove', function(e) {
+    var press = group._press;
+    if (!press || press.id !== e.pointerId) return;
+    if (!press.holding) {
+      if (press.moved) return;
+      var dx = e.clientX - press.x, dy = e.clientY - press.y;
+      if (hasStack && dy < -EMOJI_TAP_SLOP_PX && -dy > Math.abs(dx)) {
+        beginHold(press);  // a quick swipe up is a pick too: no need to wait
+      } else if (Math.abs(dx) > EMOJI_TAP_SLOP_PX || Math.abs(dy) > EMOJI_TAP_SLOP_PX) {
+        press.moved = true;  // drifted away: neither a tap nor a hold
+        clearTimeout(press.timer);
+        return;
+      }
+      if (!press.holding) return;
+    }
+    var rects = stackBtns.map(function(b) { return b.getBoundingClientRect(); });
+    var hit = _emojiStackHit(rects, e.clientX, e.clientY);
+    _setEmojiStackTarget(group, hit >= 0 ? stackBtns[hit] : null);
+  });
+  base.addEventListener('pointerup', function(e) { endPress(e, false); });
+  base.addEventListener('pointercancel', function(e) { endPress(e, true); });
+  base.addEventListener('lostpointercapture', function(e) { endPress(e, true); });
+  // A long press would otherwise pop the browser's context menu / callout.
+  group.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 }
 var VIEWS = ['activity', 'slides', 'summary', 'wiki', 'notes', 'agenda', 'report-bug', 'upload-paste', 'files', 'prompts', 'about'];
 var _suppressScrollSave = new Set();
@@ -7657,5 +7831,5 @@ function _printWhenImagesReady(w, capMs) {
   });
 })();
 </script>
-<script src="/static/tooltip.js?v=ccdaecbf"></script>
+<script src="/static/tooltip.js?v=9f4a53c1"></script>
 </body></html>

@@ -3,6 +3,9 @@
  *
  * Usage: put data-tip="some text" on any element. Nothing to initialize.
  * Add data-tip-instant to show it with no delay and no fade.
+ * Add data-tip-side to place it beside the trigger (left, or right when there
+ * is no room) instead of above — for triggers with something else above them,
+ * like the reaction bar's emoji stacks.
  *
  * Why a component: this app accumulated three tooltip systems (native title=,
  * a dead .has-tooltip CSS block, and a JS bubble wired only to the emoji bar).
@@ -83,6 +86,17 @@
     tip.textContent = text;
 
     var r = target.getBoundingClientRect();
+    if (target.hasAttribute('data-tip-side')) {
+      var sideLeft = r.left - GAP - tip.offsetWidth;                   // left of the trigger…
+      if (sideLeft < EDGE_MARGIN) sideLeft = r.right + GAP;            // …or right when there's no room
+      var sideTop = r.top + r.height / 2 - tip.offsetHeight / 2;
+      sideTop = Math.max(EDGE_MARGIN, Math.min(sideTop, window.innerHeight - tip.offsetHeight - EDGE_MARGIN));
+      tip.style.left = sideLeft + 'px';
+      tip.style.top = sideTop + 'px';
+      tip.classList.add('visible');
+      current = target;
+      return;
+    }
     var left = r.left + r.width / 2 - tip.offsetWidth / 2;
     left = Math.max(EDGE_MARGIN, Math.min(left, window.innerWidth - tip.offsetWidth - EDGE_MARGIN));
 
