@@ -170,10 +170,13 @@ function ensurePeek(): HTMLElement {
   if (peek) return peek
   peek = document.createElement("div")
   peek.className = "note-peek"
+  // The ✕ is what a phone has instead of Esc or a second click on a tiny dot.
   peek.innerHTML = `
+    <button class="note-peek-close" type="button" aria-label="Close">✕</button>
     <h2 class="note-peek-title"></h2>
     <div class="note-peek-body"></div>`
   const body = peek.querySelector(".note-peek-body") as HTMLElement
+  peek.querySelector(".note-peek-close")!.addEventListener("click", hidePeek)
   peek.addEventListener("mouseleave", () => highlight(null))
   // A link to another note swaps the popover to it instead of navigating away from
   // the graph. Stopped before it bubbles up to Quartz's SPA router, on window.

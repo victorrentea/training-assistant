@@ -923,6 +923,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   /* Toasts pinned to the top would cover the ☰: they start under the bar instead. */
   #access-duration-toast { top: 3.5rem; right: .5rem; left: .5rem; max-width: none; }
   #notes-toasts { top: 3.5rem; }
+  /* A second tab is not a thing on a phone: the wiki opens in place, nowhere else. */
+  #wiki-open-tab, #wiki-nav-open { display: none !important; }
 }
 /* Phones: the desktop gutters (4rem a side) would eat a third of the width. */
 @media (max-width: 599px) {

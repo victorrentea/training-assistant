@@ -47,9 +47,28 @@ body {
     display: flex;
   }
 
+  .note-peek-close {
+    position: absolute;
+    top: 0.45rem;
+    right: 0.45rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: var(--darkgray);
+    font-size: 1.1rem;
+    cursor: pointer;
+
+    &:hover {
+      color: #8b5cf6;
+      background: var(--lightgray);
+    }
+  }
+
   .note-peek-title {
     margin: 0;
-    padding: 0.8rem 1.1rem 0.2rem;
+    padding: 0.8rem 2.8rem 0.2rem 1.1rem;
     font-size: 1.5rem;
     line-height: 1.2;
   }
