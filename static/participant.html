@@ -429,10 +429,16 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
           transition: color 120ms ease, opacity 120ms ease, transform 120ms ease;
         }
         .side-icon .material-symbols-outlined { font-size: 1.1rem; }
-        .side-icon:hover, .side-icon:focus-visible, a:focus-visible > .side-icon {
+        /* A row that is itself a new-tab link (Google Drive, Feedback form) lights
+           its ↗ as soon as the row is hovered: the whole row is that one action.
+           Not the Wiki row — clicking it opens the wiki in place, its ↗ is a
+           separate button and lights only under the pointer. */
+        .side-icon:hover, .side-icon:focus-visible, a:focus-visible > .side-icon,
+        a[target="_blank"]:hover > .side-icon {
           color: #ca8a04; opacity: 1; transform: scale(1.15); outline: none;
         }
-        html.dark .side-icon:hover, html.dark .side-icon:focus-visible, html.dark a:focus-visible > .side-icon {
+        html.dark .side-icon:hover, html.dark .side-icon:focus-visible, html.dark a:focus-visible > .side-icon,
+        html.dark a[target="_blank"]:hover > .side-icon {
           color: #facc15;
         }
         /* A one-shot jump: the glyph alone, never a pressed look. */
@@ -1131,8 +1137,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 </a>
 <a data-nav="wiki" onclick="showView('wiki')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">hub</span>
-<span class="text-base">Wiki</span>
-<span id="wiki-nav-open" role="link" tabindex="0" data-tip="Open the wiki in a new tab" aria-label="Open the wiki in a new tab" onclick="event.stopPropagation(); window.open(_wikiUrl(), '_blank', 'noopener')" onkeydown="if(event.key==='Enter'){event.stopPropagation();this.click();}" class="side-icon material-symbols-outlined flex-shrink-0" style="display:none;margin-left:-0.5rem">open_in_new</span>
+<span class="text-base flex-1">Wiki</span>
+<span id="wiki-nav-open" role="link" tabindex="0" data-tip="Open the wiki in a new tab" aria-label="Open the wiki in a new tab" onclick="event.stopPropagation(); window.open(_wikiUrl(), '_blank', 'noopener')" onkeydown="if(event.key==='Enter'){event.stopPropagation();this.click();}" class="side-icon material-symbols-outlined flex-shrink-0" style="display:none">open_in_new</span>
 <span id="wiki-badge" class="badge-new" style="display:none"></span>
 </a>
 <div id="gdrive-row" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all" style="display:none">

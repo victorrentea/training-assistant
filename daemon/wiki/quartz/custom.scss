@@ -94,13 +94,17 @@ body {
       width: 18px;
     }
 
+    // No track: on the dark popover a lit gutter read as a second, empty bar
+    // beside the thumb. The thumb alone shows the length; a transparent border
+    // clipped off its background keeps it slim inside the 18px hit area.
     &::-webkit-scrollbar-track {
-      background: var(--lightgray);
+      background: transparent;
     }
 
     &::-webkit-scrollbar-thumb {
       background: var(--gray);
-      border: 3px solid var(--lightgray);
+      background-clip: padding-box;
+      border: 4px solid transparent;
       border-radius: 9px;
 
       &:hover {
@@ -109,7 +113,7 @@ body {
     }
 
     @supports not selector(::-webkit-scrollbar) {
-      scrollbar-color: var(--gray) var(--lightgray);
+      scrollbar-color: var(--gray) transparent;
     }
 
     img {
