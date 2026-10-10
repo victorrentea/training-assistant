@@ -184,7 +184,7 @@ body{visibility:hidden}
 @keyframes follow-blink-red{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:#e53935;background-color:#ffebee}}
 .follow-blink-red{animation:follow-blink-red 180ms ease-in-out 3}
 @keyframes slides-nav-pulse{0%,100%{color:var(--color-on-surface-variant,#5e6b70)}50%{color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
-.slides-nav-blink,.summary-nav-blink{animation:slides-nav-pulse 1.2s ease-in-out infinite}
+.slides-nav-blink,.summary-nav-blink,.wiki-nav-blink{animation:slides-nav-pulse 1.2s ease-in-out infinite}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70);font-weight:600}
 /* Tighter than py-2: the menu keeps growing (Wiki), and on a laptop screen it crowded the sidebar. */
 aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
@@ -375,25 +375,41 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
         }
         .break-reminder-gotit:hover { opacity: 1; }
 
-        /* Download-zip button in the Google Drive row. It sits next to the purely
-           decorative open_in_new glyph, so without a permanent background it reads
-           as ornament and nobody discovers it. The resting background says "this
-           is a control"; the hover confirms it. */
-        .gdrive-zip-btn {
-          background: var(--color-surface-container-highest, #e2e8ee);
-          border: none;
-          border-radius: 999px;
-          width: 1.75rem;
-          height: 1.75rem;
-          padding: 0;
-          color: inherit;
-          opacity: 0.75;
-          transition: opacity 120ms ease, background-color 120ms ease, transform 120ms ease;
+        /* Small action icons (sidebar ↗ / ⬇, Victor's quick links, the 🎯-style jump
+           buttons): a plain glyph at rest, popping out in yellow on hover or keyboard
+           focus — one rule for all of them. */
+        .side-icon {
+          display: inline-flex; align-items: center; justify-content: center;
+          background: none; border: none; padding: 0; color: inherit; cursor: pointer;
+          font-size: 1rem; opacity: .5; line-height: 1;
+          transition: color 120ms ease, opacity 120ms ease, transform 120ms ease;
         }
-        .gdrive-zip-btn:hover {
-          opacity: 1;
-          background: var(--color-primary-container, #d6e3ff);
-          transform: scale(1.08);
+        .side-icon .material-symbols-outlined { font-size: 1.1rem; }
+        .side-icon:hover, .side-icon:focus-visible, a:focus-visible > .side-icon {
+          color: #ca8a04; opacity: 1; transform: scale(1.15); outline: none;
+        }
+        html.dark .side-icon:hover, html.dark .side-icon:focus-visible, html.dark a:focus-visible > .side-icon {
+          color: #facc15;
+        }
+        /* A one-shot jump: the glyph alone, never a pressed look. */
+        .jump-btn { width: 1.75rem; height: 1.75rem; opacity: .7; }
+        .jump-btn .material-symbols-outlined { font-size: 1.2rem; }
+        /* Follow: a toggle pill — outlined when off, filled in the accent colour when on,
+           so it can't be mistaken for the jump button beside it. */
+        .follow-pill {
+          display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap; cursor: pointer;
+          font-size: .75rem; font-weight: 600; line-height: 1;
+          padding: .3rem .6rem; border-radius: 999px;
+          border: 1.5px solid var(--color-primary, #4555ba); color: var(--color-primary, #4555ba);
+          background: transparent; transition: background-color 120ms ease, color 120ms ease;
+        }
+        .follow-pill input { width: .8rem; height: .8rem; margin: 0; accent-color: var(--color-primary, #4555ba); outline: none; box-shadow: none; }
+        .follow-pill:has(input:checked) { background: var(--color-primary, #4555ba); color: var(--color-on-primary, #fff); }
+        .follow-pill:has(input:checked) input { accent-color: var(--color-on-primary, #fff); }
+        @media (max-width: 899px) {
+          /* Thumb-sized targets on phones and tablets. */
+          .jump-btn, .follow-pill { min-height: 40px; }
+          .jump-btn { min-width: 40px; }
         }
 
         /* Access duration toast */
@@ -681,10 +697,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .poll-options { display: flex; flex-direction: column; gap: 0.75rem; }
 /* Sidebar "Victor" row: quick contact icons */
 /* Monochrome, in the row's own text colour: present, not shouting. */
-.about-quick-btn { width: 1.6rem; height: 1.6rem; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
-  background: transparent; color: inherit; opacity: .55; border: none; padding: 0; cursor: pointer; transition: opacity .15s, background .15s; }
+/* Hover/focus: the shared yellow pop-out of .side-icon. */
+.about-quick-btn { width: 1.6rem; height: 1.6rem; }
 .about-quick-btn .material-symbols-outlined { font-size: 1.05rem; }
-.about-quick-btn:hover { opacity: 1; background: var(--color-surface-container-high, rgba(0,0,0,.08)); }
 /* AI-share slider activity */
 .aishare-card {
   --aishare-accent: var(--color-primary, #4555ba);
@@ -924,7 +939,10 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   #access-duration-toast { top: 3.5rem; right: .5rem; left: .5rem; max-width: none; }
   #notes-toasts { top: 3.5rem; }
   /* A second tab is not a thing on a phone: the wiki opens in place, nowhere else. */
-  #wiki-open-tab, #wiki-nav-open { display: none !important; }
+  #wiki-nav-open { display: none !important; }
+  /* The wiki's Follow sits in the top bar here (_placeWikiFollowControls): over the
+     wiki it covered the ✕ of a note popping up at the top of the screen. */
+  #mobile-bar #wiki-follow-controls { padding: 0 !important; background: none; border: none; box-shadow: none; backdrop-filter: none; }
 }
 /* Phones: the desktop gutters (4rem a side) would eat a third of the width. */
 @media (max-width: 599px) {
@@ -1003,9 +1021,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 </span>
 <span class="ml-auto mr-1 inline-flex items-center gap-1.5">
-<button onclick="event.stopPropagation(); _jumpToHostSlide()" data-tip="Jump to host slide" class="inline-flex items-center rounded-md px-2 py-1 cursor-pointer transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);font-size:0.95rem;line-height:1;">🎯</button>
-<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer rounded-md px-2 py-1 transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);">
-<input id="slides-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onFollowChange(this.checked)" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
+<button type="button" onclick="event.stopPropagation(); _jumpToHostSlide()" data-tip="Jump to host slide" aria-label="Jump to host slide" class="side-icon jump-btn"><span class="material-symbols-outlined">my_location</span></button>
+<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="follow-pill">
+<input id="slides-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onFollowChange(this.checked)" />
 <span>Follow</span>
 </label>
 </span>
@@ -1051,17 +1069,17 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <a data-nav="wiki" onclick="showView('wiki')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
 <span class="material-symbols-outlined">hub</span>
 <span class="text-base">Wiki</span>
+<span id="wiki-nav-open" role="link" tabindex="0" data-tip="Open the wiki in a new tab" aria-label="Open the wiki in a new tab" onclick="event.stopPropagation(); window.open(_wikiUrl(), '_blank', 'noopener')" onkeydown="if(event.key==='Enter'){event.stopPropagation();this.click();}" class="side-icon material-symbols-outlined flex-shrink-0" style="display:none;margin-left:-0.5rem">open_in_new</span>
 <span id="wiki-badge" class="badge-new" style="display:none"></span>
-<span id="wiki-nav-open" role="link" data-tip="Open the wiki in a new tab" onclick="event.stopPropagation(); window.open(_wikiUrl(), '_blank', 'noopener')" class="material-symbols-outlined flex-shrink-0 cursor-pointer" style="display:none;font-size:1rem;opacity:0.5">open_in_new</span>
 </a>
 <div id="gdrive-row" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all" style="display:none">
 <a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="flex items-center gap-3 flex-1 cursor-pointer">
 <span class="material-symbols-outlined flex-shrink-0">cloud</span>
 <span class="text-base flex-1">Google Drive</span>
-<span class="material-symbols-outlined flex-shrink-0" style="font-size:1rem;opacity:0.5">open_in_new</span>
+<span class="side-icon material-symbols-outlined flex-shrink-0">open_in_new</span>
 </a>
-<button id="gdrive-zip-btn" onclick="downloadMaterialsZip()" data-tip="Download everything as .zip" class="gdrive-zip-btn flex-shrink-0 cursor-pointer flex items-center justify-center">
-<span id="gdrive-zip-icon" class="material-symbols-outlined" style="font-size:1.1rem">download</span>
+<button id="gdrive-zip-btn" onclick="downloadMaterialsZip()" data-tip="Download everything as .zip" aria-label="Download everything as .zip" class="side-icon flex-shrink-0">
+<span id="gdrive-zip-icon" class="material-symbols-outlined">download</span>
 </button>
 </div>
 <a data-nav="files" onclick="showView('files')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
@@ -1087,14 +1105,14 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <span class="material-symbols-outlined">waving_hand</span>
 <span class="text-base">Victor</span>
 <span class="about-quick flex items-center">
-  <button type="button" class="about-quick-btn" data-tip="Email Victor" aria-label="Email Victor"
+  <button type="button" class="about-quick-btn side-icon" data-tip="Email Victor" aria-label="Email Victor"
           onclick="event.stopPropagation();emailVictor(event)"><span class="material-symbols-outlined">alternate_email</span></button>
-  <a class="about-quick-btn" href="https://victorrentea.ro" target="_blank" rel="noopener"
+  <a class="about-quick-btn side-icon" href="https://victorrentea.ro" target="_blank" rel="noopener"
      data-tip="victorrentea.ro" aria-label="Website" onclick="event.stopPropagation()"><span class="material-symbols-outlined">public</span></a>
-  <a class="about-quick-btn" href="https://www.linkedin.com/in/victor-rentea-trainer/" target="_blank" rel="noopener"
+  <a class="about-quick-btn side-icon" href="https://www.linkedin.com/in/victor-rentea-trainer/" target="_blank" rel="noopener"
      data-tip="LinkedIn" aria-label="LinkedIn" onclick="event.stopPropagation()">
     <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/></svg></a>
-  <a class="about-quick-btn" href="https://www.youtube.com/playlist?list=PLggcOULvfLL_MfFS_O0MKQ5W_6oWWbIw5" target="_blank" rel="noopener"
+  <a class="about-quick-btn side-icon" href="https://www.youtube.com/playlist?list=PLggcOULvfLL_MfFS_O0MKQ5W_6oWWbIw5" target="_blank" rel="noopener"
      data-tip="Victor's talks on YouTube" aria-label="YouTube" onclick="event.stopPropagation()">
     <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17" aria-hidden="true"><path d="M23.5 6.2a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.51A3.02 3.02 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.8 3.02 3.02 0 0 0 2.12 2.14c1.88.51 9.38.51 9.38.51s7.5 0 9.38-.51a3.02 3.02 0 0 0 2.12-2.14A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.8zM9.55 15.57V8.43L15.82 12l-6.27 3.57z"/></svg></a>
 </span>
@@ -1103,7 +1121,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <a id="feedback-nav" href="#" target="_blank" rel="noopener" class="flex items-center gap-3 flex-1 cursor-pointer">
 <span class="material-symbols-outlined flex-shrink-0">rate_review</span>
 <span class="text-base flex-1">Feedback form</span>
-<span class="material-symbols-outlined flex-shrink-0" style="font-size:1rem;opacity:0.5">open_in_new</span>
+<span class="side-icon material-symbols-outlined flex-shrink-0">open_in_new</span>
 </a>
 </div>
 </nav>
@@ -1230,9 +1248,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
     <!-- Follow the trainer's reading position (never shown on the host machine,
          which is the one being followed). -->
     <span id="summary-follow-controls" class="inline-flex items-center gap-1.5 mr-2 ml-1" style="display:none">
-      <button onclick="_jumpToHostSummary()" data-tip="Jump to where Victor is reading" class="inline-flex items-center rounded-md px-2 py-1 cursor-pointer transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);font-size:0.95rem;line-height:1;">🎯</button>
-      <label for="summary-follow-checkbox" class="inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap cursor-pointer rounded-md px-2 py-1 transition-colors hover-green" style="border:1px dotted var(--color-on-surface,black);">
-        <input id="summary-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onSummaryFollowChange(this.checked)" style="width:0.8rem;height:0.8rem;accent-color:var(--color-primary,#4555ba);outline:none;box-shadow:none;" />
+      <button type="button" onclick="_jumpToHostSummary()" data-tip="Jump to where Victor is reading" aria-label="Jump to where Victor is reading" class="side-icon jump-btn"><span class="material-symbols-outlined">my_location</span></button>
+      <label for="summary-follow-checkbox" class="follow-pill">
+        <input id="summary-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onSummaryFollowChange(this.checked)" />
         <span>Follow</span>
       </label>
     </span>
@@ -1260,10 +1278,17 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 </div>
 <!-- Wiki View: the session's wiki/ vault, built with Quartz and served by Railway -->
 <div id="wiki-view" style="display:none" class="relative h-full flex flex-col">
-  <a id="wiki-open-tab" href="#" target="_blank" rel="noopener" data-tip="Open the wiki in a new tab"
-     class="absolute top-4 right-6 z-20 flex items-center justify-center w-10 h-10 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10 text-on-surface-variant">
-    <span class="material-symbols-outlined" style="font-size:1.25rem">open_in_new</span>
-  </a>
+  <div id="wiki-toolbar" class="absolute top-6 right-6 z-20 flex items-center gap-2">
+    <!-- Follow the note the trainer has open (never shown on the host machine,
+         which is the one being followed). Moved into the top bar under 900px. The
+         sidebar's Wiki row has the open-in-new-tab link. -->
+    <span id="wiki-follow-controls" class="flex items-center rounded-full glass whisper-shadow border border-outline-variant border-opacity-10" style="display:none;padding:.4rem">
+      <label for="wiki-follow-checkbox" data-tip="Open the note Victor has open" class="follow-pill">
+        <input id="wiki-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onWikiFollowChange(this.checked)" />
+        <span>Follow</span>
+      </label>
+    </span>
+  </div>
   <iframe id="wiki-frame" aria-label="Session wiki" class="flex-grow w-full border-0" style="background:transparent"></iframe>
 </div>
 <!-- Files View -->
@@ -2173,6 +2198,7 @@ var LS = {
   VIEW: 'new:current_view',
   FOLLOW: 'new:slides_follow',
   SUMMARY_FOLLOW: 'new:summary_follow',
+  WIKI_FOLLOW: 'new:wiki_follow',
   ACTIVE_SLIDE: 'new:active_slide_slug',
   NOTES_UNREAD: 'new:notes_unread',
   NOTES_FOLDS: 'new:notes_folds',
@@ -2226,6 +2252,9 @@ var LS = {
   // the participant explicitly unticked it.
   getSummaryFollow: function()    { var v = localStorage.getItem(LS.SUMMARY_FOLLOW); return v === null ? true : v === '1'; },
   setSummaryFollow: function(val) { localStorage.setItem(LS.SUMMARY_FOLLOW, val ? '1' : '0'); },
+  // And for the wiki: open the note the trainer has open, unless explicitly unticked.
+  getWikiFollow: function()    { var v = localStorage.getItem(LS.WIKI_FOLLOW); return v === null ? true : v === '1'; },
+  setWikiFollow: function(val) { localStorage.setItem(LS.WIKI_FOLLOW, val ? '1' : '0'); },
   getActiveSlide: function()     { return localStorage.getItem(LS.ACTIVE_SLIDE); },
   setActiveSlide: function(slug) { localStorage.setItem(LS.ACTIVE_SLIDE, slug); },
   isNotesUnread:   function()  { return localStorage.getItem(LS.NOTES_UNREAD) === 'true'; },
@@ -2259,6 +2288,7 @@ var LS = {
     localStorage.removeItem(LS.VIEW);
     localStorage.removeItem(LS.FOLLOW);
     localStorage.removeItem(LS.SUMMARY_FOLLOW);
+    localStorage.removeItem(LS.WIKI_FOLLOW);
     localStorage.removeItem(LS.NOTES_UNREAD);
     localStorage.removeItem(LS.SUMMARY_UNREAD);
     localStorage.removeItem(LS.ACTIVITY_SEEN);
@@ -3577,6 +3607,7 @@ async function selectTopic(el, event, slide, targetPageOverride) {
   VIEWS.forEach(function(v) {
     document.getElementById(v + '-view').style.display = v === 'slides' ? '' : 'none';
   });
+  _placeWikiFollowControls();
   _setTabUrl('slides');
   if (slide && slide.url) {
     if (slide.slug && _sessionId) {
@@ -3761,12 +3792,16 @@ function showView(name) {
     var el = document.getElementById(v + '-view');
     el.style.display = v === name ? '' : 'none';
   });
+  _placeWikiFollowControls(); // in the phone's top bar only while the Wiki tab is open
   // After the view is visible: Quartz measures its sidebar on load, and inside a
   // display:none iframe everything measures 0 (the Explorer came up empty).
   if (name === 'wiki') {
+    var wikiNavEl = document.querySelector('[data-nav="wiki"]');
+    if (wikiNavEl) wikiNavEl.classList.remove('wiki-nav-blink');
     loadWiki();
     if (_wikiUpdatedAt) LS.setWikiSeen(_wikiUpdatedAt);
     _applyWikiBadgeUnread();
+    _applyHostWikiFollow();
   }
   var scrollEl = document.getElementById(name + '-scroll') || document.getElementById(name + '-view');
   var saved = LS.getScroll(name);
@@ -4477,7 +4512,6 @@ function _wikiUrl() { return '/' + _sessionId + '/wiki-site/'; }
 function _applyWiki(updatedAt) {
   _wikiUpdatedAt = updatedAt || null;
   document.querySelector('[data-nav="wiki"]').style.display = _wikiUpdatedAt ? '' : 'none';
-  document.getElementById('wiki-open-tab').href = _wikiUrl();
   var onWiki = document.getElementById('wiki-view').style.display !== 'none';
   if (!_wikiUpdatedAt && onWiki) showView('activity');
   var badge = document.getElementById('wiki-badge');
@@ -4518,6 +4552,7 @@ function loadWiki() {
       if (++tries < 30) setTimeout(openGraph, 200);
     })();
   }, { once: true });
+  _wikiFrameReady = false; // until the new page's graph says 'wiki-ready'
   frame.src = _wikiUrl();
 }
 
@@ -4929,6 +4964,7 @@ function _setDuplicateIndicator(isDup) {
     var _followCbBoot = document.getElementById('slides-follow-checkbox');
     if (_followCbBoot) _followCbBoot.checked = LS.getFollow();
     _initSummaryFollow();
+    _initWikiFollow();
 
     // Kept as a promise: the landing-tab decision needs to know whether this session
     // has any deck at all, and the fetch runs in parallel with the state fetch below.
@@ -5013,6 +5049,7 @@ function _setDuplicateIndicator(isDup) {
     await _slidesCatalogReady; // never rejects: loadSlidesCatalog swallows its errors
     _hostSlidesCurrent = state.slides_current || null;
     _hostSummaryScroll = state.summary_scroll || null;
+    _hostWikiNote = state.wiki_note || null;
     var saved = _computeLandingView({
       urlTab: location.pathname.split('/')[2] || '',
       savedView: LS.getView(),
@@ -5107,6 +5144,9 @@ function _applyState(msg) {
   // Reconnect: a position the socket missed acts like the broadcast it replaces.
   if (msg.summary_scroll && JSON.stringify(msg.summary_scroll) !== JSON.stringify(_hostSummaryScroll)) {
     _onIncomingHostSummaryScroll(msg.summary_scroll);
+  }
+  if (msg.wiki_note !== undefined && (msg.wiki_note || null) !== _hostWikiNote) {
+    _onIncomingHostWikiNote(msg.wiki_note);
   }
   if (msg.summary_updated_at !== undefined) {
     var summaryNav = document.querySelector('[data-nav="summary"]');
@@ -5679,6 +5719,7 @@ function _handleWsMessage(msg) {
     }
     case 'feedback_form_updated': _applyFeedbackUrl(msg.feedback_url); break;
     case 'wiki_updated': _applyWiki(msg.updated_at); break;
+    case 'wiki_note': _onIncomingHostWikiNote(msg.slug); break;
     case 'agenda_updated': {
       document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
       if (msg.has_agenda) {
@@ -6958,6 +6999,106 @@ function _initHostSummaryScrollSender(scrollEl) {
     clearTimeout(timer);
     timer = setTimeout(send, Math.max(0, SUMMARY_SCROLL_SEND_MS - (Date.now() - lastSentAt)));
   }, { passive: true });
+}
+
+// ── Wiki follow ─────────────────────────────────────────────────────────────
+// While the trainer has a note open in the wiki on his machine, followers have it
+// open too, popping up by its dot in the graph. Same path as the Summary's Follow:
+//   trainer's wiki (note-pane.ts) → POST 127.0.0.1:1234/wiki/note → daemon
+//   → `wiki_note` broadcast → here → postMessage('wiki-follow') into the iframe.
+// The trainer's wiki posts by itself, so it works from his Wiki tab and from the
+// wiki opened in a tab of its own alike. The host machine only ever sends; every
+// other screen only follows.
+var _hostWikiNote = null;        // slug of the note the trainer has open (state or broadcast)
+var _wikiFrameReady = false;     // the wiki in the iframe has its graph up ('wiki-ready')
+var _wikiFollowBlinkAt = 0;      // throttles the "you stopped following" blink
+
+function _isWikiViewSelected() {
+  var v = document.getElementById('wiki-view');
+  return !!(v && v.style.display !== 'none');
+}
+
+function _isWikiFollowEnabled() {
+  var cb = document.getElementById('wiki-follow-checkbox');
+  return !!(cb && cb.checked);
+}
+
+// Only into a visible wiki whose graph is up: a hidden iframe measures 0 and could
+// not place the note by its dot. showView('wiki') and 'wiki-ready' send it then.
+function _applyHostWikiFollow() {
+  if (_onHostMachine() || !_wikiFrameReady) return;
+  if (!_isWikiViewSelected() || !_isWikiFollowEnabled()) return;
+  var frame = document.getElementById('wiki-frame');
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'wiki-follow', slug: _hostWikiNote }, location.origin);
+  }
+}
+
+function _onIncomingHostWikiNote(slug) {
+  if (_onHostMachine()) return;                 // the trainer's own echo
+  _hostWikiNote = slug || null;
+  if (!_isWikiViewSelected()) {
+    var nav = document.querySelector('[data-nav="wiki"]');
+    if (nav) nav.classList.toggle('wiki-nav-blink', !!_hostWikiNote);
+    return;
+  }
+  if (_isWikiFollowEnabled()) { _applyHostWikiFollow(); return; }
+  if (!_hostWikiNote) return;
+  // Unticked while the trainer opens another note: a short red blink.
+  var now = Date.now();
+  if (now - _wikiFollowBlinkAt < 4000) return;
+  _wikiFollowBlinkAt = now;
+  var label = document.querySelector('label[for="wiki-follow-checkbox"]');
+  if (label) {
+    label.classList.remove('follow-blink-red');
+    void label.offsetWidth; // restart animation
+    label.classList.add('follow-blink-red');
+  }
+}
+
+function _onWikiFollowChange(checked) {
+  LS.setWikiFollow(checked);
+  if (checked) _applyHostWikiFollow();
+}
+
+// The reader opened a note on their own: they stop following (for this page load
+// only — only an explicit untick is remembered), as when picking a slide by hand.
+// Opening the very note the trainer has open keeps them following.
+function _onWikiNoteOpenedByHand(slug) {
+  if (_onHostMachine() || slug === _hostWikiNote) return;
+  var cb = document.getElementById('wiki-follow-checkbox');
+  if (cb && cb.checked) cb.checked = false;
+}
+
+function _onWikiFrameMessage(e) {
+  var frame = document.getElementById('wiki-frame');
+  if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;
+  var msg = e.data || {};
+  if (msg.type === 'wiki-ready') { _wikiFrameReady = true; _applyHostWikiFollow(); }
+  else if (msg.type === 'wiki-note-opened') _onWikiNoteOpenedByHand(msg.slug);
+}
+
+// Over the wiki's top-right corner on a desktop (the note popover keeps clear of
+// that band, see note-pane.ts). Under 900px, in the top bar while the
+// Wiki tab is open: nothing of the wiki or the page can end up over it there.
+var _wikiFollowNarrow = window.matchMedia('(max-width: 899px)');
+
+function _placeWikiFollowControls() {
+  var ctl = document.getElementById('wiki-follow-controls');
+  if (!ctl || !_wikiFollowNarrow) return; // a view shown before this script part ran
+  if (_onHostMachine()) { ctl.style.display = 'none'; return; }
+  var home = _wikiFollowNarrow.matches ? document.getElementById('mobile-bar')
+                                       : document.getElementById('wiki-toolbar');
+  if (ctl.parentNode !== home) home.appendChild(ctl);
+  ctl.style.display = (!_wikiFollowNarrow.matches || _isWikiViewSelected()) ? '' : 'none';
+}
+
+function _initWikiFollow() {
+  window.addEventListener('message', _onWikiFrameMessage);
+  if (_onHostMachine()) return;
+  document.getElementById('wiki-follow-checkbox').checked = LS.getWikiFollow();
+  _placeWikiFollowControls();
+  _wikiFollowNarrow.addEventListener('change', _placeWikiFollowControls);
 }
 
 var _filesDirty = true;

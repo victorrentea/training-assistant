@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, NonNegativeInt
+from pydantic import BaseModel, Field, NonNegativeInt, field_validator
 
 from daemon.slides.models import CurrentSlide, Deck
 
@@ -447,6 +447,30 @@ class SummaryScrollMsg(SummaryScrollPosition):
     type: Literal["summary_scroll"] = "summary_scroll"
 
 
+# A Quartz simple slug ("Concepts/Clean-Code", or "/" for the site root): a path
+# inside the wiki site, never a URL. A follower fetches the note at this path
+# relative to its own wiki page, so no scheme, query, fragment, backslash or
+# control character (the pattern), and no "//host" or ".." step (the validator:
+# the schema regex engine has no look-ahead).
+WIKI_SLUG_PATTERN = r"^[^\x00-\x1f\x7f:\\?#]+$"
+
+
+class WikiNotePosition(BaseModel):
+    """Which wiki note the host has open in the graph's popover; None when none is."""
+    slug: str | None = Field(default=None, min_length=1, max_length=300, pattern=WIKI_SLUG_PATTERN)
+
+    @field_validator("slug")
+    @classmethod
+    def _stays_inside_the_site(cls, slug: str | None) -> str | None:
+        if slug is not None and (slug.startswith("//") or ".." in slug):
+            raise ValueError("a wiki slug is a path inside the site")
+        return slug
+
+
+class WikiNoteMsg(WikiNotePosition):
+    type: Literal["wiki_note"] = "wiki_note"
+
+
 class AgendaUpdatedMsg(BaseModel):
     type: Literal["agenda_updated"] = "agenda_updated"
     has_agenda: bool = False  # whether an agenda .docx is available in the session folder
@@ -563,6 +587,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "agenda_updated": AgendaUpdatedMsg,
     "feedback_form_updated": FeedbackFormUpdatedMsg,
     "wiki_updated": WikiUpdatedMsg,
+    "wiki_note": WikiNoteMsg,
     # Files
     "files_count_updated": FilesCountUpdatedMsg,
     # Prompts
@@ -665,6 +690,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "agenda_updated": "notes_summary",
     "feedback_form_updated": "notes_summary",
     "wiki_updated": "notes_summary",
+    "wiki_note": "notes_summary",
     # Files
     "files_count_updated": "files",
     # Prompts

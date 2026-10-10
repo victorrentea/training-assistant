@@ -52,6 +52,7 @@ channels:
           - $ref: '#/components/messages/agenda_updated'
           - $ref: '#/components/messages/feedback_form_updated'
           - $ref: '#/components/messages/wiki_updated'
+          - $ref: '#/components/messages/wiki_note'
           - $ref: '#/components/messages/files_count_updated'
           - $ref: '#/components/messages/prompts_count_updated'
           - $ref: '#/components/messages/reload'
@@ -666,6 +667,22 @@ components:
             type: string
             nullable: true
             description: ISO timestamp of the last successful publish; null hides the Wiki menu entry
+
+    wiki_note:
+      summary: Host opened a note in the wiki graph's popover, or closed it — followers open the same note
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [wiki_note]
+          slug:
+            type: string
+            nullable: true
+            maxLength: 300
+            description: Quartz simple slug of the open note (a path inside the wiki site, "/" for its root); null once the host closed it
 
     feedback_form_updated:
       summary: End-of-session participant feedback form link published or retracted

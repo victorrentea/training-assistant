@@ -319,6 +319,7 @@ class ParticipantStateResponse(BaseModel):
     summary_updated_at: str | None = None
     wiki_updated_at: str | None = None
     summary_scroll: SummaryScrollPosition | None = None
+    wiki_note: str | None = None
     slides_history_count: int
     files_count: int = 0
     prompts_count: int = 0
@@ -880,6 +881,8 @@ async def get_participant_state(request: Request):
         "wiki_updated_at": wiki_updated_at(),
         # Where the host is reading, so a follower lands there on (re)connect
         "summary_scroll": misc_state.summary_scroll,
+        # The wiki note the host has open, so a follower opens it on (re)connect
+        "wiki_note": misc_state.wiki_note,
         "slides_history_count": len(misc_state.slides_viewed),
         # Files opened this session (count only — full list fetched on demand)
         "files_count": _files_count(),

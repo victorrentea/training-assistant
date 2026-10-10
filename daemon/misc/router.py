@@ -41,6 +41,8 @@ from daemon.ws_messages import (
     SummaryScrollMsg,
     SummaryScrollPosition,
     SummaryUpdatedMsg,
+    WikiNoteMsg,
+    WikiNotePosition,
 )
 from daemon.ws_publish import broadcast, notify_host
 
@@ -425,6 +427,17 @@ async def highlight_summary_local(body: HighlightRequest):
 async def summary_scroll_local(body: SummaryScrollPosition):
     misc_state.summary_scroll = body.model_dump()
     broadcast(SummaryScrollMsg(**misc_state.summary_scroll))
+    return body
+
+
+# The host's wiki reports which note it has open (or None once it closes it);
+# participants who follow open the same note. Host-machine only, like the summary
+# position: the wiki's note-pane.ts calls it on 127.0.0.1, from the participant
+# page's Wiki tab and from the wiki opened in a tab of its own alike.
+@local_router.post("/wiki/note", response_model=WikiNotePosition)
+async def wiki_note_local(body: WikiNotePosition):
+    misc_state.wiki_note = body.slug
+    broadcast(WikiNoteMsg(slug=body.slug))
     return body
 
 

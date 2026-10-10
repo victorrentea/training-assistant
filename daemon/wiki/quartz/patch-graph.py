@@ -129,7 +129,7 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { loadGlow, makeGlow } from "./graph-glow"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, hidePeek, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
+     'import { PaneGraph, connectGraph, disconnectGraph, graphSettled, hidePeek, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
     # Hovering a dot fetches its note ahead of the click (note-pane.ts).
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"
@@ -146,7 +146,9 @@ PATCHES = [
         toggleNote(node.simulationData.id)"""),
     # The full graph answers the popover: which dot is open, and which one a link in
     # the note points at. That one lights up with the selected dot and the edge
-    # between them, as when hovering a dot.
+    # between them, as when hovering a dot. It also tells where a dot is on screen,
+    # so a note the trainer opened (Follow) pops up by its dot, and when the layout
+    # has come to rest.
     ("""  let stopAnimation = false
 """,
      """  const isGlobal = graph.classList.contains("global-graph-container")
@@ -166,8 +168,22 @@ PATCHES = [
       for (const n of nodeRenderData) n.active = id !== null && pair.has(n.simulationData.id)
       if (!dragging) renderPixiFromD3()
     },
+    position(id) {
+      const node = graphData.nodes.find((n) => n.id === id)
+      if (node?.x === undefined || node.y === undefined) return null
+      const rect = app.canvas.getBoundingClientRect()
+      const x = rect.left + currentTransform.x + (node.x + width / 2) * currentTransform.k
+      const y = rect.top + currentTransform.y + (node.y + height / 2) * currentTransform.k
+      const inView = (v: number, lo: number, hi: number) => v >= lo && v <= hi
+      if (!inView(x, Math.max(0, rect.left), Math.min(innerWidth, rect.right))) return null
+      if (!inView(y, Math.max(0, rect.top), Math.min(innerHeight, rect.bottom))) return null
+      return { x, y }
+    },
   }
-  if (isGlobal) connectGraph(paneGraph)
+  if (isGlobal) {
+    connectGraph(paneGraph)
+    simulation.on("end.pane", () => graphSettled(paneGraph))
+  }
 
   let stopAnimation = false
 """),

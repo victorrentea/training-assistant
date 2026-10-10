@@ -30,6 +30,10 @@ class MiscState:
         # so a participant who joins or reconnects lands there. In memory only:
         # a stale reading position is worth nothing after a daemon restart.
         self.summary_scroll: dict | None = None
+        # The wiki note the host has open in the graph's popover (its slug), so a
+        # participant who joins or ticks Follow later opens it too. In memory only,
+        # like the summary position.
+        self.wiki_note: str | None = None
         self.agenda_docx_path: Path | None = None
         self.talk_presentation_name: str | None = None
         self.talk_presentation_url: str | None = None
@@ -179,6 +183,7 @@ class MiscState:
             self.slides_viewed = []
             self.slide_timeline = []
             self.summary_scroll = None
+            self.wiki_note = None
             self.talk_presentation_name = None
             self.talk_presentation_url = None
             self.talk_presentation_slug = None

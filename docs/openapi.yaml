@@ -1340,6 +1340,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/SummaryScrollPosition'
       x-feature: notes_summary
+  /wiki/note:
+    post:
+      tags:
+      - misc
+      summary: Wiki Note Local
+      operationId: wiki_note_local_wiki_note_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WikiNotePosition'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiNotePosition'
+      x-feature: notes_summary
   /feedback-form:
     post:
       tags:
@@ -3584,6 +3604,11 @@ components:
           anyOf:
           - $ref: '#/components/schemas/SummaryScrollPosition'
           - type: 'null'
+        wiki_note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Wiki Note
         slides_history_count:
           type: integer
           title: Slides History Count
@@ -4405,6 +4430,20 @@ components:
       required:
       - options
       title: VoteRequest
+    WikiNotePosition:
+      properties:
+        slug:
+          anyOf:
+          - type: string
+            maxLength: 300
+            minLength: 1
+            pattern: ^[^\x00-\x1f\x7f:\\?#]+$
+          - type: 'null'
+          title: Slug
+      type: object
+      title: WikiNotePosition
+      description: Which wiki note the host has open in the graph's popover; None
+        when none is.
     WordcloudData:
       properties:
         words:
