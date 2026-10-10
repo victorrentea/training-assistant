@@ -226,6 +226,21 @@ body {
   }
 }
 
+// Under 900px the participant page's emoji bar floats over the bottom of the wiki:
+// the pills sit above it, and are thumb-sized.
+@media (max-width: 899px) {
+  .graph-reset {
+    bottom: 5.75rem;
+    min-height: 2.5rem;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .graph-home {
+    left: 9.9rem;
+  }
+}
+
 // Badges on the graph's dots (graph-badges.ts): a picture when the note shows a slide
 // or a screenshot, and its count of external links.
 :root {

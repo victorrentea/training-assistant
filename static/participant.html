@@ -943,6 +943,18 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   /* The wiki's Follow sits in the top bar here (_placeWikiFollowControls): over the
      wiki it covered the ✕ of a note popping up at the top of the screen. */
   #mobile-bar #wiki-follow-controls { padding: 0 !important; background: none; border: none; box-shadow: none; backdrop-filter: none; }
+  /* Nothing may cover the top bar: without its ☰ there is no way to any other tab. */
+  #reconnect-giveup { top: 3rem; }
+  #access-duration-toast { max-height: 40vh; overflow-y: auto; }
+  body.nav-open #access-duration-toast { display: none; }
+  #access-duration-toast .close-btn { min-width: 2.5rem; min-height: 2.5rem; }
+  #feedback-cta-close { min-width: 2.5rem; min-height: 2.5rem; top: .25rem !important; right: .25rem !important; }
+  /* The feedback card and the emoji bar float over the bottom of every tab: the end of
+     the content scrolls up clear of them. */
+  #notes-scroll, #summary-scroll, #files-scroll, #prompts-scroll,
+  #about-view, #agenda-view, #upload-paste-view, #report-bug-view { padding-bottom: 14rem !important; }
+  #upload-paste-view, #report-bug-view { overflow-y: auto; }
+  #side-nav .nav-item { min-height: 44px; }
 }
 /* Phones: the desktop gutters (4rem a side) would eat a third of the width. */
 @media (max-width: 599px) {
@@ -956,6 +968,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   #notes-scroll, #summary-scroll { padding-top: 4.25rem !important; }
   #floating-reactions { right: .5rem; left: .5rem; bottom: .75rem; }
   #emoji-main-bar { gap: .25rem; padding: .3rem; max-width: 100%; }
+  /* A stray tap target over the reaction bar's corner; the drawer footer is enough. */
+  #deploy-age-line { display: none; }
+  #access-duration-toast { font-size: .85rem; padding: .6rem .8rem; }
 }
 </style>
 </head>
@@ -972,7 +987,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
     <h2>Welcome! What's your name?</h2>
     <p class="name-gate-hint">Your name is used to build this session's attendance sheet.</p>
     <input id="name-gate-input" type="text" maxlength="64" autocomplete="off"
-           placeholder="Type your name (e.g. Ada Lovelace)" aria-label="Your name" />
+           placeholder="Your name (e.g. Ada Lovelace)" aria-label="Your name" />
     <div class="name-gate-buttons">
       <button id="name-gate-enter" type="button" disabled>Enter</button>
       <button id="name-gate-anon" type="button"

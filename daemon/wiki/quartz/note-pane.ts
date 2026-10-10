@@ -240,11 +240,18 @@ function ensurePeek(): HTMLElement {
 function placePeek(el: HTMLElement, at: Point | null) {
   const gap = 16
   const top = embedded ? 72 : 8
+  // Under 900px the participant page's emoji bar floats over the bottom of this
+  // frame: the note stops above it, shorter if need be, instead of sliding under it.
+  const bottom = embedded && innerWidth < 900 ? 88 : 8
   el.style.maxHeight = ""
   const w = el.offsetWidth
   let h = el.offsetHeight
+  if (h > innerHeight - top - bottom) {
+    h = innerHeight - top - bottom
+    el.style.maxHeight = `${h}px`
+  }
   const clampX = (x: number) => Math.max(8, Math.min(x, innerWidth - 8 - w))
-  const clampY = (y: number) => Math.max(top, Math.min(y, innerHeight - 8 - h))
+  const clampY = (y: number) => Math.max(top, Math.min(y, innerHeight - bottom - h))
   let x: number
   let y: number
   if (!at) {
@@ -258,7 +265,7 @@ function placePeek(el: HTMLElement, at: Point | null) {
     y = clampY(at.y + gap)
   } else {
     x = clampX(at.x - w / 2)
-    const below = innerHeight - 8 - (at.y + gap)
+    const below = innerHeight - bottom - (at.y + gap)
     const above = at.y - gap - top
     if (h > below && h > above && Math.max(below, above) >= 200) {
       h = Math.max(below, above)
