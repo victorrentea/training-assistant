@@ -265,6 +265,59 @@ PATCHES = [
   forceX,
   forceY,
   zoomIdentity,"""),
+    # Best fit (Victor, 2026-10-12): once the layout settles, the full graph zooms and pans so
+    # every dot and label is in the frame — embedded in a talk page, its edges fell outside.
+    # Once per render: a dot dragged later must not make the whole view jump.
+    ("""  if (enableZoom) {
+    select<HTMLCanvasElement, NodeData>(app.canvas).call(
+      zoom<HTMLCanvasElement, NodeData>()
+""",
+     """  const zoomBehavior = zoom<HTMLCanvasElement, NodeData>()
+  if (enableZoom) {
+    select<HTMLCanvasElement, NodeData>(app.canvas).call(
+      zoomBehavior
+"""),
+    ("""  if (isGlobal) {
+    connectGraph(paneGraph)
+""",
+     """  if (isGlobal && enableZoom) {
+    let fitted = false
+    simulation.on("end.fit", () => {
+      if (fitted || stopAnimation) return
+      fitted = true
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+      for (const n of nodeRenderData) {
+        const { x, y } = n.simulationData
+        if (x === undefined || y === undefined) continue
+        const half = Math.max(n.radius, (n.label?.width ?? 0) / 2)
+        x0 = Math.min(x0, x + width / 2 - half)
+        x1 = Math.max(x1, x + width / 2 + half)
+        y0 = Math.min(y0, y + height / 2 - n.radius - 14)   // the badge sits above the dot
+        y1 = Math.max(y1, y + height / 2 + n.radius + 2 + (n.label?.height ?? 0))
+      }
+      if (!isFinite(x0)) return
+      const pad = 24
+      const k = Math.min((width - 2 * pad) / (x1 - x0), (height - 2 * pad) / (y1 - y0), 1.6)
+      const to = zoomIdentity.translate(width / 2 - k * (x0 + x1) / 2, height / 2 - k * (y0 + y1) / 2).scale(k)
+      const from = currentTransform
+      const start = performance.now()
+      const step = (now: number) => {
+        if (stopAnimation) return
+        const t = Math.min((now - start) / 450, 1)
+        const e = t * (2 - t)
+        const lerp = (a: number, b: number) => a + (b - a) * e
+        select<HTMLCanvasElement, NodeData>(app.canvas).call(
+          zoomBehavior.transform,
+          zoomIdentity.translate(lerp(from.x, to.x), lerp(from.y, to.y)).scale(lerp(from.k, to.k)),
+        )
+        if (t < 1) requestAnimationFrame(step)
+      }
+      requestAnimationFrame(step)
+    })
+  }
+  if (isGlobal) {
+    connectGraph(paneGraph)
+"""),
     # Home off (the default): the full graph leaves out its dot and every edge to it.
     ("""  const links: SimpleLinkData[] = []
   const tags: SimpleSlug[] = []
