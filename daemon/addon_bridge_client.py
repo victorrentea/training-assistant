@@ -12,7 +12,9 @@ Protocol:
               — relayed by addons to the desktop overlay for animation. "glow" is
               an optional per-participant halo colour (omitted → no halo).
   Addons → Daemon: {"type": "slide_presenting_now", "deck": "<name>", "slide": <n>, "presenting": <bool>}
-              — pushed on every PowerPoint slide/deck change (no message when unchanged)
+              — pushed on every PowerPoint slide/deck change (no message when unchanged),
+                and once more with "frontmost": true when PowerPoint comes to the front
+                (talk phones switch from the trainer's notes back to the slides)
   Addons → Daemon: {"type": "slides_viewed", "slides": [{"fileName": "<name>", "page": <n>, "seconds": <n>}, ...]}
               — periodic (60s) delta of per-slide viewing durations
   On connect:  server immediately sends the last known slide state as a welcome message.
