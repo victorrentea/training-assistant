@@ -14,13 +14,14 @@ test('+ and - keep their colours, any other single character is blue', () => {
   assert.strictEqual(TN.markerOf('i info').kind, 'info');
   assert.strictEqual(TN.markerOf('= burning tokens').kind, 'info');
   assert.strictEqual(TN.markerOf('* Chapter').kind, 'info');
-  assert.strictEqual(TN.markerOf('+').kind, 'plus');
 });
 
 test('a word is not a marker', () => {
   assert.strictEqual(TN.markerOf('Token-Maxing'), null);
   assert.strictEqual(TN.markerOf('+1 Coin'), null);
   assert.strictEqual(TN.markerOf(''), null);
+  assert.strictEqual(TN.markerOf('a'), null);
+  assert.strictEqual(TN.markerOf('  + '), null);
 });
 
 test('indentation folds like VS Code: header to the last deeper line, trailing blanks out', () => {

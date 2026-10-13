@@ -26,10 +26,10 @@
 
   function isBlank(text) { return text.trim() === ''; }
 
-  // The marker: the first non-blank character, when a space (or the end of the
-  // line) follows it. `+` green, `-` red, any other single character blue.
+  // The marker: the first non-blank character, when a space and then more text
+  // follow it (a lone character is just a word being typed). `+` green, `-` red, any other single character blue.
   // Returns {kind, col} or null. Same rule as bullets.js in victor-vsc.
-  var MARKER_RE = /^([ \t]*)(\S)(?=[ \t]|$)/u;
+  var MARKER_RE = /^([ \t]*)(\S)(?=[ \t]+\S)/u;
   function markerOf(text) {
     var m = MARKER_RE.exec(text);
     if (!m) return null;
