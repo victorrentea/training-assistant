@@ -1360,6 +1360,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/WikiNotePosition'
       x-feature: notes_summary
+  /notes/live:
+    post:
+      tags:
+      - misc
+      summary: Talk Notes Report Local
+      operationId: talk_notes_report_local_notes_live_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TalkNotesReport'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TalkNotesReportResponse'
+      x-feature: notes_summary
   /feedback-form:
     post:
       tags:
@@ -3612,6 +3632,14 @@ components:
           - type: string
           - type: 'null'
           title: Wiki Note
+        talk_notes:
+          anyOf:
+          - $ref: '#/components/schemas/TalkNotesMsg'
+          - type: 'null'
+        presenter_view:
+          type: string
+          title: Presenter View
+          default: slides
         slides_history_count:
           type: integer
           title: Slides History Count
@@ -4330,6 +4358,130 @@ components:
         Not pixels: participants differ in width, zoom and which bullets they have
 
         expanded, so the position names the bullet at the top of the host''s view.'
+    TalkNotesMsg:
+      properties:
+        line:
+          type: integer
+          maximum: 20000.0
+          minimum: 0.0
+          title: Line
+          default: 0
+        selection:
+          anyOf:
+          - $ref: '#/components/schemas/TalkNotesSelection'
+          - type: 'null'
+        collapsed:
+          items:
+            type: integer
+            minimum: 0.0
+          type: array
+          maxItems: 20000
+          title: Collapsed
+          default: []
+        type:
+          type: string
+          const: talk_notes
+          title: Type
+          default: talk_notes
+        revision:
+          type: integer
+          minimum: 0.0
+          title: Revision
+          default: 0
+        text:
+          anyOf:
+          - type: string
+            maxLength: 200000
+          - type: 'null'
+          title: Text
+      type: object
+      title: TalkNotesMsg
+      description: 'Talk phones: the trainer moved in the notes, folded something,
+        or edited them.'
+    TalkNotesReport:
+      properties:
+        line:
+          type: integer
+          maximum: 20000.0
+          minimum: 0.0
+          title: Line
+          default: 0
+        selection:
+          anyOf:
+          - $ref: '#/components/schemas/TalkNotesSelection'
+          - type: 'null'
+        collapsed:
+          items:
+            type: integer
+            minimum: 0.0
+          type: array
+          maxItems: 20000
+          title: Collapsed
+          default: []
+        path:
+          type: string
+          maxLength: 4096
+          minLength: 1
+          title: Path
+        text:
+          anyOf:
+          - type: string
+            maxLength: 200000
+          - type: 'null'
+          title: Text
+        focused:
+          type: boolean
+          title: Focused
+          default: false
+      type: object
+      required:
+      - path
+      title: TalkNotesReport
+      description: What the trainer's VS Code reports about the notes file it has
+        open.
+    TalkNotesReportResponse:
+      properties:
+        tracked:
+          type: boolean
+          title: Tracked
+        need_text:
+          type: boolean
+          title: Need Text
+      type: object
+      required:
+      - tracked
+      - need_text
+      title: TalkNotesReportResponse
+    TalkNotesSelection:
+      properties:
+        start_line:
+          type: integer
+          maximum: 20000.0
+          minimum: 0.0
+          title: Start Line
+        start_char:
+          type: integer
+          maximum: 200000.0
+          minimum: 0.0
+          title: Start Char
+        end_line:
+          type: integer
+          maximum: 20000.0
+          minimum: 0.0
+          title: End Line
+        end_char:
+          type: integer
+          maximum: 200000.0
+          minimum: 0.0
+          title: End Char
+      type: object
+      required:
+      - start_line
+      - start_char
+      - end_line
+      - end_char
+      title: TalkNotesSelection
+      description: A non-empty text selection in the notes, 0-based, end exclusive.
     TalkPresentationPathRequest:
       properties:
         path:

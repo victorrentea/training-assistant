@@ -456,6 +456,16 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
         .follow-pill input { width: .8rem; height: .8rem; margin: 0; accent-color: var(--color-primary, #4555ba); outline: none; box-shadow: none; }
         .follow-pill:has(input:checked) { background: var(--color-primary, #4555ba); color: var(--color-on-primary, #fff); }
         .follow-pill:has(input:checked) input { accent-color: var(--color-on-primary, #fff); }
+        /* Slides Follow: the crosshair is a toggle — filled while following the
+           host's slide, a plain glyph once paused (scrolled away, another deck). */
+        .follow-toggle { border-radius: 999px; transition: background-color 120ms ease, color 120ms ease; }
+        .follow-toggle[aria-pressed="true"] { opacity: 1; background: var(--color-primary, #4555ba); color: var(--color-on-primary, #fff); }
+        .follow-toggle[aria-pressed="true"] .material-symbols-outlined { font-variation-settings: 'FILL' 1, 'wght' 600; }
+        @keyframes follow-toggle-blink { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 6px var(--color-primary-container, #dfe0ff); background: var(--color-primary, #4555ba); color: var(--color-on-primary, #fff); opacity: 1; } }
+        .follow-toggle.follow-blink-red, .follow-toggle.follow-notify { animation: follow-toggle-blink .45s ease-in-out 3; }
+        #slides-follow-tip { position: fixed; z-index: 9999; max-width: 16rem; padding: .5rem .8rem; border-radius: 12px;
+          background: var(--color-inverse-surface, #2a3439); color: var(--color-inverse-on-surface, #fff); font-size: .8rem;
+          font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.3); pointer-events: none; transition: opacity .3s; }
         @media (max-width: 899px) {
           /* Thumb-sized targets on phones and tablets. */
           .jump-btn, .follow-pill { min-height: 40px; }
@@ -1090,11 +1100,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 </span>
 <span class="ml-auto mr-1 inline-flex items-center gap-1.5">
-<button type="button" onclick="event.stopPropagation(); _jumpToHostSlide()" data-tip="Jump to host slide" aria-label="Jump to host slide" class="side-icon jump-btn"><span class="material-symbols-outlined">my_location</span></button>
-<label for="slides-follow-checkbox" onclick="event.stopPropagation()" class="follow-pill">
-<input id="slides-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onFollowChange(this.checked)" />
-<span>Follow</span>
-</label>
+<button type="button" id="slides-follow-toggle" onclick="event.stopPropagation(); _onSlidesFollowToggleTap()" data-tip="Follow Victor's slide" aria-label="Follow Victor's slide" aria-pressed="true" class="side-icon jump-btn follow-toggle"><span class="material-symbols-outlined">my_location</span></button>
+<input id="slides-follow-checkbox" type="checkbox" hidden tabindex="-1" checked />
 </span>
 </a>
 <div style="max-height:0;overflow:hidden;transition:max-height 0.6s ease" class="topics-list mx-2 rounded-xl bg-surface-container-high">
@@ -2427,10 +2434,76 @@ function _startMenuCollapseTimer() {
     closePastSlides({ focusAllTopics: false });
   }, 10000);
 }
+// The hidden checkbox holds the state (much of the page reads it); the crosshair
+// toggle shows it. Every write goes through here so the two never disagree.
+function _setSlidesFollowCb(on) {
+  var cb = document.getElementById('slides-follow-checkbox');
+  if (cb) cb.checked = !!on;
+  var btn = document.getElementById('slides-follow-toggle');
+  if (btn) {
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    var tip = on ? "Following Victor's slide — tap to stop" : "Follow Victor's slide";
+    btn.setAttribute('data-tip', tip);
+    btn.setAttribute('aria-label', tip);
+    if (on) btn.classList.remove('follow-notify', 'follow-blink-red');
+  }
+}
+function _onSlidesFollowToggleTap() {
+  var on = !_isSlidesFollowEnabled();
+  _setSlidesFollowCb(on);
+  _onFollowChange(on);
+}
+// The host moved on while this participant is not following: blink the
+// crosshair, and the first time say what tapping it does.
+var _slidesFollowTipShown = false;
+function _nudgeSlidesFollow() {
+  var btn = document.getElementById('slides-follow-toggle');
+  if (!btn) return;
+  btn.classList.remove('follow-blink-red');
+  void btn.offsetWidth; // restart animation
+  btn.classList.add('follow-blink-red');
+  if (_slidesFollowTipShown) return;
+  var r = btn.getBoundingClientRect();
+  if (!r.width || !r.height) return;  // sidebar closed: no crosshair to point at
+  _slidesFollowTipShown = true;
+  var tip = document.createElement('div');
+  tip.id = 'slides-follow-tip';
+  tip.setAttribute('role', 'status');
+  tip.textContent = 'Victor moved on — tap ⌖ to follow his slide again';
+  document.body.appendChild(tip);
+  var left = Math.min(Math.max(8, r.right - tip.offsetWidth), window.innerWidth - tip.offsetWidth - 8);
+  tip.style.left = left + 'px';
+  tip.style.top = Math.max(8, r.top - tip.offsetHeight - 8) + 'px';
+  setTimeout(function() { tip.style.opacity = '0'; setTimeout(function() { tip.remove(); }, 300); }, 3500);
+}
+// Scrolling the slides by hand away from the host's slide pauses Follow for
+// this page load, as on the talk page; the crosshair brings it back.
+(function _pauseSlidesFollowOnManualScroll() {
+  var userMoved = false, settle = null;
+  function inSlides(t) { var v = document.getElementById('slides-view'); return !!(v && t && t.nodeType === 1 && v.contains(t)); }
+  ['wheel', 'touchmove'].forEach(function(ev) {
+    document.addEventListener(ev, function(e) { if (inSlides(e.target)) userMoved = true; }, { passive: true, capture: true });
+  });
+  document.addEventListener('keydown', function(e) {
+    var tag = (e.target && e.target.tagName) || '';
+    if (_isSlidesViewSelected() && !/^(INPUT|TEXTAREA|SELECT)$/.test(tag)
+        && /^(Arrow(Up|Down)|Page(Up|Down)|Home|End| )$/.test(e.key)) userMoved = true;
+  });
+  document.addEventListener('scroll', function(e) {
+    if (!userMoved || !inSlides(e.target)) return;
+    clearTimeout(settle);
+    settle = setTimeout(function() {
+      userMoved = false;
+      if (!_isSlidesFollowEnabled() || !_hostSlidesCurrent) return;
+      var target = _findSlideForHostCurrent(_hostSlidesCurrent);
+      if (!target || target._id !== _activeSlideId) return;
+      var page = _getCurrentSlidesPage();
+      if (page != null && page !== _getHostCurrentPage(_hostSlidesCurrent)) _setSlidesFollowCb(false);
+    }, 250);
+  }, { passive: true, capture: true });
+})();
 function _onFollowChange(checked) {
   LS.setFollow(checked);
-  var label = document.querySelector('label[for="slides-follow-checkbox"]');
-  if (label) label.classList.remove('follow-notify');
   if (!checked) return;
   if (!_isSlidesViewSelected()) {
     showView('slides');
@@ -2438,18 +2511,6 @@ function _onFollowChange(checked) {
   } else {
     _applyHostSlideFollow(_hostSlidesCurrent).catch(function(){});
   }
-}
-async function _jumpToHostSlide() {
-  if (!_hostSlidesCurrent) return;
-  var targetSlide = _findSlideForHostCurrent(_hostSlidesCurrent);
-  if (!targetSlide) return;
-  var targetPage = _getHostCurrentPage(_hostSlidesCurrent);
-  if (!_isSlidesViewSelected()) {
-    showView('slides');
-    openTopics();
-  }
-  var topicEl = document.querySelector('.topic-item[data-slide-id="' + targetSlide._id + '"]');
-  await selectTopic(topicEl || document.querySelector('.topic-item'), null, targetSlide, targetPage);
 }
 function _normalizeSlideMatchToken(value) {
   return String(value || '')
@@ -2581,23 +2642,13 @@ function _onIncomingHostSlidesCurrent(slidesCurrent) {
   if (!_isSlidesViewSelected()) {
     var slidesNav = document.querySelector('[data-nav="slides"]');
     if (slidesNav) slidesNav.classList.add('slides-nav-blink');
-    if (!_isSlidesFollowEnabled()) {
-      var label = document.querySelector('label[for="slides-follow-checkbox"]');
-      if (label) label.classList.add('follow-notify');
-    }
+    if (!_isSlidesFollowEnabled()) _nudgeSlidesFollow();
     return;
   }
   var key = _hostSlidesCurrentKey(_hostSlidesCurrent);
   if (key === _lastHostSlidesCurrentKey) return;
   _lastHostSlidesCurrentKey = key;
-  if (!_isSlidesFollowEnabled()) {
-    var followLabel = document.querySelector('label[for="slides-follow-checkbox"]');
-    if (followLabel) {
-      followLabel.classList.remove('follow-blink-red');
-      void followLabel.offsetWidth; // restart animation
-      followLabel.classList.add('follow-blink-red');
-    }
-  }
+  if (!_isSlidesFollowEnabled()) _nudgeSlidesFollow();
   _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
 }
 function _focusCurrentTopicInAllTopics() {
@@ -3795,10 +3846,7 @@ async function selectTopic(el, event, slide, targetPageOverride) {
   if (slidesNav) slidesNav.classList.add('nav-active');
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
   if (el) el.classList.add('topic-active');
-  if (event && slide && slide._id !== _activeSlideId) {
-    var cb = document.getElementById('slides-follow-checkbox');
-    if (cb) cb.checked = false;
-  }
+  if (event && slide && slide._id !== _activeSlideId) _setSlidesFollowCb(false);
   VIEWS.forEach(function(v) {
     document.getElementById(v + '-view').style.display = v === 'slides' ? '' : 'none';
   });
@@ -3958,17 +4006,15 @@ function showView(name) {
   // Remember where the participant came from: a bug report filed from the
   // "Report a bug" tab should name the tab that was actually broken.
   if (name === 'report-bug') _viewBeforeBugReport = LS.getView() || '';
-  var followLabel = document.querySelector('label[for="slides-follow-checkbox"]');
+  var followToggle = document.getElementById('slides-follow-toggle');
   if (name !== 'slides') {
     closeTopics();
     closeSlides({ focusAllTopics: false });
-    if (followLabel) followLabel.classList.add('follow-paused');
   } else {
-    if (followLabel) followLabel.classList.remove('follow-paused');
     var slidesNav = document.querySelector('[data-nav="slides"]');
     if (slidesNav) slidesNav.classList.remove('slides-nav-blink');
   }
-  if (followLabel) { followLabel.classList.remove('follow-notify'); followLabel.classList.remove('follow-blink-red'); }
+  if (followToggle) followToggle.classList.remove('follow-notify', 'follow-blink-red');
   document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
   setActive(name);
   Engagement.onView(name);
@@ -4003,8 +4049,7 @@ function showView(name) {
   if (saved) scrollEl.scrollTop = parseInt(saved, 10);
   if (name === 'summary') _applyHostSummaryFollow();
   if (name === 'slides') {
-    var followCb = document.getElementById('slides-follow-checkbox');
-    if (followCb) followCb.checked = LS.getFollow();
+    _setSlidesFollowCb(LS.getFollow());
     if (_isSlidesFollowEnabled()) {
       _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
     } else if (!_activeSlideId) {
@@ -5156,8 +5201,7 @@ function _setDuplicateIndicator(isDup) {
     // Mirror the stored follow preference (ON by default) into the checkbox BEFORE
     // the WS can deliver a slide event — _isSlidesFollowEnabled() reads the DOM, and
     // an unchecked box would make the first host slide of the session get ignored.
-    var _followCbBoot = document.getElementById('slides-follow-checkbox');
-    if (_followCbBoot) _followCbBoot.checked = LS.getFollow();
+    _setSlidesFollowCb(LS.getFollow());
     _initSummaryFollow();
     _initWikiFollow();
 
@@ -5261,8 +5305,7 @@ function _setDuplicateIndicator(isDup) {
     } else {
       showView(saved);
     }
-    var followCb = document.getElementById('slides-follow-checkbox');
-    if (followCb) followCb.checked = LS.getFollow(); // init checkbox from LS (handles non-slides landing view)
+    _setSlidesFollowCb(LS.getFollow()); // init from LS (handles non-slides landing view)
     // Landed on Slides with nothing to render — the host is not presenting (or is on a
     // deck we don't have) and there is no slide to restore. Show the deck menu rather
     // than a blank canvas, so the participant has something to click.

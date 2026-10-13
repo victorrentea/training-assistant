@@ -42,6 +42,7 @@ from daemon.ws_messages import (
     SummaryScrollPosition,
     SummaryUpdatedMsg,
     WikiNoteMsg,
+    TalkNotesReport,
     WikiNotePosition,
 )
 from daemon.ws_publish import broadcast, notify_host
@@ -439,6 +440,20 @@ async def wiki_note_local(body: WikiNotePosition):
     misc_state.wiki_note = body.slug
     broadcast(WikiNoteMsg(slug=body.slug))
     return body
+
+
+class TalkNotesReportResponse(BaseModel):
+    tracked: bool  # the file is the active session's notes (anything else is ignored)
+    need_text: bool  # the daemon has no text yet: send the whole file next time
+
+
+# The trainer's VS Code reports the notes file it has open (cursor, selection,
+# folds, text on change); talk phones mirror it. Host-machine only, like the
+# summary position: sent on every cursor move, so it stays silent in the log.
+@local_router.post("/notes/live", response_model=TalkNotesReportResponse)
+async def talk_notes_report_local(body: TalkNotesReport):
+    from daemon.misc.talk_notes import apply_report
+    return TalkNotesReportResponse(**apply_report(body))
 
 
 class FeedbackFormRequest(BaseModel):

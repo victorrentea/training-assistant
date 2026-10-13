@@ -34,6 +34,14 @@ class MiscState:
         # participant who joins or ticks Follow later opens it too. In memory only,
         # like the summary position.
         self.wiki_note: str | None = None
+        # The session notes as the trainer's VS Code has them open (talk mode):
+        # {revision, text, line, selection, collapsed}. None until VS Code first
+        # reports the file — the notes are shared only once he opens them. In
+        # memory only: VS Code re-sends the text when the daemon asks for it.
+        self.talk_notes: dict | None = None
+        # What the trainer presents from right now: "slides" (PowerPoint) or
+        # "notes" (the notes file focused in VS Code). Talk phones follow it.
+        self.presenter_view: str = "slides"
         self.agenda_docx_path: Path | None = None
         self.talk_presentation_name: str | None = None
         self.talk_presentation_url: str | None = None
@@ -184,6 +192,8 @@ class MiscState:
             self.slide_timeline = []
             self.summary_scroll = None
             self.wiki_note = None
+            self.talk_notes = None
+            self.presenter_view = "slides"
             self.talk_presentation_name = None
             self.talk_presentation_url = None
             self.talk_presentation_slug = None

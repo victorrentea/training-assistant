@@ -134,7 +134,7 @@ def test_follow_me_basic():
                 () => {
                     try {
                         const el = document.getElementById('slides-follow-checkbox')
-                            || document.querySelector('label[for="slides-follow-checkbox"]');
+                            || document.getElementById('slides-follow-toggle');
                         return el !== null;
                     } catch { return false; }
                 }
@@ -183,7 +183,7 @@ def test_follow_me_basic():
             }, true);
         }""")
         rect_info = pax_page.evaluate("""() => {
-            const lbl = document.querySelector('label[for="slides-follow-checkbox"]');
+            const lbl = document.getElementById('slides-follow-toggle');
             if (!lbl) return {err:'no label'};
             const r = lbl.getBoundingClientRect();
             const cx = Math.round(r.left + r.width/2), cy = Math.round(r.top + r.height/2);
@@ -196,8 +196,8 @@ def test_follow_me_basic():
         }""")
         print(f"[DIAG rect] {json.dumps(rect_info, default=str)}")
 
-        # Click the Follow button (label for the checkbox)
-        follow_btn = pax_page.locator("label[for='slides-follow-checkbox']")
+        # Click the Follow toggle (the crosshair)
+        follow_btn = pax_page.locator("#slides-follow-toggle")
         follow_btn.wait_for(state="visible", timeout=5000)
         follow_btn.click()
         print("Clicked Follow button")

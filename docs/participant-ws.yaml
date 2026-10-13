@@ -53,6 +53,8 @@ channels:
           - $ref: '#/components/messages/feedback_form_updated'
           - $ref: '#/components/messages/wiki_updated'
           - $ref: '#/components/messages/wiki_note'
+          - $ref: '#/components/messages/talk_notes'
+          - $ref: '#/components/messages/presenter_view'
           - $ref: '#/components/messages/files_count_updated'
           - $ref: '#/components/messages/prompts_count_updated'
           - $ref: '#/components/messages/reload'
@@ -638,6 +640,59 @@ components:
             format: date-time
             nullable: true
             description: Summary version the host had rendered
+
+    talk_notes:
+      summary: Talk mode — the trainer moved, folded or edited in the session notes he has open in VS Code; followers scroll to his line
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [talk_notes]
+          revision:
+            type: integer
+            minimum: 0
+            description: Bumps on every text change
+          text:
+            type: string
+            nullable: true
+            maxLength: 200000
+            description: The whole notes file when this message carries an edit; null for a cursor-only move
+          line:
+            type: integer
+            minimum: 0
+            description: 0-based cursor line
+          selection:
+            type: object
+            nullable: true
+            description: Non-empty text selection, 0-based, end exclusive
+            properties:
+              start_line: {type: integer, minimum: 0}
+              start_char: {type: integer, minimum: 0}
+              end_line: {type: integer, minimum: 0}
+              end_char: {type: integer, minimum: 0}
+          collapsed:
+            type: array
+            items:
+              type: integer
+              minimum: 0
+            description: 0-based header lines of the regions the trainer has folded
+
+    presenter_view:
+      summary: Talk mode — the trainer switched between presenting the slides and the notes; followers switch tab
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type, view]
+        properties:
+          type:
+            type: string
+            enum: [presenter_view]
+          view:
+            type: string
+            enum: [slides, notes]
 
     agenda_updated:
       summary: Agenda .docx availability changed in the session folder

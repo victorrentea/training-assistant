@@ -13,7 +13,7 @@
 <!-- Only the icons this page uses (alphabetical, as Google Fonts requires): ~3 KB instead
      of the 1.1 MB full icon font, times every phone on the venue Wi-Fi. Add a name here
      when a new icon is used. -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;icon_names=commit,download,mic,slideshow,smartphone,sync&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;icon_names=chevron_right,commit,download,mic,my_location,slideshow,smartphone,sticky_note_2,sync&amp;display=swap" rel="stylesheet"/>
 <style>html:not(.fonts-ready) body{visibility:hidden}</style>
 <script>
   // Hide the page until the icon font is in (no ligature-text flash), but never
@@ -207,8 +207,64 @@
         #rotate-hint.show { opacity: 1; }
         #rotate-hint .material-symbols-outlined { font-size: 44px; animation: rotate-hint-turn 1.2s ease-in-out .2s 2 alternate; }
         @keyframes rotate-hint-turn { from { transform: rotate(0deg); } to { transform: rotate(-90deg); } }
+
+        /* Follow toggle (crosshair): filled = following, outlined = paused. */
+        #follow-toggle { width: 52px; height: 52px; border-radius: 999px; display: flex; align-items: center;
+          justify-content: center; border: 2px solid #a3a6ff; background: rgba(15, 7, 46, 0.82); color: #a3a6ff;
+          box-shadow: 0 6px 18px rgba(0,0,0,.45); transition: background .2s, color .2s, transform .1s; }
+        #follow-toggle:active { transform: scale(0.92); }
+        #follow-toggle .material-symbols-outlined { font-size: 28px; font-variation-settings: 'FILL' 0, 'wght' 500; }
+        #follow-toggle.on { background: linear-gradient(135deg, #a3a6ff 0%, #a28efc 100%); color: #0f00a4;
+          border-color: transparent; box-shadow: 0 6px 22px rgba(163,166,255,.55), inset 0 2px 6px rgba(0,0,0,.25); }
+        #follow-toggle.on .material-symbols-outlined { font-variation-settings: 'FILL' 1, 'wght' 600; }
+        @keyframes follow-blink { 0%,100% { background: rgba(15, 7, 46, 0.82); box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+          50% { background: #a3a6ff; color: #0f00a4; box-shadow: 0 0 0 8px rgba(163,166,255,.35); } }
+        #follow-toggle.blink { animation: follow-blink .45s ease-in-out 3; }
+        #follow-tip { position: absolute; right: 0; bottom: 64px; width: max-content; max-width: 70vw;
+          padding: .55rem .9rem; border-radius: 14px; background: #271c53; color: #e9e1ff; font-size: .875rem;
+          font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.45); opacity: 0; transform: translateY(6px);
+          transition: opacity .3s, transform .3s; pointer-events: none; }
+        #follow-tip::after { content: ''; position: absolute; right: 20px; bottom: -6px; border: 6px solid transparent;
+          border-bottom: 0; border-top-color: #271c53; }
+        #follow-tip.show { opacity: 1; transform: none; }
+
+        /* Notes (static/talk-notes.js): a mirror of Vic Presentation in VS Code. */
+        #view-notes { background: #0b0718; padding: 14px 10px 110px 4px; }
+        #notes-lines { font-size: 16px; line-height: 1.5; color: #e9e1ff; }
+        .nl { position: relative; padding-left: calc(2.1em + var(--ind, 0) * 0.55em); min-height: 1.5em;
+          transition: opacity .25s, color .25s; word-break: break-word; overflow-wrap: anywhere; }
+        .nl-blank { min-height: .9em; }
+        .nl-has-mark { padding-left: calc(3.75em + var(--ind, 0) * 0.55em); text-indent: -1.65em; }
+        .nl-bright { color: #fff; opacity: 1; }
+        .nl-dim { opacity: .7; }
+        .nl-fade { opacity: .3; }
+        .nl-cur { background: rgba(163,166,255,.10); border-radius: 6px; }
+        .nl a { color: #a3a6ff; text-decoration: underline; }
+        .nl-mark { display: inline-flex; align-items: center; justify-content: center; width: 1.3em; height: 1.3em;
+          margin-right: .35em; border-radius: 999px; color: #fff; font-weight: 600; text-indent: 0;
+          vertical-align: .05em; line-height: 1; font-size: .95em; }
+        .nl-mark-plus { background: #2e9e4f; }
+        .nl-mark-minus { background: #d64541; }
+        .nl-mark-info { background: #2f74d0; }
+        .nl-sel { background: #000; color: #fff; border: 1px solid rgba(255,255,255,.6); border-radius: 3px;
+          padding: 0 1px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+        .nl-fold { position: absolute; left: 0; top: -.15em; width: 2em; height: 1.8em; display: flex;
+          align-items: center; justify-content: center; color: #cfc8ff; background: none; border: 0; padding: 0;
+          text-indent: 0; }
+        .nl-fold .material-symbols-outlined { font-size: 1.6em; font-variation-settings: 'wght' 700;
+          transform: rotate(90deg); transition: transform .2s; }
+        .nl-fold-collapsed .material-symbols-outlined { transform: none; }
+        .nl-more { display: inline-flex; gap: .22em; margin-left: .45em; padding: .25em .4em; border-radius: 6px;
+          background: rgba(163,166,255,.12); vertical-align: middle; cursor: pointer; text-indent: 0; }
+        .nl-more i { width: .38em; height: .38em; border-radius: 999px; background: #8f89b8;
+          animation: nl-glow 1.5s ease-in-out infinite; }
+        .nl-more i:nth-child(2) { animation-delay: .25s; }
+        .nl-more i:nth-child(3) { animation-delay: .5s; }
+        @keyframes nl-glow { 0%, 60%, 100% { background: #8f89b8; box-shadow: none; }
+          30% { background: #fff; box-shadow: 0 0 6px 2px rgba(163,166,255,.85); } }
     </style>
 <script src="/static/emoji-float.js"></script>
+<script src="/static/talk-notes.js"></script>
 </head>
 <body class="bg-background text-on-background font-body flex flex-col overflow-hidden">
 <!-- Desktop Warning -->
@@ -244,13 +300,17 @@
 <!-- TopAppBar Component -->
 <header class="bg-[#0f072e] sticky top-0 z-50 flex items-center px-4 py-3 w-full gap-2">
 <div class="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1">
-<button id="btn-speaker" onclick="showView('speaker')" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
+<button id="btn-speaker" onclick="_onTabTap('speaker')" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
 <span class="material-symbols-outlined text-xl">mic</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Speaker</span>
 </button>
-<button id="btn-slides" onclick="showView('slides')" class="tab-btn active flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
+<button id="btn-slides" onclick="_onTabTap('slides')" class="tab-btn active flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]">
 <span class="material-symbols-outlined text-xl">slideshow</span>
 <span class="text-[10px] font-semibold uppercase tracking-tight">Slides</span>
+</button>
+<button id="btn-notes" onclick="_onTabTap('notes')" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]" disabled>
+<span class="material-symbols-outlined text-xl">sticky_note_2</span>
+<span class="text-[10px] font-semibold uppercase tracking-tight">Notes</span>
 </button>
 <button id="btn-download-slides" class="tab-btn flex flex-col items-center gap-1 p-2 bg-surface-container-highest/30 hover:bg-surface-container-highest rounded-lg transition-colors min-w-[64px]" disabled>
 <span class="material-symbols-outlined text-xl">download</span>
@@ -284,10 +344,17 @@
   <div id="view-speaker" class="absolute inset-0 hidden overflow-y-auto p-4 pb-16">
     <div id="speaker-content" class="md-content text-sm"></div>
   </div>
-  <!-- Floating Action Button (inside relative container) -->
-  <div id="fab-current-slide" class="hidden absolute bottom-4 right-4 z-40" style="pointer-events:auto">
-    <button onclick="scrollToCurrentSlide()" class="kinetic-gradient text-on-primary font-bold py-3 px-5 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(163,166,255,0.4)] hover:scale-105 active:scale-95 transition-transform">
-      <span class="text-lg">Current Slide 🎯</span>
+  <!-- Notes View: the trainer's notes file, live from his VS Code -->
+  <div id="view-notes" class="absolute inset-0 hidden overflow-y-auto overflow-x-hidden">
+    <div id="notes-lines"></div>
+  </div>
+  <!-- Follow toggle: pressed = this phone follows the trainer (his slide, his
+       line in the notes, and which of the two he presents from). Shown on the
+       Slides and Notes tabs. -->
+  <div id="follow-wrap" class="absolute bottom-4 right-4 z-40">
+    <div id="follow-tip" role="status" aria-live="polite">Victor moved on — tap to follow him again</div>
+    <button id="follow-toggle" type="button" class="on" aria-pressed="true" aria-label="Follow Victor" onclick="_onFollowToggleTap()">
+      <span class="material-symbols-outlined">my_location</span>
     </button>
   </div>
 </div>
@@ -738,7 +805,7 @@
 
   // ── Views ─────────────────────────────────────────────────────────────────────
   // View names that have a tab button
-  var _viewNames = ['speaker', 'slides'];
+  var _viewNames = ['speaker', 'slides', 'notes'];
 
   function showView(name) {
     _viewNames.forEach(function(v) {
@@ -747,12 +814,23 @@
       var btn = document.getElementById('btn-' + v);
       if (btn) btn.classList.toggle('active', v === name);
     });
+    // The slide spinner sits over the views; it belongs to the slides only.
+    var ph = document.getElementById('slide-placeholder');
+    if (ph) ph.classList.toggle('hidden', name !== 'slides');
     _activeView = name;
-    _updateFab();
+    _updateFollowToggle();
     if (name === 'speaker') _renderSpeaker();
     // Back on the slides: catch up with wherever the trainer went meanwhile — at
     // once, not a smooth scroll across every slide shown in between.
     if (name === 'slides' && _following) _showLive(false, true);
+    if (name === 'notes') { _renderNotes(); if (_following) _scrollNotesToLive(true); }
+  }
+
+  // A tab tapped by the reader. Leaving what the trainer presents from stops
+  // following him: otherwise his next slide would pull the reader back.
+  function _onTabTap(name) {
+    if (_following && name !== _presenterView) _setFollowing(false);
+    showView(name);
   }
 
   function _renderSpeaker() {
@@ -772,23 +850,73 @@
   }
 
   // ── Live follow ───────────────────────────────────────────────────────────────
-  // ON by default: every current_slide_updated adds the trainer's slide and
-  // scrolls to it. Scrolling away from it by hand pauses following (new slides
-  // are still added, without moving the reader); the "Current Slide" button
-  // jumps back and resumes it.
+  // ON by default: the reader sees what the trainer presents from (slides or
+  // notes — `presenter_view`), at his slide or his line. Scrolling away by hand
+  // pauses following (new slides and lines still arrive, without moving the
+  // reader); the crosshair toggle shows it, blinks each time the trainer moves
+  // on meanwhile, and a tap on it jumps back and resumes.
   var _live = null;            // { slug, page } — the slide the trainer is showing
+  var _presenterView = 'slides';  // what the trainer presents from: 'slides' | 'notes'
   var _following = true;
   var _userScrolled = false;   // a user gesture moved the slides since our last jump
 
-  // The button is only useful (and only shown) while following is paused; while
-  // following, the reader already sits on the live slide and it would cover it.
   function _setFollowing(on) {
     _following = on;
-    _updateFab();
+    _updateFollowToggle();
   }
-  function _updateFab() {
-    var fab = document.getElementById('fab-current-slide');
-    if (fab) fab.classList.toggle('hidden', _activeView !== 'slides' || _following);
+  function _updateFollowToggle() {
+    var wrap = document.getElementById('follow-wrap');
+    var btn = document.getElementById('follow-toggle');
+    if (!wrap || !btn) return;
+    wrap.classList.toggle('hidden', _activeView !== 'slides' && _activeView !== 'notes');
+    btn.classList.toggle('on', _following);
+    btn.setAttribute('aria-pressed', _following ? 'true' : 'false');
+    btn.setAttribute('aria-label', _following ? 'Following Victor — tap to stop' : 'Follow Victor');
+    if (_following) document.getElementById('follow-tip').classList.remove('show');
+  }
+
+  // The trainer moved on while this reader is not following: blink the
+  // toggle, and the first time say what tapping it does.
+  var _followTipShown = false;
+  function _nudgeFollow() {
+    if (_following) return;
+    var btn = document.getElementById('follow-toggle');
+    if (!btn || document.getElementById('follow-wrap').classList.contains('hidden')) return;
+    btn.classList.remove('blink');
+    void btn.offsetWidth;  // restart the animation
+    btn.classList.add('blink');
+    if (_followTipShown) return;
+    _followTipShown = true;
+    var tip = document.getElementById('follow-tip');
+    tip.classList.add('show');
+    setTimeout(function() { tip.classList.remove('show'); }, 3500);
+  }
+
+  // Tap on the crosshair: follow again (back to what the trainer presents from,
+  // at his position), or stop following.
+  function _onFollowToggleTap() {
+    if (_following) { _setFollowing(false); return; }
+    _resumeFollow();
+  }
+  function _resumeFollow() {
+    _setFollowing(true);
+    if (_activeView !== _presenterView && !(_presenterView === 'notes' && !_notes)) {
+      showView(_presenterView);
+    } else if (_activeView === 'slides') {
+      _showLive(true);
+    } else if (_activeView === 'notes') {
+      _scrollNotesToLive(false);
+    }
+  }
+
+  function _onPresenterView(view) {
+    if (view !== 'slides' && view !== 'notes') return;
+    var changed = view !== _presenterView;
+    _presenterView = view;
+    if (!changed) return;
+    if (!_following) { _nudgeFollow(); return; }
+    if (view === 'notes' && !_notes) return;  // nothing to show yet
+    if (_activeView === 'slides' || _activeView === 'notes') showView(view);
   }
 
   function _onLiveSlide(sc) {
@@ -799,9 +927,12 @@
     var moved = deckChanged || _live.page !== page;
     _live = { slug: slug, page: page };
     // A different deck has no earlier position worth keeping: follow it.
-    if (deckChanged) _setFollowing(true);
+    if (deckChanged && _activeView === 'slides') _setFollowing(true);
     if (_following) _showLive(deckChanged ? true : (moved ? 'revisit' : false));
-    else showSlide(slug, page, { scroll: false });
+    else {
+      showSlide(slug, page, { scroll: false });
+      if (moved) _nudgeFollow();
+    }
   }
 
   // Host pressed "Clear slides": forget the live slide and every slide on screen;
@@ -818,11 +949,6 @@
     showSlide(_live.slug, _live.page, { scroll: true, highlight: highlight, instant: instant === true });
   }
 
-  // "Current Slide 🎯" button: jump to the live slide and follow again.
-  function scrollToCurrentSlide() {
-    _setFollowing(true);
-    _showLive(true);
-  }
 
   (function _pauseFollowOnManualScroll() {
     var view = document.getElementById('view-slides');
@@ -843,7 +969,7 @@
         // (Half of it, as for pausing, is too easy to reach by accident while
         // reading the slide just above it.)
         if (_following && isSlideInView(_live.slug, _live.page) === false) _setFollowing(false);
-        else if (!_following && isSlideInView(_live.slug, _live.page, 0.9) === true) _setFollowing(true);
+        else if (!_following && _presenterView === 'slides' && isSlideInView(_live.slug, _live.page, 0.9) === true) _setFollowing(true);
       }, 150);
     }, { passive: true });
   })();
@@ -885,6 +1011,99 @@
         }
       }, 150);
     });
+  })();
+
+  // ── Notes ─────────────────────────────────────────────────────────────────────
+  // The trainer's notes file, live from his VS Code (talk_notes): drawn by
+  // static/talk-notes.js. His folds apply until the reader taps a chevron
+  // himself; from then on the reader's choice wins for that header.
+  var _notes = null;          // { revision, text, line, selection, collapsed }
+  var _notesUserFold = {};    // header text → collapsed, the reader's own taps
+  var _notesView = null;      // what render() returned: lineEl(l)
+  var _notesUserScrolled = false;
+
+  function _onTalkNotes(msg) {
+    if (!msg) return;
+    var first = !_notes;
+    if (first && typeof msg.text !== 'string') return;  // a cursor move before the text: wait for /state
+    var moved = !first && (msg.line !== _notes.line
+      || JSON.stringify(msg.selection || null) !== JSON.stringify(_notes.selection || null));
+    _notes = {
+      revision: msg.revision || 0,
+      text: typeof msg.text === 'string' ? msg.text : _notes.text,
+      line: msg.line || 0,
+      selection: msg.selection || null,
+      collapsed: Array.isArray(msg.collapsed) ? msg.collapsed : []
+    };
+    document.getElementById('btn-notes').disabled = false;
+    if (first && _following && _presenterView === 'notes' && (_activeView === 'slides' || _activeView === 'notes')) {
+      showView('notes');
+      return;
+    }
+    if (_activeView === 'notes') _renderNotes();
+    if (_following && _activeView === 'notes') _scrollNotesToLive(false);
+    else if (moved) _nudgeFollow();
+  }
+
+  function _renderNotes() {
+    if (!_notes || !window.TalkNotes) return;
+    var hostCollapsed = {};
+    _notes.collapsed.forEach(function(l) { hostCollapsed[l] = true; });
+    var container = document.getElementById('notes-lines');
+    _notesView = TalkNotes.render(container, {
+      text: _notes.text,
+      line: _notes.line,
+      selection: _notes.selection,
+      isCollapsed: function(line, text) {
+        return Object.prototype.hasOwnProperty.call(_notesUserFold, text) ? _notesUserFold[text] : !!hostCollapsed[line];
+      },
+      onToggle: function(line, text, collapsedNow) {
+        _notesUserFold[text] = collapsedNow;
+        _renderNotes();
+      }
+    });
+  }
+
+  // Bring the trainer's line into view: left alone while it already sits in the
+  // middle of the screen, centred otherwise.
+  function _scrollNotesToLive(instant) {
+    if (!_notesView || _activeView !== 'notes') return;
+    var el = _notesView.lineEl(_notes.selection ? _notes.selection.start_line : _notes.line);
+    if (!el) return;
+    var view = document.getElementById('view-notes');
+    var v = view.getBoundingClientRect(), r = el.getBoundingClientRect();
+    _notesUserScrolled = false;
+    if (r.top >= v.top + v.height * 0.15 && r.bottom <= v.bottom - v.height * 0.2) return;
+    view.scrollTo({ top: view.scrollTop + (r.top - v.top) - v.height * 0.35, behavior: instant ? 'auto' : 'smooth' });
+  }
+
+  function _notesLiveInView() {
+    if (!_notesView || !_notes) return null;
+    var el = _notesView.lineEl(_notes.selection ? _notes.selection.start_line : _notes.line);
+    if (!el) return null;
+    var v = document.getElementById('view-notes').getBoundingClientRect(), r = el.getBoundingClientRect();
+    return r.bottom > v.top && r.top < v.bottom;
+  }
+
+  (function _pauseNotesFollowOnManualScroll() {
+    var view = document.getElementById('view-notes');
+    var settle = null;
+    function gesture() { _notesUserScrolled = true; }
+    view.addEventListener('touchmove', gesture, { passive: true });
+    view.addEventListener('wheel', gesture, { passive: true });
+    document.addEventListener('keydown', function(e) {
+      if (_activeView === 'notes' && /^(Arrow(Up|Down)|Page(Up|Down)|Home|End| )$/.test(e.key)) gesture();
+    });
+    view.addEventListener('scroll', function() {
+      if (!_notesUserScrolled) return;
+      clearTimeout(settle);
+      settle = setTimeout(function() {
+        if (!_notesUserScrolled) return;
+        var inView = _notesLiveInView();
+        if (_following && inView === false) _setFollowing(false);
+        else if (!_following && _presenterView === 'notes' && inView === true) _setFollowing(true);
+      }, 150);
+    }, { passive: true });
   })();
 
   // ── Emoji reactions ───────────────────────────────────────────────────────────
@@ -1015,8 +1234,10 @@
       _lastStateAt = Date.now();
       _renderEmojiBar(state.emoji_catalog);
       if (state.emoji_counters) _applyEmojiCounters(state.emoji_counters);
+      if (state.presenter_view) _presenterView = state.presenter_view;
       var sc = state.slides_current || (state.talk_presentation_slug ? { slug: state.talk_presentation_slug, page: 1 } : null);
       if (sc) _onLiveSlide(sc);
+      if (state.talk_notes) _onTalkNotes(state.talk_notes);
     } catch (e) {
       console.warn('[talk] state fetch failed', e);
       _syncTimer = setTimeout(_syncState, _backoffDelay(_syncAttempts++));
@@ -1030,6 +1251,8 @@
       case 'current_slide_updated': _onLiveSlide(msg.current_slide); break;
       case 'slides_cleared': _onSlidesCleared(); break;
       case 'talk_pdf_ready': if (msg.slug) _onLiveSlide({ slug: msg.slug, page: 1 }); break;
+      case 'talk_notes': _onTalkNotes(msg); break;
+      case 'presenter_view': _onPresenterView(msg.view); break;
       case 'emoji_counters_updated': if (msg.counters) _applyEmojiCounters(msg.counters); break;
       case 'active_participants_count_updated': _applyPaxCount(msg.count); break;
     }
@@ -1213,7 +1436,8 @@
     if (shown || !window.matchMedia('(orientation: portrait)').matches || window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     setTimeout(function() {
       var hint = document.getElementById('rotate-hint');
-      if (!hint || !window.matchMedia('(orientation: portrait)').matches) return;
+      // Only over a slide: on the Notes or Speaker tab a bigger slide means nothing.
+      if (!hint || !window.matchMedia('(orientation: portrait)').matches || _activeView !== 'slides') return;
       try { sessionStorage.setItem('talk_rotate_hint', '1'); } catch (e) {}
       hint.classList.add('show');
       setTimeout(function() { hint.classList.remove('show'); }, 2700);

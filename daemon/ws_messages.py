@@ -471,6 +471,53 @@ class WikiNoteMsg(WikiNotePosition):
     type: Literal["wiki_note"] = "wiki_note"
 
 
+# ── Talk notes (the trainer's notes file, shown live on the talk phones) ─────────
+
+TALK_NOTES_MAX_CHARS = 200_000
+TALK_NOTES_MAX_LINES = 20_000
+
+
+class TalkNotesSelection(BaseModel):
+    """A non-empty text selection in the notes, 0-based, end exclusive."""
+    start_line: NonNegativeInt = Field(le=TALK_NOTES_MAX_LINES)
+    start_char: NonNegativeInt = Field(le=TALK_NOTES_MAX_CHARS)
+    end_line: NonNegativeInt = Field(le=TALK_NOTES_MAX_LINES)
+    end_char: NonNegativeInt = Field(le=TALK_NOTES_MAX_CHARS)
+
+
+class TalkNotesCursor(BaseModel):
+    """Where the trainer is in the notes: cursor line, selection, folded headers."""
+    line: NonNegativeInt = Field(default=0, le=TALK_NOTES_MAX_LINES)  # 0-based cursor line
+    selection: TalkNotesSelection | None = None
+    # 0-based header lines of the regions the trainer has collapsed in VS Code
+    collapsed: list[NonNegativeInt] = Field(default=[], max_length=TALK_NOTES_MAX_LINES)
+
+
+class TalkNotesReport(TalkNotesCursor):
+    """What the trainer's VS Code reports about the notes file it has open."""
+    path: str = Field(min_length=1, max_length=4096)  # absolute path of the file
+    # The whole file, only when it changed since the last report (or when the
+    # daemon asked for it with need_text); None otherwise.
+    text: str | None = Field(default=None, max_length=TALK_NOTES_MAX_CHARS)
+    # The VS Code window is focused with this file active: the trainer is
+    # presenting from the notes now, not from the slides.
+    focused: bool = False
+
+
+class TalkNotesMsg(TalkNotesCursor):
+    """Talk phones: the trainer moved in the notes, folded something, or edited them."""
+    type: Literal["talk_notes"] = "talk_notes"
+    revision: NonNegativeInt = 0  # bumps on every text change
+    # The new text when this message carries an edit; None for a cursor-only move
+    text: str | None = Field(default=None, max_length=TALK_NOTES_MAX_CHARS)
+
+
+class PresenterViewMsg(BaseModel):
+    """Talk phones: the trainer switched between presenting slides and notes."""
+    type: Literal["presenter_view"] = "presenter_view"
+    view: Literal["slides", "notes"]
+
+
 class AgendaUpdatedMsg(BaseModel):
     type: Literal["agenda_updated"] = "agenda_updated"
     has_agenda: bool = False  # whether an agenda .docx is available in the session folder
@@ -588,6 +635,8 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "feedback_form_updated": FeedbackFormUpdatedMsg,
     "wiki_updated": WikiUpdatedMsg,
     "wiki_note": WikiNoteMsg,
+    "talk_notes": TalkNotesMsg,
+    "presenter_view": PresenterViewMsg,
     # Files
     "files_count_updated": FilesCountUpdatedMsg,
     # Prompts
@@ -691,6 +740,8 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "feedback_form_updated": "notes_summary",
     "wiki_updated": "notes_summary",
     "wiki_note": "notes_summary",
+    "talk_notes": "notes_summary",
+    "presenter_view": "notes_summary",
     # Files
     "files_count_updated": "files",
     # Prompts

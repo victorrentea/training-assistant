@@ -43,6 +43,7 @@ from daemon.ws_messages import (
     ParticipantNamesUpdatedMsg,
     ScoresUpdatedMsg,
     SummaryScrollPosition,
+    TalkNotesMsg,
 )
 from daemon.ws_publish import broadcast
 
@@ -320,6 +321,10 @@ class ParticipantStateResponse(BaseModel):
     wiki_updated_at: str | None = None
     summary_scroll: SummaryScrollPosition | None = None
     wiki_note: str | None = None
+    # Talk mode: the trainer's notes as VS Code has them open (None until he
+    # opens them) and whether he presents from the slides or the notes.
+    talk_notes: TalkNotesMsg | None = None
+    presenter_view: str = "slides"
     slides_history_count: int
     files_count: int = 0
     prompts_count: int = 0
@@ -883,6 +888,9 @@ async def get_participant_state(request: Request):
         "summary_scroll": misc_state.summary_scroll,
         # The wiki note the host has open, so a follower opens it on (re)connect
         "wiki_note": misc_state.wiki_note,
+        # Talk mode: the notes on screen in VS Code, and slides vs notes
+        "talk_notes": misc_state.talk_notes if ps.mode == "talk" else None,
+        "presenter_view": misc_state.presenter_view,
         "slides_history_count": len(misc_state.slides_viewed),
         # Files opened this session (count only — full list fetched on demand)
         "files_count": _files_count(),

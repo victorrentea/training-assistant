@@ -1139,6 +1139,11 @@ def run() -> None:
             for _slide_event in _bridge.drain_slides():
                 _deck = _slide_event.get("deck")
                 _slide_num = _slide_event.get("slide")
+                # PowerPoint came to the front (Cmd-Tab back from the notes):
+                # talk phones go back to the slides, even with no slide change.
+                if _slide_event.get("frontmost") is True:
+                    from daemon.misc.talk_notes import set_presenter_view
+                    set_presenter_view("slides")
                 if _deck and _slide_num:
                     if slides_runner and slides_runner._slides_config:
                         catalog_file = getattr(slides_runner._slides_config, "catalog_file", None)
@@ -1159,6 +1164,9 @@ def run() -> None:
                                 from daemon.ws_messages import SlidesCurrentMsg
                                 ws_publish.broadcast(SlidesCurrentMsg(current_slide=CurrentSlide(**_sc)))
                                 log.info("addons   ", f"← Slide: {_deck}:{_slide_num}")
+                                # A new slide means he presents from PowerPoint.
+                                from daemon.misc.talk_notes import set_presenter_view
+                                set_presenter_view("slides")
 
             # ── Process slides_viewed deltas from addon bridge ──
             for _sv_batch in _bridge.drain_slides_viewed():
