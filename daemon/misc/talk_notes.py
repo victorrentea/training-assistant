@@ -9,6 +9,7 @@ and the notes as he does (`presenter_view`).
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from daemon.misc.content_files import get_active_session_folder
 from daemon.misc.state import misc_state
@@ -36,7 +37,7 @@ def _is_talk() -> bool:
     return participant_state.mode == "talk"
 
 
-def set_presenter_view(view: str) -> None:
+def set_presenter_view(view: Literal["slides", "notes"]) -> None:
     """Record what the trainer presents from; tell the phones when it changes."""
     if misc_state.presenter_view == view:
         return
@@ -56,7 +57,8 @@ def apply_report(report: TalkNotesReport) -> dict:
     cursor = report.model_dump(include={"line", "selection", "collapsed"})
     text_changed = report.text is not None and (current is None or current["text"] != report.text)
     revision = (current["revision"] if current else 0) + (1 if text_changed else 0)
-    updated = {"revision": revision, "text": report.text if text_changed else current["text"], **cursor}
+    text = report.text if text_changed or current is None else current["text"]
+    updated = {"revision": revision, "text": text, **cursor}
     changed = current is None or text_changed or any(current[k] != updated[k] for k in cursor)
     misc_state.talk_notes = updated
     if changed and _is_talk():
