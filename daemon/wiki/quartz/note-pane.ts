@@ -205,6 +205,7 @@ function ensurePeek(): HTMLElement {
     <div class="note-peek-body"></div>`
   const body = peek.querySelector(".note-peek-body") as HTMLElement
   peek.querySelector(".note-peek-close")!.addEventListener("click", hidePeek)
+  dragByHead(peek, peek.querySelector(".note-peek-title") as HTMLElement)
   peek.addEventListener("mouseleave", () => highlight(null))
   // Being read: it no longer moves after its dot.
   peek.addEventListener("pointerdown", () => (followPlaced = false))
@@ -229,6 +230,32 @@ function ensurePeek(): HTMLElement {
   body.addEventListener("mouseover", (e) => highlight(linkSlug(e.target)))
   document.body.appendChild(peek)
   return peek
+}
+
+// The title is a handle: dragged, it moves the popover off what it covers (Victor,
+// 2026-10-14), half of it out of the window at most, its title always in. It stays
+// where it was dropped for the links followed inside it; a click on a dot opens the
+// next note by the cursor again.
+function dragByHead(el: HTMLElement, head: HTMLElement) {
+  head.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const dx = e.clientX - el.offsetLeft
+    const dy = e.clientY - el.offsetTop
+    head.setPointerCapture(e.pointerId)
+    const move = (m: PointerEvent) => {
+      el.style.left = `${Math.max(-el.offsetWidth / 2, Math.min(m.clientX - dx, innerWidth - el.offsetWidth / 2))}px`
+      el.style.top = `${Math.max(0, Math.min(m.clientY - dy, innerHeight - 48))}px`
+    }
+    const drop = () => {
+      head.removeEventListener("pointermove", move)
+      head.removeEventListener("pointerup", drop)
+      head.removeEventListener("pointercancel", drop)
+    }
+    head.addEventListener("pointermove", move)
+    head.addEventListener("pointerup", drop)
+    head.addEventListener("pointercancel", drop)
+  })
 }
 
 // Beside the point (the cursor, or a dot), flipped to its left where it would
@@ -322,9 +349,33 @@ function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | n
   title.innerHTML = h1?.innerHTML ?? ""
   h1?.remove()
   body.replaceChildren(...note.filter((e) => e !== h1))
+  foldPoints(body)
   body.querySelectorAll<HTMLAnchorElement>("a[data-slug]").forEach((a) => {
     a.classList.toggle("seen", isSeen(simplifySlug(a.dataset.slug as never)))
   })
+}
+
+// Only the lead sentence shows at first; the bullets under it fold into a "Details"
+// line that opens them (Victor, 2026-10-14): at the end of the day there is no time
+// to go through every note's points, and the lead is what the reader takes away.
+// A note without a lead paragraph shows whole.
+function foldPoints(body: HTMLElement) {
+  const article = body.querySelector("article")
+  const lead = article?.firstElementChild
+  if (!article || lead?.tagName !== "P" || !lead.nextElementSibling) return
+  const rest: Element[] = []
+  for (let e = lead.nextElementSibling; e; e = e.nextElementSibling) rest.push(e)
+  // The note's own points: not the "See also" / day footer under its closing rule.
+  const footer = rest.findIndex((e) => e.tagName === "HR")
+  const points = rest
+    .slice(0, footer < 0 ? rest.length : footer)
+    .reduce((n, e) => n + (e.matches("ul, ol") ? e.children.length : 0), 0)
+  const details = document.createElement("details")
+  details.className = "note-points"
+  const summary = document.createElement("summary")
+  summary.textContent = points > 0 ? `Details · ${points} point${points === 1 ? "" : "s"}` : "Details"
+  details.append(summary, ...rest)
+  article.appendChild(details)
 }
 
 // Also on a pan or scroll-zoom of the graph (patch-graph.py): its dot moves away from

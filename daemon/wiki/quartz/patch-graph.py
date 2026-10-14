@@ -130,6 +130,23 @@ PATCHES = [
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { loadGlow, makeGlow } from "./graph-glow"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, graphSettled, hidePeek, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
+    # PixiJS listens for pointermove on the whole document, so a pointer over the note
+    # popover still lit the dot under it (Victor, 2026-10-14). Only a move over the canvas
+    # reaches the dots; leaving it for the popover is the canvas's own pointerleave, which
+    # unlights the dot. A move Pixi replays on document while the layout settles counts
+    # where the pointer actually is.
+    ("""  graph.appendChild(app.canvas)
+""",
+     """  graph.appendChild(app.canvas)
+  const pixiEvents = app.renderer.events as unknown as { _onPointerMove: (e: PointerEvent) => void }
+  const pixiMove = pixiEvents._onPointerMove
+  document.removeEventListener("pointermove", pixiMove, true)
+  pixiEvents._onPointerMove = (e: PointerEvent) => {
+    const over = e.target === document ? document.elementFromPoint(e.clientX, e.clientY) : e.target
+    if (over === app.canvas) pixiMove(e)
+  }
+  document.addEventListener("pointermove", pixiEvents._onPointerMove, true)
+"""),
     # Hovering a dot fetches its note ahead of the click (note-pane.ts).
     ("    hoveredNodeId = newHoveredId\n",
      "    hoveredNodeId = newHoveredId\n"

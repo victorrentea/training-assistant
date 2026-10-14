@@ -71,6 +71,14 @@ body {
     padding: 0.8rem 2.8rem 0.2rem 1.1rem;
     font-size: 1.5rem;
     line-height: 1.2;
+    // The handle that drags the popover (note-pane.ts): no text selection on a drag.
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+
+    &:active {
+      cursor: grabbing;
+    }
   }
 
   .note-peek-body {
@@ -118,6 +126,29 @@ body {
 
     img {
       cursor: zoom-in;
+    }
+
+    // The bullets folded under the lead (note-pane.ts): one line that opens them.
+    details.note-points > summary {
+      width: fit-content;
+      margin: 0.2rem 0 0.4rem;
+      padding: 0.3rem 0.8rem;
+      border: 1px solid var(--lightgray);
+      border-radius: 999px;
+      font-weight: 600;
+      color: var(--darkgray);
+      cursor: pointer;
+      user-select: none;
+
+      &:hover {
+        color: #8b5cf6;
+        border-color: #8b5cf6;
+      }
+    }
+
+    details.note-points[open] > summary {
+      color: #8b5cf6;
+      border-color: #8b5cf6;
     }
 
     a.internal {

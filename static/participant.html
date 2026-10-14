@@ -461,6 +461,17 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
         .follow-toggle { border-radius: 999px; transition: background-color 120ms ease, color 120ms ease; }
         .follow-toggle[aria-pressed="true"] { opacity: 1; background: var(--color-primary, #4555ba); color: var(--color-on-primary, #fff); }
         .follow-toggle[aria-pressed="true"] .material-symbols-outlined { font-variation-settings: 'FILL' 1, 'wght' 600; }
+        /* Sunk into the row like a pressed key (Victor, 2026-10-14): a flat filled disc
+           didn't read as "on". Shadow inside along the top, a light lip along the bottom. */
+        .follow-toggle[aria-pressed="true"] {
+          box-shadow: inset 0 3px 5px rgba(0,0,0,.55), inset 0 -1px 1px rgba(255,255,255,.35), 0 1px 0 rgba(255,255,255,.18);
+        }
+        .follow-toggle[aria-pressed="true"] .material-symbols-outlined { transform: translateY(1px); }
+        /* Hovered while pressed: it stays the same pressed key, a touch lighter — the
+           shared yellow hover glyph turned it into a muddy yellow-on-lavender blob. */
+        #slides-follow-toggle[aria-pressed="true"]:hover, #slides-follow-toggle[aria-pressed="true"]:focus-visible {
+          color: var(--color-on-primary, #fff); transform: none; filter: brightness(1.12);
+        }
         @keyframes follow-toggle-blink { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 6px var(--color-primary-container, #dfe0ff); background: var(--color-primary, #4555ba); color: var(--color-on-primary, #fff); opacity: 1; } }
         .follow-toggle.follow-blink-red, .follow-toggle.follow-notify { animation: follow-toggle-blink .45s ease-in-out 3; }
         #slides-follow-tip { position: fixed; z-index: 9999; max-width: 16rem; padding: .5rem .8rem; border-radius: 12px;
@@ -1099,7 +1110,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <span class="text-base">Slides</span>
 <span class="material-symbols-outlined topics-arrow text-xl transition-transform duration-300">chevron_right</span>
 </span>
-<span class="ml-auto mr-1 inline-flex items-center gap-1.5">
+<span class="ml-auto inline-flex items-center gap-1.5" style="margin-right:-2px">
 <button type="button" id="slides-follow-toggle" onclick="event.stopPropagation(); _onSlidesFollowToggleTap()" data-tip="Follow Victor's slide" aria-label="Follow Victor's slide" aria-pressed="true" class="side-icon jump-btn follow-toggle"><span class="material-symbols-outlined">my_location</span></button>
 <input id="slides-follow-checkbox" type="checkbox" hidden tabindex="-1" checked />
 </span>
