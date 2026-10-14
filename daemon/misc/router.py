@@ -41,8 +41,8 @@ from daemon.ws_messages import (
     SummaryScrollMsg,
     SummaryScrollPosition,
     SummaryUpdatedMsg,
-    WikiNoteMsg,
     TalkNotesReport,
+    WikiNoteMsg,
     WikiNotePosition,
 )
 from daemon.ws_publish import broadcast, notify_host
