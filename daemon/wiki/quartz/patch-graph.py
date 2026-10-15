@@ -164,7 +164,8 @@ PATCHES = [
     # The full graph answers the popover: which dot is open, and which one a link in
     # the note points at. That one lights up with the selected dot and the edge
     # between them, as when hovering a dot. It also tells where a dot is on screen,
-    # so a note the trainer opened (Follow) pops up by its dot, and when the layout
+    # so a note the trainer opened (Follow) pops up by its dot, where every dot and its
+    # label are (the popover opens over the fewest unread ones), and when the layout
     # has come to rest.
     ("""  let stopAnimation = false
 """,
@@ -195,6 +196,27 @@ PATCHES = [
       if (!inView(x, Math.max(0, rect.left), Math.min(innerWidth, rect.right))) return null
       if (!inView(y, Math.max(0, rect.top), Math.min(innerHeight, rect.bottom))) return null
       return { x, y }
+    },
+    dots() {
+      const rect = app.canvas.getBoundingClientRect()
+      return nodeRenderData.map((n) => {
+        const box = n.gfx.getBounds()
+        let { minX, minY, maxX, maxY } = box
+        if (n.label.alpha > 0.3) {
+          const label = n.label.getBounds()
+          minX = Math.min(minX, label.minX)
+          minY = Math.min(minY, label.minY)
+          maxX = Math.max(maxX, label.maxX)
+          maxY = Math.max(maxY, label.maxY)
+        }
+        return {
+          id: n.simulationData.id,
+          left: rect.left + minX,
+          top: rect.top + minY,
+          right: rect.left + maxX,
+          bottom: rect.top + maxY,
+        }
+      })
     },
   }
   if (isGlobal) {

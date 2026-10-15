@@ -29,9 +29,13 @@ export type PaneGraph = {
   // Where the note's dot is on screen, or null when it has no dot (Home, hidden by
   // default) or the dot is out of view.
   position(slug: SimpleSlug): Point | null
+  // Every dot on screen, each with its label: what the popover should leave in view.
+  dots(): Dot[]
 }
 
 type Point = { x: number; y: number }
+type Box = { left: number; top: number; right: number; bottom: number }
+type Dot = Box & { id: SimpleSlug }
 
 // Where the popover opens: by the cursor (a clicked dot), where it already is (a
 // link followed inside it), or by the note's dot (a note the trainer opened).
@@ -258,10 +262,12 @@ function dragByHead(el: HTMLElement, head: HTMLElement) {
   })
 }
 
-// Beside the point (the cursor, or a dot), flipped to its left where it would
-// overflow the window. Where it fits on neither side (a phone: the popover is about
-// as wide as the screen), below the point or above it, shortened to the room there
-// if need be, so the dot stays in view. No point: centred. Inside the participant
+// Wherever it hides the fewest unread dots, keeping its own dot in view (Victor,
+// 2026-10-15: pinned beside the cursor, it sat on a crowded corner of the graph while
+// the top of the window was empty). Among equally good spots, the nearest to the
+// point (the cursor, or a dot). Where it fits on neither side of the point (a phone:
+// the popover is about as wide as the screen), below the point or above it,
+// shortened to the room there if need be. No point: centred. Inside the participant
 // page it keeps clear of the top band, where the page floats its controls over the
 // wiki: they would cover the popover's ✕.
 function placePeek(el: HTMLElement, at: Point | null) {
@@ -284,12 +290,8 @@ function placePeek(el: HTMLElement, at: Point | null) {
   if (!at) {
     x = clampX((innerWidth - w) / 2)
     y = clampY((innerHeight - h) / 2)
-  } else if (at.x + gap + w <= innerWidth - 8) {
-    x = at.x + gap
-    y = clampY(at.y + gap)
-  } else if (at.x - gap - w >= 8) {
-    x = at.x - gap - w
-    y = clampY(at.y + gap)
+  } else if (at.x + gap + w <= innerWidth - 8 || at.x - gap - w >= 8) {
+    ;({ x, y } = leastCovering(at, w, h, top, bottom, gap))
   } else {
     x = clampX(at.x - w / 2)
     const below = innerHeight - bottom - (at.y + gap)
@@ -304,6 +306,48 @@ function placePeek(el: HTMLElement, at: Point | null) {
   }
   el.style.left = `${x}px`
   el.style.top = `${y}px`
+}
+
+// Scans the window for the top-left corner where a w×h popover covers the fewest
+// dots: an unread one weighs as much as moving the popover 4000px further from the
+// point, a read one 400px. Never over the point itself, nor over the open note's dot.
+function leastCovering(at: Point, w: number, h: number, top: number, bottom: number, gap: number): Point {
+  const dots = graph?.dots() ?? []
+  const own = dots.find((d) => d.id === peeked)
+  const keepClear = (own ? [own] : []).concat({
+    left: at.x - gap,
+    top: at.y - gap,
+    right: at.x + gap,
+    bottom: at.y + gap,
+  })
+  const others = dots.filter((d) => d !== own)
+  const overlaps = (b: Box, x: number, y: number) =>
+    b.left < x + w && b.right > x && b.top < y + h && b.bottom > y
+  const steps = (lo: number, hi: number) => {
+    const vs: number[] = []
+    for (let v = lo; v < hi; v += 24) vs.push(v)
+    vs.push(Math.max(lo, hi))
+    return vs
+  }
+  // Beside the point, as it always opened: these win a tie on distance.
+  const beside = [at.x + gap, at.x - gap - w].map((x) => ({ x, y: at.y + gap }))
+  let best: Point | null = null
+  let bestScore = Infinity
+  for (const c of [
+    ...beside,
+    ...steps(8, innerWidth - 8 - w).flatMap((x) => steps(top, innerHeight - bottom - h).map((y) => ({ x, y }))),
+  ]) {
+    const x = Math.max(8, Math.min(c.x, innerWidth - 8 - w))
+    const y = Math.max(top, Math.min(c.y, innerHeight - bottom - h))
+    if (keepClear.some((b) => overlaps(b, x, y))) continue
+    let score = Math.hypot(Math.max(x - at.x, 0, at.x - x - w), Math.max(y - at.y, 0, at.y - y - h))
+    for (const d of others) if (overlaps(d, x, y)) score += isSeen(d.id) ? 400 : 4000
+    if (score < bestScore) {
+      bestScore = score
+      best = { x, y }
+    }
+  }
+  return best ?? { x: at.x + gap <= innerWidth - 8 - w ? at.x + gap : at.x - gap - w, y: at.y + gap }
 }
 
 // By the cursor for a clicked dot; a link followed inside the popover keeps it where
