@@ -358,7 +358,8 @@ function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | n
 // Only the lead sentence shows at first; the bullets under it fold into a "Details"
 // line that opens them (Victor, 2026-10-14): at the end of the day there is no time
 // to go through every note's points, and the lead is what the reader takes away.
-// A note without a lead paragraph shows whole.
+// A note without a lead paragraph shows whole. Its slides stay out of the fold, between
+// the lead and "Details" (Victor, 2026-10-15): a picture is worth showing up front.
 function foldPoints(body: HTMLElement) {
   const article = body.querySelector("article")
   const lead = article?.firstElementChild
@@ -367,15 +368,16 @@ function foldPoints(body: HTMLElement) {
   for (let e = lead.nextElementSibling; e; e = e.nextElementSibling) rest.push(e)
   // The note's own points: not the "See also" / day footer under its closing rule.
   const footer = rest.findIndex((e) => e.tagName === "HR")
-  const points = rest
-    .slice(0, footer < 0 ? rest.length : footer)
-    .reduce((n, e) => n + (e.matches("ul, ol") ? e.children.length : 0), 0)
+  const own = rest.slice(0, footer < 0 ? rest.length : footer)
+  // A slide is its own paragraph: ![[assets/…]] plus the *Slide N — …* caption under it.
+  const slides = own.filter((e) => e.tagName === "P" && e.querySelector("img"))
+  const points = own.reduce((n, e) => n + (e.matches("ul, ol") ? e.children.length : 0), 0)
   const details = document.createElement("details")
   details.className = "note-points"
   const summary = document.createElement("summary")
   summary.textContent = points > 0 ? `Details · ${points} point${points === 1 ? "" : "s"}` : "Details"
-  details.append(summary, ...rest)
-  article.appendChild(details)
+  details.append(summary, ...rest.filter((e) => !slides.includes(e)))
+  article.append(...slides, details)
 }
 
 // Also on a pan or scroll-zoom of the graph (patch-graph.py): its dot moves away from
