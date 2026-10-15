@@ -264,30 +264,37 @@ assert(
 
 
 // --- from host-landing.js ---
-const FOLDER_DATE_RE = /^((\d{4})-(\d{2})-(\d{1,2})(?:(\.\.|\+)(?:(\d{4})-(\d{2})-(\d{1,2})|(\d{2})-(\d{1,2})|(\d{1,2})))?)(?:\s+(.+))?$/;
+const DATE_STEP = String.raw`(\.\.|\+)(?:(\d{4})-(\d{2})-(\d{1,2})|(\d{2})-(\d{1,2})|(\d{1,2}))`;
+const FOLDER_DATE_RE = new RegExp(String.raw`^((\d{4})-(\d{2})-(\d{1,2})(?:${DATE_STEP})*)(?:\s+(.+))?$`);
+const DATE_STEP_RE = new RegExp(DATE_STEP, 'g');
 
 function parseFolderDates(f) {
   const m = f.match(FOLDER_DATE_RE);
   if (!m) return {dateStr: '', dates: [], topic: f};
-  const [, dateStr, y, mo, d, sep, ey, em, ed, em2, ed2, ed3, topic] = m;
-  const start = Date.UTC(+y, +mo - 1, +d);
-  let end = start;
-  if (ey) {
-    end = Date.UTC(+ey, +em - 1, +ed);
-  } else if (em2) {
-    end = Date.UTC(+y, +em2 - 1, +ed2);
-    if (end < start) end = Date.UTC(+y + 1, +em2 - 1, +ed2);
-  } else if (ed3) {
-    end = Date.UTC(+y, +mo - 1, +ed3);
-    if (end <= start) end = Date.UTC(+y, +mo, +ed3);  // bare day ≤ start day: next month
-  }
+  const [, dateStr, y, mo, d] = m;
+  const topic = m[m.length - 1];
   const DAY = 86400000;
   const iso = t => new Date(t).toISOString().slice(0, 10);
-  const dates = [];
-  if (sep === '+' || end < start) {
-    dates.push(iso(start), iso(end));
-  } else {
-    for (let t = start; t <= end && dates.length < 62; t += DAY) dates.push(iso(t));
+  let prev = Date.UTC(+y, +mo - 1, +d);
+  const dates = [iso(prev)];
+  for (const [, sep, ey, em, ed, em2, ed2, ed3] of dateStr.slice(`${y}-${mo}-${d}`.length).matchAll(DATE_STEP_RE)) {
+    const p = new Date(prev);
+    let next;
+    if (ey) {
+      next = Date.UTC(+ey, +em - 1, +ed);
+    } else if (em2) {
+      next = Date.UTC(p.getUTCFullYear(), +em2 - 1, +ed2);
+      if (next < prev) next = Date.UTC(p.getUTCFullYear() + 1, +em2 - 1, +ed2);
+    } else {
+      next = Date.UTC(p.getUTCFullYear(), p.getUTCMonth(), +ed3);
+      if (next <= prev) next = Date.UTC(p.getUTCFullYear(), p.getUTCMonth() + 1, +ed3);  // bare day ≤ previous day: next month
+    }
+    if (sep === '..') {
+      for (let t = prev + DAY; t <= next && dates.length < 62; t += DAY) dates.push(iso(t));
+    } else {
+      dates.push(iso(next));
+    }
+    prev = next;
   }
   return {dateStr, dates, topic: topic || ''};
 }
@@ -307,6 +314,10 @@ assertEq('three-day range lists the middle day', parseFolderDates('2026-09-10..1
 assertEq('MM-DD end', parseFolderDates('2026-08-31..09-01 X').dates, ['2026-08-31', '2026-09-01']);
 assertEq('full end date across year', parseFolderDates('2026-12-31..2027-01-01 X').dates,
   ['2026-12-31', '2027-01-01']);
+assertEq('chained + then ..', parseFolderDates('2026-10-12+14..16 EDA@Amex'),
+  {dateStr: '2026-10-12+14..16', dates: ['2026-10-12', '2026-10-14', '2026-10-15', '2026-10-16'], topic: 'EDA@Amex'});
+assertEq('chained .. then +', parseFolderDates('2026-10-30..1+3 X').dates,
+  ['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-03']);
 assertEq('date only, no topic', parseFolderDates('2026-09-15'),
   {dateStr: '2026-09-15', dates: ['2026-09-15'], topic: ''});
 assertEq('no date prefix', parseFolderDates('Random'), {dateStr: '', dates: [], topic: 'Random'});

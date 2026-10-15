@@ -84,32 +84,40 @@ function buildFolderList(folders, today) {
 
 // Folder names start with a date prefix, then the topic:
 //   2026-09-15 T | 2026-09-14..15 T | 2026-08-31..1 T (rolls into next month)
-//   2026-09-4+9 T (two separate days) | 2026-08-31..09-01 T | 2026-12-31..2027-01-02 T
+//   2026-09-4+9 T (two separate days) | 2026-10-12+14..16 T (segments chain)
+//   2026-08-31..09-01 T | 2026-12-31..2027-01-02 T
 // Days may have one or two digits. Mirrors daemon/config.py::parse_session_folder_dates.
-const FOLDER_DATE_RE = /^((\d{4})-(\d{2})-(\d{1,2})(?:(\.\.|\+)(?:(\d{4})-(\d{2})-(\d{1,2})|(\d{2})-(\d{1,2})|(\d{1,2})))?)(?:\s+(.+))?$/;
+const DATE_STEP = String.raw`(\.\.|\+)(?:(\d{4})-(\d{2})-(\d{1,2})|(\d{2})-(\d{1,2})|(\d{1,2}))`;
+const FOLDER_DATE_RE = new RegExp(String.raw`^((\d{4})-(\d{2})-(\d{1,2})(?:${DATE_STEP})*)(?:\s+(.+))?$`);
+const DATE_STEP_RE = new RegExp(DATE_STEP, 'g');
 
 function parseFolderDates(f) {
   const m = f.match(FOLDER_DATE_RE);
   if (!m) return {dateStr: '', dates: [], topic: f};
-  const [, dateStr, y, mo, d, sep, ey, em, ed, em2, ed2, ed3, topic] = m;
-  const start = Date.UTC(+y, +mo - 1, +d);
-  let end = start;
-  if (ey) {
-    end = Date.UTC(+ey, +em - 1, +ed);
-  } else if (em2) {
-    end = Date.UTC(+y, +em2 - 1, +ed2);
-    if (end < start) end = Date.UTC(+y + 1, +em2 - 1, +ed2);
-  } else if (ed3) {
-    end = Date.UTC(+y, +mo - 1, +ed3);
-    if (end <= start) end = Date.UTC(+y, +mo, +ed3);  // bare day ≤ start day: next month
-  }
+  const [, dateStr, y, mo, d] = m;
+  const topic = m[m.length - 1];
   const DAY = 86400000;
   const iso = t => new Date(t).toISOString().slice(0, 10);
-  const dates = [];
-  if (sep === '+' || end < start) {
-    dates.push(iso(start), iso(end));
-  } else {
-    for (let t = start; t <= end && dates.length < 62; t += DAY) dates.push(iso(t));
+  let prev = Date.UTC(+y, +mo - 1, +d);
+  const dates = [iso(prev)];
+  for (const [, sep, ey, em, ed, em2, ed2, ed3] of dateStr.slice(`${y}-${mo}-${d}`.length).matchAll(DATE_STEP_RE)) {
+    const p = new Date(prev);
+    let next;
+    if (ey) {
+      next = Date.UTC(+ey, +em - 1, +ed);
+    } else if (em2) {
+      next = Date.UTC(p.getUTCFullYear(), +em2 - 1, +ed2);
+      if (next < prev) next = Date.UTC(p.getUTCFullYear() + 1, +em2 - 1, +ed2);
+    } else {
+      next = Date.UTC(p.getUTCFullYear(), p.getUTCMonth(), +ed3);
+      if (next <= prev) next = Date.UTC(p.getUTCFullYear(), p.getUTCMonth() + 1, +ed3);  // bare day ≤ previous day: next month
+    }
+    if (sep === '..') {
+      for (let t = prev + DAY; t <= next && dates.length < 62; t += DAY) dates.push(iso(t));
+    } else {
+      dates.push(iso(next));
+    }
+    prev = next;
   }
   return {dateStr, dates, topic: topic || ''};
 }

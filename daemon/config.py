@@ -94,66 +94,81 @@ def config_from_env(minutes: int = DEFAULT_MINUTES) -> "Config":
 #   2026-09-14..15 Topic        consecutive days (bare end day, same month)
 #   2026-08-31..1 Topic         consecutive days rolling into the next month
 #   2026-09-4+9 Topic           two separate, non-consecutive days
+#   2026-10-12+14..16 Topic     segments chain: Oct 12, then Oct 14 to 16
 #   2026-08-31..09-01 Topic     end given as MM-DD
 #   2026-12-31..2027-01-02 T    end given as a full date
 # Days may be written with one or two digits.
+_DATE_STEP = r"(\.\.|\+)(?:(\d{4})-(\d{2})-(\d{1,2})|(\d{2})-(\d{1,2})|(\d{1,2}))"
 _SESSION_FOLDER_RE = re.compile(
     r"^[^0-9]*(\d{4})-(\d{2})-(\d{1,2})"
-    r"(?:(\.\.|\+)(?:(\d{4})-(\d{2})-(\d{1,2})|(\d{2})-(\d{1,2})|(\d{1,2})))?"
+    r"((?:" + _DATE_STEP + r")*)"
     r"(?=[\s_]|$)"
 )
+_DATE_STEP_RE = re.compile(_DATE_STEP)
 
 
 @dataclass(frozen=True)
 class SessionFolderDates:
     """The day(s) a session folder name says the session runs on."""
 
-    start: date
-    end: date
-    consecutive: bool  # ".." = every day from start to end; "+" = only the two days
+    ranges: tuple[tuple[date, date], ...]  # each (first, last) day, inclusive, in order
+
+    @property
+    def start(self) -> date:
+        return self.ranges[0][0]
+
+    @property
+    def end(self) -> date:
+        return self.ranges[-1][1]
 
     def covers(self, day: date) -> bool:
-        if self.consecutive:
-            return self.start <= day <= self.end
-        return day in (self.start, self.end)
+        return any(first <= day <= last for first, last in self.ranges)
 
     def label(self) -> str:
-        if self.start == self.end:
-            return self.start.isoformat()
-        sep = " .. " if self.consecutive else " + "
-        return f"{self.start.isoformat()}{sep}{self.end.isoformat()}"
+        return " + ".join(
+            first.isoformat() if first == last else f"{first.isoformat()} .. {last.isoformat()}"
+            for first, last in self.ranges
+        )
+
+
+def _next_date(prev: date, ey, em, ed, em2, ed2, ed3) -> date:
+    """Resolve one '..X' / '+X' step relative to the date before it."""
+    if ey:
+        return date(int(ey), int(em), int(ed))
+    if em2:
+        d = date(prev.year, int(em2), int(ed2))
+        return d.replace(year=prev.year + 1) if d < prev else d
+    day = int(ed3)
+    if day > prev.day:
+        return date(prev.year, prev.month, day)
+    return (prev.replace(day=1) + timedelta(days=32)).replace(day=day)
 
 
 def parse_session_folder_dates(name: str) -> Optional[SessionFolderDates]:
     """Parse the date prefix of a session folder name; None if it has none.
 
-    A bare end day at or before the start day rolls into the next month
-    ("2026-08-31..1" is Aug 31 to Sep 1); a MM-DD end before the start month
-    rolls into the next year. Raises ValueError for a non-existent date or an
-    end before the start.
+    Each '..X' extends the current range up to X; each '+X' starts a new one.
+    A bare day at or before the previous day rolls into the next month
+    ("2026-08-31..1" is Aug 31 to Sep 1); a MM-DD before the previous date
+    rolls into the next year. Raises ValueError for a non-existent date or a
+    date before the one preceding it.
     """
     m = _SESSION_FOLDER_RE.match(name)
     if not m:
         return None
-    y, mo, d, sep, ey, em, ed, em2, ed2, ed3 = m.groups()
-    start = date(int(y), int(mo), int(d))
-    if sep is None:
-        return SessionFolderDates(start, start, True)
-    if ey:
-        end = date(int(ey), int(em), int(ed))
-    elif em2:
-        end = date(start.year, int(em2), int(ed2))
-        if end < start:
-            end = end.replace(year=start.year + 1)
-    else:
-        end_day = int(ed3)
-        if end_day > start.day:
-            end = date(start.year, start.month, end_day)
+    y, mo, d, steps = m.groups()[:4]
+    prev = date(int(y), int(mo), int(d))
+    ranges = [[prev, prev]]
+    for sep, *parts in _DATE_STEP_RE.findall(steps):
+        nxt = _next_date(prev, *parts)
+        if nxt < prev:
+            raise ValueError(f"{nxt} < {prev}")
+        if sep == "..":
+            ranges[-1][1] = nxt
         else:
-            end = (start.replace(day=1) + timedelta(days=32)).replace(day=end_day)
-    if end < start:
-        raise ValueError(f"end {end} < start {start}")
-    return SessionFolderDates(start, end, sep == "..")
+            ranges.append([nxt, nxt])
+        prev = nxt
+    return SessionFolderDates(tuple((a, b) for a, b in ranges))
 
 MAX_SESSION_NOTES_CHARS = 20_000
 
