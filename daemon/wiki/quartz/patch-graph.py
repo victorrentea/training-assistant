@@ -69,6 +69,27 @@ PATCHES = [
   stage.addChild(glowContainer)
   const noteGlow = await loadGlow(fullSlug)
   const glowColor = computedStyleMap["--wiki-glow"]
+  // The yellow ring around the note the trainer has open (Follow, note-pane.ts): above
+  // the dots, under their labels; clicks go through it to the dot.
+  const ring = new Graphics({ zIndex: 2.5, eventMode: "none" })
+  stage.addChild(ring)
+  const ringColor = computedStyleMap["--wiki-follow-ring"]
+  let ringedNode: NodeRenderData | null = null
+"""),
+    # Drawn every frame: it moves with its dot, stays the same thickness on screen at
+    # any zoom, like the edges, and breathes so a follower's eye finds it.
+    ("""    tweens.forEach((t) => t.update(time))
+""",
+     """    ring.clear()
+    const rn = ringedNode?.simulationData
+    if (ringedNode && rn?.x !== undefined && rn.y !== undefined) {
+      const k = currentTransform.k
+      const pulse = (1 + Math.sin(time / 300)) / 2
+      ring
+        .circle(rn.x + width / 2, rn.y + height / 2, ringedNode.radius + (5 + 4 * pulse) / k)
+        .stroke({ width: 3 / k, color: ringColor, alpha: 0.6 + 0.4 * pulse })
+    }
+    tweens.forEach((t) => t.update(time))
 """),
     ("""    labelsContainer.addChild(label)
 """,
@@ -99,6 +120,7 @@ PATCHES = [
     "--wiki-badge-img",
     "--wiki-badge-link",
     "--wiki-glow",
+    "--wiki-follow-ring",
   ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k. A lit edge
@@ -129,7 +151,7 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { loadGlow, makeGlow } from "./graph-glow"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, graphSettled, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
+     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
     # PixiJS listens for pointermove on the whole document, so a pointer over the note
     # popover still lit the dot under it (Victor, 2026-10-14). Only a move over the canvas
     # reaches the dots; leaving it for the popover is the canvas's own pointerleave, which
@@ -163,10 +185,9 @@ PATCHES = [
         toggleNote(node.simulationData.id)"""),
     # The full graph answers the popover: which dot is open, and which one a link in
     # the note points at. That one lights up with the selected dot and the edge
-    # between them, as when hovering a dot. It also tells where a dot is on screen,
-    # so a note the trainer opened (Follow) pops up by its dot, where every dot and its
-    # label are (the popover opens over the fewest unread ones), and when the layout
-    # has come to rest.
+    # between them, as when hovering a dot. It rings the dot of the note the trainer
+    # has open (Follow), and tells where every dot and its label are on screen (the
+    # popover opens over the fewest unread ones).
     ("""  let stopAnimation = false
 """,
      """  const isGlobal = graph.classList.contains("global-graph-container")
@@ -186,16 +207,8 @@ PATCHES = [
       for (const n of nodeRenderData) n.active = id !== null && pair.has(n.simulationData.id)
       if (!dragging) renderPixiFromD3()
     },
-    position(id) {
-      const node = graphData.nodes.find((n) => n.id === id)
-      if (node?.x === undefined || node.y === undefined) return null
-      const rect = app.canvas.getBoundingClientRect()
-      const x = rect.left + currentTransform.x + (node.x + width / 2) * currentTransform.k
-      const y = rect.top + currentTransform.y + (node.y + height / 2) * currentTransform.k
-      const inView = (v: number, lo: number, hi: number) => v >= lo && v <= hi
-      if (!inView(x, Math.max(0, rect.left), Math.min(innerWidth, rect.right))) return null
-      if (!inView(y, Math.max(0, rect.top), Math.min(innerHeight, rect.bottom))) return null
-      return { x, y }
+    ring(id) {
+      ringedNode = nodeRenderData.find((n) => n.simulationData.id === id) ?? null
     },
     dots() {
       const rect = app.canvas.getBoundingClientRect()
@@ -219,10 +232,7 @@ PATCHES = [
       })
     },
   }
-  if (isGlobal) {
-    connectGraph(paneGraph)
-    simulation.on("end.pane", () => graphSettled(paneGraph))
-  }
+  if (isGlobal) connectGraph(paneGraph)
 
   let stopAnimation = false
 """),
@@ -307,8 +317,7 @@ PATCHES = [
     select<HTMLCanvasElement, NodeData>(app.canvas).call(
       zoomBehavior
 """),
-    ("""  if (isGlobal) {
-    connectGraph(paneGraph)
+    ("""  if (isGlobal) connectGraph(paneGraph)
 """,
      """  if (isGlobal && enableZoom) {
     let fitted = false
@@ -345,8 +354,7 @@ PATCHES = [
       requestAnimationFrame(step)
     })
   }
-  if (isGlobal) {
-    connectGraph(paneGraph)
+  if (isGlobal) connectGraph(paneGraph)
 """),
     # Home off (the default): the full graph leaves out its dot and every edge to it.
     ("""  const links: SimpleLinkData[] = []

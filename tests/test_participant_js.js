@@ -614,8 +614,8 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
     getElementById: (id) => els[id] || null,
     querySelector: (sel) => (sel === '[data-nav="wiki"]' ? nav : sel === 'label[for="wiki-follow-checkbox"]' ? label : null),
   };
-  const names = ['_isWikiViewSelected', '_isWikiFollowEnabled', '_applyHostWikiFollow',
-    '_onIncomingHostWikiNote', '_onWikiNoteOpenedByHand', '_onWikiFrameMessage', '_onWikiFollowChange'];
+  const names = ['_isWikiViewSelected', '_isWikiFollowEnabled', '_postWikiFollow', '_applyHostWikiFollow',
+    '_onIncomingHostWikiNote', '_onWikiFrameMessage', '_onWikiFollowChange'];
   const LS = makeLS({});
   const api = new Function('document', 'location', 'LS', '_onHostMachine',
     'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0;\n' +
@@ -633,7 +633,7 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
     w.posted.length === 1 && w.posted[0].msg.type === 'wiki-follow' &&
     w.posted[0].msg.slug === 'Concepts/Clean-Code' && w.posted[0].origin === 'https://interact.example');
   w.api._onIncomingHostWikiNote(null);
-  assert('the host closing the note is posted as null (closes it)', w.posted.length === 2 && w.posted[1].msg.slug === null);
+  assert('the host closing the note is posted as null (takes the ring away)', w.posted.length === 2 && w.posted[1].msg.slug === null);
 }
 {
   const w = makeWikiFollow({ onHost: true });
@@ -647,7 +647,7 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
     w.posted.length === 0 && w.label.classList.contains('follow-blink-red'));
   w.els['wiki-follow-checkbox'].checked = true;
   w.api._onWikiFollowChange(true);
-  assert('ticking Follow opens the note the host has open right away',
+  assert('ticking Follow rings the note the host has open right away',
     w.posted.length === 1 && w.posted[0].msg.slug === 'Home' && w.LS.getWikiFollow() === true);
 }
 {
@@ -670,13 +670,10 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
 {
   const w = makeWikiFollow();
   w.api._onIncomingHostWikiNote('Home');
-  const opened = (slug) => w.api._onWikiFrameMessage(
-    { source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-note-opened', slug } });
-  opened('Home');
-  assert('opening the note the host has open keeps Follow ticked', w.els['wiki-follow-checkbox'].checked === true);
-  opened('Other-note');
-  assert('opening another note by hand unticks Follow', w.els['wiki-follow-checkbox'].checked === false);
-  assert('...for this page load only: the stored choice stays ON', w.LS.getWikiFollow() === true);
+  w.els['wiki-follow-checkbox'].checked = false;
+  w.api._onWikiFollowChange(false);
+  assert('unticking Follow takes the ring away and is remembered',
+    w.posted.length === 2 && w.posted[1].msg.slug === null && w.LS.getWikiFollow() === false);
 }
 
 const hostMachineResults = [];

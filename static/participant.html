@@ -1366,11 +1366,11 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <!-- Wiki View: the session's wiki/ vault, built with Quartz and served by Railway -->
 <div id="wiki-view" style="display:none" class="relative h-full flex flex-col">
   <div id="wiki-toolbar" class="absolute top-6 right-6 z-20 flex items-center gap-2">
-    <!-- Follow the note the trainer has open (never shown on the host machine,
+    <!-- Follow: ring the note the trainer has open (never shown on the host machine,
          which is the one being followed). Moved into the top bar under 900px. The
          sidebar's Wiki row has the open-in-new-tab link. -->
     <span id="wiki-follow-controls" class="flex items-center rounded-full glass whisper-shadow border border-outline-variant border-opacity-10" style="display:none;padding:.4rem">
-      <label for="wiki-follow-checkbox" data-tip="Open the note Victor has open" class="follow-pill">
+      <label for="wiki-follow-checkbox" data-tip="Ring in yellow the note Victor has open" class="follow-pill">
         <input id="wiki-follow-checkbox" type="checkbox" tabindex="-1" onfocus="this.blur()" onchange="_onWikiFollowChange(this.checked)" />
         <span>Follow</span>
       </label>
@@ -7280,8 +7280,10 @@ function _initHostSummaryScrollSender(scrollEl) {
 }
 
 // ── Wiki follow ─────────────────────────────────────────────────────────────
-// While the trainer has a note open in the wiki on his machine, followers have it
-// open too, popping up by its dot in the graph. Same path as the Summary's Follow:
+// While the trainer has a note open in the wiki on his machine, followers see its dot
+// ringed in yellow in their graph; it does not open on their screen, so they keep
+// exploring the graph on their own (Victor, 2026-10-16). Only unticking Follow takes
+// the ring away. Same path as the Summary's Follow:
 //   trainer's wiki (note-pane.ts) → POST 127.0.0.1:1234/wiki/note → daemon
 //   → `wiki_note` broadcast → here → postMessage('wiki-follow') into the iframe.
 // The trainer's wiki posts by itself, so it works from his Wiki tab and from the
@@ -7301,15 +7303,19 @@ function _isWikiFollowEnabled() {
   return !!(cb && cb.checked);
 }
 
-// Only into a visible wiki whose graph is up: a hidden iframe measures 0 and could
-// not place the note by its dot. showView('wiki') and 'wiki-ready' send it then.
+function _postWikiFollow(slug) {
+  var frame = document.getElementById('wiki-frame');
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'wiki-follow', slug: slug }, location.origin);
+  }
+}
+
+// Only into a visible wiki whose graph is up: showView('wiki') and 'wiki-ready'
+// send it then.
 function _applyHostWikiFollow() {
   if (_onHostMachine() || !_wikiFrameReady) return;
   if (!_isWikiViewSelected() || !_isWikiFollowEnabled()) return;
-  var frame = document.getElementById('wiki-frame');
-  if (frame && frame.contentWindow) {
-    frame.contentWindow.postMessage({ type: 'wiki-follow', slug: _hostWikiNote }, location.origin);
-  }
+  _postWikiFollow(_hostWikiNote);
 }
 
 function _onIncomingHostWikiNote(slug) {
@@ -7337,15 +7343,7 @@ function _onIncomingHostWikiNote(slug) {
 function _onWikiFollowChange(checked) {
   LS.setWikiFollow(checked);
   if (checked) _applyHostWikiFollow();
-}
-
-// The reader opened a note on their own: they stop following (for this page load
-// only — only an explicit untick is remembered), as when picking a slide by hand.
-// Opening the very note the trainer has open keeps them following.
-function _onWikiNoteOpenedByHand(slug) {
-  if (_onHostMachine() || slug === _hostWikiNote) return;
-  var cb = document.getElementById('wiki-follow-checkbox');
-  if (cb && cb.checked) cb.checked = false;
+  else if (_wikiFrameReady) _postWikiFollow(null); // the ring goes away
 }
 
 function _onWikiFrameMessage(e) {
@@ -7353,7 +7351,6 @@ function _onWikiFrameMessage(e) {
   if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;
   var msg = e.data || {};
   if (msg.type === 'wiki-ready') { _wikiFrameReady = true; _applyHostWikiFollow(); }
-  else if (msg.type === 'wiki-note-opened') _onWikiNoteOpenedByHand(msg.slug);
 }
 
 // Over the wiki's top-right corner on a desktop (the note popover keeps clear of

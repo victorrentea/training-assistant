@@ -299,3 +299,13 @@ body {
 :root[saved-theme="dark"] {
   --wiki-glow: #2dd4bf;
 }
+
+// The ring a follower sees around the note the trainer has open (patch-graph.py):
+// yellow, apart from the amber picture badge; darker on the light theme to show.
+:root {
+  --wiki-follow-ring: #eab308;
+}
+
+:root[saved-theme="dark"] {
+  --wiki-follow-ring: #fde047;
+}

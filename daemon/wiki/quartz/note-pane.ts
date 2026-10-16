@@ -10,7 +10,8 @@
 // so what is left to read stands out.
 //
 // Participants can follow the trainer: whichever note Victor opens on his machine
-// opens on theirs too (see "Following the trainer" below).
+// gets a pulsing yellow ring around its dot on theirs (see "Following the trainer"
+// below).
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes the
 // full graph register here (connectGraph) and call toggleNote() on a click.
@@ -26,9 +27,8 @@ import {
 export type PaneGraph = {
   select(slug: SimpleSlug | null): void
   highlight(slug: SimpleSlug | null): void
-  // Where the note's dot is on screen, or null when it has no dot (Home, hidden by
-  // default) or the dot is out of view.
-  position(slug: SimpleSlug): Point | null
+  // The yellow ring around the note the trainer has open (null: none).
+  ring(slug: SimpleSlug | null): void
   // Every dot on screen, each with its label: what the popover should leave in view.
   dots(): Dot[]
 }
@@ -37,14 +37,15 @@ type Point = { x: number; y: number }
 type Box = { left: number; top: number; right: number; bottom: number }
 type Dot = Box & { id: SimpleSlug }
 
-// Where the popover opens: by the cursor (a clicked dot), where it already is (a
-// link followed inside it), or by the note's dot (a note the trainer opened).
-type Place = "cursor" | "keep" | "dot"
+// Where the popover opens: by the cursor (a clicked dot), or where it already is (a
+// link followed inside it).
+type Place = "cursor" | "keep"
 
 const parser = new DOMParser()
 const cache = new Map<string, Promise<HTMLElement[]>>()
 
 let graph: PaneGraph | null = null
+let ringed: SimpleSlug | null = null // the note the trainer has open, for a follower
 let highlighted: SimpleSlug | null = null
 
 // Kept per site (the path holds the session id), so one training's reading doesn't
@@ -136,19 +137,12 @@ let announced = false
 export function connectGraph(g: PaneGraph) {
   graph = g
   g.select(peeked)
+  g.ring(ringed)
   // The participant page sends the trainer's note once the graph can place it.
   if (!announced) {
     announced = true
     tellParent({ type: "wiki-ready" })
   }
-}
-
-// The d3 layout keeps moving the dots for a few seconds after a render: a note the
-// trainer opened meanwhile moves next to where its dot came to rest.
-export function graphSettled(g: PaneGraph) {
-  if (g !== graph || !followPlaced || !peek || !peeked) return
-  followPlaced = false
-  placePeek(peek, g.position(peeked))
 }
 
 export function disconnectGraph(g: PaneGraph) {
@@ -196,7 +190,6 @@ let mouseX = 0
 let mouseY = 0
 let peek: HTMLElement | null = null
 let peeked: SimpleSlug | null = null // the note the popover shows
-let followPlaced = false // placed by its dot while the layout may still be moving
 
 function ensurePeek(): HTMLElement {
   if (peek) return peek
@@ -211,9 +204,6 @@ function ensurePeek(): HTMLElement {
   peek.querySelector(".note-peek-close")!.addEventListener("click", hidePeek)
   dragByHead(peek, peek.querySelector(".note-peek-title") as HTMLElement)
   peek.addEventListener("mouseleave", () => highlight(null))
-  // Being read: it no longer moves after its dot.
-  peek.addEventListener("pointerdown", () => (followPlaced = false))
-  peek.addEventListener("wheel", () => (followPlaced = false), { passive: true })
   // A link to another note swaps the popover to it instead of navigating away from
   // the graph. Stopped before it bubbles up to Quartz's SPA router, on window.
   body.addEventListener("click", (e) => {
@@ -221,7 +211,7 @@ function ensurePeek(): HTMLElement {
     if (slug) {
       e.preventDefault()
       e.stopPropagation()
-      void showPeek(slug, "keep", "user")
+      void showPeek(slug, "keep")
       return
     }
     const img = (e.target as Element | null)?.closest?.("img")
@@ -265,12 +255,11 @@ function dragByHead(el: HTMLElement, head: HTMLElement) {
 // Wherever it hides the fewest unread dots, keeping its own dot in view (Victor,
 // 2026-10-15: pinned beside the cursor, it sat on a crowded corner of the graph while
 // the top of the window was empty). Among equally good spots, the nearest to the
-// point (the cursor, or a dot). Where it fits on neither side of the point (a phone:
-// the popover is about as wide as the screen), below the point or above it,
-// shortened to the room there if need be. No point: centred. Inside the participant
-// page it keeps clear of the top band, where the page floats its controls over the
-// wiki: they would cover the popover's ✕.
-function placePeek(el: HTMLElement, at: Point | null) {
+// cursor. Where it fits on neither side of the cursor (a phone: the popover is about
+// as wide as the screen), below it or above it, shortened to the room there if need
+// be. Inside the participant page it keeps clear of the top band, where the page
+// floats its controls over the wiki: they would cover the popover's ✕.
+function placePeek(el: HTMLElement, at: Point) {
   const gap = 16
   const top = embedded ? 72 : 8
   // Under 900px the participant page's emoji bar floats over the bottom of this
@@ -287,10 +276,7 @@ function placePeek(el: HTMLElement, at: Point | null) {
   const clampY = (y: number) => Math.max(top, Math.min(y, innerHeight - bottom - h))
   let x: number
   let y: number
-  if (!at) {
-    x = clampX((innerWidth - w) / 2)
-    y = clampY((innerHeight - h) / 2)
-  } else if (at.x + gap + w <= innerWidth - 8 || at.x - gap - w >= 8) {
+  if (at.x + gap + w <= innerWidth - 8 || at.x - gap - w >= 8) {
     ;({ x, y } = leastCovering(at, w, h, top, bottom, gap))
   } else {
     x = clampX(at.x - w / 2)
@@ -352,14 +338,12 @@ function leastCovering(at: Point, w: number, h: number, top: number, bottom: num
 
 // By the cursor for a clicked dot; a link followed inside the popover keeps it where
 // it is, under the mouse; a note the trainer opened goes by its dot.
-async function showPeek(slug: SimpleSlug, place: Place, by: "user" | "follow") {
+async function showPeek(slug: SimpleSlug, place: Place) {
   const el = ensurePeek()
   graph?.select(slug)
   if (slug === peeked) return
   peeked = slug
-  followPlaced = false
   reportOpenNote(slug)
-  if (by === "user") tellParent({ type: "wiki-note-opened", slug })
   highlight(null)
   const elts = await loadNote(slug).catch(() => null)
   if (peeked !== slug) return // another note was picked meanwhile
@@ -370,10 +354,7 @@ async function showPeek(slug: SimpleSlug, place: Place, by: "user" | "follow") {
   )
   const wasOpen = el.classList.contains("open")
   el.classList.add("open")
-  if (place === "dot") {
-    placePeek(el, graph?.position(slug) ?? null)
-    followPlaced = true
-  } else if (place === "cursor" || !wasOpen) {
+  if (place === "cursor" || !wasOpen) {
     placePeek(el, { x: mouseX, y: mouseY })
   }
   markSeen(slug)
@@ -428,7 +409,6 @@ function foldPoints(body: HTMLElement) {
 // zooms in around it (Victor, 2026-10-16), and can be dragged off what it covers.
 export function hidePeek() {
   peeked = null
-  followPlaced = false
   reportOpenNote(null)
   highlight(null)
   graph?.select(null)
@@ -438,7 +418,7 @@ export function hidePeek() {
 // A click on a dot opens its note; on the open one, closes it.
 export function toggleNote(slug: SimpleSlug) {
   if (slug === peeked) hidePeek()
-  else void showPeek(slug, "cursor", "user")
+  else void showPeek(slug, "cursor")
 }
 
 // pointerdown too: a tap on a phone moves no pointer before it lands.
@@ -478,19 +458,21 @@ function reportOpenNote(slug: SimpleSlug | null) {
   })
 }
 
-// To the participant page around the wiki: the graph is ready, or the reader opened
-// a note on their own (which unticks their Follow).
-function tellParent(msg: { type: string; slug?: SimpleSlug }) {
+// To the participant page around the wiki: the graph is ready.
+function tellParent(msg: { type: string }) {
   if (embedded) window.parent.postMessage(msg, window.location.origin)
 }
 
-// From the participant page: the note the trainer has open now (null: none).
+// From the participant page: the note the trainer has open now (null: none, or the
+// follower unticked Follow). Only ringed, never opened: the follower keeps exploring
+// the graph and reading their own notes (Victor, 2026-10-16).
 window.addEventListener("message", (e) => {
   if (!embedded || e.source !== window.parent || e.origin !== window.location.origin) return
   const msg = e.data
   if (msg?.type !== "wiki-follow") return
-  if (msg.slug === null) hidePeek()
-  else if (typeof msg.slug === "string") void showPeek(msg.slug as SimpleSlug, "dot", "follow")
+  if (msg.slug !== null && typeof msg.slug !== "string") return
+  ringed = msg.slug as SimpleSlug | null
+  graph?.ring(ringed)
 })
 
 // Not while typing, e.g. in Quartz's search box, whose own Esc closes it.
