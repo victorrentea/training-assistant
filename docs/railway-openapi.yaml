@@ -18,7 +18,10 @@ paths:
         describing why the build failed. Railway caches the archive and serves it
         at GET /{session_id}/api/materials/zip for participants whose firewall
         blocks Google Drive. Streamed to disk with a 25 MB ceiling; an error
-        payload leaves any previously cached archive untouched.
+        payload leaves any previously cached archive untouched. Railway then adds
+        the PDF of each deck named in `decks` from its own slides cache, as
+        slides/<filename> (up to 100 MB in total); a deck not cached yet is left
+        out and fetched from Google Drive in the background for the next build.
       operationId: upload_materials_zip
       security:
       - basicAuth: []
@@ -40,7 +43,7 @@ paths:
         '413':
           description: Archive exceeds the 25 MB ceiling
         '422':
-          description: Neither a file nor an error field was provided
+          description: Neither a file nor an error field was provided (an invalid deck in `decks` is only dropped)
       x-feature: materials_zip
   /api/wiki/upload:
     post:
@@ -338,6 +341,14 @@ components:
             Build failure message (missing session folder, size guard tripped).
             Mutually exclusive with file; lets waiting participants fail fast
             instead of sitting out the 20s build timeout.
+        decks:
+          type: string
+          description: >
+            JSON array of the decks shown for at least 2 minutes this session,
+            most-viewed first: [{"slug", "filename", "drive_export_url"}]. The
+            slug names the PDF in Railway's slides cache; filename (e.g.
+            "Agentic Engineering.pdf") is its name inside the archive.
+          default: "[]"
       required:
       - session_id
     MaterialsZipUploadResponse:
@@ -351,6 +362,11 @@ components:
           description: Stored archive size in bytes.
         filename:
           type: string
+        decks:
+          type: array
+          items:
+            type: string
+          description: Filenames of the deck PDFs added to the archive.
       required:
       - ok
     WikiUploadRequest:

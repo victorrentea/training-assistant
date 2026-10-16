@@ -6,14 +6,18 @@ daemon builds one archive of the session folder when a participant asks, and
 Railway caches it briefly.
 """
 import asyncio
+import json
 import logging
 import time
+import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 
+from railway.features.slides.cache import CACHE_DIR as SLIDES_CACHE_DIR
+from railway.features.slides.cache import do_download
 from railway.features.ws.daemon_protocol import MSG_BUILD_MATERIALS_ZIP, push_to_daemon
 from railway.shared.auth import require_host_auth
 from railway.shared.state import state
@@ -24,6 +28,10 @@ public_router = APIRouter()  # participant-facing, mounted under /{session_id}
 logger = logging.getLogger(__name__)
 
 MAX_ZIP_BYTES = 25 * 1024 * 1024
+# The decks are added here, after the daemon's upload, so they never count
+# against MAX_ZIP_BYTES — but a session that flipped through six big decks
+# still must not produce a 200 MB download.
+MAX_ZIP_WITH_DECKS_BYTES = 100 * 1024 * 1024
 CACHE_TTL_S = 60.0
 BUILD_TIMEOUT_S = 20.0
 MATERIALS_DIR = Path(".server-data") / "materials"
@@ -41,6 +49,18 @@ class MaterialsZipUploadResponse(BaseModel):
     ok: bool
     size: int = 0
     filename: str = ""
+    decks: list[str] = []
+
+
+class ZipDeck(BaseModel):
+    """A deck the daemon saw on screen; mirrors daemon/materials/viewed_decks.py."""
+
+    slug: str = Field(pattern=r"^[a-z0-9-]+$")
+    filename: str = Field(pattern=r"^[^/\\]+\.pdf$")
+    drive_export_url: str = ""
+
+
+_background_downloads: set[asyncio.Task] = set()
 
 
 def reset_materials_cache() -> None:
@@ -71,6 +91,69 @@ def resolve_pending_build(error: str | None) -> None:
 def _zip_path(session_id: str) -> Path:
     safe = (session_id or "nosession").strip() or "nosession"
     return MATERIALS_DIR / f"{safe}.zip"
+
+
+def _parse_decks(raw: str) -> list[ZipDeck]:
+    """Decode the daemon's deck list, dropping entries that fail validation.
+
+    The decks are an extra: a bad one must cost only itself, never the session
+    archive the participant is waiting for.
+    """
+    try:
+        entries = json.loads(raw or "[]")
+    except ValueError:
+        logger.warning("[materials] ignoring malformed decks field: %.200s", raw)
+        return []
+    if not isinstance(entries, list):
+        logger.warning("[materials] ignoring decks field that is not a list: %.200s", raw)
+        return []
+    decks: list[ZipDeck] = []
+    for entry in entries:
+        try:
+            decks.append(ZipDeck.model_validate(entry))
+        except ValidationError:
+            logger.warning("[materials] ignoring invalid deck: %.200s", entry)
+    return decks
+
+
+def _append_cached_decks(zip_path: Path, decks: list[ZipDeck]) -> tuple[list[str], list[ZipDeck]]:
+    """Add each deck's cached PDF to the archive as slides/<filename>, most-viewed first.
+
+    Returns (added filenames, decks with no cached PDF yet). A deck that would
+    push the archive past MAX_ZIP_WITH_DECKS_BYTES is left out.
+    """
+    added: list[str] = []
+    uncached: list[ZipDeck] = []
+    total = zip_path.stat().st_size
+    with zipfile.ZipFile(zip_path, "a") as archive:
+        for deck in decks:
+            pdf = SLIDES_CACHE_DIR / f"{deck.slug}.pdf"
+            if not pdf.is_file():
+                uncached.append(deck)
+                continue
+            size = pdf.stat().st_size
+            if total + size > MAX_ZIP_WITH_DECKS_BYTES:
+                logger.warning("[materials] deck %s left out: zip would exceed %d MB",
+                               deck.filename, MAX_ZIP_WITH_DECKS_BYTES // (1024 * 1024))
+                continue
+            # PDFs are already compressed; deflating them again only costs CPU.
+            archive.write(pdf, arcname=f"slides/{deck.filename}", compress_type=zipfile.ZIP_STORED)
+            total += size
+            added.append(deck.filename)
+    return added, uncached
+
+
+def _warm_slides_cache(decks: list[ZipDeck]) -> None:
+    """Fetch uncached decks in the background, so the next build (after CACHE_TTL_S) has them."""
+    for deck in decks:
+        if not deck.drive_export_url:
+            continue
+        if (state.slides_updated.get(deck.slug) or {}).get("status") == "downloading":
+            continue
+        task = asyncio.create_task(do_download(deck.slug, deck.drive_export_url))
+        _background_downloads.add(task)
+        task.add_done_callback(_background_downloads.discard)
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())  # logged by do_download
 
 
 def _cache_is_fresh() -> bool:
@@ -133,14 +216,17 @@ async def upload_materials_zip(
     session_id: str = Form(...),
     filename: str = Form(default=""),
     error: str = Form(default=""),
+    decks: str = Form(default="[]"),
     file: UploadFile | None = File(default=None),
 ):
-    """Receive the archive (or a build error) from the daemon."""
+    """Receive the archive (or a build error) from the daemon, then add the viewed decks' PDFs."""
     global _built_at, _zip_filename
 
     if error:
         resolve_pending_build(error)
         return MaterialsZipUploadResponse(ok=False)
+
+    wanted_decks = _parse_decks(decks)
 
     if file is None:
         raise HTTPException(status_code=422, detail="file or error is required")
@@ -173,9 +259,19 @@ async def upload_materials_zip(
         tmp.unlink(missing_ok=True)
         raise HTTPException(400, "Empty zip")
 
+    added: list[str] = []
+    if wanted_decks:
+        try:
+            added, uncached = await asyncio.to_thread(_append_cached_decks, tmp, wanted_decks)
+        except (zipfile.BadZipFile, OSError) as exc:
+            logger.warning("[materials] could not add decks to the zip: %s", exc)
+            uncached = []
+        _warm_slides_cache(uncached)
+
     tmp.replace(dest)  # atomic swap so a concurrent GET never sees a partial file
     _zip_filename = filename or DEFAULT_ZIP_NAME
     _built_at = time.monotonic()
     resolve_pending_build(None)
-    logger.info("[materials] ↓ received zip %s (%d bytes)", _zip_filename, total)
-    return MaterialsZipUploadResponse(ok=True, size=total, filename=_zip_filename)
+    logger.info("[materials] ↓ received zip %s (%d bytes), added decks: %s",
+                _zip_filename, total, ", ".join(added) or "none")
+    return MaterialsZipUploadResponse(ok=True, size=total, filename=_zip_filename, decks=added)

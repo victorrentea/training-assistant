@@ -6,6 +6,7 @@ which only happens when a participant clicks the download button.
 from __future__ import annotations
 
 import base64
+import json
 import ssl
 import urllib.error
 import urllib.request
@@ -13,6 +14,8 @@ import uuid
 from pathlib import Path
 
 from daemon import log
+from daemon.materials.viewed_decks import select_viewed_decks
+from daemon.misc.state import misc_state
 from daemon.materials.zip_builder import (
     ZipTooLargeError,
     build_session_zip,
@@ -91,7 +94,13 @@ def handle_build_materials_zip(data: dict, config) -> None:
         filename = session_zip_filename(folder)
         fields["filename"] = filename
         file_part = (filename, payload)
-        log.info("materials", f"↑ built session zip {filename} ({len(payload)} bytes)")
+        decks = select_viewed_decks(list(misc_state.slides_viewed), dict(misc_state.slides_catalog))
+        fields["decks"] = json.dumps([deck.model_dump() for deck in decks])
+        deck_names = ", ".join(deck.filename for deck in decks) or "none"
+        log.info(
+            "materials",
+            f"↑ built session zip {filename} ({len(payload)} bytes), decks: {deck_names}",
+        )
     except (FileNotFoundError, ZipTooLargeError, OSError) as exc:
         fields["error"] = str(exc)
         log.error("materials", f"Session zip build failed: {exc}")

@@ -155,3 +155,117 @@ def test_concurrent_requests_trigger_one_build(monkeypatch):
 
     assert len(pushed) == 1
     assert results == [None] * 5
+
+
+def _real_zip() -> bytes:
+    import io
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("ai-summary.md", "summary")
+    return buffer.getvalue()
+
+
+def _zip_names(data: bytes) -> list[str]:
+    import io
+    import zipfile
+
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        return archive.namelist()
+
+
+def _decks_json(*decks: tuple[str, str]) -> str:
+    import json
+
+    return json.dumps([
+        {"slug": slug, "filename": filename, "drive_export_url": f"https://drive/{slug}"}
+        for slug, filename in decks
+    ])
+
+
+def test_viewed_decks_are_added_from_the_slides_cache(monkeypatch, tmp_path):
+    (tmp_path / "agentic-engineering.pdf").write_bytes(b"%PDF-ae")
+    (tmp_path / "clean-code.pdf").write_bytes(b"%PDF-cc")
+    monkeypatch.setattr(materials, "SLIDES_CACHE_DIR", tmp_path)
+
+    with TestClient(app) as client:
+        upload = _upload(
+            client,
+            data={"decks": _decks_json(("agentic-engineering", "Agentic Engineering.pdf"),
+                                       ("clean-code", "Clean Code.pdf"))},
+            files={"file": ("Session.zip", _real_zip(), "application/zip")},
+        )
+        response = client.get("/e2etst/api/materials/zip")
+
+    assert upload.json()["decks"] == ["Agentic Engineering.pdf", "Clean Code.pdf"]
+    assert _zip_names(response.content) == [
+        "ai-summary.md", "slides/Agentic Engineering.pdf", "slides/Clean Code.pdf",
+    ]
+
+
+def test_uncached_deck_is_skipped_and_fetched_for_the_next_build(monkeypatch, tmp_path):
+    monkeypatch.setattr(materials, "SLIDES_CACHE_DIR", tmp_path)
+    downloads = []
+
+    async def _fake_download(slug, url):
+        downloads.append((slug, url))
+
+    monkeypatch.setattr(materials, "do_download", _fake_download)
+
+    with TestClient(app) as client:
+        upload = _upload(
+            client,
+            data={"decks": _decks_json(("agentic-engineering", "Agentic Engineering.pdf"))},
+            files={"file": ("Session.zip", _real_zip(), "application/zip")},
+        )
+        response = client.get("/e2etst/api/materials/zip")
+
+    assert upload.json()["decks"] == []
+    assert _zip_names(response.content) == ["ai-summary.md"]
+    assert downloads == [("agentic-engineering", "https://drive/agentic-engineering")]
+
+
+def test_deck_that_would_overflow_the_cap_is_left_out(monkeypatch, tmp_path):
+    (tmp_path / "big.pdf").write_bytes(b"%PDF" + b"x" * 4096)
+    (tmp_path / "small.pdf").write_bytes(b"%PDF-s")
+    monkeypatch.setattr(materials, "SLIDES_CACHE_DIR", tmp_path)
+    monkeypatch.setattr(materials, "MAX_ZIP_WITH_DECKS_BYTES", 1024)
+
+    with TestClient(app) as client:
+        upload = _upload(
+            client,
+            data={"decks": _decks_json(("big", "Big.pdf"), ("small", "Small.pdf"))},
+            files={"file": ("Session.zip", _real_zip(), "application/zip")},
+        )
+
+    assert upload.json()["decks"] == ["Small.pdf"]
+
+
+def test_invalid_deck_is_dropped_without_failing_the_archive(monkeypatch, tmp_path):
+    (tmp_path / "clean-code.pdf").write_bytes(b"%PDF-cc")
+    monkeypatch.setattr(materials, "SLIDES_CACHE_DIR", tmp_path)
+
+    with TestClient(app) as client:
+        upload = _upload(
+            client,
+            data={"decks": _decks_json(("../../etc/passwd", "x.pdf"), ("clean-code", "Clean Code.pdf"))},
+            files={"file": ("Session.zip", _real_zip(), "application/zip")},
+        )
+        response = client.get("/e2etst/api/materials/zip")
+
+    assert upload.status_code == 200
+    assert _zip_names(response.content) == ["ai-summary.md", "slides/Clean Code.pdf"]
+
+
+def test_malformed_decks_field_still_stores_the_archive():
+    with TestClient(app) as client:
+        upload = _upload(
+            client,
+            data={"decks": "not json"},
+            files={"file": ("Session.zip", _real_zip(), "application/zip")},
+        )
+        response = client.get("/e2etst/api/materials/zip")
+
+    assert upload.status_code == 200
+    assert _zip_names(response.content) == ["ai-summary.md"]

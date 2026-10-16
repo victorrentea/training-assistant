@@ -94,3 +94,28 @@ def test_handler_survives_no_session_folder_configured(monkeypatch):
     handle_build_materials_zip({"session_id": "e2etst"}, config)
 
     assert b'name="error"' in posted["body"]
+
+
+def test_handler_names_the_viewed_decks_for_railway(tmp_path, monkeypatch):
+    from daemon.misc.state import misc_state
+
+    (tmp_path / "ai-summary.md").write_text("summary", encoding="utf-8")
+    posted = {}
+    monkeypatch.setattr(
+        "daemon.materials.upload.post_multipart",
+        lambda url, body, boundary, config: posted.update(body=body),
+    )
+    monkeypatch.setattr(misc_state, "slides_viewed", [
+        {"slug": "agentic-engineering", "page": 3, "seconds": 6011},
+        {"slug": "bio-victor", "page": 1, "seconds": 4},
+    ])
+    monkeypatch.setattr(misc_state, "slides_catalog", {
+        "agentic-engineering": {"title": "Agentic Engineering 🔥", "drive_export_url": "https://drive/ae"},
+        "bio-victor": {"title": "About Victor", "drive_export_url": "https://drive/bio"},
+    })
+
+    handle_build_materials_zip({"session_id": "e2etst"}, _config(tmp_path))
+
+    assert b'name="decks"' in posted["body"]
+    assert b'"filename": "Agentic Engineering.pdf"' in posted["body"]
+    assert b"bio-victor" not in posted["body"]
