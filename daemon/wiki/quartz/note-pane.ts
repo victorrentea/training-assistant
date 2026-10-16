@@ -424,8 +424,8 @@ function foldPoints(body: HTMLElement) {
   article.append(...slides, details)
 }
 
-// Also on a pan or scroll-zoom of the graph (patch-graph.py): its dot moves away from
-// the popover, which would be left pointing at nothing.
+// Not on a pan or zoom of the graph: the note being read stays open while the reader
+// zooms in around it (Victor, 2026-10-16), and can be dragged off what it covers.
 export function hidePeek() {
   peeked = null
   followPlaced = false
