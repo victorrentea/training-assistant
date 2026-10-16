@@ -261,19 +261,37 @@ body {
   }
 }
 
-// Bottom-right of the full graph (patch-graph.py): what the wiki was written from.
+// Right of Home, on the trainer's machine only (patch-graph.py): the notes opened here
+// are followed. In the yellow of the ring his followers see; a badge, not a button.
+.graph-followed {
+  position: absolute;
+  left: 13.9rem;
+  bottom: 0.7rem;
+  z-index: 1;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-family: var(--bodyFont);
+  font-size: 0.8rem;
+  color: var(--wiki-follow-ring);
+  background: var(--light);
+  border: 1px solid var(--wiki-follow-ring);
+  cursor: default;
+  user-select: none;
+}
+
+// Bottom-right of the full graph (patch-graph.py): what the wiki was written from, on
+// one line and half see-through, so it stays out of the graph's way.
 // Inside the participant page it sits above the emoji bar floating in that corner.
 .graph-sources {
   position: absolute;
   right: 0.9rem;
   bottom: 0.8rem;
   z-index: 1;
-  max-width: 24rem;
-  text-align: right;
+  white-space: nowrap;
   font-family: var(--bodyFont);
   font-size: 0.72rem;
-  line-height: 1.35;
   color: var(--gray);
+  opacity: 0.55;
   pointer-events: none;
 }
 
@@ -295,6 +313,14 @@ body {
 
   .graph-home {
     left: 9.9rem;
+  }
+
+  .graph-followed {
+    top: 0.6rem;
+    bottom: auto;
+    left: 15.9rem;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.9rem;
   }
 
   // No room on a phone: the emoji bar takes the bottom, the pills the top.

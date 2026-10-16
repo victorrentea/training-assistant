@@ -151,7 +151,7 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { loadGlow, makeGlow } from "./graph-glow"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
+     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, onHostMachine, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
     # PixiJS listens for pointermove on the whole document, so a pointer over the note
     # popover still lit the dot under it (Victor, 2026-10-14). Only a move over the canvas
     # reaches the dots; leaving it for the popover is the canvas's own pointerleave, which
@@ -293,6 +293,15 @@ PATCHES = [
     sources.textContent =
       "Sources: browser history · opened files · slides viewed · notes · transcription · screenshots · internet research"
     container.append(reset, home, sources)
+    // Only on the trainer's machine, right of Home: the notes he opens here are the ones
+    // his participants' Follow rings in yellow (Victor, 2026-10-16).
+    if (onHostMachine()) {
+      const followed = document.createElement("div")
+      followed.className = "graph-followed"
+      followed.textContent = "◉ Followed by participants"
+      followed.title = "The note you open here is ringed in yellow for everyone who ticks Follow"
+      container.append(followed)
+    }
   }
 """),
     # Without Home, which tied every note to the middle, the notes drift past the

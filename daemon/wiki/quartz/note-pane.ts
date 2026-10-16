@@ -444,7 +444,7 @@ const embedded = window.parent !== window
 if (embedded) document.documentElement.classList.add("wiki-embedded")
 let reported: SimpleSlug | null | undefined // the last note told to the daemon
 
-function onHostMachine(): boolean {
+export function onHostMachine(): boolean {
   return document.cookie.split(";").some((p) => p.trim() === "ON_HOST_MACHINE=true")
 }
 
