@@ -85,6 +85,9 @@ body {
     flex: 1;
     overflow: auto;
     overscroll-behavior: contain;
+    // The scrollbar's room is kept even while the note fits: appearing when the points
+    // open, it narrowed the text and pushed the lead's lines down (Victor, 2026-10-16).
+    scrollbar-gutter: stable;
     padding: 0 1.1rem 0.9rem;
 
     // The note's lead sentence (its first paragraph) is what the reader takes away;
@@ -149,6 +152,30 @@ body {
     details.note-points[open] > summary {
       color: #8b5cf6;
       border-color: #8b5cf6;
+    }
+
+    // The emotional anchors lifted above "Details" (note-pane.ts), one per line.
+    p.note-anchor {
+      margin: 0.25rem 0;
+    }
+
+    // Tight around the rule above "See also" and under the note's last line (Victor,
+    // 2026-10-16): Quartz's page margins left a hole there in a popover this small.
+    hr {
+      margin: 0.6rem 0 0.4rem;
+    }
+
+    details.note-points > :has(+ hr) {
+      margin-bottom: 0;
+    }
+
+    hr + * {
+      margin-top: 0;
+    }
+
+    article > :last-child,
+    details.note-points > :last-child {
+      margin-bottom: 0;
     }
 
     a.internal {

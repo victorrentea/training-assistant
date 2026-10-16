@@ -1,7 +1,8 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
 // opening: a tiny picture at the dot's top-right when the note shows a slide or a
-// screenshot, and at its top-left 🔗 with how many external links it holds (none: no
-// badge).
+// screenshot, and at its top-left how many external links it holds, as "3↗" with the
+// arrow raised like an exponent (none: no badge). A detail, not a key number: it was
+// "🔗3" in bold, which drew the eye before the note titles (Victor, 2026-10-16).
 //
 // daemon/wiki/builder.py scans the built pages into note-badges.json at the site
 // root and copies this file next to graph.inline.ts; patch-graph.py makes the graph
@@ -62,25 +63,33 @@ function picture(colors: BadgeColors): Graphics {
     .fill({ color: colors.img })
 }
 
-function linkCount(n: number, colors: BadgeColors): Text {
-  return new Text({
-    eventMode: "none",
-    text: `🔗${n}`,
-    anchor: { x: 1, y: 1 },
-    style: {
-      fontSize: LINK_FONT,
-      fontWeight: "700",
-      fill: colors.link,
-      fontFamily: colors.font,
-      stroke: { color: colors.halo, width: 3, join: "round" },
-    },
-    resolution: window.devicePixelRatio * 4,
-  })
+// Bottom-right corner at (0, 0): the count, then the arrow beside its top.
+function linkCount(n: number, colors: BadgeColors): Container {
+  const text = (content: string, fontSize: number) =>
+    new Text({
+      eventMode: "none",
+      text: content,
+      anchor: { x: 1, y: 1 },
+      style: {
+        fontSize,
+        fontWeight: "500",
+        fill: colors.link,
+        fontFamily: colors.font,
+        stroke: { color: colors.halo, width: 3, join: "round" },
+      },
+      resolution: window.devicePixelRatio * 4,
+    })
+  // U+FE0E: the text arrow, not the emoji one.
+  const arrow = text("↗\uFE0E", LINK_FONT * 0.65)
+  arrow.position.set(0, -LINK_FONT * 0.4)
+  const count = text(`${n}`, LINK_FONT)
+  count.position.set(-arrow.width + 1, 0)
+  return new Container({ eventMode: "none", children: [count, arrow] })
 }
 
 export class NoteBadge extends Container {
   private picture: Graphics | null
-  private links: Text | null
+  private links: Container | null
 
   constructor(badges: Badges, colors: BadgeColors) {
     super({ eventMode: "none" })

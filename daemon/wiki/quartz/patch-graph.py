@@ -124,15 +124,48 @@ PATCHES = [
   ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k. A lit edge
-    # (hovered dot, or a link hovered in the note popover) is thicker, to stand out.
-    (".stroke({ alpha: l.alpha, width: 1, color: l.color })",
-     ".stroke({ alpha: l.alpha * (l.active ? 1 : 0.6), width: (l.active ? 1.6 : 0.6) / currentTransform.k, color: l.color })"),
+    # (hovered dot, a link hovered in the note popover, or an edge of the dot whose
+    # note is open) is thicker, to stand out.
+    # The edges of the open dot also show their direction (Victor, 2026-10-16): an
+    # arrowhead where the edge enters the dot its link points to. Quartz keeps A→B and
+    # B→A as two edges on the same line, so a two-way link gets a head at each end.
+    ("""      l.gfx
+        .lineTo(linkData.target.x! + width / 2, linkData.target.y! + height / 2)
+        .stroke({ alpha: l.alpha, width: 1, color: l.color })
+""",
+     """      const lit = l.active || selectedEdge(l)
+      const tx = linkData.target.x! + width / 2
+      const ty = linkData.target.y! + height / 2
+      l.gfx
+        .lineTo(tx, ty)
+        .stroke({ alpha: l.alpha * (lit ? 1 : 0.6), width: (lit ? 1.6 : 0.6) / currentTransform.k, color: l.color })
+      if (selectedEdge(l)) {
+        const k = currentTransform.k
+        const dx = linkData.target.x! - linkData.source.x!
+        const dy = linkData.target.y! - linkData.source.y!
+        const len = Math.hypot(dx, dy)
+        if (len > 0) {
+          const ux = dx / len
+          const uy = dy / len
+          // The tip on the target dot's rim; the head keeps its size on screen at any zoom.
+          const back = nodeRadius(linkData.target) + 1 / k
+          const tipX = tx - ux * back
+          const tipY = ty - uy * back
+          const baseX = tipX - (ux * 8) / k
+          const baseY = tipY - (uy * 8) / k
+          const half = 3.5 / k
+          l.gfx
+            .poly([tipX, tipY, baseX - uy * half, baseY + ux * half, baseX + uy * half, baseY - ux * half])
+            .fill({ color: l.color, alpha: l.alpha })
+        }
+      }
+"""),
     # Hover: the node and its links turn purple; the rest keep their look, without the
     # dimming Quartz applies to edges even with focusOnHover off (nodes: quartz.layout.ts).
     ("alpha = l.active ? 1 : 0.2",
      "alpha = 1"),
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
-     'l.color = l.active ? "#8b5cf6" : computedStyleMap["--lightgray"]'),
+     'l.color = l.active || selectedEdge(l) ? "#8b5cf6" : computedStyleMap["--lightgray"]'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
      """      // Repainted, not tinted: a tint multiplies, so on light theme's dark-grey dots
       // "purple" came out almost black.
@@ -143,10 +176,14 @@ PATCHES = [
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
     # Note popover (note-pane.ts): the full graph is the wiki's main screen. The dot
-    # whose note is open stays purple (selectedNodeId) until the popover closes.
+    # whose note is open stays purple (selectedNodeId) until the popover closes, and
+    # so do its edges, whatever the pointer hovers meanwhile.
     ("  let hoveredNodeId: string | null = null\n",
      "  let hoveredNodeId: string | null = null\n"
-     "  let selectedNodeId: string | null = null\n"),
+     "  let selectedNodeId: string | null = null\n"
+     "  const selectedEdge = (l: LinkRenderData) =>\n"
+     "    selectedNodeId !== null &&\n"
+     "    (l.simulationData.source.id === selectedNodeId || l.simulationData.target.id === selectedNodeId)\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
@@ -230,6 +267,17 @@ PATCHES = [
           bottom: rect.top + maxY,
         }
       })
+    },
+    edges() {
+      const rect = app.canvas.getBoundingClientRect()
+      const { x, y, k } = currentTransform
+      const at = (v: number, size: number, shift: number) => shift + k * (v + size / 2)
+      return linkRenderData.filter(selectedEdge).map(({ simulationData: { source, target } }) => ({
+        x1: rect.left + at(source.x!, width, x),
+        y1: rect.top + at(source.y!, height, y),
+        x2: rect.left + at(target.x!, width, x),
+        y2: rect.top + at(target.y!, height, y),
+      }))
     },
   }
   if (isGlobal) connectGraph(paneGraph)

@@ -31,9 +31,12 @@ export type PaneGraph = {
   ring(slug: SimpleSlug | null): void
   // Every dot on screen, each with its label: what the popover should leave in view.
   dots(): Dot[]
+  // The open dot's edges on screen, the purple ones: the popover keeps off them too.
+  edges(): Segment[]
 }
 
 type Point = { x: number; y: number }
+type Segment = { x1: number; y1: number; x2: number; y2: number }
 type Box = { left: number; top: number; right: number; bottom: number }
 type Dot = Box & { id: SimpleSlug }
 
@@ -222,6 +225,9 @@ function ensurePeek(): HTMLElement {
     }
   })
   body.addEventListener("mouseover", (e) => highlight(linkSlug(e.target)))
+  // Opening the points (foldPoints) grows the popover: refit it to the window. A
+  // details' toggle doesn't bubble, so it is caught on the way down.
+  body.addEventListener("toggle", () => peek && fitPeek(peek), true)
   document.body.appendChild(peek)
   return peek
 }
@@ -261,10 +267,7 @@ function dragByHead(el: HTMLElement, head: HTMLElement) {
 // floats its controls over the wiki: they would cover the popover's ✕.
 function placePeek(el: HTMLElement, at: Point) {
   const gap = 16
-  const top = embedded ? 72 : 8
-  // Under 900px the participant page's emoji bar floats over the bottom of this
-  // frame: the note stops above it, shorter if need be, instead of sliding under it.
-  const bottom = embedded && innerWidth < 900 ? 88 : 8
+  const { top, bottom } = peekMargins()
   el.style.maxHeight = ""
   const w = el.offsetWidth
   let h = el.offsetHeight
@@ -294,12 +297,43 @@ function placePeek(el: HTMLElement, at: Point) {
   el.style.top = `${y}px`
 }
 
+// The room the popover keeps free at the window's top and bottom. Under 900px the
+// participant page's emoji bar floats over the bottom of this frame: the note stops
+// above it, shorter if need be, instead of sliding under it.
+function peekMargins() {
+  return { top: embedded ? 72 : 8, bottom: embedded && innerWidth < 900 ? 88 : 16 }
+}
+
+// Its points opened, the popover grows down from where it was placed for the lead
+// alone: it ends above the window's bottom edge instead of running past it, which
+// looked cut off (Victor, 2026-10-16). Shorter and scrolling where it stands, or moved
+// up when the room left under it is too little to read in.
+function fitPeek(el: HTMLElement) {
+  const { top, bottom } = peekMargins()
+  el.style.maxHeight = ""
+  const h = el.offsetHeight
+  const room = innerHeight - bottom - el.offsetTop
+  if (h <= room) return
+  if (room >= Math.min(h, 320)) {
+    el.style.maxHeight = `${room}px`
+    return
+  }
+  const y = Math.max(top, innerHeight - bottom - h)
+  el.style.top = `${y}px`
+  el.style.maxHeight = `${innerHeight - bottom - y}px`
+}
+
 // Scans the window for the top-left corner where a w×h popover covers the fewest
 // dots: an unread one weighs as much as moving the popover 4000px further from the
-// point, a read one 400px. Never over the point itself, nor over the open note's dot.
+// open dot, a read one 400px. Never over the point itself, nor over the open note's dot.
+// Its purple edges outweigh all that (Victor, 2026-10-16): the popover sits as close to
+// the open dot as it can without hiding where its links go, and covers them only where
+// no spot in the window leaves them all clear.
 function leastCovering(at: Point, w: number, h: number, top: number, bottom: number, gap: number): Point {
   const dots = graph?.dots() ?? []
+  const edges = graph?.edges() ?? []
   const own = dots.find((d) => d.id === peeked)
+  const near = own ? { x: (own.left + own.right) / 2, y: (own.top + own.bottom) / 2 } : at
   const keepClear = (own ? [own] : []).concat({
     left: at.x - gap,
     top: at.y - gap,
@@ -326,14 +360,39 @@ function leastCovering(at: Point, w: number, h: number, top: number, bottom: num
     const x = Math.max(8, Math.min(c.x, innerWidth - 8 - w))
     const y = Math.max(top, Math.min(c.y, innerHeight - bottom - h))
     if (keepClear.some((b) => overlaps(b, x, y))) continue
-    let score = Math.hypot(Math.max(x - at.x, 0, at.x - x - w), Math.max(y - at.y, 0, at.y - y - h))
+    let score = Math.hypot(Math.max(x - near.x, 0, near.x - x - w), Math.max(y - near.y, 0, near.y - y - h))
     for (const d of others) if (overlaps(d, x, y)) score += isSeen(d.id) ? 400 : 4000
+    for (const e of edges) if (crosses(e, x - 6, y - 6, x + w + 6, y + h + 6)) score += 100000
     if (score < bestScore) {
       bestScore = score
       best = { x, y }
     }
   }
   return best ?? { x: at.x + gap <= innerWidth - 8 - w ? at.x + gap : at.x - gap - w, y: at.y + gap }
+}
+
+// Whether the segment runs through the box (Liang–Barsky clipping).
+function crosses(e: Segment, x0: number, y0: number, x1: number, y1: number): boolean {
+  const dx = e.x2 - e.x1
+  const dy = e.y2 - e.y1
+  let t0 = 0
+  let t1 = 1
+  for (const [p, q] of [
+    [-dx, e.x1 - x0],
+    [dx, x1 - e.x1],
+    [-dy, e.y1 - y0],
+    [dy, y1 - e.y1],
+  ]) {
+    if (p === 0) {
+      if (q < 0) return false
+    } else {
+      const t = q / p
+      if (p < 0) t0 = Math.max(t0, t)
+      else t1 = Math.min(t1, t)
+      if (t0 > t1) return false
+    }
+  }
+  return true
 }
 
 // By the cursor for a clicked dot; a link followed inside the popover keeps it where
@@ -384,7 +443,9 @@ function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | n
 // line that opens them (Victor, 2026-10-14): at the end of the day there is no time
 // to go through every note's points, and the lead is what the reader takes away.
 // A note without a lead paragraph shows whole. Its slides stay out of the fold, between
-// the lead and "Details" (Victor, 2026-10-15): a picture is worth showing up front.
+// the lead and "Details" (Victor, 2026-10-15): a picture is worth showing up front. So
+// do its emotional anchors (⚓ *the story*, Victor, 2026-10-16), one line each: the
+// story is what makes the point stick.
 function foldPoints(body: HTMLElement) {
   const article = body.querySelector("article")
   const lead = article?.firstElementChild
@@ -396,13 +457,21 @@ function foldPoints(body: HTMLElement) {
   const own = rest.slice(0, footer < 0 ? rest.length : footer)
   // A slide is its own paragraph: ![[assets/…]] plus the *Slide N — …* caption under it.
   const slides = own.filter((e) => e.tagName === "P" && e.querySelector("img"))
-  const points = own.reduce((n, e) => n + (e.matches("ul, ol") ? e.children.length : 0), 0)
+  const anchors = own.flatMap((e) =>
+    [...e.querySelectorAll("em")].filter((em) => em.previousSibling?.textContent?.trimEnd().endsWith("⚓")),
+  )
+  const lines = anchors.map((em) => {
+    const line = document.createElement("p")
+    line.className = "note-anchor"
+    line.append("⚓ ", em.cloneNode(true))
+    return line
+  })
   const details = document.createElement("details")
   details.className = "note-points"
   const summary = document.createElement("summary")
-  summary.textContent = points > 0 ? `Details · ${points} point${points === 1 ? "" : "s"}` : "Details"
+  summary.textContent = "Details"
   details.append(summary, ...rest.filter((e) => !slides.includes(e)))
-  article.append(...slides, details)
+  article.append(...slides, ...lines, details)
 }
 
 // Not on a pan or zoom of the graph: the note being read stays open while the reader
