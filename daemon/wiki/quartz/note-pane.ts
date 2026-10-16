@@ -440,6 +440,8 @@ document.addEventListener("pointerdown", trackPointer, { capture: true })
 // ON_HOST_MACHINE cookie only spares every other browser a pointless request.
 const HOST_DAEMON = "http://127.0.0.1:1234"
 const embedded = window.parent !== window
+// For custom.scss: the participant page floats its controls over the embedded wiki.
+if (embedded) document.documentElement.classList.add("wiki-embedded")
 let reported: SimpleSlug | null | undefined // the last note told to the daemon
 
 function onHostMachine(): boolean {

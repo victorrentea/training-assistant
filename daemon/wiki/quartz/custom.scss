@@ -261,6 +261,26 @@ body {
   }
 }
 
+// Bottom-right of the full graph (patch-graph.py): what the wiki was written from.
+// Inside the participant page it sits above the emoji bar floating in that corner.
+.graph-sources {
+  position: absolute;
+  right: 0.9rem;
+  bottom: 0.8rem;
+  z-index: 1;
+  max-width: 24rem;
+  text-align: right;
+  font-family: var(--bodyFont);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--gray);
+  pointer-events: none;
+}
+
+.wiki-embedded .graph-sources {
+  bottom: 7rem;
+}
+
 // Under 900px the participant page's emoji bar and feedback card float over the bottom
 // of the wiki: the pills move to its top-left corner (a note popover keeps that band
 // free), and are thumb-sized.
@@ -275,6 +295,11 @@ body {
 
   .graph-home {
     left: 9.9rem;
+  }
+
+  // No room on a phone: the emoji bar takes the bottom, the pills the top.
+  .graph-sources {
+    display: none;
   }
 }
 

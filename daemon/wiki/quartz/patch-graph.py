@@ -287,7 +287,12 @@ PATCHES = [
       cleanupGlobalGraphs()
       void renderGlobalGraph()
     })
-    container.append(reset, home)
+    // Bottom-right, in grey: what the wiki was written from (Victor, 2026-10-16).
+    const sources = document.createElement("div")
+    sources.className = "graph-sources"
+    sources.textContent =
+      "Sources: browser history · opened files · slides viewed · notes · transcription · screenshots · internet research"
+    container.append(reset, home, sources)
   }
 """),
     # Without Home, which tied every note to the middle, the notes drift past the
