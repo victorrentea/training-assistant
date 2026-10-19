@@ -15,12 +15,12 @@ from pathlib import Path
 
 from daemon import log
 from daemon.materials.viewed_decks import select_viewed_decks
-from daemon.misc.state import misc_state
 from daemon.materials.zip_builder import (
     ZipTooLargeError,
     build_session_zip,
     session_zip_filename,
 )
+from daemon.misc.state import misc_state
 
 _UPLOAD_PATH = "/api/materials/zip/upload"
 _TIMEOUT_S = 30
