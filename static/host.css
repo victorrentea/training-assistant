@@ -761,7 +761,7 @@ body {
 .aishare-host-block-head { display: flex; justify-content: space-between; gap: 1rem; font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .4rem; }
 .aishare-host-block-count { flex-shrink: 0; font-weight: 500; color: var(--muted); }
 .aishare-bars { display: flex; flex-direction: column; gap: .3rem; }
-.aishare-bar { display: grid; grid-template-columns: 7.5rem 1fr 2.5rem; align-items: center; gap: .6rem; font-size: .9rem; color: var(--text); }
+.aishare-bar { display: grid; grid-template-columns: 12rem 1fr 2.5rem; align-items: center; gap: .6rem; font-size: .9rem; color: var(--text); }
 .aishare-bar-track { height: 1.1rem; border-radius: 4px; background: var(--surface2); overflow: hidden; }
 .aishare-bar-fill { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 4px; transition: width .4s ease; }
 .aishare-bar-count { font-weight: 700; text-align: right; }

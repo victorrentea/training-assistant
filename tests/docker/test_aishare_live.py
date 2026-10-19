@@ -30,7 +30,7 @@ def _shot(page, name):
         page.screenshot(path=f"{SHOTS}/{name}.png", full_page=True)
 
 
-CHOICES = ["agents_md", "skill", "mcp", "custom_agent"]
+CHOICES = ["harness", "agents_md", "skill", "mcp", "custom_agent"]
 
 
 @pytest.mark.nightly
@@ -71,12 +71,13 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(cards).to_have_count(2, timeout=5000)
         for i, q in enumerate(CHOICES):
             alice.choose_aishare(q, 0 if q != "custom_agent" else 1)
-            expect(cards).to_have_count(3 + i if i < 3 else 6, timeout=5000)
+            expect(cards).to_have_count(3 + i, timeout=5000)
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
         alice.set_aishare(30, "review")
         expect(alice._page.locator("#aishare-done")).to_contain_text("Thank you", timeout=5000)
 
         bob.set_aishare(20)
+        bob.choose_aishare("harness", 3)
         bob.choose_aishare("agents_md", 2)
         expect(bob.aishare_card("skill")).to_be_visible(timeout=5000)
         expect(bob.aishare_card("mcp")).to_have_count(0)
@@ -92,7 +93,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         # ── Host reveals → every question, with results, for everyone
         host.reveal_aishare(True)
         expect(alice.aishare_card("ai_generated").locator(".aishare-dot")).to_have_count(2, timeout=5000)
-        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(6, timeout=5000)
+        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(7, timeout=5000)
         expect(bob.aishare_card("agents_md").locator(".count")).to_have_text(["1", "1"])
         # Anonymous: hovering a dot tells the %, never a name.
         alice._page.wait_for_timeout(1500)  # let the dots land on the curve
