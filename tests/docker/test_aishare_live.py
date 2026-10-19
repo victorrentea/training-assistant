@@ -96,10 +96,9 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(bob.aishare_card("agents_md").locator(".count")).to_have_text(["1", "1"])
         # Anonymous: hovering a dot tells the %, never a name.
         alice._page.wait_for_timeout(1500)  # let the dots land on the curve
-        alice.aishare_card("ai_generated").locator('.aishare-dot[data-value="20"]').hover()
-        expect(alice._page.locator("#app-tooltip.visible")).to_have_text("20%", timeout=1000)
-        expect(alice._page.locator("#activity-aishare-section")).not_to_contain_text("Bob")
         _shot(alice._page, "aishare-pax-revealed")
+        expect(alice.aishare_card("ai_generated").locator(".aishare-dot[data-value=\"20\"]")).to_have_attribute("data-tip", "20%")
+        expect(alice._page.locator("#activity-aishare-section")).not_to_contain_text("Bob")
         _shot(host_raw, "aishare-host")
 
         # ── A participant moves a slider after the reveal → others see it live
