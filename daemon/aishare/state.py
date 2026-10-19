@@ -96,7 +96,9 @@ class AiShareState:
         raw = data.get("answers")
         if not raw and isinstance(data.get("values"), dict):
             # Legacy single-question shape: values[uuid] = 0..100 for "ai_generated".
-            raw = {"ai_generated": data.get("values") or {}}
+            raw = {"ai_generated": data["values"]}
+        if not isinstance(raw, dict):
+            raw = {}
         self.answers = {}
         for qid, per in raw.items():
             if not isinstance(per, dict):
