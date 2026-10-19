@@ -263,7 +263,7 @@
     "/api/materials/zip/upload": {
       "post": {
         "summary": "Upload Materials Zip",
-        "description": "Receive the archive (or a build error) from the daemon.",
+        "description": "Receive the archive (or a build error) from the daemon, then add the viewed decks' PDFs.",
         "operationId": "upload_materials_zip_api_materials_zip_upload_post",
         "requestBody": {
           "content": {
@@ -995,6 +995,11 @@
             "title": "Error",
             "default": ""
           },
+          "decks": {
+            "type": "string",
+            "title": "Decks",
+            "default": "[]"
+          },
           "file": {
             "anyOf": [
               {
@@ -1110,6 +1115,14 @@
             "type": "string",
             "title": "Filename",
             "default": ""
+          },
+          "decks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Decks",
+            "default": []
           }
         },
         "type": "object",
