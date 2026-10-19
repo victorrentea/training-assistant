@@ -307,7 +307,8 @@ body {
 }
 
 // Bottom-right of the full graph (patch-graph.py): what the wiki was written from, on
-// one line and half see-through, so it stays out of the graph's way.
+// one line. Full contrast (white on dark, the text colour on light): the dim grey it had
+// was unreadable on the projector (Victor, 2026-10-19).
 // Inside the participant page it sits above the emoji bar floating in that corner.
 .graph-sources {
   position: absolute;
@@ -317,9 +318,13 @@ body {
   white-space: nowrap;
   font-family: var(--bodyFont);
   font-size: 0.72rem;
-  color: var(--gray);
-  opacity: 0.55;
+  color: var(--dark);
+  opacity: 1;
   pointer-events: none;
+}
+
+:root[saved-theme="dark"] .graph-sources {
+  color: #fff;
 }
 
 .wiki-embedded .graph-sources {
