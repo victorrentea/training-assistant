@@ -54,7 +54,8 @@ qa_questions?: dict[str, dict[str, any]]  # question_id → {text, author, upvot
 aishare?: PersistedAiShareState{
   active?:bool
   revealed?:bool  # participants see everyone's answers
-  values?:dict[str, int]  # participant_uuid → 0 (all by hand) … 100 (all by AI)
+  answers?:dict[str, dict[str, int]]  # question_id → participant_uuid → slider 0..100 | choice option index
+  values?:dict[str, int]  # legacy single-question shape (question 'ai_generated'), read on restore only
 }
 wordcloud?: PersistedWordCloudState{
   words?:dict[str, int]  # word → submission count

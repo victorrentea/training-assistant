@@ -955,7 +955,7 @@ paths:
       tags:
       - aishare
       summary: Start Aishare
-      description: Open a fresh round and route every participant to the slider.
+      description: Open a fresh round and route every participant to the survey.
       operationId: start_aishare_api__session_id__host_aishare_start_post
       responses:
         '204':
@@ -993,7 +993,7 @@ paths:
       tags:
       - aishare
       summary: Set Aishare Value
-      description: Participant moves their slider; the last value wins.
+      description: Participant answers one question; the last value wins.
       operationId: set_aishare_value_api_participant_aishare_value_post
       requestBody:
         content:
@@ -2102,16 +2102,22 @@ components:
         revealed:
           type: boolean
           title: Revealed
-        points:
+        questions:
           items:
-            $ref: '#/components/schemas/AiSharePoint'
+            $ref: '#/components/schemas/AiShareQuestion'
           type: array
-          title: Points
+          title: Questions
+        results:
+          items:
+            $ref: '#/components/schemas/AiShareResult'
+          type: array
+          title: Results
       type: object
       required:
       - active
       - revealed
-      - points
+      - questions
+      - results
       title: AiShareHostState
     AiShareParticipantState:
       properties:
@@ -2121,42 +2127,105 @@ components:
         revealed:
           type: boolean
           title: Revealed
-        count:
-          type: integer
-          title: Count
-        points:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/AiSharePoint'
-            type: array
-          - type: 'null'
-          title: Points
-        my_value:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: My Value
+        questions:
+          items:
+            $ref: '#/components/schemas/AiShareQuestion'
+          type: array
+          title: Questions
+        results:
+          items:
+            $ref: '#/components/schemas/AiShareResult'
+          type: array
+          title: Results
+        my_answers:
+          additionalProperties:
+            type: integer
+          type: object
+          title: My Answers
+          default: {}
       type: object
       required:
       - active
       - revealed
-      - count
+      - questions
+      - results
       title: AiShareParticipantState
-    AiSharePoint:
+    AiShareQuestion:
       properties:
-        name:
+        id:
           type: string
-          title: Name
-        value:
-          type: integer
-          title: Value
+          title: Id
+        kind:
+          type: string
+          enum:
+          - slider
+          - choice
+          title: Kind
+        text:
+          type: string
+          title: Text
+        options:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Options
+        low:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Low
+        high:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: High
+        future:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Future
       type: object
       required:
-      - name
-      - value
-      title: AiSharePoint
+      - id
+      - kind
+      - text
+      title: AiShareQuestion
+    AiShareResult:
+      properties:
+        id:
+          type: string
+          title: Id
+        count:
+          type: integer
+          title: Count
+          default: 0
+        values:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Values
+        counts:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Counts
+      type: object
+      required:
+      - id
+      title: AiShareResult
+      description: Anonymous results of one question — no names, no UUIDs.
     AiShareValueRequest:
       properties:
+        question:
+          type: string
+          title: Question
+          default: ai_generated
         value:
           type: integer
           maximum: 100.0

@@ -195,7 +195,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 </style>
 <script>document.fonts.ready.then(function(){var s=function(){document.body.style.visibility='visible'};if(document.body)s();else document.addEventListener('DOMContentLoaded',s)})</script>
 <script src="/static/emoji-float.js"></script>
-<script src="/static/aishare-chart.js?v=8d2605ab"></script>
+<script src="/static/aishare-chart.js?v=00b03db9"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
@@ -786,20 +786,26 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-value.untouched { font-size: 1rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); padding-top: .9rem; }
 .aishare-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .aishare-head h2 { margin: 0; }
+.aishare-questions { display: flex; flex-direction: column; gap: 1rem; }
+.aishare-q { animation: aishare-q-in .45s cubic-bezier(.2,.8,.2,1); }
+@keyframes aishare-q-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .aishare-q { animation: none; } }
+.aishare-choices { display: flex; flex-direction: column; gap: .5rem; }
+.aishare-done { margin-top: 1rem; text-align: center; font-size: 1.4rem; font-weight: 800; color: var(--color-primary, #4555ba); animation: aishare-q-in .45s cubic-bezier(.2,.8,.2,1); }
+.aishare-done small { display: block; margin-top: .35rem; font-size: .85rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); }
 /* Same size as the question (.poll-card h2) — it reads as the question's other half. */
 .aishare-status { flex-shrink: 0; font-size: 1.15rem; line-height: 1.4; font-weight: 700; color: var(--color-on-surface-variant, #566166); }
 .aishare-value { margin-bottom: 1rem; }
 /* The plot opens upward from the slider when the host reveals the answers. */
 .aishare-plot { height: 0; overflow: hidden; transition: height .7s cubic-bezier(.2,.8,.2,1); }
-.aishare-names { height: 0; }
 /* Slider = the chart's x axis: fixed 22px thumb, so x=0/100 sit 11px in from each edge. */
-#aishare-slider { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; }
-#aishare-slider::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--color-outline-variant, #a9b4b9); }
-#aishare-slider::-moz-range-track { height: 6px; border-radius: 3px; background: var(--color-outline-variant, #a9b4b9); }
-#aishare-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: var(--aishare-me); border: 3px solid var(--aishare-bg); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
-#aishare-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--aishare-me); border: 3px solid var(--aishare-bg); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
-#aishare-slider.untouched::-webkit-slider-thumb { background: var(--color-outline, #6e797e); }
-#aishare-slider.untouched::-moz-range-thumb { background: var(--color-outline, #6e797e); }
+.aishare-slider { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; }
+.aishare-slider::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--color-outline-variant, #a9b4b9); }
+.aishare-slider::-moz-range-track { height: 6px; border-radius: 3px; background: var(--color-outline-variant, #a9b4b9); }
+.aishare-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: var(--aishare-me); border: 3px solid var(--aishare-bg); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.aishare-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--aishare-me); border: 3px solid var(--aishare-bg); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.aishare-slider.untouched::-webkit-slider-thumb { background: var(--color-outline, #6e797e); }
+.aishare-slider.untouched::-moz-range-thumb { background: var(--color-outline, #6e797e); }
 /* Scale bar above the slider; the plot opens between the two and pushes it up. */
 .aishare-scale { position: relative; height: 1.5rem; margin-bottom: .35rem; font-size: .85rem; font-weight: 600; color: var(--color-on-surface-variant, #566166); }
 .aishare-scale > span { position: absolute; bottom: 0; white-space: nowrap; }
@@ -1298,19 +1304,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
     </div>
   </section>
   <section id="activity-aishare-section" style="display:none;" class="w-full">
-    <div class="poll-card aishare-card">
-      <div class="aishare-head">
-        <h2>How much of your🫵 code is generated by AI?</h2>
-        <span id="aishare-status" class="aishare-status"></span>
-      </div>
-      <div id="aishare-value" class="aishare-value untouched">Drag the slider to answer</div>
-      <div class="aishare-scale"><span class="aishare-end-l">0% – ✍️ All by hand</span><span class="aishare-tick" style="--p:.25">25%</span><span class="aishare-tick" style="--p:.5">50%</span><span class="aishare-tick" style="--p:.75">75%</span><span class="aishare-end-r">100% – All by AI 🤖</span></div>
-      <div id="aishare-plot" class="aishare-plot"></div>
-      <input id="aishare-slider" type="range" min="0" max="100" step="1" value="50" class="untouched"
-             aria-label="Percentage of your code generated by AI"
-             oninput="_onAiShareInput(this.value)" onchange="_onAiShareInput(this.value, true)" />
-      <div id="aishare-names" class="aishare-names"></div>
-    </div>
+    <!-- One card per question, appearing one after another (built by _renderActivityAiShare) -->
+    <div id="aishare-questions" class="aishare-questions"></div>
+    <div id="aishare-done" class="poll-card aishare-card aishare-done" style="display:none;">🎉 Thank you — you finished!<small>Anonymous: nobody sees who answered what.</small></div>
   </section>
 </div>
 <!-- AI Summary View -->
@@ -5569,79 +5565,166 @@ function _updateActivityNavLabel() {
   el.textContent = (hasContent && labels[_currentActivity]) || 'Activity';
 }
 
-// ── AI share slider ──
-var _aiShare = { active: false, revealed: false, count: 0, points: null, myValue: null };
-var _aiShareSendTimer = null;
+// ── AI share survey ──
+// Questions come from the daemon; each next one appears once the previous one
+// is answered (all of them once the host reveals the answers). Anonymous: the
+// broadcasts carry counts/values only; own answers arrive with /state.
+var _aiShare = { active: false, revealed: false, questions: [], results: {}, my: {} };
+var _aiShareSendTimers = {};
 
 function _applyAiShareState(msg) {
   _aiShare.active = !!msg.active;
   _aiShare.revealed = !!msg.revealed;
-  _aiShare.count = msg.count || 0;
-  _aiShare.points = msg.points || null;
-  // Own answer only arrives with /state (broadcasts are UUID-free);
-  // aishare_opened resets it for a fresh round.
-  if (msg.my_value !== undefined) _aiShare.myValue = msg.my_value;
-  if (!_aiShare.active) _aiShare.myValue = null;
+  if (msg.questions) _aiShare.questions = msg.questions;
+  _aiShare.results = {};
+  (msg.results || []).forEach(function (r) { _aiShare.results[r.id] = r; });
+  if (msg.my_answers !== undefined) _aiShare.my = Object.assign({}, msg.my_answers || {});
+  if (!_aiShare.active) _aiShare.my = {};
   _renderActivityAiShare();
 }
 
-function _aiShareParts() {
-  return { plot: document.getElementById('aishare-plot'), names: document.getElementById('aishare-names') };
+function _aiShareAnswered(qid) {
+  return _aiShare.my[qid] !== undefined && _aiShare.my[qid] !== null;
 }
 
-function _renderActivityAiShare() {
+// How many questions are on screen: up to and including the first unanswered one.
+function _aiShareVisibleCount() {
+  var qs = _aiShare.questions;
+  if (_aiShare.revealed) return qs.length;
+  for (var i = 0; i < qs.length; i++) if (!_aiShareAnswered(qs[i].id)) return i + 1;
+  return qs.length;
+}
+
+function _aiShareCountText(n) { return n === 1 ? 'One answer' : n + ' answers'; }
+
+function _aiShareBuildCard(q) {
+  var card = document.createElement('div');
+  card.className = 'poll-card aishare-card aishare-q';
+  card.dataset.q = q.id;
+  var head = '<div class="aishare-head"><h2>' + _escHtml(q.text) + '</h2><span class="aishare-status"></span></div>';
+  if (q.kind === 'slider') {
+    card.innerHTML = head +
+      '<div class="aishare-value untouched">Drag the slider to answer</div>' +
+      '<div class="aishare-scale"><span class="aishare-end-l">' + _escHtml(q.low || '0%') + '</span>' +
+        '<span class="aishare-tick" style="--p:.25">25%</span><span class="aishare-tick" style="--p:.5">50%</span>' +
+        '<span class="aishare-tick" style="--p:.75">75%</span><span class="aishare-end-r">' + _escHtml(q.high || '100%') + '</span></div>' +
+      '<div class="aishare-plot"></div>' +
+      '<input id="aishare-slider-' + q.id + '" class="aishare-slider untouched" type="range" min="0" max="100" step="1" value="50" aria-label="' + _escHtml(q.text) + '" />';
+    var slider = card.querySelector('input');
+    slider.addEventListener('input', function () { _onAiShareInput(q.id, slider.value); });
+    slider.addEventListener('change', function () { _onAiShareInput(q.id, slider.value, true); });
+  } else {
+    card.innerHTML = head + '<div class="aishare-choices">' + q.options.map(function (text, idx) {
+      return '<button class="poll-option-btn aishare-opt" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
+        '<div class="row"><span><span class="poll-option-mark" aria-hidden="true"></span>' + _escHtml(text) + '</span></div></button>';
+    }).join('') + '</div>';
+    card.querySelectorAll('.aishare-opt').forEach(function (btn) {
+      btn.addEventListener('click', function () { _onAiShareInput(q.id, btn.dataset.i, true); });
+    });
+  }
+  return card;
+}
+
+function _aiShareUpdateCard(card, q) {
+  var res = _aiShare.results[q.id] || { count: 0 };
+  card.querySelector('.aishare-status').textContent = _aiShareCountText(res.count || 0);
+  var answered = _aiShareAnswered(q.id);
+  var mine = _aiShare.my[q.id];
+  if (q.kind === 'slider') {
+    var slider = card.querySelector('.aishare-slider');
+    var valueEl = card.querySelector('.aishare-value');
+    var plot = card.querySelector('.aishare-plot');
+    // Don't yank the thumb from under a participant who is dragging it.
+    if (answered && document.activeElement !== slider) slider.value = mine;
+    if (!answered) slider.value = 50;
+    slider.classList.toggle('untouched', !answered);
+    var shown = _aiShare.revealed && res.values && window.AiShareChart;
+    valueEl.style.display = answered || shown ? 'none' : '';
+    if (shown) {
+      // The curve sits right over the slider: x=0/100 at the thumb centres.
+      var plotH = Math.round(Math.max(140, Math.min(280, window.innerHeight * 0.28)));
+      AiShareChart.render({ plot: plot }, res.values, { me: answered ? mine : null, inset: 11, height: plotH,
+        id: 'pax-' + q.id, label: q.text, future: q.future });
+    } else if (window.AiShareChart) {
+      AiShareChart.reset({ plot: plot });
+    }
+  } else {
+    var counts = _aiShare.revealed ? res.counts : null;
+    var maxCount = counts ? Math.max.apply(null, counts.concat([0])) : 0;
+    card.querySelectorAll('.aishare-opt').forEach(function (btn) {
+      var idx = +btn.dataset.i;
+      var sel = answered && mine === idx;
+      btn.classList.toggle('selected', sel);
+      btn.querySelector('.poll-option-mark').textContent = sel ? '✓' : '';
+      var c = counts ? (counts[idx] || 0) : 0;
+      var pct = c > 0 && maxCount > 0 ? (c / maxCount) * 100 : 0;
+      btn.querySelector('.fill').style.width = pct + '%';
+      var countEl = btn.querySelector('.count');
+      if (c > 0) {
+        if (!countEl) { countEl = document.createElement('span'); countEl.className = 'count'; btn.insertBefore(countEl, btn.querySelector('.row')); }
+        countEl.style.setProperty('--fill-pct', pct + '%');
+        countEl.textContent = c;
+      } else if (countEl) {
+        countEl.remove();
+      }
+    });
+  }
+}
+
+function _renderActivityAiShare(scrollToNew) {
   _updateActivityNavLabel();
   var section = document.getElementById('activity-aishare-section');
   if (!section) return;
-  var parts = _aiShareParts();
+  var list = document.getElementById('aishare-questions');
+  var done = document.getElementById('aishare-done');
   if (!_aiShare.active) {
     section.style.display = 'none';
-    if (window.AiShareChart) AiShareChart.reset(parts);
+    if (window.AiShareChart) list.querySelectorAll('.aishare-plot').forEach(function (p) { AiShareChart.reset({ plot: p }); });
+    list.innerHTML = '';
+    done.style.display = 'none';
     _updateActivityIdleSections();
     return;
   }
   section.style.display = '';
   _updateActivityIdleSections();
 
-  var slider = document.getElementById('aishare-slider');
-  var valueEl = document.getElementById('aishare-value');
-  var answered = _aiShare.myValue !== null && _aiShare.myValue !== undefined;
-  // Don't yank the thumb from under a participant who is dragging it.
-  if (answered && document.activeElement !== slider) slider.value = _aiShare.myValue;
-  if (!answered) slider.value = 50;
-  slider.classList.toggle('untouched', !answered);
-  valueEl.classList.toggle('untouched', !answered);
-  // No number once answered: the thumb's position says it. Only the hint stays.
-  valueEl.textContent = 'Drag the slider to answer';
-
-  var n = _aiShare.count;
-  document.getElementById('aishare-status').textContent = n === 1 ? 'One answer' : n + ' answers';
-
-  var shown = _aiShare.revealed && _aiShare.points && window.AiShareChart;
-  valueEl.style.display = answered || shown ? 'none' : '';
-  if (shown) {
-    // The curve sits right over the slider: x=0/100 at the thumb centres.
-    var plotH = Math.round(Math.max(180, Math.min(360, window.innerHeight * 0.36)));
-    AiShareChart.render(parts, _aiShare.points, { me: _myName, inset: 11, height: plotH, id: 'pax', names: false });
-  } else if (window.AiShareChart) {
-    AiShareChart.reset(parts);
+  var qs = _aiShare.questions;
+  var visible = _aiShareVisibleCount();
+  var added = null;
+  qs.forEach(function (q, i) {
+    var card = list.querySelector('[data-q="' + q.id + '"]');
+    if (i >= visible) { if (card) card.remove(); return; }
+    if (!card) { card = _aiShareBuildCard(q); list.appendChild(card); added = added || card; }
+    _aiShareUpdateCard(card, q);
+  });
+  var finished = qs.length > 0 && qs.every(function (q) { return _aiShareAnswered(q.id); });
+  var wasHidden = done.style.display === 'none';
+  done.style.display = finished ? '' : 'none';
+  if (scrollToNew) {
+    var target = added || (finished && wasHidden ? done : null);
+    if (target) setTimeout(function () { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
   }
 }
 
-function _onAiShareInput(raw, commit) {
+function _onAiShareInput(qid, raw, commit) {
   if (!_aiShare.active || !_sessionId) return;
   var value = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
-  _aiShare.myValue = value;
-  var slider = document.getElementById('aishare-slider');
-  var valueEl = document.getElementById('aishare-value');
-  slider.classList.remove('untouched');
-  valueEl.style.display = 'none';
-  clearTimeout(_aiShareSendTimer);
-  _aiShareSendTimer = setTimeout(function () {
+  var first = !_aiShareAnswered(qid);
+  _aiShare.my[qid] = value;
+  var card = document.querySelector('#aishare-questions [data-q="' + qid + '"]');
+  var slider = card && card.querySelector('.aishare-slider');
+  if (slider) {
+    slider.classList.remove('untouched');
+    card.querySelector('.aishare-value').style.display = 'none';
+  }
+  // A slider unlocks the next question on release, a choice on click.
+  if (commit || !slider) _renderActivityAiShare(first || commit);
+  clearTimeout(_aiShareSendTimers[qid]);
+  _aiShareSendTimers[qid] = setTimeout(function () {
     fetch('/' + _sessionId + '/api/participant/aishare/value', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
-      body: JSON.stringify({ value: value }),
+      body: JSON.stringify({ question: qid, value: value }),
     }).catch(function () { /* silent — next WS push reconciles */ });
   }, commit ? 0 : 200);
 }
@@ -6139,7 +6222,8 @@ function _handleWsMessage(msg) {
       _showPaxLb(msg);
       break;
     case 'aishare_opened':
-      _aiShare = { active: true, revealed: false, count: 0, points: null, myValue: null };
+      _aiShare = { active: true, revealed: false, questions: _aiShare.questions, results: {}, my: {} };
+      document.getElementById('aishare-questions').innerHTML = '';
       _renderActivityAiShare();
       showView('activity');
       break;

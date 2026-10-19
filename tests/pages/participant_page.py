@@ -84,11 +84,14 @@ class ParticipantPage:
     def wait_for_aishare(self, timeout: int = 8000) -> None:
         expect(self._page.locator("#activity-aishare-section")).to_be_visible(timeout=timeout)
 
-    def set_aishare(self, value: int) -> None:
-        self._page.locator("#aishare-slider").fill(str(value))
+    def set_aishare(self, value: int, question: str = "ai_generated") -> None:
+        self._page.locator(f"#aishare-slider-{question}").fill(str(value))
 
-    def aishare_chart_labels(self) -> list[str]:
-        return self._page.locator("#aishare-names .aishare-label text").all_text_contents()
+    def choose_aishare(self, question: str, option: int) -> None:
+        self._page.locator(f'[data-q="{question}"] .aishare-opt[data-i="{option}"]').click()
+
+    def aishare_card(self, question: str):
+        return self._page.locator(f'#aishare-questions [data-q="{question}"]')
 
     def rename(self, name: str) -> None:
         """Trigger inline name edit and set a new name."""

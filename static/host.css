@@ -756,6 +756,17 @@ body {
   padding: 1rem 1.5rem;
   overflow-y: auto;
 }
+#center-aishare { justify-content: flex-start; }
+.aishare-host-results { display: flex; flex-direction: column; gap: 1.1rem; width: 100%; }
+.aishare-host-block-head { display: flex; justify-content: space-between; gap: 1rem; font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .4rem; }
+.aishare-host-block-count { flex-shrink: 0; font-weight: 500; color: var(--muted); }
+.aishare-bars { display: flex; flex-direction: column; gap: .3rem; }
+.aishare-bar { display: grid; grid-template-columns: 7.5rem 1fr 2.5rem; align-items: center; gap: .6rem; font-size: .9rem; color: var(--text); }
+.aishare-bar-track { height: 1.1rem; border-radius: 4px; background: var(--surface2); overflow: hidden; }
+.aishare-bar-fill { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 4px; transition: width .4s ease; }
+.aishare-bar-count { font-weight: 700; text-align: right; }
+.aishare-host-questions { margin: .9rem 0 0; padding-left: 1.3rem; font-size: .85rem; color: var(--muted); line-height: 1.6; }
+.aishare-host-count { display: inline-block; min-width: 1.3rem; padding: 0 .35rem; border-radius: 9px; background: var(--surface2); color: var(--text); font-size: .75rem; font-weight: 700; text-align: center; }
 #center-aishare .aishare-plot { height: 0; overflow: hidden; transition: height .7s cubic-bezier(.2,.8,.2,1); }
 #center-aishare .aishare-scale { position: relative; height: 1.5rem; margin-bottom: .35rem; font-size: .85rem; font-weight: 600; color: var(--muted); }
 #center-aishare .aishare-scale > span { position: absolute; bottom: 0; white-space: nowrap; }

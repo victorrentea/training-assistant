@@ -2635,26 +2635,58 @@ function _renderEngagementPopover() {
     } catch (e) { /* silent */ }
   }
 
+  // One block per question in the center panel, kept across updates so the
+  // bell curves morph instead of being redrawn from scratch.
   function renderAiShareHost(state) {
-    const points = state.points || [];
+    const questions = state.questions || [];
+    const results = Object.fromEntries((state.results || []).map(r => [r.id, r]));
     const reveal = document.getElementById('aishare-reveal');
     reveal.checked = !!state.revealed;
     reveal.disabled = !state.active;
     document.getElementById('aishare-start-btn').textContent = state.active ? 'Restart' : 'Start';
-    const n = points.length;
+    const n = Math.max(0, ...questions.map(q => (results[q.id] || {}).count || 0));
     document.getElementById('aishare-host-status').textContent = state.active
-      ? `${n} ${n === 1 ? 'answer' : 'answers'}${state.revealed ? ' · visible to everyone' : ' · only you see them'}`
-      : 'Start to put a slider in front of every participant.';
-    const parts = {
-      plot: document.getElementById('aishare-host-plot'),
-      names: document.getElementById('aishare-host-names'),
-    };
-    if (state.active) {
-      AiShareChart.render(parts, points, { axis: true, inset: 11, id: 'host', names: false,
-        height: Math.round(Math.max(180, Math.min(340, window.innerHeight * 0.34))) });
-    } else {
-      AiShareChart.reset(parts);
+      ? `${n} ${n === 1 ? 'participant' : 'participants'}${state.revealed ? ' · visible to everyone' : ' · only you see them'}`
+      : 'Start to put the questions in front of every participant, one after another.';
+    document.getElementById('aishare-host-questions').innerHTML = questions.map(q => {
+      const c = (results[q.id] || {}).count || 0;
+      return `<li>${escHtml(q.text)}${c ? ` <span class="aishare-host-count">${c}</span>` : ''}</li>`;
+    }).join('');
+
+    const box = document.getElementById('aishare-host-results');
+    if (!state.active) {
+      box.querySelectorAll('.aishare-plot').forEach(p => AiShareChart.reset({ plot: p }));
+      box.innerHTML = '';
+      return;
     }
+    const plotH = Math.round(Math.max(70, Math.min(150, window.innerHeight * 0.12)));
+    questions.forEach(q => {
+      const res = results[q.id] || { count: 0 };
+      let block = box.querySelector(`[data-q="${q.id}"]`);
+      if (!block) {
+        block = document.createElement('div');
+        block.className = 'aishare-host-block';
+        block.dataset.q = q.id;
+        block.innerHTML = `<div class="aishare-host-block-head"><span>${escHtml(q.text)}</span><span class="aishare-host-block-count"></span></div>` +
+          (q.kind === 'slider'
+            ? `<div class="aishare-scale"><span class="aishare-end-l">${escHtml(q.low || '0%')}</span><span class="aishare-tick" style="--p:.25">25%</span><span class="aishare-tick" style="--p:.5">50%</span><span class="aishare-tick" style="--p:.75">75%</span><span class="aishare-end-r">${escHtml(q.high || '100%')}</span></div><div class="aishare-plot"></div>`
+            : `<div class="aishare-bars">${q.options.map((o, i) => `<div class="aishare-bar" data-i="${i}"><span class="aishare-bar-label">${escHtml(o)}</span><span class="aishare-bar-track"><span class="aishare-bar-fill"></span></span><span class="aishare-bar-count"></span></div>`).join('')}</div>`);
+        box.appendChild(block);
+      }
+      block.querySelector('.aishare-host-block-count').textContent = res.count ? `${res.count} ${res.count === 1 ? 'answer' : 'answers'}` : '';
+      if (q.kind === 'slider') {
+        AiShareChart.render({ plot: block.querySelector('.aishare-plot') }, res.values || [],
+          { axis: true, inset: 11, id: 'host-' + q.id, label: q.text, future: q.future, height: plotH });
+      } else {
+        const counts = res.counts || [];
+        const max = Math.max(0, ...counts);
+        block.querySelectorAll('.aishare-bar').forEach(bar => {
+          const c = counts[+bar.dataset.i] || 0;
+          bar.querySelector('.aishare-bar-fill').style.width = max ? (c / max * 100) + '%' : '0%';
+          bar.querySelector('.aishare-bar-count').textContent = c ? c : '';
+        });
+      }
+    });
   }
 
   async function startAiShare() {

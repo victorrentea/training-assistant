@@ -133,11 +133,24 @@ class PollHostUpdateMsg(BaseModel):
     host_extras: list[int] = []          # host-added extras (per option); total = participant + extras
 
 
-# ── AI share (slider: how much of your code does AI generate) ─────────────────
+# ── AI share (anonymous survey: how much AI is in your code) ─────────────────
 
-class AiSharePoint(BaseModel):
-    name: str
-    value: int                         # 0 = all by hand … 100 = all by AI
+class AiShareQuestion(BaseModel):
+    id: str
+    kind: Literal["slider", "choice"]
+    text: str
+    options: list[str] | None = None   # choice: the answers, stored as their index
+    low: str | None = None             # slider: label at 0%
+    high: str | None = None            # slider: label at 100%
+    future: int | None = None          # slider: from here on the curve is painted green
+
+
+class AiShareResult(BaseModel):
+    """Anonymous results of one question — no names, no UUIDs."""
+    id: str
+    count: int = 0
+    values: list[int] | None = None    # slider: every answer 0..100, sorted
+    counts: list[int] | None = None    # choice: answers per option
 
 
 class AiShareOpenedMsg(BaseModel):
@@ -147,13 +160,13 @@ class AiShareOpenedMsg(BaseModel):
 
 
 class AiShareUpdatedMsg(BaseModel):
-    """Participant-facing snapshot. `points` (names + values, UUID-free) only
-    while the host has revealed the distribution; otherwise None."""
+    """Participant-facing snapshot. Each result carries only `count` until the
+    host reveals the answers; then `values`/`counts` too."""
     type: Literal["aishare_updated"] = "aishare_updated"
     active: bool
     revealed: bool
-    count: int = 0
-    points: list[AiSharePoint] | None = None
+    questions: list[AiShareQuestion] = []
+    results: list[AiShareResult] = []
 
 
 class AiShareHostUpdateMsg(BaseModel):
@@ -161,7 +174,8 @@ class AiShareHostUpdateMsg(BaseModel):
     type: Literal["aishare_host_update"] = "aishare_host_update"
     active: bool
     revealed: bool
-    points: list[AiSharePoint] = []
+    questions: list[AiShareQuestion] = []
+    results: list[AiShareResult] = []
 
 
 class QuizEndCountdownStartedMsg(BaseModel):

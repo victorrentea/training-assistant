@@ -71,11 +71,17 @@ class PersistedPollState(PersistedModel):
 
 
 class PersistedAiShareState(PersistedModel):
-    """AI-share slider snapshot persisted in session state."""
+    """AI-share survey snapshot persisted in session state."""
 
     active: bool = False
     revealed: bool = Field(default=False, description="participants see everyone's answers")
-    values: dict[str, int] = Field(default_factory=dict, description="participant_uuid → 0 (all by hand) … 100 (all by AI)")
+    answers: dict[str, dict[str, int]] = Field(
+        default_factory=dict,
+        description="question_id → participant_uuid → slider 0..100 | choice option index",
+    )
+    values: dict[str, int] | None = Field(
+        default=None, description="legacy single-question shape (question 'ai_generated'), read on restore only",
+    )
 
 
 class PersistedWordCloudState(PersistedModel):

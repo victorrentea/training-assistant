@@ -294,10 +294,10 @@ components:
     # ── AI share ──────────────────────────────────────────────────────────────
 
     aishare_opened:
-      summary: Host started the "how much of your code does AI generate" slider
+      summary: Host started the anonymous "how much AI is in your code" survey
       x-feature: aishare
       x-doc-notes:
-        - Bare signal; participants jump to the Activity view and reset their own answer.
+        - Bare signal; participants jump to the Activity view and reset their own answers.
         - WS ordering guarantees aishare_updated arrives immediately after.
       payload:
         type: object
@@ -311,8 +311,8 @@ components:
       summary: AI-share snapshot — fires on start, reveal toggle, every answer and clear
       x-feature: aishare
       x-doc-notes:
-        - "`points` (names + values, UUID-free) is present only while the host has revealed the distribution."
-        - "`active=false` means the activity was cleared; hide the slider."
+        - "Each result carries only `count` until the host reveals the answers; then `values` / `counts` too. Always anonymous."
+        - "`active=false` means the activity was cleared; hide the survey."
       payload:
         type: object
         required: [type, active, revealed]
@@ -324,23 +324,64 @@ components:
             type: boolean
           revealed:
             type: boolean
-          count:
-            type: integer
-            description: Number of participants who answered
-          points:
-            nullable: true
+          questions:
             type: array
+            description: The survey, in the order participants answer it (one question appears after the previous one is answered)
             items:
               type: object
-              required: [name, value]
+              required: [id, kind, text]
               properties:
-                name:
+                id:
                   type: string
-                value:
+                kind:
+                  type: string
+                  enum: [slider, choice]
+                text:
+                  type: string
+                options:
+                  nullable: true
+                  type: array
+                  items:
+                    type: string
+                  description: "choice: the answers (e.g. Yes / No / I don't know), stored as their index"
+                low:
+                  nullable: true
+                  type: string
+                  description: "slider: label at 0%"
+                high:
+                  nullable: true
+                  type: string
+                  description: "slider: label at 100%"
+                future:
+                  nullable: true
                   type: integer
-                  minimum: 0
-                  maximum: 100
-                  description: 0 = all by hand … 100 = all by AI
+                  description: "slider: from this % on the curve is painted green"
+          results:
+            type: array
+            description: Anonymous per-question results (no names, no UUIDs), in question order
+            items:
+              type: object
+              required: [id]
+              properties:
+                id:
+                  type: string
+                count:
+                  type: integer
+                  description: Number of participants who answered this question
+                values:
+                  nullable: true
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                  description: "slider: every answer, sorted; only once revealed"
+                counts:
+                  nullable: true
+                  type: array
+                  items:
+                    type: integer
+                  description: "choice: answers per option; only once revealed"
 
     # ── Scores ────────────────────────────────────────────────────────────────
 

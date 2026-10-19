@@ -39,7 +39,8 @@ from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
 from daemon.wiki.publisher import wiki_updated_at
 from daemon.ws_messages import (
-    AiSharePoint,
+    AiShareQuestion,
+    AiShareResult,
     ParticipantNamesUpdatedMsg,
     ScoresUpdatedMsg,
     SummaryScrollPosition,
@@ -256,9 +257,9 @@ class DebateArgumentParticipant(BaseModel):
 class AiShareParticipantState(BaseModel):
     active: bool
     revealed: bool
-    count: int
-    points: list[AiSharePoint] | None = None
-    my_value: int | None = None
+    questions: list[AiShareQuestion]
+    results: list[AiShareResult]
+    my_answers: dict[str, int] = {}
 
 
 class WordcloudData(BaseModel):
@@ -490,7 +491,7 @@ def _build_aishare_for_participant(pid: str) -> dict:
     from daemon.aishare.router import participant_view
     from daemon.aishare.state import aishare_state
 
-    return {**participant_view(), "my_value": aishare_state.values.get(pid)}
+    return {**participant_view(), "my_answers": aishare_state.answers_of(pid)}
 
 
 def _participant_display_names() -> list[str]:
