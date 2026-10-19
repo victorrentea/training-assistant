@@ -38,6 +38,7 @@ from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
 from daemon.wiki.publisher import wiki_updated_at
+from daemon.wiki.takeaways import current_takeaways
 from daemon.ws_messages import (
     AiShareQuestion,
     AiShareResult,
@@ -45,6 +46,7 @@ from daemon.ws_messages import (
     ScoresUpdatedMsg,
     SummaryScrollPosition,
     TalkNotesMsg,
+    WikiTakeaways,
 )
 from daemon.ws_publish import broadcast
 
@@ -322,6 +324,8 @@ class ParticipantStateResponse(BaseModel):
     wiki_updated_at: str | None = None
     summary_scroll: SummaryScrollPosition | None = None
     wiki_note: str | None = None
+    # The wiki notes the trainer starred as key takeaways (glow on every graph)
+    wiki_takeaways: list[str] = []
     # Talk mode: the trainer's notes as VS Code has them open (None until he
     # opens them) and whether he presents from the slides or the notes.
     talk_notes: TalkNotesMsg | None = None
@@ -826,6 +830,13 @@ async def set_location(request: Request, body: LocationRequest):
     return Response(status_code=204)
 
 
+# The wiki notes the trainer starred, for a wiki opened in a tab of its own: inside
+# the participant page the stars come with the state and the WS broadcast instead.
+@router.get("/wiki/takeaways", response_model=WikiTakeaways)
+async def get_wiki_takeaways():
+    return WikiTakeaways(slugs=current_takeaways())
+
+
 @router.get("/state", response_model=ParticipantStateResponse)
 async def get_participant_state(request: Request):
     """Return full personalised state for a participant — used on page load and WS reconnect."""
@@ -889,6 +900,8 @@ async def get_participant_state(request: Request):
         "summary_scroll": misc_state.summary_scroll,
         # The wiki note the host has open, so a follower opens it on (re)connect
         "wiki_note": misc_state.wiki_note,
+        # The notes the trainer starred as key takeaways: they glow on every graph
+        "wiki_takeaways": current_takeaways(),
         # Talk mode: the notes on screen in VS Code, and slides vs notes
         "talk_notes": misc_state.talk_notes if ps.mode == "talk" else None,
         "presenter_view": misc_state.presenter_view,

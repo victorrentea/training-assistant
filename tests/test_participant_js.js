@@ -615,10 +615,11 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
     querySelector: (sel) => (sel === '[data-nav="wiki"]' ? nav : sel === 'label[for="wiki-follow-checkbox"]' ? label : null),
   };
   const names = ['_isWikiViewSelected', '_isWikiFollowEnabled', '_postWikiFollow', '_applyHostWikiFollow',
-    '_onIncomingHostWikiNote', '_onWikiFrameMessage', '_onWikiFollowChange'];
+    '_onIncomingHostWikiNote', '_onWikiFrameMessage', '_onWikiFollowChange',
+    '_postWikiTakeaways', '_onIncomingWikiTakeaways'];
   const LS = makeLS({});
   const api = new Function('document', 'location', 'LS', '_onHostMachine',
-    'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0;\n' +
+    'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0, _wikiTakeaways = [];\n' +
     names.map((n) => extractFunction(PARTICIPANT_HTML, n)).join('\n') +
     '\nreturn { ' + names.join(', ') +
     ', hostNote: function () { return _hostWikiNote; }, isReady: function () { return _wikiFrameReady; } };'
@@ -665,7 +666,25 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   w.api._onWikiFrameMessage({ source: {}, origin: 'https://interact.example', data: { type: 'wiki-ready' } });
   assert('a message from anything but the wiki iframe is ignored', w.posted.length === 0 && !w.api.isReady());
   w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-ready' } });
-  assert("the wiki's 'ready' sends the host note it missed", w.posted.length === 1 && w.posted[0].msg.slug === 'Home');
+  const follows = w.posted.filter((p) => p.msg.type === 'wiki-follow');
+  assert("the wiki's 'ready' sends the host note it missed", follows.length === 1 && follows[0].msg.slug === 'Home');
+}
+{
+  const w = makeWikiFollow({ onHost: true, followed: false, onWiki: false });
+  w.api._onIncomingWikiTakeaways(['Self-review']);
+  assert('starred notes are posted into the wiki iframe even on the host machine, unticked, on another tab',
+    w.posted.length === 1 && w.posted[0].msg.type === 'wiki-takeaways' &&
+    w.posted[0].msg.slugs.join() === 'Self-review' && w.posted[0].origin === 'https://interact.example');
+  w.api._onIncomingWikiTakeaways(undefined);
+  assert('a missing set clears the stars', w.posted.length === 2 && w.posted[1].msg.slugs.length === 0);
+}
+{
+  const w = makeWikiFollow({ ready: false });
+  w.api._onIncomingWikiTakeaways(['Self-review', 'Autonomy']);
+  assert('before the wiki graph is up no stars are posted', w.posted.length === 0);
+  w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-ready' } });
+  const stars = w.posted.filter((p) => p.msg.type === 'wiki-takeaways');
+  assert("the wiki's 'ready' sends the stars it missed", stars.length === 1 && stars[0].msg.slugs.join() === 'Self-review,Autonomy');
 }
 {
   const w = makeWikiFollow();

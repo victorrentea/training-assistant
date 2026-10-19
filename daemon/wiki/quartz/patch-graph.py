@@ -43,6 +43,7 @@ PATCHES = [
       radius: nodeRadius(n),
       badge,
       glow,
+      takeaway,
     }
 
     nodeRenderData.push(nodeRenderDatum)"""),
@@ -75,6 +76,19 @@ PATCHES = [
   stage.addChild(ring)
   const ringColor = computedStyleMap["--wiki-follow-ring"]
   let ringedNode: NodeRenderData | null = null
+  // Key takeaways (graph-takeaway.ts): a golden starburst over the edges, under the
+  // dots, and a star left of each dot, above everything - clickable on the trainer's
+  // machine only. Not the topic glow's container: the two never depend on each other.
+  const takeawayGlowContainer = new Container({ zIndex: 1.5, isRenderGroup: true, eventMode: "none" })
+  const starsContainer = new Container({ zIndex: 4.5, eventMode: "passive" })
+  stage.addChild(takeawayGlowContainer, starsContainer)
+  const takeawayColors: TakeawayColors = {
+    on: computedStyleMap["--wiki-takeaway"],
+    off: computedStyleMap["--wiki-takeaway-off"],
+    halo: computedStyleMap["--light"],
+    font: computedStyleMap["--bodyFont"],
+  }
+  const trainer = onHostMachine()
 """),
     # Drawn every frame: it moves with its dot, stays the same thickness on screen at
     # any zoom, like the edges, and breathes so a follower's eye finds it.
@@ -98,6 +112,10 @@ PATCHES = [
     if (badge) badgesContainer.addChild(badge)
     const glow = makeGlow(noteGlow.get(nodeId), nodeRadius(n), glowColor)
     if (glow) glowContainer.addChild(glow)
+    const takeaway = new TakeawayMark(nodeRadius(n), takeawayColors, trainer, (on) => toggleTakeaway(nodeId, on))
+    takeaway.set(isTakeaway(nodeId), trainer)
+    takeawayGlowContainer.addChild(takeaway.burst)
+    starsContainer.addChild(takeaway.star)
 """),
     ("""        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
       }
@@ -106,6 +124,7 @@ PATCHES = [
       }
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
       n.glow?.position.set(x + width / 2, y + height / 2)
+      n.takeaway?.place(x + width / 2, y + height / 2, n.radius, time)
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
@@ -121,6 +140,8 @@ PATCHES = [
     "--wiki-badge-link",
     "--wiki-glow",
     "--wiki-follow-ring",
+    "--wiki-takeaway",
+    "--wiki-takeaway-off",
   ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k. A lit edge
@@ -188,7 +209,8 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { loadGlow, makeGlow } from "./graph-glow"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, onHostMachine, setShowHome, showHome, toggleNote, warmNote } from "./note-pane"'),
+     'import { TakeawayColors, TakeawayMark } from "./graph-takeaway"\n'
+     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, isTakeaway, onHostMachine, setShowHome, showHome, toggleNote, toggleTakeaway, warmNote } from "./note-pane"'),
     # PixiJS listens for pointermove on the whole document, so a pointer over the note
     # popover still lit the dot under it (Victor, 2026-10-14). Only a move over the canvas
     # reaches the dots; leaving it for the popover is the canvas's own pointerleave, which
@@ -246,6 +268,13 @@ PATCHES = [
     },
     ring(id) {
       ringedNode = nodeRenderData.find((n) => n.simulationData.id === id) ?? null
+    },
+    takeaways(slugs) {
+      for (const n of nodeRenderData) n.takeaway?.set(slugs.has(n.simulationData.id), trainer)
+      // The canvas has no DOM: what it shows as starred, readable from a test.
+      graph.dataset.takeaways = JSON.stringify(
+        nodeRenderData.filter((n) => slugs.has(n.simulationData.id)).map((n) => n.simulationData.id),
+      )
     },
     dots() {
       const rect = app.canvas.getBoundingClientRect()
@@ -391,7 +420,7 @@ PATCHES = [
         const { x, y } = n.simulationData
         if (x === undefined || y === undefined) continue
         const half = Math.max(n.radius, (n.label?.width ?? 0) / 2)
-        x0 = Math.min(x0, x + width / 2 - half)
+        x0 = Math.min(x0, x + width / 2 - Math.max(half, n.radius + 14))   // the star left of the dot
         x1 = Math.max(x1, x + width / 2 + half)
         y0 = Math.min(y0, y + height / 2 - n.radius - 14)   // the badge sits above the dot
         y1 = Math.max(y1, y + height / 2 + n.radius + 2 + (n.label?.height ?? 0))

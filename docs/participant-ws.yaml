@@ -53,6 +53,7 @@ channels:
           - $ref: '#/components/messages/feedback_form_updated'
           - $ref: '#/components/messages/wiki_updated'
           - $ref: '#/components/messages/wiki_note'
+          - $ref: '#/components/messages/wiki_takeaways'
           - $ref: '#/components/messages/talk_notes'
           - $ref: '#/components/messages/presenter_view'
           - $ref: '#/components/messages/files_count_updated'
@@ -779,6 +780,23 @@ components:
             nullable: true
             maxLength: 300
             description: Quartz simple slug of the open note (a path inside the wiki site, "/" for its root); null once the host closed it
+
+    wiki_takeaways:
+      summary: Host starred or un-starred a wiki note as a key takeaway — every graph shows the starred notes with a filled star and a golden glow
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [wiki_takeaways]
+          slugs:
+            type: array
+            maxItems: 1000
+            items:
+              type: string
+            description: Quartz simple slugs of every starred note, sorted (the whole set, not a delta)
 
     feedback_form_updated:
       summary: End-of-session participant feedback form link published or retracted

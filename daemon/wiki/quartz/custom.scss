@@ -66,9 +66,51 @@ body {
     }
   }
 
+  // Left of the ✕ (note-pane.ts): the trainer stars the note as a key takeaway; for
+  // everyone else it only shows, filled, on a starred note.
+  .note-peek-star {
+    position: absolute;
+    top: 0.45rem;
+    right: 2.75rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: var(--wiki-takeaway-off);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &[hidden] {
+      display: none;
+    }
+
+    &.on {
+      color: var(--wiki-takeaway);
+    }
+
+    &:hover:not(:disabled) {
+      color: var(--wiki-takeaway);
+      background: var(--lightgray);
+    }
+
+    &:disabled {
+      cursor: default;
+    }
+  }
+
+  // A starred note's popover wears the takeaway gold.
+  &.takeaway {
+    border-color: var(--wiki-takeaway);
+    box-shadow:
+      0 0 0 1px var(--wiki-takeaway),
+      0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
   .note-peek-title {
     margin: 0;
-    padding: 0.8rem 2.8rem 0.2rem 1.1rem;
+    padding: 0.8rem 5.2rem 0.2rem 1.1rem;
     font-size: 1.5rem;
     line-height: 1.2;
     // The handle that drags the popover (note-pane.ts): no text selection on a drag.
@@ -391,4 +433,18 @@ body {
 
 :root[saved-theme="dark"] {
   --wiki-follow-ring: #fde047;
+}
+
+// Key takeaways (graph-takeaway.ts): the trainer's starred notes get a filled star and a
+// golden starburst on every graph. Gold, apart from the teal topic glow, the yellow
+// Follow ring and the purple selection; deeper on the light theme to show on white.
+// The hollow star the trainer clicks stays quiet: it is on every dot of his graph.
+:root {
+  --wiki-takeaway: #d97706;
+  --wiki-takeaway-off: #9ca3af;
+}
+
+:root[saved-theme="dark"] {
+  --wiki-takeaway: #fbbf24;
+  --wiki-takeaway-off: #6b7280;
 }

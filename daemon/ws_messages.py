@@ -485,6 +485,28 @@ class WikiNoteMsg(WikiNotePosition):
     type: Literal["wiki_note"] = "wiki_note"
 
 
+class WikiTakeawayToggle(BaseModel):
+    """The trainer stars (or un-stars) a wiki note as a key takeaway of the session."""
+    slug: str = Field(min_length=1, max_length=300, pattern=WIKI_SLUG_PATTERN)
+    starred: bool
+
+    @field_validator("slug")
+    @classmethod
+    def _stays_inside_the_site(cls, slug: str) -> str:
+        if slug.startswith("//") or ".." in slug:
+            raise ValueError("a wiki slug is a path inside the site")
+        return slug
+
+
+class WikiTakeaways(BaseModel):
+    """Every wiki note the trainer starred as a key takeaway, sorted."""
+    slugs: list[str] = Field(default_factory=list, max_length=1000)
+
+
+class WikiTakeawaysMsg(WikiTakeaways):
+    type: Literal["wiki_takeaways"] = "wiki_takeaways"
+
+
 # ── Talk notes (the trainer's notes file, shown live on the talk phones) ─────────
 
 TALK_NOTES_MAX_CHARS = 200_000
@@ -649,6 +671,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "feedback_form_updated": FeedbackFormUpdatedMsg,
     "wiki_updated": WikiUpdatedMsg,
     "wiki_note": WikiNoteMsg,
+    "wiki_takeaways": WikiTakeawaysMsg,
     "talk_notes": TalkNotesMsg,
     "presenter_view": PresenterViewMsg,
     # Files
@@ -754,6 +777,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "feedback_form_updated": "notes_summary",
     "wiki_updated": "notes_summary",
     "wiki_note": "notes_summary",
+    "wiki_takeaways": "notes_summary",
     "talk_notes": "notes_summary",
     "presenter_view": "notes_summary",
     # Files

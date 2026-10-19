@@ -80,7 +80,7 @@ def _prepare_quartz(qdir: Path) -> None:
     shutil.copy(ASSETS_DIR / "quartz.config.ts", qdir)
     shutil.copy(ASSETS_DIR / "quartz.layout.ts", qdir)
     shutil.copy(ASSETS_DIR / "custom.scss", qdir / "quartz" / "styles" / "custom.scss")
-    for script in ("note-pane.ts", "graph-badges.ts", "graph-glow.ts"):
+    for script in ("note-pane.ts", "graph-badges.ts", "graph-glow.ts", "graph-takeaway.ts"):
         shutil.copy(ASSETS_DIR / script, qdir / "quartz" / "components" / "scripts" / script)
     patch = subprocess.run(
         [sys.executable, str(ASSETS_DIR / "patch-graph.py"),

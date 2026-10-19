@@ -11,7 +11,8 @@
 //
 // Participants can follow the trainer: whichever note Victor opens on his machine
 // gets a pulsing yellow ring around its dot on theirs (see "Following the trainer"
-// below).
+// below). He can also star a note as a key takeaway: its dot glows golden on every
+// graph (see "Key takeaways" below).
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes the
 // full graph register here (connectGraph) and call toggleNote() on a click.
@@ -29,6 +30,8 @@ export type PaneGraph = {
   highlight(slug: SimpleSlug | null): void
   // The yellow ring around the note the trainer has open (null: none).
   ring(slug: SimpleSlug | null): void
+  // The notes the trainer starred as key takeaways: a filled star and a golden glow.
+  takeaways(slugs: ReadonlySet<SimpleSlug>): void
   // Every dot on screen, each with its label: what the popover should leave in view.
   dots(): Dot[]
   // The open dot's edges on screen, the purple ones: the popover keeps off them too.
@@ -141,6 +144,7 @@ export function connectGraph(g: PaneGraph) {
   graph = g
   g.select(peeked)
   g.ring(ringed)
+  g.takeaways(starred)
   // The participant page sends the trainer's note once the graph can place it.
   if (!announced) {
     announced = true
@@ -198,13 +202,18 @@ function ensurePeek(): HTMLElement {
   if (peek) return peek
   peek = document.createElement("div")
   peek.className = "note-peek"
-  // The ✕ is what a phone has instead of Esc or a second click on a tiny dot.
+  // The ✕ is what a phone has instead of Esc or a second click on a tiny dot. The
+  // star left of it marks the note a key takeaway (the trainer's machine only).
   peek.innerHTML = `
+    <button class="note-peek-star" type="button"></button>
     <button class="note-peek-close" type="button" aria-label="Close">✕</button>
     <h2 class="note-peek-title"></h2>
     <div class="note-peek-body"></div>`
   const body = peek.querySelector(".note-peek-body") as HTMLElement
   peek.querySelector(".note-peek-close")!.addEventListener("click", hidePeek)
+  peek.querySelector(".note-peek-star")!.addEventListener("click", () => {
+    if (peeked) toggleTakeaway(peeked, !starred.has(peeked))
+  })
   dragByHead(peek, peek.querySelector(".note-peek-title") as HTMLElement)
   peek.addEventListener("mouseleave", () => highlight(null))
   // A link to another note swaps the popover to it instead of navigating away from
@@ -402,6 +411,7 @@ async function showPeek(slug: SimpleSlug, place: Place) {
   graph?.select(slug)
   if (slug === peeked) return
   peeked = slug
+  showPeekStar()
   reportOpenNote(slug)
   highlight(null)
   const elts = await loadNote(slug).catch(() => null)
@@ -540,6 +550,11 @@ function tellParent(msg: { type: string }) {
 window.addEventListener("message", (e) => {
   if (!embedded || e.source !== window.parent || e.origin !== window.location.origin) return
   const msg = e.data
+  // The notes the trainer starred (see "Key takeaways" below), on load and on change.
+  if (msg?.type === "wiki-takeaways") {
+    if (Array.isArray(msg.slugs)) applyTakeaways(msg.slugs.filter((s: unknown) => typeof s === "string"))
+    return
+  }
   if (msg?.type !== "wiki-follow") return
   if (msg.slug !== null && typeof msg.slug !== "string") return
   ringed = msg.slug as SimpleSlug | null
@@ -554,3 +569,76 @@ document.addEventListener("keydown", (e) => {
   if (zoomed) unzoom() // a zoomed picture goes first, the note stays
   else hidePeek()
 })
+
+// ── Key takeaways ──
+// The trainer stars the notes his participants must leave with; on every graph their
+// dots get a filled star and a golden glow (graph-takeaway.ts), live:
+//   trainer's wiki (a star by a dot, or in the popover) → POST 127.0.0.1:1234/wiki/takeaway
+//   → daemon saves them in the session folder → `wiki_takeaways` broadcast (the whole
+//   set) → each participant page → postMessage("wiki-takeaways") → this pane.
+// Who is the trainer: the same as for Follow - the ON_HOST_MACHINE cookie shows the
+// hollow stars, and only his browser reaches the daemon on 127.0.0.1 anyway.
+// A wiki in a tab of its own has no participant page around it: it asks the daemon
+// (through Railway) for the set on load, and again every few seconds.
+const TAKEAWAYS_POLL_MS = 15000
+let starred = new Set<SimpleSlug>()
+let changedAt = 0 // the trainer's last click: an older answer must not undo it
+
+export function isTakeaway(slug: SimpleSlug): boolean {
+  return starred.has(slug)
+}
+
+function applyTakeaways(slugs: readonly string[]) {
+  starred = new Set(slugs.map((s) => simplifySlug(s as never)))
+  graph?.takeaways(starred)
+  showPeekStar()
+}
+
+function showPeekStar() {
+  const button = peek?.querySelector(".note-peek-star") as HTMLButtonElement | null
+  if (!peek || !button) return
+  const on = peeked !== null && starred.has(peeked)
+  const host = onHostMachine()
+  peek.classList.toggle("takeaway", on)
+  button.textContent = on ? "★\uFE0E" : "☆\uFE0E"
+  button.classList.toggle("on", on)
+  button.hidden = !host && !on
+  button.disabled = !host
+  const tip = host ? (on ? "Key takeaway - click to un-star" : "Star as a key takeaway: it glows for everyone") : "Key takeaway"
+  button.title = tip
+  button.setAttribute("aria-label", tip)
+}
+
+// The trainer's click, on a dot's star or in the popover: shown at once, then saved.
+export function toggleTakeaway(slug: SimpleSlug, on: boolean) {
+  if (!onHostMachine()) return
+  const before = [...starred]
+  changedAt = Date.now()
+  applyTakeaways(on ? [...before, slug] : before.filter((s) => s !== slug))
+  fetch(`${HOST_DAEMON}/wiki/takeaway`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slug, starred: on }),
+  })
+    .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`${res.status}`))))
+    .then((json: { slugs: string[] }) => applyTakeaways(json.slugs))
+    .catch(() => applyTakeaways(before)) // not saved: the star goes back
+}
+
+function fetchTakeaways() {
+  const asked = Date.now()
+  const site = new URL(pathToRoot(getFullSlug(window)), window.location.href)
+  fetch(new URL("../api/participant/wiki/takeaways", site))
+    .then((res) => (res.ok ? res.json() : null))
+    .then((json: { slugs?: string[] } | null) => {
+      if (json && Array.isArray(json.slugs) && asked > changedAt) applyTakeaways(json.slugs)
+    })
+    .catch(() => {})
+}
+
+if (!embedded) {
+  fetchTakeaways()
+  window.setInterval(() => {
+    if (document.visibilityState === "visible") fetchTakeaways()
+  }, TAKEAWAYS_POLL_MS)
+}

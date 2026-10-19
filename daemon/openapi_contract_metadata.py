@@ -33,6 +33,8 @@ def _feature_from_tag_and_path(tag: str, path: str) -> str:
         return "host_state"
     if tag in ("", "_untagged", "session"):
         return "session_management"
+    if path.startswith("/api/participant/wiki/"):
+        return "notes_summary"
     if tag in ("participant", "host-state"):
         return "identity"
     if tag == "leaderboard":

@@ -44,6 +44,9 @@ from daemon.ws_messages import (
     TalkNotesReport,
     WikiNoteMsg,
     WikiNotePosition,
+    WikiTakeaways,
+    WikiTakeawaysMsg,
+    WikiTakeawayToggle,
 )
 from daemon.ws_publish import broadcast, notify_host
 
@@ -440,6 +443,25 @@ async def wiki_note_local(body: WikiNotePosition):
     misc_state.wiki_note = body.slug
     broadcast(WikiNoteMsg(slug=body.slug))
     return body
+
+
+# The trainer stars a wiki note as a key takeaway (or un-stars it): its dot gets a
+# filled star and a golden glow on every participant's graph. Host-machine only,
+# like the open note above: the star is clickable only in a wiki on his machine
+# (ON_HOST_MACHINE), and only his browser reaches 127.0.0.1. Unlike the open note,
+# the stars are saved in the session folder, so they outlive a daemon restart and a
+# wiki rebuild. The whole set goes out each time, so a missed message heals itself.
+@local_router.post("/wiki/takeaway", response_model=WikiTakeaways)
+async def wiki_takeaway_local(body: WikiTakeawayToggle):
+    from daemon import log
+    from daemon.wiki.takeaways import set_takeaway
+
+    slugs = await asyncio.to_thread(set_takeaway, body.slug, body.starred)
+    if slugs is None:
+        return JSONResponse(status_code=404, content={"detail": "no active session"})
+    log.info("wiki", f"{'★ starred' if body.starred else '☆ un-starred'} takeaway: {body.slug}")
+    broadcast(WikiTakeawaysMsg(slugs=slugs))
+    return WikiTakeaways(slugs=slugs)
 
 
 class TalkNotesReportResponse(BaseModel):

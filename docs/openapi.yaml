@@ -105,6 +105,20 @@ paths:
         '204':
           description: Successful Response
       x-feature: identity
+  /api/participant/wiki/takeaways:
+    get:
+      tags:
+      - participant
+      summary: Get Wiki Takeaways
+      operationId: get_wiki_takeaways_api_participant_wiki_takeaways_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiTakeaways'
+      x-feature: notes_summary
   /api/participant/state:
     get:
       tags:
@@ -1359,6 +1373,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WikiNotePosition'
+      x-feature: notes_summary
+  /wiki/takeaway:
+    post:
+      tags:
+      - misc
+      summary: Wiki Takeaway Local
+      operationId: wiki_takeaway_local_wiki_takeaway_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WikiTakeawayToggle'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiTakeaways'
       x-feature: notes_summary
   /notes/live:
     post:
@@ -3701,6 +3735,12 @@ components:
           - type: string
           - type: 'null'
           title: Wiki Note
+        wiki_takeaways:
+          items:
+            type: string
+          type: array
+          title: Wiki Takeaways
+          default: []
         talk_notes:
           anyOf:
           - $ref: '#/components/schemas/TalkNotesMsg'
@@ -4668,6 +4708,35 @@ components:
       title: WikiNotePosition
       description: Which wiki note the host has open in the graph's popover; None
         when none is.
+    WikiTakeawayToggle:
+      properties:
+        slug:
+          type: string
+          maxLength: 300
+          minLength: 1
+          pattern: ^[^\x00-\x1f\x7f:\\?#]+$
+          title: Slug
+        starred:
+          type: boolean
+          title: Starred
+      type: object
+      required:
+      - slug
+      - starred
+      title: WikiTakeawayToggle
+      description: The trainer stars (or un-stars) a wiki note as a key takeaway of
+        the session.
+    WikiTakeaways:
+      properties:
+        slugs:
+          items:
+            type: string
+          type: array
+          maxItems: 1000
+          title: Slugs
+      type: object
+      title: WikiTakeaways
+      description: Every wiki note the trainer starred as a key takeaway, sorted.
     WordcloudData:
       properties:
         words:

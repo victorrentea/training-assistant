@@ -5296,6 +5296,7 @@ function _setDuplicateIndicator(isDup) {
     _hostSlidesCurrent = state.slides_current || null;
     _hostSummaryScroll = state.summary_scroll || null;
     _hostWikiNote = state.wiki_note || null;
+    _onIncomingWikiTakeaways(state.wiki_takeaways);
     var saved = _computeLandingView({
       urlTab: location.pathname.split('/')[2] || '',
       savedView: LS.getView(),
@@ -5393,6 +5394,7 @@ function _applyState(msg) {
   if (msg.wiki_note !== undefined && (msg.wiki_note || null) !== _hostWikiNote) {
     _onIncomingHostWikiNote(msg.wiki_note);
   }
+  if (msg.wiki_takeaways !== undefined) _onIncomingWikiTakeaways(msg.wiki_takeaways);
   if (msg.summary_updated_at !== undefined) {
     var summaryNav = document.querySelector('[data-nav="summary"]');
     summaryNav.style.display = msg.summary_updated_at ? '' : 'none';
@@ -6052,6 +6054,7 @@ function _handleWsMessage(msg) {
     case 'feedback_form_updated': _applyFeedbackUrl(msg.feedback_url); break;
     case 'wiki_updated': _applyWiki(msg.updated_at); break;
     case 'wiki_note': _onIncomingHostWikiNote(msg.slug); break;
+    case 'wiki_takeaways': _onIncomingWikiTakeaways(msg.slugs); break;
     case 'agenda_updated': {
       document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
       if (msg.has_agenda) {
@@ -7434,7 +7437,25 @@ function _onWikiFrameMessage(e) {
   var frame = document.getElementById('wiki-frame');
   if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;
   var msg = e.data || {};
-  if (msg.type === 'wiki-ready') { _wikiFrameReady = true; _applyHostWikiFollow(); }
+  if (msg.type === 'wiki-ready') { _wikiFrameReady = true; _applyHostWikiFollow(); _postWikiTakeaways(); }
+}
+
+// ── Wiki key takeaways ──
+// The notes the trainer starred glow golden on every graph, his own included, so unlike
+// Follow this is neither ticked nor skipped on the host machine. The whole set comes
+// with the state and with each `wiki_takeaways` broadcast; the wiki gets it once its
+// graph is up ('wiki-ready') and again on every change.
+var _wikiTakeaways = [];
+
+function _postWikiTakeaways() {
+  var frame = document.getElementById('wiki-frame');
+  if (!_wikiFrameReady || !frame || !frame.contentWindow) return;
+  frame.contentWindow.postMessage({ type: 'wiki-takeaways', slugs: _wikiTakeaways }, location.origin);
+}
+
+function _onIncomingWikiTakeaways(slugs) {
+  _wikiTakeaways = Array.isArray(slugs) ? slugs : [];
+  _postWikiTakeaways();
 }
 
 // Over the wiki's top-right corner on a desktop (the note popover keeps clear of
