@@ -89,6 +89,25 @@ PATCHES = [
     font: computedStyleMap["--bodyFont"],
   }
   const trainer = onHostMachine()
+  let starredIds: ReadonlySet<string> = new Set()
+  // For a test (the canvas has no DOM): where the starred dots and the other ends of
+  // their edges are on screen right now.
+  ;(graph as HTMLElement & { takeawaysOnScreen?: () => unknown }).takeawaysOnScreen = () => {
+    const rect = app.canvas.getBoundingClientRect()
+    const { x, y, k } = currentTransform
+    const at = (d: NodeData) => ({ x: rect.left + x + k * (d.x! + width / 2), y: rect.top + y + k * (d.y! + height / 2) })
+    return nodeRenderData
+      .filter((n) => starredIds.has(n.simulationData.id))
+      .map(({ simulationData: d, radius }) => ({
+        id: d.id,
+        ...at(d),
+        r: k * radius,
+        edges: linkRenderData
+          .map(({ simulationData: { source, target } }) => (source.id === d.id ? target : target.id === d.id ? source : null))
+          .filter((o): o is NodeData => o !== null)
+          .map((o) => ({ id: o.id, starred: starredIds.has(o.id), ...at(o) })),
+      }))
+  }
 """),
     # Drawn every frame: it moves with its dot, stays the same thickness on screen at
     # any zoom, like the edges, and breathes so a follower's eye finds it.
@@ -113,7 +132,7 @@ PATCHES = [
     const glow = makeGlow(noteGlow.get(nodeId), nodeRadius(n), glowColor)
     if (glow) glowContainer.addChild(glow)
     const takeaway = new TakeawayMark(nodeRadius(n), takeawayColors, trainer, (on) => toggleTakeaway(nodeId, on))
-    takeaway.set(isTakeaway(nodeId), trainer)
+    takeaway.set(isTakeaway(nodeId))
     takeawayGlowContainer.addChild(takeaway.burst)
     starsContainer.addChild(takeaway.star)
 """),
@@ -157,9 +176,18 @@ PATCHES = [
      """      const lit = l.active || selectedEdge(l)
       const tx = linkData.target.x! + width / 2
       const ty = linkData.target.y! + height / 2
-      l.gfx
-        .lineTo(tx, ty)
-        .stroke({ alpha: l.alpha * (lit ? 1 : 0.6), width: (lit ? 1.6 : 0.6) / currentTransform.k, color: l.color })
+      // A key takeaway's edges are rays of its star (graph-takeaway.ts); the purple of a
+      // hovered or open dot still wins.
+      const raySource = !lit && starredIds.has(linkData.source.id)
+      const rayTarget = !lit && starredIds.has(linkData.target.id)
+      if (raySource || rayTarget) {
+        drawRay(l.gfx, linkData.source.x! + width / 2, linkData.source.y! + height / 2, tx, ty,
+          raySource, rayTarget, takeawayColors.on, l.color, 0.6 / currentTransform.k, l.alpha * 0.6)
+      } else {
+        l.gfx
+          .lineTo(tx, ty)
+          .stroke({ alpha: l.alpha * (lit ? 1 : 0.6), width: (lit ? 1.6 : 0.6) / currentTransform.k, color: l.color })
+      }
       if (selectedEdge(l)) {
         const k = currentTransform.k
         const dx = linkData.target.x! - linkData.source.x!
@@ -209,7 +237,7 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { loadGlow, makeGlow } from "./graph-glow"\n'
-     'import { TakeawayColors, TakeawayMark } from "./graph-takeaway"\n'
+     'import { TakeawayColors, TakeawayMark, drawRay } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, isSeen, isTakeaway, onHostMachine, setShowHome, showHome, toggleNote, toggleTakeaway, warmNote } from "./note-pane"'),
     # PixiJS listens for pointermove on the whole document, so a pointer over the note
     # popover still lit the dot under it (Victor, 2026-10-14). Only a move over the canvas
@@ -270,11 +298,14 @@ PATCHES = [
       ringedNode = nodeRenderData.find((n) => n.simulationData.id === id) ?? null
     },
     takeaways(slugs) {
-      for (const n of nodeRenderData) n.takeaway?.set(slugs.has(n.simulationData.id), trainer)
-      // The canvas has no DOM: what it shows as starred, readable from a test.
-      graph.dataset.takeaways = JSON.stringify(
-        nodeRenderData.filter((n) => slugs.has(n.simulationData.id)).map((n) => n.simulationData.id),
-      )
+      starredIds = slugs
+      for (const n of nodeRenderData) n.takeaway?.set(slugs.has(n.simulationData.id))
+      // The canvas has no DOM: what it shows as starred, and which dots draw a star
+      // beside them, readable from a test.
+      const ids = (keep: (n: NodeRenderData) => boolean) =>
+        JSON.stringify(nodeRenderData.filter(keep).map((n) => n.simulationData.id))
+      graph.dataset.takeaways = ids((n) => slugs.has(n.simulationData.id))
+      graph.dataset.starsShown = ids((n) => n.takeaway?.starShown ?? false)
     },
     dots() {
       const rect = app.canvas.getBoundingClientRect()

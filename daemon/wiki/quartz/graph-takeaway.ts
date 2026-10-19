@@ -3,26 +3,26 @@
 // (Victor, 2026-10-19). Unrelated to the teal topic glow (graph-glow.ts): that one comes
 // from an LLM score at build time, this one from a click of the trainer, during the day.
 //
-// The star sits on the dot's left, mid-height: the top corners hold the link count and
-// the picture badges (graph-badges.ts), the label hangs below. On the trainer's machine
-// every dot has one, hollow until he clicks it; everywhere else only the starred dots
-// show theirs, filled, and nothing there is clickable.
+// On the trainer's machine every dot not starred yet has a hollow star he clicks, on its
+// left, mid-height: the top corners hold the link count and the picture badges
+// (graph-badges.ts), the label hangs below. A starred dot shows no star at all, for
+// anyone: the starburst says it (Victor, 2026-10-19); the trainer un-stars it from the
+// note popover's star. Elsewhere nothing on the graph is clickable.
 //
 // note-pane.ts keeps the starred set and the toggle; builder.py copies this file next
 // to graph.inline.ts, and patch-graph.py makes one TakeawayMark per dot, puts its star
 // and its burst in containers of their own and places them in its animation loop.
-import { Sprite, Text, Texture } from "pixi.js"
+import { Color, Graphics, Sprite, Text, Texture } from "pixi.js"
 
 export type TakeawayColors = {
-  on: string // the filled star and the burst
+  on: string // the burst
   off: string // the hollow star the trainer clicks
   halo: string // the page background, behind the star so edges don't run through it
   font: string
 }
 
 const STAR_FONT = 11
-// U+FE0E: the text glyphs, not emoji, so they take the theme's colours.
-const FILLED = "★︎"
+// U+FE0E: the text glyph, not the emoji, so it takes the theme's colour.
 const HOLLOW = "☆︎"
 
 // Drawn once, white, tinted per theme: a soft round core and eight rays, four long and
@@ -71,14 +71,16 @@ export class TakeawayMark {
   readonly star: Text
   readonly burst: Sprite
   private starred = false
+  private clickable: boolean
 
   // clickable: the trainer's machine. onToggle gets what the star should become.
   constructor(
     r: number,
-    private colors: TakeawayColors,
+    colors: TakeawayColors,
     clickable: boolean,
     onToggle: (starred: boolean) => void,
   ) {
+    this.clickable = clickable
     this.burst = new Sprite({
       texture: burstTexture(),
       anchor: 0.5,
@@ -109,13 +111,16 @@ export class TakeawayMark {
     }
   }
 
-  set(starred: boolean, clickable: boolean) {
+  set(starred: boolean) {
     if (starred === this.starred) return
     this.starred = starred
     this.burst.visible = starred
-    this.star.text = starred ? FILLED : HOLLOW
-    this.star.style.fill = starred ? this.colors.on : this.colors.off
-    this.star.visible = starred || clickable
+    this.star.visible = this.clickable && !starred
+  }
+
+  // Whether its star is drawn: for a test, the canvas has no DOM.
+  get starShown(): boolean {
+    return this.star.visible
   }
 
   // The dot is at (x, y) with radius r. The burst turns slowly, so it reads as alive
@@ -126,5 +131,49 @@ export class TakeawayMark {
       this.burst.position.set(x, y)
       this.burst.rotation = time / 6000
     }
+  }
+}
+
+// An edge touching a starred dot is a ray of light out of its star (Victor, 2026-10-19):
+// gold and bright at the starred end, fading into the plain grey edge at the other end;
+// between two starred dots, gold at both ends and grey midway. Drawn as short segments
+// of stepped colour: a FillGradient per edge per frame would build a texture each time.
+const RAY_STEPS = 16
+
+// Any CSS colour the theme gives (#hex, rgb(...)), as 0-255 channels.
+function rgb(css: string): number[] {
+  return [...new Color(css.trim()).toUint8RgbArray()].slice(0, 3)
+}
+
+export function drawRay(
+  g: Graphics,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  goldAt0: boolean,
+  goldAt1: boolean,
+  gold: string,
+  grey: string,
+  width: number, // the plain edge's width, already divided by the zoom
+  alpha: number, // the plain edge's alpha
+) {
+  const a = rgb(gold)
+  const b = rgb(grey)
+  for (let i = 0; i < RAY_STEPS; i++) {
+    const t0 = i / RAY_STEPS
+    const t1 = (i + 1) / RAY_STEPS
+    const mid = (t0 + t1) / 2
+    // 1 at a gold end, 0 where the edge is plain grey.
+    const glow = Math.max(goldAt0 ? 1 - mid / (goldAt1 ? 0.5 : 1) : 0, goldAt1 ? 1 - (1 - mid) / (goldAt0 ? 0.5 : 1) : 0, 0)
+    const w = glow * glow * (3 - 2 * glow) // smoothstep: the gold holds near the star, then fades
+    const c = a.map((v, j) => Math.round(b[j] + (v - b[j]) * w))
+    g.moveTo(x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0)
+      .lineTo(x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1)
+      .stroke({
+        color: (c[0] << 16) | (c[1] << 8) | c[2],
+        alpha: alpha + (0.95 - alpha) * w,
+        width: width * (1 + 1.6 * w),
+      })
   }
 }

@@ -435,8 +435,8 @@ body {
   --wiki-follow-ring: #fde047;
 }
 
-// Key takeaways (graph-takeaway.ts): the trainer's starred notes get a filled star and a
-// golden starburst on every graph. Gold, apart from the teal topic glow, the yellow
+// Key takeaways (graph-takeaway.ts): the trainer's starred notes get a golden starburst
+// on every graph (and a filled star in their popover). Gold, apart from the teal topic glow, the yellow
 // Follow ring and the purple selection; deeper on the light theme to show on white.
 // The hollow star the trainer clicks stays quiet: it is on every dot of his graph.
 :root {
