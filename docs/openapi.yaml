@@ -2205,6 +2205,20 @@ components:
             type: array
           - type: 'null'
           title: Options
+        host_options:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Host Options
+        host_option_of:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Host Option Of
         low:
           anyOf:
           - type: string

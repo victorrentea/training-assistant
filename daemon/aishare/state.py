@@ -16,16 +16,17 @@ MIN_VALUE = 0
 MAX_VALUE = 100
 
 YES_NO_IDK = ["Yes", "No", "I don't know"]
+YES_NO = ["Yes", "No"]
 
 QUESTIONS: list[dict] = [
     {"id": "harness", "kind": "choice", "text": "What harness are you using?",
      "options": ["Claude Code / Codex", "Copilot CLI", "Copilot Chat in VS Code", "Copilot Chat in IntelliJ", "Other"]},
     {"id": "agents_md", "kind": "choice", "text": "Do you have an AGENTS.md / CLAUDE.md in your project?",
-     "options": YES_NO_IDK},
+     "options": YES_NO_IDK, "host_options": ["Yes", "No / don't know"], "host_option_of": [0, 1, 1]},
     {"id": "mcp", "kind": "choice", "text": "Ever used an MCP tool?", "options": YES_NO_IDK},
-    {"id": "skill", "kind": "choice", "text": "Ever created a skill?", "options": YES_NO_IDK},
+    {"id": "skill", "kind": "choice", "text": "Ever created a skill?", "options": YES_NO},
     {"id": "plugins", "kind": "choice", "text": "Company plugins installed in your agent?", "options": YES_NO_IDK},
-    {"id": "custom_agent", "kind": "choice", "text": "Ever created a custom agent (.md)?", "options": YES_NO_IDK},
+    {"id": "custom_agent", "kind": "choice", "text": "Ever created a custom agent (.md)?", "options": YES_NO},
     {"id": "code_review", "kind": "choice", "text": "Do you have a code-review skill / agent?", "options": YES_NO_IDK},
     {"id": "ai_generated", "kind": "slider", "text": "How much% of your🫵 code is AI-generated?",
      "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 95},

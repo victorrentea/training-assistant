@@ -2670,7 +2670,7 @@ function _renderEngagementPopover() {
         block.innerHTML = `<div class="aishare-host-block-head"><span>${escHtml(q.text)}</span><span class="aishare-host-block-count"></span></div>` +
           (q.kind === 'slider'
             ? `<div class="aishare-scale"><span class="aishare-end-l">${escHtml(q.low || '0%')}</span><span class="aishare-tick" style="--p:.25">25%</span><span class="aishare-tick" style="--p:.5">50%</span><span class="aishare-tick" style="--p:.75">75%</span><span class="aishare-end-r">${escHtml(q.high || '100%')}</span></div><div class="aishare-plot"></div>`
-            : `<div class="aishare-bars">${q.options.map((o, i) => `<div class="aishare-bar" data-i="${i}"><span class="aishare-bar-label">${escHtml(o)}</span><span class="aishare-bar-track"><span class="aishare-bar-fill"></span></span><span class="aishare-bar-count"></span></div>`).join('')}</div>`);
+            : `<div class="aishare-bars">${(q.host_options || q.options).map((o, i) => `<div class="aishare-bar" data-i="${i}"><span class="aishare-bar-label">${escHtml(o)}</span><span class="aishare-bar-track"><span class="aishare-bar-fill"></span></span><span class="aishare-bar-count"></span></div>`).join('')}</div>`);
         box.appendChild(block);
       }
       block.querySelector('.aishare-host-block-count').textContent = res.count ? `${res.count} ${res.count === 1 ? 'answer' : 'answers'}` : '';
@@ -2678,7 +2678,13 @@ function _renderEngagementPopover() {
         AiShareChart.render({ plot: block.querySelector('.aishare-plot') }, res.values || [],
           { axis: true, inset: 11, id: 'host-' + q.id, label: q.text, future: q.future, height: plotH });
       } else {
-        const counts = res.counts || [];
+        let counts = res.counts || [];
+        if (q.host_options) {
+          // Answers the host reads as one (e.g. No + I don't know) share a bar.
+          const merged = q.host_options.map(() => 0);
+          counts.forEach((c, i) => { merged[q.host_option_of[i]] += c; });
+          counts = merged;
+        }
         const max = Math.max(0, ...counts);
         block.querySelectorAll('.aishare-bar').forEach(bar => {
           const c = counts[+bar.dataset.i] || 0;

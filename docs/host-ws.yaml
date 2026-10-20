@@ -178,6 +178,18 @@ components:
                   items:
                     type: string
                   description: "choice: the answers (e.g. Yes / No / I don't know), stored as their index"
+                host_options:
+                  nullable: true
+                  type: array
+                  items:
+                    type: string
+                  description: "choice: the host's results merge some answers into these bars"
+                host_option_of:
+                  nullable: true
+                  type: array
+                  items:
+                    type: integer
+                  description: "choice: options[i] is counted under host_options[host_option_of[i]]"
                 low:
                   nullable: true
                   type: string

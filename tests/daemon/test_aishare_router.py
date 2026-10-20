@@ -68,6 +68,8 @@ def test_questions_are_shipped_in_order(client, sent):
     assert [q.id for q in pax.questions] == ["harness", "agents_md", "mcp", "skill", "plugins", "custom_agent", "code_review", "ai_generated", "review"]
     assert pax.questions[0].options[-1] == "Other"
     assert pax.questions[1].options == ["Yes", "No", "I don't know"]
+    assert pax.questions[1].host_options == ["Yes", "No / don't know"]
+    assert next(q for q in pax.questions if q.id == "skill").options == ["Yes", "No"]
     assert [q.kind for q in pax.questions[-2:]] == ["slider", "slider"]
 
 

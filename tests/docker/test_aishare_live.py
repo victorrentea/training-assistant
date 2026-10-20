@@ -86,7 +86,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice.aishare_card("ai_generated").locator(".aishare-status")).to_have_text("2 answers", timeout=5000)
         expect(alice._page.locator("#aishare-questions .aishare-plot svg")).to_have_count(0)
         expect(host_raw.locator('#aishare-host-results [data-q="ai_generated"] .aishare-dot')).to_have_count(2)
-        expect(host_raw.locator('#aishare-host-results [data-q="agents_md"] .aishare-bar-count')).to_have_text(["1", "", "1"])
+        expect(host_raw.locator('#aishare-host-results [data-q="agents_md"] .aishare-bar-count')).to_have_text(["1", "1"])  # No + I don't know share a bar
         _shot(alice._page, "aishare-pax-hidden")
 
         # ── Host reveals → every question, with results, for everyone
