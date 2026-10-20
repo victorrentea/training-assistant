@@ -157,12 +157,12 @@
       <div class="poll-left">
         <div class="aishare-host-question">Anonymous survey: how much AI is in your🫵 code?</div>
         <div class="poll-controls-row">
-          <button class="btn btn-danger" id="aishare-clear-btn" onclick="clearAiShare()">Clear</button>
+          <button class="btn btn-success" id="aishare-start-btn" onclick="startAiShare()">▶ Start</button>
           <label class="poll-multi-label" data-tip="Participants see everyone's answers to every question, anonymously">
             <input type="checkbox" id="aishare-reveal" onchange="setAiShareRevealed(this.checked)" disabled />
             Show to everyone
           </label>
-          <button class="btn btn-success" id="aishare-start-btn" onclick="startAiShare()">Start</button>
+          <button class="btn btn-danger" id="aishare-clear-btn" onclick="clearAiShare()">🗑️ Clear</button>
         </div>
         <ol id="aishare-host-questions" class="aishare-host-questions"></ol>
         <div id="aishare-host-status" class="aishare-host-status"></div>

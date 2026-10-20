@@ -2643,7 +2643,7 @@ function _renderEngagementPopover() {
     const reveal = document.getElementById('aishare-reveal');
     reveal.checked = !!state.revealed;
     reveal.disabled = !state.active;
-    document.getElementById('aishare-start-btn').textContent = state.active ? 'Restart' : 'Start';
+    document.getElementById('aishare-start-btn').textContent = state.active ? '▶ Restart' : '▶ Start';
     const n = Math.max(0, ...questions.map(q => (results[q.id] || {}).count || 0));
     document.getElementById('aishare-host-status').textContent = state.active
       ? `${n} ${n === 1 ? 'participant' : 'participants'}${state.revealed ? ' · visible to everyone' : ' · only you see them'}`

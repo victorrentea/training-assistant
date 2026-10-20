@@ -30,7 +30,7 @@ def _shot(page, name):
         page.screenshot(path=f"{SHOTS}/{name}.png", full_page=True)
 
 
-CHOICES = ["harness", "agents_md", "skill", "mcp", "custom_agent"]
+CHOICES = ["harness", "agents_md", "mcp", "skill", "plugins", "custom_agent", "code_review"]
 
 
 @pytest.mark.nightly
@@ -67,20 +67,19 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
 
         # ── Each answer brings in the next question
-        alice.set_aishare(80)
-        expect(cards).to_have_count(2, timeout=5000)
         for i, q in enumerate(CHOICES):
             alice.choose_aishare(q, 0 if q != "custom_agent" else 1)
-            expect(cards).to_have_count(3 + i, timeout=5000)
+            expect(cards).to_have_count(i + 2, timeout=5000)
+        alice.set_aishare(80)
+        expect(cards).to_have_count(len(CHOICES) + 2, timeout=5000)
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
         alice.set_aishare(30, "review")
         expect(alice._page.locator("#aishare-done")).to_contain_text("Thank you", timeout=5000)
 
+        for q in CHOICES:
+            bob.choose_aishare(q, 2 if q == "agents_md" else (3 if q == "harness" else 0))
         bob.set_aishare(20)
-        bob.choose_aishare("harness", 3)
-        bob.choose_aishare("agents_md", 2)
-        expect(bob.aishare_card("skill")).to_be_visible(timeout=5000)
-        expect(bob.aishare_card("mcp")).to_have_count(0)
+        expect(bob.aishare_card("review")).to_be_visible(timeout=5000)
 
         # ── Nobody sees the others yet; the host sees everything, anonymously
         expect(host_raw.locator("#aishare-host-status")).to_contain_text("2 participants", timeout=5000)
@@ -93,7 +92,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         # ── Host reveals → every question, with results, for everyone
         host.reveal_aishare(True)
         expect(alice.aishare_card("ai_generated").locator(".aishare-dot")).to_have_count(2, timeout=5000)
-        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(7, timeout=5000)
+        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(9, timeout=5000)
         expect(bob.aishare_card("agents_md").locator(".count")).to_have_text(["1", "1"])
         # Anonymous: hovering a dot tells the %, never a name.
         alice._page.wait_for_timeout(1500)  # let the dots land on the curve
@@ -155,14 +154,14 @@ def test_aishare_fits_a_crowd_of_25():
         host.open_aishare_tab()
         host.start_aishare()
         victor.wait_for_aishare()
-        victor.set_aishare(40)
         for name, value in CROWD:
             pid = str(uuid.uuid4())
             _post(f"{BASE}/{session_id}/api/participant/register", {"name": name}, pid)
             _post(f"{BASE}/{session_id}/api/participant/aishare/value", {"question": "ai_generated", "value": value}, pid)
-        expect(host_raw.locator("#aishare-host-status")).to_contain_text("25 participants", timeout=5000)
+        expect(host_raw.locator("#aishare-host-status")).to_contain_text("24 participants", timeout=5000)
 
-        host.reveal_aishare(True)
+        host.reveal_aishare(True)  # opens every question, the last slider included
+        victor.set_aishare(40)
         expect(victor.aishare_card("ai_generated").locator(".aishare-dot")).to_have_count(25, timeout=5000)
         _shot(raw, "aishare-crowd-pax")
         _shot(host_raw, "aishare-crowd-host")
