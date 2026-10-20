@@ -9,7 +9,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from daemon.aishare.state import MAX_VALUE, QUESTIONS, aishare_state, valid_value
+from daemon.aishare.state import MAX_OTHER_LEN, MAX_VALUE, QUESTIONS, aishare_state, valid_value
 from daemon.participant.state import participant_state
 from daemon.ws_messages import (
     ActivityUpdatedMsg,
@@ -40,6 +40,8 @@ class RevealRequest(BaseModel):
 class AiShareValueRequest(BaseModel):
     question: str = "ai_generated"
     value: int = Field(ge=0, le=MAX_VALUE)
+    other: str | None = Field(default=None, max_length=MAX_OTHER_LEN,
+                              description='free text typed after picking the question\'s "other" option')
 
 
 def _questions() -> list[AiShareQuestion]:
@@ -55,6 +57,8 @@ def participant_view() -> dict:
     results = aishare_state.results()
     if not aishare_state.revealed:
         results = [{"id": r["id"], "count": r["count"]} for r in results]
+    # What people typed under "Other" goes to the host only.
+    results = [{k: v for k, v in r.items() if k != "others"} for r in results]
     return {
         "active": aishare_state.active,
         "revealed": aishare_state.revealed,
@@ -129,7 +133,7 @@ async def set_aishare_value(request: Request, body: AiShareValueRequest):
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
     if not valid_value(body.question, body.value):
         return JSONResponse({"error": "Unknown question or value out of range"}, status_code=422)
-    if not aishare_state.set_value(pid, body.question, body.value):
+    if not aishare_state.set_value(pid, body.question, body.value, body.other):
         return JSONResponse({"error": "AI share not active"}, status_code=409)
     await _push_state()
     return Response(status_code=204)

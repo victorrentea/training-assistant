@@ -142,6 +142,7 @@ class AiShareQuestion(BaseModel):
     options: list[str] | None = None   # choice: the answers, stored as their index
     host_options: list[str] | None = None    # choice: the host's results merge some answers into these bars
     host_option_of: list[int] | None = None  # choice: options[i] is counted under host_options[host_option_of[i]]
+    other_option: int | None = None          # choice: picking this option opens a free-text box
     low: str | None = None             # slider: label at 0%
     high: str | None = None            # slider: label at 100%
     future: int | None = None          # slider: from here on the curve is painted green
@@ -153,6 +154,7 @@ class AiShareResult(BaseModel):
     count: int = 0
     values: list[int] | None = None    # slider: every answer 0..100, sorted
     counts: list[int] | None = None    # choice: answers per option
+    others: list[str] | None = None    # choice, host only: what people typed under the "other" option
 
 
 class AiShareOpenedMsg(BaseModel):

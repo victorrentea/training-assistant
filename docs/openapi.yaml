@@ -2177,6 +2177,12 @@ components:
           type: object
           title: My Answers
           default: {}
+        my_others:
+          additionalProperties:
+            type: string
+          type: object
+          title: My Others
+          default: {}
       type: object
       required:
       - active
@@ -2219,6 +2225,11 @@ components:
             type: array
           - type: 'null'
           title: Host Option Of
+        other_option:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Other Option
         low:
           anyOf:
           - type: string
@@ -2263,6 +2274,13 @@ components:
             type: array
           - type: 'null'
           title: Counts
+        others:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Others
       type: object
       required:
       - id
@@ -2279,6 +2297,13 @@ components:
           maximum: 100.0
           minimum: 0.0
           title: Value
+        other:
+          anyOf:
+          - type: string
+            maxLength: 60
+          - type: 'null'
+          title: Other
+          description: free text typed after picking the question's "other" option
       type: object
       required:
       - value

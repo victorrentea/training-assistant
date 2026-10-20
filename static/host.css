@@ -765,6 +765,9 @@ body {
 .aishare-bar-track { height: 1.1rem; border-radius: 4px; background: var(--surface2); overflow: hidden; }
 .aishare-bar-fill { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 4px; transition: width .4s ease; }
 .aishare-bar-count { font-weight: 700; text-align: right; }
+.aishare-others { display: flex; flex-wrap: wrap; gap: .35rem; margin: .45rem 0 0 12.6rem; }
+.aishare-others:empty { display: none; }
+.aishare-other-chip { padding: .1rem .55rem; border-radius: 10px; background: var(--surface2); color: var(--text); font-size: .85rem; }
 .aishare-host-questions { margin: .9rem 0 0; padding-left: 1.3rem; font-size: .85rem; color: var(--muted); line-height: 1.6; }
 .aishare-host-count { display: inline-block; min-width: 1.3rem; padding: 0 .35rem; border-radius: 9px; background: var(--surface2); color: var(--text); font-size: .75rem; font-weight: 700; text-align: center; }
 #center-aishare .aishare-plot { height: 0; overflow: hidden; transition: height .7s cubic-bezier(.2,.8,.2,1); }

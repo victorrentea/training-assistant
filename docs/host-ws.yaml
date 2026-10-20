@@ -190,6 +190,10 @@ components:
                   items:
                     type: integer
                   description: "choice: options[i] is counted under host_options[host_option_of[i]]"
+                other_option:
+                  nullable: true
+                  type: integer
+                  description: "choice: picking this option opens a free-text box"
                 low:
                   nullable: true
                   type: string
@@ -228,6 +232,12 @@ components:
                   items:
                     type: integer
                   description: "choice: answers per option"
+                others:
+                  nullable: true
+                  type: array
+                  items:
+                    type: string
+                  description: "choice: what people typed under the \"other\" option (anonymous)"
     # ── Word Cloud ────────────────────────────────────────────────────────────
 
     wordcloud_updated:

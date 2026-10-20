@@ -262,6 +262,7 @@ class AiShareParticipantState(BaseModel):
     questions: list[AiShareQuestion]
     results: list[AiShareResult]
     my_answers: dict[str, int] = {}
+    my_others: dict[str, str] = {}
 
 
 class WordcloudData(BaseModel):
@@ -495,7 +496,8 @@ def _build_aishare_for_participant(pid: str) -> dict:
     from daemon.aishare.router import participant_view
     from daemon.aishare.state import aishare_state
 
-    return {**participant_view(), "my_answers": aishare_state.answers_of(pid)}
+    return {**participant_view(), "my_answers": aishare_state.answers_of(pid),
+            "my_others": aishare_state.others_of(pid)}
 
 
 def _participant_display_names() -> list[str]:

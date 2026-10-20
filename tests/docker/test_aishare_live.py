@@ -68,8 +68,18 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
 
         # ── Each answer brings in the next question
         for i, q in enumerate(CHOICES):
-            alice.choose_aishare(q, 0 if q != "custom_agent" else 1)
+            alice.choose_aishare(q, {"custom_agent": 1, "harness": 4}.get(q, 0))
             expect(cards).to_have_count(i + 2, timeout=5000)
+        # "Other" harness: say which one
+        other_box = alice.aishare_card("harness").locator(".aishare-other input")
+        expect(other_box).to_be_visible()
+        other_box.fill("Cursor")
+        other_box.press("Enter")
+        # Dragging the slider (no release yet) must not unlock the last question
+        alice._page.locator("#aishare-slider-ai_generated").evaluate(
+            "el => { el.value = 70; el.dispatchEvent(new Event('input', {bubbles: true})); }")
+        alice._page.wait_for_timeout(1200)  # the debounced answer goes out and comes back over WS
+        expect(cards).to_have_count(len(CHOICES) + 1)
         alice.set_aishare(80)
         expect(cards).to_have_count(len(CHOICES) + 2, timeout=5000)
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
@@ -87,6 +97,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice._page.locator("#aishare-questions .aishare-plot svg")).to_have_count(0)
         expect(host_raw.locator('#aishare-host-results [data-q="ai_generated"] .aishare-dot')).to_have_count(2)
         expect(host_raw.locator('#aishare-host-results [data-q="agents_md"] .aishare-bar-count')).to_have_text(["1", "1"])  # No + I don't know share a bar
+        expect(host_raw.locator('#aishare-host-results [data-q="harness"] .aishare-other-chip')).to_have_text(["Cursor"])
         _shot(alice._page, "aishare-pax-hidden")
 
         # ── Host reveals → every question, with results, for everyone

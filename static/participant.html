@@ -791,6 +791,12 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 @keyframes aishare-q-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .aishare-q { animation: none; } }
 .aishare-choices { display: flex; flex-direction: column; gap: .5rem; }
+.aishare-other { display: none; gap: .5rem; }
+.aishare-other.open { display: flex; }
+.aishare-other input { flex: 1; min-width: 0; padding: .65rem .9rem; border-radius: 8px; border: 1.5px solid var(--color-primary, #4555ba); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font: inherit; }
+.aishare-other-save { padding: 0 1.1rem; border-radius: 8px; border: none; background: var(--color-primary, #4555ba); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.aishare-other-save:disabled { opacity: .45; cursor: default; }
+@media (prefers-color-scheme: dark) { .aishare-other input { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); } }
 .aishare-done { margin-top: 1rem; text-align: center; font-size: 1.4rem; font-weight: 800; color: var(--color-primary, #4555ba); animation: aishare-q-in .45s cubic-bezier(.2,.8,.2,1); }
 .aishare-done small { display: block; margin-top: .35rem; font-size: .85rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); }
 /* Same size as the question (.poll-card h2) — it reads as the question's other half. */
@@ -5571,7 +5577,9 @@ function _updateActivityNavLabel() {
 // Questions come from the daemon; each next one appears once the previous one
 // is answered (all of them once the host reveals the answers). Anonymous: the
 // broadcasts carry counts/values only; own answers arrive with /state.
-var _aiShare = { active: false, revealed: false, questions: [], results: {}, my: {} };
+var _aiShare = { active: false, revealed: false, questions: [], results: {}, my: {}, live: {}, myOther: {} };
+// my: committed answers — a slider counts once released; they unlock the next question.
+// live: a slider's value while it is being dragged.
 var _aiShareSendTimers = {};
 
 function _applyAiShareState(msg) {
@@ -5581,7 +5589,8 @@ function _applyAiShareState(msg) {
   _aiShare.results = {};
   (msg.results || []).forEach(function (r) { _aiShare.results[r.id] = r; });
   if (msg.my_answers !== undefined) _aiShare.my = Object.assign({}, msg.my_answers || {});
-  if (!_aiShare.active) _aiShare.my = {};
+  if (msg.my_others !== undefined) _aiShare.myOther = Object.assign({}, msg.my_others || {});
+  if (!_aiShare.active) { _aiShare.my = {}; _aiShare.live = {}; _aiShare.myOther = {}; }
   _renderActivityAiShare();
 }
 
@@ -5623,6 +5632,30 @@ function _aiShareBuildCard(q) {
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
       btn.addEventListener('click', function () { _onAiShareInput(q.id, btn.dataset.i, true); });
     });
+    if (q.other_option != null) {
+      // Picking "Other" opens a box to say which one, so nobody is left out.
+      var box = document.createElement('div');
+      box.className = 'aishare-other';
+      box.innerHTML = '<input type="text" maxlength="60" placeholder="Which one?" autocomplete="off" />' +
+        '<button class="aishare-other-save" disabled>Save</button>';
+      card.querySelector('.aishare-choices').appendChild(box);
+      var input = box.querySelector('input'), save = box.querySelector('button');
+      var sync = function () {
+        var t = input.value.trim();
+        save.disabled = !t || t === (_aiShare.myOther[q.id] || '');
+      };
+      var send = function () {
+        var t = input.value.trim();
+        if (!t) return;
+        _aiShare.myOther[q.id] = t;
+        _onAiShareInput(q.id, q.other_option, true, t);
+        sync();
+        save.textContent = 'Saved ✓';
+      };
+      input.addEventListener('input', function () { save.textContent = 'Save'; sync(); });
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
+      save.addEventListener('click', send);
+    }
   }
   return card;
 }
@@ -5636,12 +5669,13 @@ function _aiShareUpdateCard(card, q) {
     var slider = card.querySelector('.aishare-slider');
     var valueEl = card.querySelector('.aishare-value');
     var plot = card.querySelector('.aishare-plot');
+    var live = _aiShare.live[q.id];
+    var touched = answered || live != null;
     // Don't yank the thumb from under a participant who is dragging it.
-    if (answered && document.activeElement !== slider) slider.value = mine;
-    if (!answered) slider.value = 50;
-    slider.classList.toggle('untouched', !answered);
+    if (document.activeElement !== slider) slider.value = touched ? (live != null ? live : mine) : 50;
+    slider.classList.toggle('untouched', !touched);
     var shown = _aiShare.revealed && res.values && window.AiShareChart;
-    valueEl.style.display = answered || shown ? 'none' : '';
+    valueEl.style.display = touched || shown ? 'none' : '';
     if (shown) {
       // The curve sits right over the slider: x=0/100 at the thumb centres.
       var plotH = Math.round(Math.max(140, Math.min(280, window.innerHeight * 0.28)));
@@ -5670,6 +5704,15 @@ function _aiShareUpdateCard(card, q) {
         countEl.remove();
       }
     });
+    var other = card.querySelector('.aishare-other');
+    if (other) {
+      var open = answered && mine === q.other_option;
+      var wasOpen = other.classList.contains('open');
+      other.classList.toggle('open', open);
+      var inp = other.querySelector('input');
+      if (open && document.activeElement !== inp && !inp.value) inp.value = _aiShare.myOther[q.id] || '';
+      if (open && !wasOpen && !_aiShare.myOther[q.id]) setTimeout(function () { inp.focus(); }, 0);
+    }
   }
 }
 
@@ -5708,25 +5751,30 @@ function _renderActivityAiShare(scrollToNew) {
   }
 }
 
-function _onAiShareInput(qid, raw, commit) {
+function _onAiShareInput(qid, raw, commit, otherText) {
   if (!_aiShare.active || !_sessionId) return;
   var value = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
   var first = !_aiShareAnswered(qid);
-  _aiShare.my[qid] = value;
   var card = document.querySelector('#aishare-questions [data-q="' + qid + '"]');
   var slider = card && card.querySelector('.aishare-slider');
   if (slider) {
     slider.classList.remove('untouched');
     card.querySelector('.aishare-value').style.display = 'none';
   }
-  // A slider unlocks the next question on release, a choice on click.
-  if (commit || !slider) _renderActivityAiShare(first || commit);
+  // A slider unlocks the next question only once released, a choice on click.
+  if (slider && !commit) {
+    _aiShare.live[qid] = value;
+  } else {
+    delete _aiShare.live[qid];
+    _aiShare.my[qid] = value;
+    _renderActivityAiShare(first);
+  }
   clearTimeout(_aiShareSendTimers[qid]);
   _aiShareSendTimers[qid] = setTimeout(function () {
     fetch('/' + _sessionId + '/api/participant/aishare/value', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
-      body: JSON.stringify({ question: qid, value: value }),
+      body: JSON.stringify(otherText !== undefined ? { question: qid, value: value, other: otherText } : { question: qid, value: value }),
     }).catch(function () { /* silent — next WS push reconciles */ });
   }, commit ? 0 : 200);
 }
@@ -6225,7 +6273,7 @@ function _handleWsMessage(msg) {
       _showPaxLb(msg);
       break;
     case 'aishare_opened':
-      _aiShare = { active: true, revealed: false, questions: _aiShare.questions, results: {}, my: {} };
+      _aiShare = { active: true, revealed: false, questions: _aiShare.questions, results: {}, my: {}, live: {}, myOther: {} };
       document.getElementById('aishare-questions').innerHTML = '';
       _renderActivityAiShare();
       showView('activity');

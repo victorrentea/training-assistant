@@ -2670,7 +2670,8 @@ function _renderEngagementPopover() {
         block.innerHTML = `<div class="aishare-host-block-head"><span>${escHtml(q.text)}</span><span class="aishare-host-block-count"></span></div>` +
           (q.kind === 'slider'
             ? `<div class="aishare-scale"><span class="aishare-end-l">${escHtml(q.low || '0%')}</span><span class="aishare-tick" style="--p:.25">25%</span><span class="aishare-tick" style="--p:.5">50%</span><span class="aishare-tick" style="--p:.75">75%</span><span class="aishare-end-r">${escHtml(q.high || '100%')}</span></div><div class="aishare-plot"></div>`
-            : `<div class="aishare-bars">${(q.host_options || q.options).map((o, i) => `<div class="aishare-bar" data-i="${i}"><span class="aishare-bar-label">${escHtml(o)}</span><span class="aishare-bar-track"><span class="aishare-bar-fill"></span></span><span class="aishare-bar-count"></span></div>`).join('')}</div>`);
+            : `<div class="aishare-bars">${(q.host_options || q.options).map((o, i) => `<div class="aishare-bar" data-i="${i}"><span class="aishare-bar-label">${escHtml(o)}</span><span class="aishare-bar-track"><span class="aishare-bar-fill"></span></span><span class="aishare-bar-count"></span></div>`).join('')}</div>` +
+              (q.other_option != null ? '<div class="aishare-others"></div>' : ''));
         box.appendChild(block);
       }
       block.querySelector('.aishare-host-block-count').textContent = res.count ? `${res.count} ${res.count === 1 ? 'answer' : 'answers'}` : '';
@@ -2691,6 +2692,18 @@ function _renderEngagementPopover() {
           bar.querySelector('.aishare-bar-fill').style.width = max ? (c / max * 100) + '%' : '0%';
           bar.querySelector('.aishare-bar-count').textContent = c ? c : '';
         });
+        const othersEl = block.querySelector('.aishare-others');
+        if (othersEl) {
+          // What people typed under "Other", same names folded together: "Cursor ×2".
+          const tally = new Map();
+          (res.others || []).forEach(t => {
+            const key = t.toLowerCase();
+            const seen = tally.get(key);
+            tally.set(key, { text: seen ? seen.text : t, n: (seen ? seen.n : 0) + 1 });
+          });
+          othersEl.innerHTML = [...tally.values()]
+            .map(o => `<span class="aishare-other-chip">${escHtml(o.text)}${o.n > 1 ? ` ×${o.n}` : ''}</span>`).join('');
+        }
       }
     });
   }

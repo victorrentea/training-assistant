@@ -42,9 +42,11 @@ def client(sent):
     return TestClient(app)
 
 
-def _answer(client, pid, value, question="ai_generated"):
-    return client.post("/api/participant/aishare/value", json={"question": question, "value": value},
-                       headers={"X-Participant-ID": pid})
+def _answer(client, pid, value, question="ai_generated", other=None):
+    body = {"question": question, "value": value}
+    if other is not None:
+        body["other"] = other
+    return client.post("/api/participant/aishare/value", json=body, headers={"X-Participant-ID": pid})
 
 
 def _last(msgs, type_):
@@ -153,3 +155,25 @@ def test_restore_reads_the_legacy_single_slider_shape():
     s = AiShareState()
     s.restore({"active": True, "revealed": False, "values": {"u1": 40, "u2": 150}})
     assert s.answers == {"ai_generated": {"u1": 40}}
+
+
+def test_other_harness_text_reaches_the_host_only(client, state, sent):
+    client.post("/api/cur/host/aishare/start")
+    _answer(client, "u1", 4, question="harness", other="  Cursor ")
+    _answer(client, "u2", 4, question="harness", other="windsurf")
+    client.post("/api/cur/host/aishare/reveal", json={"revealed": True})
+    host = _last(sent["host"], "aishare_host_update")
+    assert _result(host, "harness").others == ["Cursor", "windsurf"]
+    pax = _last(sent["broadcast"], "aishare_updated")
+    assert _result(pax, "harness").others is None
+    assert "Cursor" not in pax.model_dump_json()
+    assert state.others_of("u1") == {"harness": "Cursor"}
+
+
+def test_other_text_dropped_when_another_option_is_picked(client, state):
+    client.post("/api/cur/host/aishare/start")
+    _answer(client, "u1", 4, question="harness", other="Cursor")
+    _answer(client, "u1", 4, question="harness")          # re-clicking Other keeps the text
+    assert state.others_of("u1") == {"harness": "Cursor"}
+    _answer(client, "u1", 0, question="harness")
+    assert state.others_of("u1") == {}
