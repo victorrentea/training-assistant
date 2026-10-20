@@ -4209,10 +4209,14 @@ components:
         session_id:
           type: string
           title: Session Id
+        join_url:
+          type: string
+          title: Join Url
       type: object
       required:
       - session_name
       - session_id
+      - join_url
       title: SessionStartResponse
     SetActivityRequest:
       properties:

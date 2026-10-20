@@ -123,7 +123,10 @@ def test_host_starts_session_participant_joins():
 
         create_btn = host_page.locator("#create-btn-workshop")
         expect(create_btn).to_be_enabled(timeout=3000)
-        create_btn.click()
+        # Starting a workshop also opens the participant view in a second tab
+        with host_page.expect_popup() as popup_info:
+            create_btn.click()
+        pax_tab = popup_info.value
 
         # Host should be redirected to /host/{session_id}
         host_page.wait_for_url(re.compile(r"/host/[a-zA-Z0-9]+"), timeout=10000)
@@ -131,6 +134,8 @@ def test_host_starts_session_participant_joins():
         session_id = session_url.split("/host/")[-1].split("?")[0]
         assert session_id, "No session_id in URL"
         print(f"Session started: {session_id}")
+        pax_tab.wait_for_url(re.compile(rf"/{session_id}$"), timeout=10000)
+        pax_tab.close()
 
         # Wait for the host page to fully load and show participant link
         host_page.wait_for_load_state("networkidle")

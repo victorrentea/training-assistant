@@ -164,6 +164,11 @@ class ResumeSessionRequest(BaseModel):
 class SessionStartResponse(BaseModel):
     session_name: str
     session_id: str
+    join_url: str  # participant view — the host landing page opens it in a second tab
+
+
+def _join_url(session_id: str) -> str:
+    return os.environ.get("WORKSHOP_SERVER_URL", "http://localhost:8000").rstrip("/") + "/" + session_id
 
 
 class FolderInfo(BaseModel):
@@ -242,7 +247,7 @@ async def start_session(body: StartSessionRequest):
     # Pre-register session_id with Railway immediately so host WS validates on first connect
     # (avoids race condition where host navigates before session_pending queue is processed)
     announce_session_id(session_id, session_type=body.type)
-    return SessionStartResponse(session_name=name, session_id=session_id)
+    return SessionStartResponse(session_name=name, session_id=session_id, join_url=_join_url(session_id))
 
 
 @global_router.post("/end", status_code=204)
@@ -289,7 +294,7 @@ async def resume_session(body: ResumeSessionRequest):
         "existed": True,
     })
     announce_session_id(session_id, session_type=session_type)
-    return SessionStartResponse(session_name=folder_name, session_id=session_id)
+    return SessionStartResponse(session_name=folder_name, session_id=session_id, join_url=_join_url(session_id))
 
 
 @global_router.get("/folders", response_model=SessionFoldersResponse)

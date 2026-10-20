@@ -44,10 +44,10 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Get Log Level<br>`GET /api/log-level` | - | `level: 'info' \| 'debug'` |
 | Set Log Level<br>`POST /api/log-level` | `level: 'info' \| 'debug'` | - |
 | Get Session Active, public endpoint: returns the active session_id or null.<br>`GET /api/session/active` | - | `session_id?: string` |
-| Host starts a new session (creates folder, assigns session_id, clean slate). For fresh sessions the local folder is created immediately so DriveFS can sync it up to Google Drive; we then poll DriveFS for the resulting URL up to 15s before returning. The host UI only navigates into the session once we respond, so this guarantees a usable gdrive_url is in place.<br>`POST /api/session/create` | `name: string`<br>`type: 'workshop' \| 'talk'` | `session_name: string`<br>`session_id: string` |
+| Host starts a new session (creates folder, assigns session_id, clean slate). For fresh sessions the local folder is created immediately so DriveFS can sync it up to Google Drive; we then poll DriveFS for the resulting URL up to 15s before returning. The host UI only navigates into the session once we respond, so this guarantees a usable gdrive_url is in place.<br>`POST /api/session/create` | `name: string`<br>`type: 'workshop' \| 'talk'` | `session_name: string`<br>`session_id: string`<br>`join_url: string` |
 | Host ends the current session. Railway closes WS connections on session end.<br>`POST /api/session/end` | - | - |
 | List Session Folders<br>`GET /api/session/folders` | - | `folders: list[FolderInfo{`<br>&nbsp;&nbsp;&nbsp;&nbsp;`name:string`<br>&nbsp;&nbsp;&nbsp;&nbsp;`session_type?:string`<br>`}]` |
-| Host resumes an existing session folder. Like /create, this requires Google Drive to be running so we can resolve the folder's GDrive URL for the participant view. Returns 503 if unavailable.<br>`POST /api/session/resume` | `folder: string` | `session_name: string`<br>`session_id: string` |
+| Host resumes an existing session folder. Like /create, this requires Google Drive to be running so we can resolve the folder's GDrive URL for the participant view. Returns 503 if unavailable.<br>`POST /api/session/resume` | `folder: string` | `session_name: string`<br>`session_id: string`<br>`join_url: string` |
 | Talk Presentation Path, host drops a PPTX file during a talk — resolve GDrive URL, trigger Railway download, push current_slide_updated.<br>`POST /api/session/talk-presentation-path` | `path: string` | - |
 
 ### Railway WS

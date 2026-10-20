@@ -152,6 +152,20 @@ function onSessionReady(session_id) {
   window.location = '/host/' + session_id;
 }
 
+// The participant view opens in a second tab next to the host panel. The tab
+// is opened blank right on the click — after the awaited create/resume the
+// browser would no longer count it as user-initiated and block the popup —
+// and pointed at the session once the daemon answers.
+function openParticipantTab() {
+  return window.open('about:blank', '_blank');
+}
+
+function showParticipantView(tab, joinUrl) {
+  if (!tab) return;
+  if (joinUrl) tab.location = joinUrl;
+  else tab.close();
+}
+
 async function doCreate(type) {
   const input = document.getElementById('session-name-input');
   const dateInput = document.getElementById('session-date-input');
@@ -162,6 +176,7 @@ async function doCreate(type) {
   const btn = document.getElementById('create-btn-' + type);
   btn.disabled = true;
   showSessionBlocker(type === 'talk' ? 'Starting talk…' : 'Starting workshop…');
+  const paxTab = openParticipantTab();
 
   const errEl = document.getElementById('create-error');
   if (errEl) errEl.style.display = 'none';
@@ -175,8 +190,10 @@ async function doCreate(type) {
     });
     const data = await r.json();
     if (r.ok && data.session_id) {
+      showParticipantView(paxTab, data.join_url);
       onSessionReady(data.session_id);
     } else {
+      showParticipantView(paxTab, null);
       const msg = data.detail || data.error || 'Failed to create session.';
       if (errEl) { errEl.textContent = msg; errEl.style.display = ''; }
       btn.disabled = false;
@@ -184,6 +201,7 @@ async function doCreate(type) {
       if (blocker) blocker.style.display = 'none';
     }
   } catch (e) {
+    showParticipantView(paxTab, null);
     if (errEl) { errEl.textContent = 'Network error — please retry.'; errEl.style.display = ''; }
     btn.disabled = false;
     const blocker = document.getElementById('session-blocker');
@@ -193,6 +211,7 @@ async function doCreate(type) {
 
 async function doResumeFolder(folder_name) {
   showSessionBlocker('Resuming session…');
+  const paxTab = openParticipantTab();
   try {
     const r = await fetch('/api/session/resume', {
       method: 'POST',
@@ -202,14 +221,17 @@ async function doResumeFolder(folder_name) {
     });
     const data = await r.json();
     if (r.ok && data.session_id) {
+      showParticipantView(paxTab, data.join_url);
       onSessionReady(data.session_id);
     } else {
+      showParticipantView(paxTab, null);
       const blocker = document.getElementById('session-blocker');
       if (blocker) blocker.style.display = 'none';
       const msg = data.message || data.detail || data.error || 'unknown error';
       alert('Failed to resume session: ' + msg);
     }
   } catch (e) {
+    showParticipantView(paxTab, null);
     const blocker = document.getElementById('session-blocker');
     if (blocker) blocker.style.display = 'none';
     alert('Network error resuming session.');
