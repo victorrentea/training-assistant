@@ -5732,7 +5732,7 @@ function _aiShareUpdateCard(card, q) {
         var fav = !!((_aiShare.myHearts[q.id] || 0) >> idx & 1);
         var h = hearts ? (hearts[idx] || 0) : 0;
         heart.classList.toggle('mine', fav);
-        heart.textContent = (fav ? '❤️' : '♡') + (h ? ' ' + h : '');
+        heart.textContent = (fav ? '❤️' : '♡') + (h ? ' ×' + h : '');
       }
       var c = counts ? (counts[idx] || 0) : 0;
       // A multi's longest bar stops short of the ❤️ on the right, so its count stays readable.

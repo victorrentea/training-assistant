@@ -101,7 +101,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(host_raw.locator('#aishare-host-results [data-q="ai_generated"] .aishare-dot')).to_have_count(2)
         expect(host_raw.locator('#aishare-host-results [data-q="agents_md"] .aishare-bar-count')).to_have_text(["1", "1"])  # No + I don't know share a bar
         expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-other-chip')).to_have_text(["Cursor"])
-        expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-bar-hearts')).to_have_text(["❤️ 1", "", "", "", ""])
+        expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-bar-hearts')).to_have_text(["❤️ ×1", "", "", "", ""])
         _shot(alice._page, "aishare-pax-hidden")
 
         # ── Host reveals → every question, with results, for everyone

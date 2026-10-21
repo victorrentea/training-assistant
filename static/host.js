@@ -2693,7 +2693,7 @@ function _renderEngagementPopover() {
           bar.querySelector('.aishare-bar-count').textContent = c ? c : '';
           const heartsEl = bar.querySelector('.aishare-bar-hearts');
           const h = (res.hearts || [])[+bar.dataset.i] || 0;
-          if (heartsEl) heartsEl.textContent = h ? `❤️ ${h}` : '';
+          if (heartsEl) heartsEl.textContent = h ? `❤️ ×${h}` : '';
         });
         const othersEl = block.querySelector('.aishare-others');
         if (othersEl) {
