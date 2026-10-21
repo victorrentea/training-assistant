@@ -49,9 +49,13 @@ EMOJI_CATALOG: list[EmojiDef] = [
     EmojiDef(emoji="🔥", title="", section="stacked", stack_of="❤️"),
     EmojiDef(emoji="👏", title="Applause!", section="stacked", stack_of="❤️"),
     EmojiDef(emoji="😂", title="I'm dead 💀", section="stacked", stack_of="❤️"),
-    # ☕ — breaks
+    # ☕ — breaks (and food)
     EmojiDef(emoji="☕", title="I need a coffee break", section="primary"),
     EmojiDef(emoji="🍕", title="Pizza time!", section="stacked", stack_of="☕"),
+    EmojiDef(emoji="🍔", title="Burger time!", section="stacked", stack_of="☕"),
+    EmojiDef(emoji="🌮", title="Taco break!", section="stacked", stack_of="☕"),
+    EmojiDef(emoji="🍣", title="Sushi, anyone?", section="stacked", stack_of="☕"),
+    EmojiDef(emoji="🍩", title="Donut break!", section="stacked", stack_of="☕"),
     # 👍 — opinion: agree / disagree / let's debate
     EmojiDef(emoji="👍", title="", section="primary"),
     EmojiDef(emoji="✅", title="Agreed. 100%.", section="stacked", stack_of="👍"),
