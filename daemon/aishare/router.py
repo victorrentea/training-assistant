@@ -39,9 +39,12 @@ class RevealRequest(BaseModel):
 
 class AiShareValueRequest(BaseModel):
     question: str = "ai_generated"
-    value: int = Field(ge=0, le=MAX_VALUE)
+    value: int = Field(ge=0, le=MAX_VALUE,
+                       description="slider: 0..100; choice: the option index; multi: bitmask of the ticked options (0 = none)")
     other: str | None = Field(default=None, max_length=MAX_OTHER_LEN,
                               description='free text typed after picking the question\'s "other" option')
+    favorite: int | None = Field(default=None, ge=0,
+                                 description="multi: the ❤️ option, one of the ticked ones; null = no favourite")
 
 
 def _questions() -> list[AiShareQuestion]:
@@ -133,7 +136,7 @@ async def set_aishare_value(request: Request, body: AiShareValueRequest):
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
     if not valid_value(body.question, body.value):
         return JSONResponse({"error": "Unknown question or value out of range"}, status_code=422)
-    if not aishare_state.set_value(pid, body.question, body.value, body.other):
+    if not aishare_state.set_value(pid, body.question, body.value, body.other, body.favorite):
         return JSONResponse({"error": "AI share not active"}, status_code=409)
     await _push_state()
     return Response(status_code=204)

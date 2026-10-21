@@ -30,7 +30,7 @@ def _shot(page, name):
         page.screenshot(path=f"{SHOTS}/{name}.png", full_page=True)
 
 
-CHOICES = ["harness", "agents_md", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr"]
+CHOICES = ["harness_work", "personal_sub", "agents_md", "knowledge_base", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr"]
 
 
 @pytest.mark.nightly
@@ -68,13 +68,16 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
 
         # ── Each answer brings in the next question
         for i, q in enumerate(CHOICES):
-            alice.choose_aishare(q, {"custom_agent": 1, "harness": 4}.get(q, 0))
+            alice.choose_aishare(q, {"custom_agent": 1, "harness_work": 4}.get(q, 0))
             expect(cards).to_have_count(i + 2, timeout=5000)
         # "Other" harness: say which one
-        other_box = alice.aishare_card("harness").locator(".aishare-other input")
+        other_box = alice.aishare_card("harness_work").locator(".aishare-other input")
         expect(other_box).to_be_visible()
         other_box.fill("Cursor")
         other_box.press("Enter")
+        # Multi: ❤️ on Claude Code / Codex ticks it too, next to Other
+        alice.aishare_card("harness_work").locator('.aishare-opt[data-i="0"] .aishare-heart').click()
+        expect(alice.aishare_card("harness_work").locator(".aishare-opt.selected")).to_have_count(2)
         # Dragging the slider (no release yet) must not unlock the last question
         alice._page.locator("#aishare-slider-ai_generated").evaluate(
             "el => { el.value = 70; el.dispatchEvent(new Event('input', {bubbles: true})); }")
@@ -87,7 +90,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice._page.locator("#aishare-done")).to_contain_text("Thank you", timeout=5000)
 
         for q in CHOICES:
-            bob.choose_aishare(q, 2 if q == "agents_md" else (3 if q == "harness" else 0))
+            bob.choose_aishare(q, 2 if q == "agents_md" else (3 if q == "harness_work" else 0))
         bob.set_aishare(20)
         expect(bob.aishare_card("review")).to_be_visible(timeout=5000)
 
@@ -97,13 +100,14 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice._page.locator("#aishare-questions .aishare-plot svg")).to_have_count(0)
         expect(host_raw.locator('#aishare-host-results [data-q="ai_generated"] .aishare-dot')).to_have_count(2)
         expect(host_raw.locator('#aishare-host-results [data-q="agents_md"] .aishare-bar-count')).to_have_text(["1", "1"])  # No + I don't know share a bar
-        expect(host_raw.locator('#aishare-host-results [data-q="harness"] .aishare-other-chip')).to_have_text(["Cursor"])
+        expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-other-chip')).to_have_text(["Cursor"])
+        expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-bar-hearts')).to_have_text(["❤️ 1", "", "", "", ""])
         _shot(alice._page, "aishare-pax-hidden")
 
         # ── Host reveals → every question, with results, for everyone
         host.reveal_aishare(True)
         expect(alice.aishare_card("ai_generated").locator(".aishare-dot")).to_have_count(2, timeout=5000)
-        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(9, timeout=5000)
+        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(len(CHOICES) + 2, timeout=5000)
         expect(bob.aishare_card("agents_md").locator(".count")).to_have_text(["1", "1"])
         # Anonymous: hovering a dot tells the %, never a name.
         alice._page.wait_for_timeout(1500)  # let the dots land on the curve

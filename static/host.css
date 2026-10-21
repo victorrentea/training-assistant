@@ -765,6 +765,9 @@ body {
 .aishare-bar-track { height: 1.1rem; border-radius: 4px; background: var(--surface2); overflow: hidden; }
 .aishare-bar-fill { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 4px; transition: width .4s ease; }
 .aishare-bar-count { font-weight: 700; text-align: right; }
+/* Multi: who uses it (bar) and who loves it most (❤️ count). */
+.aishare-bars.multi .aishare-bar { grid-template-columns: 12rem 1fr 2.5rem 3.2rem; }
+.aishare-bar-hearts { font-weight: 700; white-space: nowrap; }
 .aishare-others { display: flex; flex-wrap: wrap; gap: .35rem; margin: .45rem 0 0 12.6rem; }
 .aishare-others:empty { display: none; }
 .aishare-other-chip { padding: .1rem .55rem; border-radius: 10px; background: var(--surface2); color: var(--text); font-size: .85rem; }

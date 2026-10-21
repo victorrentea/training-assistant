@@ -771,6 +771,11 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 /* Hover/focus: the shared yellow pop-out of .side-icon. */
 .about-quick-btn { width: 1.6rem; height: 1.6rem; }
 .about-quick-btn .material-symbols-outlined { font-size: 1.05rem; }
+/* ❤️ on a multi option: tap the one you love most; once revealed it also counts everyone's. */
+.aishare-opt .row { justify-content: space-between; }
+.aishare-heart { position: relative; z-index: 3; flex-shrink: 0; padding: .1rem .45rem; border-radius: 999px; font-size: 1.05rem; font-weight: 800; line-height: 1.3; color: var(--color-on-surface-variant, #566166); cursor: pointer; transition: transform .15s; }
+.aishare-heart:hover { transform: scale(1.2); }
+.aishare-heart.mine { color: #e03131; }
 /* A tall activity (the AI-share survey, a long poll) scrolls instead of being
    clipped; `safe` keeps its top reachable when it outgrows the view. */
 #activity-view { overflow-y: auto; justify-content: safe center; }
@@ -5577,9 +5582,11 @@ function _updateActivityNavLabel() {
 // Questions come from the daemon; each next one appears once the previous one
 // is answered (all of them once the host reveals the answers). Anonymous: the
 // broadcasts carry counts/values only; own answers arrive with /state.
-var _aiShare = { active: false, revealed: false, questions: [], results: {}, my: {}, live: {}, myOther: {} };
+var _aiShare = { active: false, revealed: false, questions: [], results: {}, my: {}, live: {}, myOther: {}, myFav: {} };
 // my: committed answers — a slider counts once released; they unlock the next question.
+//     A multi's answer is the bitmask of its ticked options.
 // live: a slider's value while it is being dragged.
+// myFav: a multi's ❤️ option, always one of the ticked ones.
 var _aiShareSendTimers = {};
 
 function _applyAiShareState(msg) {
@@ -5590,7 +5597,8 @@ function _applyAiShareState(msg) {
   (msg.results || []).forEach(function (r) { _aiShare.results[r.id] = r; });
   if (msg.my_answers !== undefined) _aiShare.my = Object.assign({}, msg.my_answers || {});
   if (msg.my_others !== undefined) _aiShare.myOther = Object.assign({}, msg.my_others || {});
-  if (!_aiShare.active) { _aiShare.my = {}; _aiShare.live = {}; _aiShare.myOther = {}; }
+  if (msg.my_favorites !== undefined) _aiShare.myFav = Object.assign({}, msg.my_favorites || {});
+  if (!_aiShare.active) { _aiShare.my = {}; _aiShare.live = {}; _aiShare.myOther = {}; _aiShare.myFav = {}; }
   _renderActivityAiShare();
 }
 
@@ -5625,12 +5633,30 @@ function _aiShareBuildCard(q) {
     slider.addEventListener('input', function () { _onAiShareInput(q.id, slider.value); });
     slider.addEventListener('change', function () { _onAiShareInput(q.id, slider.value, true); });
   } else {
+    var multi = q.kind === 'multi';
     card.innerHTML = head + '<div class="aishare-choices">' + q.options.map(function (text, idx) {
       return '<button class="poll-option-btn aishare-opt" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
-        '<div class="row"><span><span class="poll-option-mark" aria-hidden="true"></span>' + _escHtml(text) + '</span></div></button>';
+        '<div class="row"><span><span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true"></span>' + _escHtml(text) + '</span>' +
+        (multi ? '<span class="aishare-heart" role="button" tabindex="0" title="My favourite"></span>' : '') + '</div></button>';
     }).join('') + '</div>';
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
-      btn.addEventListener('click', function () { _onAiShareInput(q.id, btn.dataset.i, true); });
+      var idx = +btn.dataset.i;
+      if (!multi) {
+        btn.addEventListener('click', function () { _onAiShareInput(q.id, idx, true); });
+        return;
+      }
+      // Tick / untick; unticking the ❤️ option drops the heart too.
+      btn.addEventListener('click', function () {
+        var mask = (_aiShare.my[q.id] || 0) ^ (1 << idx);
+        var fav = _aiShare.myFav[q.id];
+        _onAiShareMulti(q.id, mask, fav != null && (mask >> fav & 1) ? fav : null);
+      });
+      // ❤️ = the one they love most: ticks it as well; a second tap takes the heart back.
+      btn.querySelector('.aishare-heart').addEventListener('click', function (e) {
+        e.stopPropagation();
+        var mine = _aiShare.myFav[q.id] === idx;
+        _onAiShareMulti(q.id, (_aiShare.my[q.id] || 0) | (1 << idx), mine ? null : idx);
+      });
     });
     if (q.other_option != null) {
       // Picking "Other" opens a box to say which one, so nobody is left out.
@@ -5648,7 +5674,8 @@ function _aiShareBuildCard(q) {
         var t = input.value.trim();
         if (!t) return;
         _aiShare.myOther[q.id] = t;
-        _onAiShareInput(q.id, q.other_option, true, t);
+        if (multi) _onAiShareMulti(q.id, (_aiShare.my[q.id] || 0) | (1 << q.other_option), _aiShare.myFav[q.id], t);
+        else _onAiShareInput(q.id, q.other_option, true, t);
         sync();
         save.textContent = 'Saved ✓';
       };
@@ -5685,15 +5712,26 @@ function _aiShareUpdateCard(card, q) {
       AiShareChart.reset({ plot: plot });
     }
   } else {
+    var multi = q.kind === 'multi';
     var counts = _aiShare.revealed ? res.counts : null;
+    var hearts = _aiShare.revealed ? res.hearts : null;
     var maxCount = counts ? Math.max.apply(null, counts.concat([0])) : 0;
+    var picked = function (idx) { return answered && (multi ? !!(mine >> idx & 1) : mine === idx); };
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
       var idx = +btn.dataset.i;
-      var sel = answered && mine === idx;
+      var sel = picked(idx);
       btn.classList.toggle('selected', sel);
       btn.querySelector('.poll-option-mark').textContent = sel ? '✓' : '';
+      var heart = btn.querySelector('.aishare-heart');
+      if (heart) {
+        var fav = _aiShare.myFav[q.id] === idx;
+        var h = hearts ? (hearts[idx] || 0) : 0;
+        heart.classList.toggle('mine', fav);
+        heart.textContent = (fav ? '❤️' : '♡') + (h ? ' ' + h : '');
+      }
       var c = counts ? (counts[idx] || 0) : 0;
-      var pct = c > 0 && maxCount > 0 ? (c / maxCount) * 100 : 0;
+      // A multi's longest bar stops short of the ❤️ on the right, so its count stays readable.
+      var pct = c > 0 && maxCount > 0 ? (c / maxCount) * (multi ? 82 : 100) : 0;
       btn.querySelector('.fill').style.width = pct + '%';
       var countEl = btn.querySelector('.count');
       if (c > 0) {
@@ -5706,7 +5744,7 @@ function _aiShareUpdateCard(card, q) {
     });
     var other = card.querySelector('.aishare-other');
     if (other) {
-      var open = answered && mine === q.other_option;
+      var open = picked(q.other_option);
       var wasOpen = other.classList.contains('open');
       other.classList.toggle('open', open);
       var inp = other.querySelector('input');
@@ -5777,6 +5815,22 @@ function _onAiShareInput(qid, raw, commit, otherText) {
       body: JSON.stringify(otherText !== undefined ? { question: qid, value: value, other: otherText } : { question: qid, value: value }),
     }).catch(function () { /* silent — next WS push reconciles */ });
   }, commit ? 0 : 200);
+}
+
+// A multi answer: the ticked options as a bitmask (0 withdraws it) plus the ❤️ one.
+function _onAiShareMulti(qid, mask, fav, otherText) {
+  if (!_aiShare.active || !_sessionId) return;
+  var first = !_aiShareAnswered(qid);
+  if (mask) _aiShare.my[qid] = mask; else delete _aiShare.my[qid];
+  if (fav != null) _aiShare.myFav[qid] = fav; else delete _aiShare.myFav[qid];
+  _renderActivityAiShare(first && !!mask);
+  var body = { question: qid, value: mask, favorite: fav != null ? fav : null };
+  if (otherText !== undefined) body.other = otherText;
+  fetch('/' + _sessionId + '/api/participant/aishare/value', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+    body: JSON.stringify(body),
+  }).catch(function () { /* silent — next WS push reconciles */ });
 }
 
 function _applyPollState(msg) {
@@ -6273,7 +6327,7 @@ function _handleWsMessage(msg) {
       _showPaxLb(msg);
       break;
     case 'aishare_opened':
-      _aiShare = { active: true, revealed: false, questions: _aiShare.questions, results: {}, my: {}, live: {}, myOther: {} };
+      _aiShare = { active: true, revealed: false, questions: _aiShare.questions, results: {}, my: {}, live: {}, myOther: {}, myFav: {} };
       document.getElementById('aishare-questions').innerHTML = '';
       _renderActivityAiShare();
       showView('activity');

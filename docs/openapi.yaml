@@ -2183,6 +2183,12 @@ components:
           type: object
           title: My Others
           default: {}
+        my_favorites:
+          additionalProperties:
+            type: integer
+          type: object
+          title: My Favorites
+          default: {}
       type: object
       required:
       - active
@@ -2200,6 +2206,7 @@ components:
           enum:
           - slider
           - choice
+          - multi
           title: Kind
         text:
           type: string
@@ -2274,6 +2281,13 @@ components:
             type: array
           - type: 'null'
           title: Counts
+        hearts:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Hearts
         others:
           anyOf:
           - items:
@@ -2297,6 +2311,8 @@ components:
           maximum: 100.0
           minimum: 0.0
           title: Value
+          description: 'slider: 0..100; choice: the option index; multi: bitmask of
+            the ticked options (0 = none)'
         other:
           anyOf:
           - type: string
@@ -2304,6 +2320,13 @@ components:
           - type: 'null'
           title: Other
           description: free text typed after picking the question's "other" option
+        favorite:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Favorite
+          description: 'multi: the ❤️ option, one of the ticked ones; null = no favourite'
       type: object
       required:
       - value

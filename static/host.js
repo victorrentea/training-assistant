@@ -2670,7 +2670,7 @@ function _renderEngagementPopover() {
         block.innerHTML = `<div class="aishare-host-block-head"><span>${escHtml(q.text)}</span><span class="aishare-host-block-count"></span></div>` +
           (q.kind === 'slider'
             ? `<div class="aishare-scale"><span class="aishare-end-l">${escHtml(q.low || '0%')}</span><span class="aishare-tick" style="--p:.25">25%</span><span class="aishare-tick" style="--p:.5">50%</span><span class="aishare-tick" style="--p:.75">75%</span><span class="aishare-end-r">${escHtml(q.high || '100%')}</span></div><div class="aishare-plot"></div>`
-            : `<div class="aishare-bars">${(q.host_options || q.options).map((o, i) => `<div class="aishare-bar" data-i="${i}"><span class="aishare-bar-label">${escHtml(o)}</span><span class="aishare-bar-track"><span class="aishare-bar-fill"></span></span><span class="aishare-bar-count"></span></div>`).join('')}</div>` +
+            : `<div class="aishare-bars${q.kind === 'multi' ? ' multi' : ''}">${(q.host_options || q.options).map((o, i) => `<div class="aishare-bar" data-i="${i}"><span class="aishare-bar-label">${escHtml(o)}</span><span class="aishare-bar-track"><span class="aishare-bar-fill"></span></span><span class="aishare-bar-count"></span>${q.kind === 'multi' ? '<span class="aishare-bar-hearts"></span>' : ''}</div>`).join('')}</div>` +
               (q.other_option != null ? '<div class="aishare-others"></div>' : ''));
         box.appendChild(block);
       }
@@ -2691,6 +2691,9 @@ function _renderEngagementPopover() {
           const c = counts[+bar.dataset.i] || 0;
           bar.querySelector('.aishare-bar-fill').style.width = max ? (c / max * 100) + '%' : '0%';
           bar.querySelector('.aishare-bar-count').textContent = c ? c : '';
+          const heartsEl = bar.querySelector('.aishare-bar-hearts');
+          const h = (res.hearts || [])[+bar.dataset.i] || 0;
+          if (heartsEl) heartsEl.textContent = h ? `❤️ ${h}` : '';
         });
         const othersEl = block.querySelector('.aishare-others');
         if (othersEl) {

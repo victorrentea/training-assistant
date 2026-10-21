@@ -336,7 +336,7 @@ components:
                   type: string
                 kind:
                   type: string
-                  enum: [slider, choice]
+                  enum: [slider, choice, multi]
                 text:
                   type: string
                 options:
@@ -398,7 +398,13 @@ components:
                   type: array
                   items:
                     type: integer
-                  description: "choice: answers per option; only once revealed"
+                  description: "choice/multi: answers per option; only once revealed"
+                hearts:
+                  nullable: true
+                  type: array
+                  items:
+                    type: integer
+                  description: "multi: ❤️ favourites per option; only once revealed"
 
     # ── Scores ────────────────────────────────────────────────────────────────
 
