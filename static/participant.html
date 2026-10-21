@@ -794,6 +794,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-value.untouched { font-size: 1rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); padding-top: .9rem; }
 .aishare-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .aishare-head h2 { margin: 0; }
+.aishare-cont { display: inline-block; padding-left: 1.5em; }
 .aishare-head h2 a { color: var(--color-primary, #4555ba); text-decoration: underline; }
 .aishare-questions { display: flex; flex-direction: column; gap: 1rem; }
 .aishare-q { animation: aishare-q-in .45s cubic-bezier(.2,.8,.2,1); }
@@ -5615,9 +5616,9 @@ function _aiShareVisibleCount() {
 }
 
 // The question text, with `q.link.text` in it turned into a link (opens in a new tab)
-// and a newline in it into a line break.
+// and what follows a newline into an indented second line.
 function _aiShareTitleHtml(q) {
-  var html = _escHtml(q.text).replace(/\n/g, '<br>');
+  var html = _escHtml(q.text).replace(/\n([^]*)$/, '<br><span class="aishare-cont">$1</span>');
   if (!q.link) return html;
   return html.replace(_escHtml(q.link.text), '<a href="' + _escHtml(q.link.url) + '" target="_blank" rel="noopener">' + _escHtml(q.link.text) + '</a>');
 }

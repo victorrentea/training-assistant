@@ -21,7 +21,7 @@ YES_NO_IDK = ["Yes", "No", "I don't know"]
 YES_NO = ["Yes", "No"]
 
 QUESTIONS: list[dict] = [
-    {"id": "harness_work", "kind": "multi", "text": "What harness do you use at work? — Tick all you use,\nthen click ❤️ on your favourite",
+    {"id": "harness_work", "kind": "multi", "text": "What harness do you use at work?\n…then click ❤️ on your favourite",
      "options": ["Claude Code / Codex", "Copilot CLI", "Copilot Chat in VS Code", "Copilot Chat in IntelliJ", "Other"],
      "other_option": 4},
     {"id": "personal_sub", "kind": "choice", "text": "Do you have a personal Claude / Codex subscription?", "options": YES_NO},
