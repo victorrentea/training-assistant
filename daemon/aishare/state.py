@@ -36,7 +36,7 @@ QUESTIONS: list[dict] = [
     {"id": "custom_agent", "kind": "choice", "text": "Ever created a custom agent (.md)?", "options": YES_NO},
     {"id": "code_review", "kind": "choice", "text": "Do you have a code-review skill / agent?", "options": YES_NO_IDK},
     {"id": "nontech_pr", "kind": "choice", "text": "Ever received a PR written by a non-developer (e.g. PO, business)?", "options": YES_NO},
-    {"id": "ai_generated", "kind": "slider", "text": "How much% of your🫵 code is AI-generated?",
+    {"id": "ai_generated", "kind": "slider", "text": "How much% of the code you🫵 write is AI-generated?",
      "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 95},
     {"id": "review", "kind": "slider", "text": "How much of that do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
