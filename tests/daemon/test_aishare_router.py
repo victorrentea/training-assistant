@@ -67,7 +67,7 @@ def test_start_routes_everyone_to_the_activity(client, pstate, sent):
 def test_questions_are_shipped_in_order(client, sent):
     client.post("/api/cur/host/aishare/start")
     pax = _last(sent["broadcast"], "aishare_updated")
-    assert [q.id for q in pax.questions] == ["harness", "agents_md", "mcp", "skill", "plugins", "custom_agent", "code_review", "ai_generated", "review"]
+    assert [q.id for q in pax.questions] == ["harness", "agents_md", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr", "ai_generated", "review"]
     assert pax.questions[0].options[-1] == "Other"
     assert pax.questions[1].options == ["Yes", "No", "I don't know"]
     assert pax.questions[1].host_options == ["Yes", "No / don't know"]
