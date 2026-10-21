@@ -2153,6 +2153,19 @@ components:
       - questions
       - results
       title: AiShareHostState
+    AiShareLink:
+      properties:
+        text:
+          type: string
+          title: Text
+        url:
+          type: string
+          title: Url
+      type: object
+      required:
+      - text
+      - url
+      title: AiShareLink
     AiShareParticipantState:
       properties:
         active:
@@ -2183,11 +2196,11 @@ components:
           type: object
           title: My Others
           default: {}
-        my_favorites:
+        my_hearts:
           additionalProperties:
             type: integer
           type: object
-          title: My Favorites
+          title: My Hearts
           default: {}
       type: object
       required:
@@ -2252,6 +2265,10 @@ components:
           - type: integer
           - type: 'null'
           title: Future
+        link:
+          anyOf:
+          - $ref: '#/components/schemas/AiShareLink'
+          - type: 'null'
       type: object
       required:
       - id
@@ -2320,13 +2337,13 @@ components:
           - type: 'null'
           title: Other
           description: free text typed after picking the question's "other" option
-        favorite:
-          anyOf:
-          - type: integer
-            minimum: 0.0
-          - type: 'null'
-          title: Favorite
-          description: 'multi: the ❤️ option, one of the ticked ones; null = no favourite'
+        hearts:
+          type: integer
+          minimum: 0.0
+          title: Hearts
+          description: 'multi: bitmask of the ❤️ favourite options, among the ticked
+            ones (0 = none)'
+          default: 0
       type: object
       required:
       - value

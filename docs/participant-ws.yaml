@@ -373,6 +373,15 @@ components:
                   nullable: true
                   type: integer
                   description: "slider: from this % on the curve is painted green"
+                link:
+                  nullable: true
+                  type: object
+                  properties:
+                    text:
+                      type: string
+                    url:
+                      type: string
+                  description: "turns link.text inside the question text into a link"
           results:
             type: array
             description: Anonymous per-question results (no names, no UUIDs), in question order

@@ -135,6 +135,11 @@ class PollHostUpdateMsg(BaseModel):
 
 # ── AI share (anonymous survey: how much AI is in your code) ─────────────────
 
+class AiShareLink(BaseModel):
+    text: str   # the words of the question text that become the link
+    url: str
+
+
 class AiShareQuestion(BaseModel):
     id: str
     kind: Literal["slider", "choice", "multi"]
@@ -146,6 +151,7 @@ class AiShareQuestion(BaseModel):
     low: str | None = None             # slider: label at 0%
     high: str | None = None            # slider: label at 100%
     future: int | None = None          # slider: from here on the curve is painted green
+    link: AiShareLink | None = None    # turns `link.text` inside the question text into a link
 
 
 class AiShareResult(BaseModel):

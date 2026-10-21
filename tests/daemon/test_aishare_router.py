@@ -42,12 +42,12 @@ def client(sent):
     return TestClient(app)
 
 
-def _answer(client, pid, value, question="ai_generated", other=None, favorite=None):
+def _answer(client, pid, value, question="ai_generated", other=None, hearts=None):
     body = {"question": question, "value": value}
     if other is not None:
         body["other"] = other
-    if favorite is not None:
-        body["favorite"] = favorite
+    if hearts is not None:
+        body["hearts"] = hearts
     return client.post("/api/participant/aishare/value", json=body, headers={"X-Participant-ID": pid})
 
 
@@ -184,22 +184,24 @@ def test_other_text_dropped_when_another_option_is_picked(client, state):
 
 def test_multi_counts_every_ticked_option_and_the_hearts(client, state, sent):
     client.post("/api/cur/host/aishare/start")
-    _answer(client, "u1", 0b00011, question="harness_work", favorite=1)
-    _answer(client, "u2", 0b00101, question="harness_work", favorite=0)
+    _answer(client, "u1", 0b00011, question="harness_work", hearts=0b00011)   # two favourites
+    _answer(client, "u2", 0b00101, question="harness_work", hearts=0b00001)
     host = _last(sent["host"], "aishare_host_update")
     assert _result(host, "harness_work").counts == [2, 1, 1, 0, 0]
-    assert _result(host, "harness_work").hearts == [1, 1, 0, 0, 0]
+    assert _result(host, "harness_work").hearts == [2, 1, 0, 0, 0]
     pax = _last(sent["broadcast"], "aishare_updated")
     assert _result(pax, "harness_work").hearts is None              # hidden until revealed
     client.post("/api/cur/host/aishare/reveal", json={"revealed": True})
-    assert _result(_last(sent["broadcast"], "aishare_updated"), "harness_work").hearts == [1, 1, 0, 0, 0]
+    assert _result(_last(sent["broadcast"], "aishare_updated"), "harness_work").hearts == [2, 1, 0, 0, 0]
 
 
-def test_multi_heart_only_on_a_ticked_option_and_untick_all_withdraws(client, state):
+def test_multi_hearts_only_on_ticked_options_and_untick_all_withdraws(client, state):
     client.post("/api/cur/host/aishare/start")
-    _answer(client, "u1", 0b00011, question="harness_work", favorite=1)
-    _answer(client, "u1", 0b00001, question="harness_work", favorite=1)   # unticked the ❤️ one
-    assert state.favorites_of("u1") == {}
+    _answer(client, "u1", 0b00011, question="harness_work", hearts=0b00011)
+    _answer(client, "u1", 0b00001, question="harness_work", hearts=0b00011)   # unticked a ❤️ one
+    assert state.hearts_of("u1") == {"harness_work": 0b00001}
+    _answer(client, "u1", 0b00001, question="harness_work", hearts=0b00010)   # ❤️ on an unticked one
+    assert state.hearts_of("u1") == {}
     assert _answer(client, "u1", 0b100000, question="harness_work").status_code == 422
     _answer(client, "u1", 0, question="harness_work")
     assert state.answers_of("u1") == {}
@@ -208,8 +210,15 @@ def test_multi_heart_only_on_a_ticked_option_and_untick_all_withdraws(client, st
 def test_multi_snapshot_round_trips_the_hearts():
     s = AiShareState()
     s.start()
-    s.set_value("u1", "harness_work", 0b10001, other="Cursor", favorite=4)
+    s.set_value("u1", "harness_work", 0b10001, other="Cursor", hearts=0b10001)
     restored = AiShareState()
     restored.restore(s.snapshot())
     assert restored.snapshot() == s.snapshot()
-    assert restored.favorites_of("u1") == {"harness_work": 4}
+    assert restored.hearts_of("u1") == {"harness_work": 0b10001}
+
+
+def test_restore_turns_a_legacy_single_favourite_into_a_heart():
+    s = AiShareState()
+    s.restore({"active": True, "answers": {"harness_work": {"u1": 0b10001, "u2": 0b00001}},
+               "favorites": {"harness_work": {"u1": 4, "u2": 3}}})   # u2's ❤️ was not ticked
+    assert s.hearts == {"harness_work": {"u1": 0b10000}}

@@ -121,13 +121,23 @@
     // The opts.future+ slice, painted over the accent curve in green.
     var futureArea = el('path', { fill: 'url(#aishare-future-' + (opts.id || 'x') + ')' }, svg);
     var futureLine = el('path', { fill: 'none', stroke: FUTURE_COLOR, 'stroke-width': 2.5, 'stroke-linejoin': 'round' }, svg);
+    if (future != null) {
+      // Name the green slice at its foot: "90%" and up.
+      var fl = el('text', { x: (X(future) + X(100)) / 2, y: y0 - 8, 'text-anchor': 'middle', fill: FUTURE_COLOR,
+        'font-size': 13, 'font-weight': 800, 'pointer-events': 'none' }, svg);
+      fl.textContent = future + '%';
+    }
     if (opts.axis) el('line', { x1: X(0), x2: X(100), y1: y0 - 0.75, y2: y0 - 0.75, stroke: 'var(--aishare-muted)', 'stroke-width': 1.5 }, svg);
 
     var n = values.length;
     if (n) {
       var avg = values.reduce(function (a, v) { return a + v; }, 0) / n;
       var avgG = el('g', { class: animate && first ? 'aishare-avg' : '' }, svg);
-      el('line', { x1: X(avg), x2: X(avg), y1: 4, y2: y0, stroke: 'var(--aishare-text)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4', 'stroke-opacity': 0.7 }, avgG);
+      el('line', { x1: X(avg), x2: X(avg), y1: 16, y2: y0, stroke: 'var(--aishare-text)', 'stroke-width': 1.2, 'stroke-dasharray': '5 4', 'stroke-opacity': 0.7 }, avgG);
+      // Say what the dashed line is: the running average of everyone's answers.
+      var al = el('text', { x: Math.max(X(0) + 30, Math.min(X(100) - 30, X(avg))), y: 11, 'text-anchor': 'middle', fill: 'var(--aishare-text)',
+        'font-size': 12, 'font-weight': 700, 'pointer-events': 'none' }, avgG);
+      al.textContent = 'avg ' + Math.round(avg) + '%';
     }
     var dotsG = el('g', {}, svg);
 

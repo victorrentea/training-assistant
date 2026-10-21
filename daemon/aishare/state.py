@@ -3,7 +3,7 @@
 A fixed list of questions (QUESTIONS): sliders 0..100 (e.g. "how much of your
 code does AI generate?"), Yes / No / I don't know choices (stored as the
 option index) and multi choices (stored as a bitmask of the ticked options,
-plus at most one ❤️ favourite among them). Participants answer them one after another; the host sees every
+plus a bitmask of the ❤️ favourites among them). Participants answer them one after another; the host sees every
 answer live; participants see everyone's answers only after the host flips
 `revealed` on. Everything leaving the daemon is anonymous — no names, no UUIDs.
 Module-level singleton, persisted via the 3-second session-state snapshot loop
@@ -21,14 +21,15 @@ YES_NO_IDK = ["Yes", "No", "I don't know"]
 YES_NO = ["Yes", "No"]
 
 QUESTIONS: list[dict] = [
-    {"id": "harness_work", "kind": "multi", "text": "What harness do you use at work? Tick all, ❤️ your favourite",
+    {"id": "harness_work", "kind": "multi", "text": "What harness do you use at work? — Tick all you use. Click ❤️ on your favourite (favourites could be multiple)",
      "options": ["Claude Code / Codex", "Copilot CLI", "Copilot Chat in VS Code", "Copilot Chat in IntelliJ", "Other"],
      "other_option": 4},
     {"id": "personal_sub", "kind": "choice", "text": "Do you have a personal Claude / Codex subscription?", "options": YES_NO},
     {"id": "agents_md", "kind": "choice", "text": "Do you have an AGENTS.md / CLAUDE.md in your project?",
      "options": YES_NO_IDK, "host_options": ["Yes", "No / don't know"], "host_option_of": [0, 1, 1]},
     {"id": "knowledge_base", "kind": "choice",
-     "text": "Does your company have a Markdown knowledge base for your agents to use (LLM wiki, RAG-searchable docs…)?",
+     "text": "Does your company have a (Markdown) knowledge base for your agents to use (e.g. LLM Wiki)?",
+     "link": {"text": "LLM Wiki", "url": "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"},
      "options": ["Yes", "No / I don't know"]},
     {"id": "mcp", "kind": "choice", "text": "Ever used an MCP tool?", "options": YES_NO_IDK},
     {"id": "skill", "kind": "choice", "text": "Ever created a skill?", "options": YES_NO},
@@ -37,7 +38,7 @@ QUESTIONS: list[dict] = [
     {"id": "code_review", "kind": "choice", "text": "Do you have a code-review skill / agent?", "options": YES_NO_IDK},
     {"id": "nontech_pr", "kind": "choice", "text": "Ever received a PR written by a non-developer (e.g. PO, business)?", "options": YES_NO},
     {"id": "ai_generated", "kind": "slider", "text": "How much% of the code you🫵 write is AI-generated?",
-     "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 95},
+     "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 90},
     {"id": "review", "kind": "slider", "text": "How much of that do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
 ]
@@ -70,8 +71,8 @@ class AiShareState:
     # answers[question_id][participant_uuid] = slider 0..100 | choice option index
     others: dict[str, dict[str, str]] = field(default_factory=dict)
     # others[question_id][participant_uuid] = what they typed after picking the "other" option
-    favorites: dict[str, dict[str, int]] = field(default_factory=dict)
-    # favorites[question_id][participant_uuid] = the ❤️ option of a multi, always one they ticked
+    hearts: dict[str, dict[str, int]] = field(default_factory=dict)
+    # hearts[question_id][participant_uuid] = bitmask of a multi's ❤️ options, always among the ticked ones
 
     def start(self) -> None:
         """Open a fresh round: questions enabled, previous answers dropped."""
@@ -79,18 +80,18 @@ class AiShareState:
         self.revealed = False
         self.answers.clear()
         self.others.clear()
-        self.favorites.clear()
+        self.hearts.clear()
 
     def set_value(self, pid: str, qid: str, value: int, other: str | None = None,
-                  favorite: int | None = None) -> bool:
+                  hearts: int = 0) -> bool:
         """Record a participant's answer. Returns False when not accepted.
         `other` is kept only alongside the question's "other" option; on a multi,
-        `favorite` is the ❤️ option (kept only if ticked) and value 0 withdraws the answer."""
+        `hearts` is the bitmask of ❤️ options (only ticked ones are kept) and value 0 withdraws the answer."""
         if not self.active or not valid_value(qid, value):
             return False
         q = QUESTIONS_BY_ID[qid]
         if q["kind"] == "multi" and value == 0:
-            for per in (self.answers, self.others, self.favorites):
+            for per in (self.answers, self.others, self.hearts):
                 per.get(qid, {}).pop(pid, None)
             return True
         self.answers.setdefault(qid, {})[pid] = value
@@ -101,10 +102,10 @@ class AiShareState:
         elif other is not None or not has_other:
             self.others.get(qid, {}).pop(pid, None)
         if q["kind"] == "multi":
-            if favorite is not None and picked(q, value, favorite):
-                self.favorites.setdefault(qid, {})[pid] = favorite
+            if hearts & value:
+                self.hearts.setdefault(qid, {})[pid] = hearts & value
             else:
-                self.favorites.get(qid, {}).pop(pid, None)
+                self.hearts.get(qid, {}).pop(pid, None)
         return True
 
     def reset(self) -> None:
@@ -112,7 +113,7 @@ class AiShareState:
         self.revealed = False
         self.answers.clear()
         self.others.clear()
-        self.favorites.clear()
+        self.hearts.clear()
 
     def answers_of(self, pid: str) -> dict[str, int]:
         return {qid: per[pid] for qid, per in self.answers.items() if pid in per}
@@ -120,8 +121,8 @@ class AiShareState:
     def others_of(self, pid: str) -> dict[str, str]:
         return {qid: per[pid] for qid, per in self.others.items() if pid in per}
 
-    def favorites_of(self, pid: str) -> dict[str, int]:
-        return {qid: per[pid] for qid, per in self.favorites.items() if pid in per}
+    def hearts_of(self, pid: str) -> dict[str, int]:
+        return {qid: per[pid] for qid, per in self.hearts.items() if pid in per}
 
     def results(self) -> list[dict]:
         """Anonymous per-question results, in QUESTIONS order:
@@ -137,8 +138,8 @@ class AiShareState:
                 n = len(q["options"])
                 if q["kind"] == "multi":
                     item["counts"] = [sum(v >> i & 1 for v in values) for i in range(n)]
-                    hearts = list((self.favorites.get(q["id"]) or {}).values())
-                    item["hearts"] = [hearts.count(i) for i in range(n)]
+                    hearts = (self.hearts.get(q["id"]) or {}).values()
+                    item["hearts"] = [sum(h >> i & 1 for h in hearts) for i in range(n)]
                 else:
                     item["counts"] = [values.count(i) for i in range(n)]
                 if "other_option" in q:
@@ -150,7 +151,7 @@ class AiShareState:
         return {"active": self.active, "revealed": self.revealed,
                 "answers": {qid: dict(per) for qid, per in self.answers.items()},
                 "others": {qid: dict(per) for qid, per in self.others.items()},
-                "favorites": {qid: dict(per) for qid, per in self.favorites.items()}}
+                "hearts": {qid: dict(per) for qid, per in self.hearts.items()}}
 
     def restore(self, data: dict | None) -> None:
         if not isinstance(data, dict):
@@ -177,13 +178,20 @@ class AiShareState:
             for qid, per in (raw_others.items() if isinstance(raw_others, dict) else [])
             if isinstance(per, dict)
         }
-        raw_favorites = data.get("favorites")
-        self.favorites = {
-            str(qid): {str(pid): int(i) for pid, i in per.items()
-                       if isinstance(i, int) and picked(QUESTIONS_BY_ID[str(qid)], self.answers.get(str(qid), {}).get(str(pid), 0), i)}
-            for qid, per in (raw_favorites.items() if isinstance(raw_favorites, dict) else [])
-            if isinstance(per, dict) and str(qid) in QUESTIONS_BY_ID
-        }
+        raw_hearts = data.get("hearts")
+        if not isinstance(raw_hearts, dict) and isinstance(data.get("favorites"), dict):
+            # Legacy shape: a single ❤️ per participant, stored as its option index.
+            raw_hearts = {qid: {pid: 1 << i for pid, i in per.items() if isinstance(i, int) and 0 <= i < 32}
+                          for qid, per in data["favorites"].items() if isinstance(per, dict)}
+        self.hearts = {}
+        for qid, per in (raw_hearts.items() if isinstance(raw_hearts, dict) else []):
+            if not isinstance(per, dict):
+                continue
+            ticked = self.answers.get(str(qid), {})
+            kept = {str(pid): h & ticked[str(pid)] for pid, h in per.items()
+                    if isinstance(h, int) and h & ticked.get(str(pid), 0)}
+            if kept:
+                self.hearts[str(qid)] = kept
 
 
 aishare_state = AiShareState()
