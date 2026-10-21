@@ -101,7 +101,7 @@ class AiShareState:
         elif other is not None or not has_other:
             self.others.get(qid, {}).pop(pid, None)
         if q["kind"] == "multi":
-            if picked(q, value, favorite):
+            if favorite is not None and picked(q, value, favorite):
                 self.favorites.setdefault(qid, {})[pid] = favorite
             else:
                 self.favorites.get(qid, {}).pop(pid, None)
