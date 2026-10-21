@@ -5614,9 +5614,10 @@ function _aiShareVisibleCount() {
   return qs.length;
 }
 
-// The question text, with `q.link.text` in it turned into a link (opens in a new tab).
+// The question text, with `q.link.text` in it turned into a link (opens in a new tab)
+// and a newline in it into a line break.
 function _aiShareTitleHtml(q) {
-  var html = _escHtml(q.text);
+  var html = _escHtml(q.text).replace(/\n/g, '<br>');
   if (!q.link) return html;
   return html.replace(_escHtml(q.link.text), '<a href="' + _escHtml(q.link.url) + '" target="_blank" rel="noopener">' + _escHtml(q.link.text) + '</a>');
 }
