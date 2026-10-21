@@ -1,8 +1,10 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
-// opening: a tiny picture at the dot's top-right when the note shows a slide or a
-// screenshot, and at its top-left how many external links it holds, as "3↗" with the
-// arrow raised like an exponent (none: no badge). A detail, not a key number: it was
-// "🔗3" in bold, which drew the eye before the note titles (Victor, 2026-10-16).
+// opening: a tiny picture at the dot's top-left when the note shows a slide or a
+// screenshot, and at its top-right how many external links it holds, as "↗3" with the
+// arrow small and low, touching the number, so it reads as coming out of the dot
+// (none: no badge; Victor, 2026-10-21 - it was "3↗" on the left, the picture on the
+// right). A detail, not a key number: it was "🔗3" in bold, which drew the eye before
+// the note titles (Victor, 2026-10-16).
 //
 // daemon/wiki/builder.py scans the built pages into note-badges.json at the site
 // root and copies this file next to graph.inline.ts; patch-graph.py makes the graph
@@ -63,13 +65,14 @@ function picture(colors: BadgeColors): Graphics {
     .fill({ color: colors.img })
 }
 
-// Bottom-right corner at (0, 0): the count, then the arrow beside its top.
+// Bottom-left corner at (0, 0): the arrow, low like a subscript, then the count right
+// after it, no space between.
 function linkCount(n: number, colors: BadgeColors): Container {
   const text = (content: string, fontSize: number) =>
     new Text({
       eventMode: "none",
       text: content,
-      anchor: { x: 1, y: 1 },
+      anchor: { x: 0, y: 1 },
       style: {
         fontSize,
         fontWeight: "500",
@@ -81,9 +84,9 @@ function linkCount(n: number, colors: BadgeColors): Container {
     })
   // U+FE0E: the text arrow, not the emoji one.
   const arrow = text("↗\uFE0E", LINK_FONT * 0.65)
-  arrow.position.set(0, -LINK_FONT * 0.4)
+  arrow.position.set(0, 0)
   const count = text(`${n}`, LINK_FONT)
-  count.position.set(-arrow.width + 1, 0)
+  count.position.set(arrow.width - 2.5, -LINK_FONT * 0.3)
   return new Container({ eventMode: "none", children: [count, arrow] })
 }
 
@@ -100,12 +103,12 @@ export class NoteBadge extends Container {
   }
 
   // The dot is at (x, y) with radius r. Each badge's inner corner sits on the dot's
-  // rim, at 45° up-right (picture) and up-left (link count).
+  // rim, at 45° up-left (picture) and up-right (link count).
   place(x: number, y: number, r: number) {
     const rim = r * Math.SQRT1_2
     this.position.set(x, y)
-    this.picture?.position.set(rim + 0.5, -rim - 0.5)
-    this.links?.position.set(-rim + 0.5, -rim + 1.5)
+    this.picture?.position.set(-rim - 0.5 - PICTURE_W, -rim - 0.5)
+    this.links?.position.set(rim - 0.5, -rim + 1.5)
   }
 }
 

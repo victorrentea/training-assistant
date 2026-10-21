@@ -7,9 +7,11 @@ built pages as static files, so browsing the wiki never touches this machine.
 """
 from __future__ import annotations
 
+import io
 import tempfile
 import threading
 import time
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -182,3 +184,32 @@ def install(publisher: WikiPublisher) -> None:
 def wiki_updated_at() -> str | None:
     """What participants get in their state snapshot: None hides the Wiki entry."""
     return _installed.updated_at if _installed else None
+
+
+_notes_of: tuple[bytes, frozenset[str]] | None = None  # (site zip, its note ids)
+
+
+def note_id(page: str) -> str:
+    """A page of the built site ('Concepts/index.html') as the graph's node id ('Concepts/').
+
+    Quartz's simplifySlug: drop '.html', then a trailing 'index', then a leading '/';
+    nothing left is the root, '/'.
+    """
+    slug = page.removesuffix(".html")
+    if slug == "index" or slug.endswith("/index"):
+        slug = slug[: -len("index")]
+    return slug.lstrip("/") or "/"
+
+
+def published_notes() -> frozenset[str] | None:
+    """The node ids of the site last published (None: none yet), e.g. for a participant's
+    star: only a note the participants can actually see may be starred."""
+    global _notes_of
+    payload = _installed._payload if _installed else None
+    if payload is None:
+        return None
+    if _notes_of is None or _notes_of[0] is not payload:
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            pages = [n for n in archive.namelist() if n.endswith(".html") and n != "404.html"]
+        _notes_of = (payload, frozenset(note_id(p) for p in pages))
+    return _notes_of[1]

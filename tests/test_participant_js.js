@@ -594,7 +594,8 @@ assert('an explicit wiki untick is respected', makeLS({ 'new:wiki_follow': '0' }
 
 // The shipped follow functions, wired to a fake page: the wiki view, its Follow
 // box, the nav entry and the iframe (whose postMessage calls are recorded).
-function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready = true } = {}) {
+const pendingAsync = [];
+function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready = true, fetch = null } = {}) {
   const classes = () => {
     const set = new Set();
     return { add: (c) => set.add(c), remove: (c) => set.delete(c), contains: (c) => set.has(c),
@@ -616,15 +617,18 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   };
   const names = ['_isWikiViewSelected', '_isWikiFollowEnabled', '_postWikiFollow', '_applyHostWikiFollow',
     '_onIncomingHostWikiNote', '_onWikiFrameMessage', '_onWikiFollowChange',
-    '_postWikiTakeaways', '_onIncomingWikiTakeaways'];
+    '_postWikiTakeaways', '_onIncomingWikiTakeaways', '_postWikiStars', '_onIncomingWikiStars', '_starWikiNote'];
   const LS = makeLS({});
-  const api = new Function('document', 'location', 'LS', '_onHostMachine',
+  const fetched = [];
+  const fakeFetch = (url, opts) => { fetched.push({ url, opts }); return fetch ? fetch(url, opts) : Promise.reject(new Error('offline')); };
+  const api = new Function('document', 'location', 'LS', '_onHostMachine', 'fetch', '_sessionId', '_myUUID',
     'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0, _wikiTakeaways = [];\n' +
+    'var _wikiStarCounts = {}, _wikiMyStars = [];\n' +
     names.map((n) => extractFunction(PARTICIPANT_HTML, n)).join('\n') +
     '\nreturn { ' + names.join(', ') +
     ', hostNote: function () { return _hostWikiNote; }, isReady: function () { return _wikiFrameReady; } };'
-  )(document, { origin: 'https://interact.example' }, LS, () => onHost);
-  return { api, posted, els, nav, label, frameWindow, LS };
+  )(document, { origin: 'https://interact.example' }, LS, () => onHost, fakeFetch, 'sess1', 'my-uuid');
+  return { api, posted, els, nav, label, frameWindow, LS, fetched };
 }
 
 {
@@ -687,6 +691,43 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   assert("the wiki's 'ready' sends the stars it missed", stars.length === 1 && stars[0].msg.slugs.join() === 'Self-review,Autonomy');
 }
 {
+  const w = makeWikiFollow({ ready: false });
+  w.api._onIncomingWikiStars({ 'Self-review': 2 }, ['Self-review']);
+  assert('before the wiki graph is up no star counts are posted', w.posted.length === 0);
+  w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-ready' } });
+  const sent = w.posted.filter((p) => p.msg.type === 'wiki-stars');
+  assert("the wiki's 'ready' sends the star counts and this participant's own stars",
+    sent.length === 1 && sent[0].msg.counts['Self-review'] === 2 && sent[0].msg.mine.join() === 'Self-review');
+  w.api._onIncomingWikiStars({ 'Self-review': 3 });
+  const last = w.posted[w.posted.length - 1].msg;
+  assert('a broadcast (counts only) keeps the own stars', last.counts['Self-review'] === 3 && last.mine.join() === 'Self-review');
+}
+{
+  const w = makeWikiFollow({ fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve({ counts: { Autonomy: 1 }, mine: ['Autonomy'] }) }) });
+  w.api._onWikiFrameMessage({ source: {}, origin: 'https://interact.example', data: { type: 'wiki-star', slug: 'Autonomy', starred: true } });
+  w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://evil.example', data: { type: 'wiki-star', slug: 'Autonomy', starred: true } });
+  w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-star', slug: 42, starred: true } });
+  assert('a star from anything but the wiki iframe, or malformed, is never sent', w.fetched.length === 0);
+  w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-star', slug: 'Autonomy', starred: true } });
+  const call = w.fetched[0];
+  assert("the wiki's star goes out with this participant's id",
+    w.fetched.length === 1 && call.url === '/sess1/api/participant/wiki/star' &&
+    call.opts.headers['X-Participant-ID'] === 'my-uuid' && JSON.parse(call.opts.body).slug === 'Autonomy');
+  pendingAsync.push(new Promise((r) => setTimeout(r, 0)).then(() => {
+    const back = w.posted.filter((p) => p.msg.type === 'wiki-stars').pop();
+    assert('the saved stars are posted back into the wiki', back && back.msg.mine.join() === 'Autonomy' && back.msg.counts.Autonomy === 1);
+  }));
+}
+{
+  const w = makeWikiFollow();
+  w.api._onIncomingWikiStars({ Autonomy: 4 }, []);
+  w.api._starWikiNote('Autonomy', true);
+  pendingAsync.push(new Promise((r) => setTimeout(r, 0)).then(() => {
+    const back = w.posted.filter((p) => p.msg.type === 'wiki-stars').pop();
+    assert('a star that was not saved: the wiki gets the stored state back', back && back.msg.mine.length === 0 && back.msg.counts.Autonomy === 4);
+  }));
+}
+{
   const w = makeWikiFollow();
   w.api._onIncomingHostWikiNote('Home');
   w.els['wiki-follow-checkbox'].checked = false;
@@ -703,6 +744,7 @@ Promise.all([
     .then((r) => hostMachineResults.push(['unchanged session => no navigation', r.calls.length === 1 && r.navigatedTo === null && r.removed.length === 0])),
   runHostMachinePoll({ cookie: 'ON_HOST_MACHINE=true', activeSessionId: 'newone', currentSessionId: 'oldone' })
     .then((r) => hostMachineResults.push(['new session => fresh UUID, then navigate', r.navigatedTo === '/newone/' && r.removed.join() === 'workshop_participant_uuid'])),
+  ...pendingAsync,
 ]).then(() => {
   hostMachineResults.forEach(([desc, ok]) => assert(desc, ok));
   console.log(`\n${passed} passed, ${failed} failed`);

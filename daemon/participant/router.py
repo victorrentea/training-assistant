@@ -37,7 +37,9 @@ from daemon.participant.sanitize import (
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
 from daemon.slides.models import CurrentSlide
-from daemon.wiki.publisher import wiki_updated_at
+from daemon.throttle import LoopThrottle
+from daemon.wiki import stars as wiki_stars
+from daemon.wiki.publisher import published_notes, wiki_updated_at
 from daemon.wiki.takeaways import current_takeaways
 from daemon.ws_messages import (
     AiShareQuestion,
@@ -46,6 +48,9 @@ from daemon.ws_messages import (
     ScoresUpdatedMsg,
     SummaryScrollPosition,
     TalkNotesMsg,
+    WikiStars,
+    WikiStarsMsg,
+    WikiStarToggle,
     WikiTakeaways,
 )
 from daemon.ws_publish import broadcast
@@ -328,6 +333,9 @@ class ParticipantStateResponse(BaseModel):
     wiki_note: str | None = None
     # The wiki notes the trainer starred as key takeaways (glow on every graph)
     wiki_takeaways: list[str] = []
+    # How many participants starred each wiki note, and the ones this one starred
+    wiki_stars: dict[str, int] = {}
+    wiki_my_stars: list[str] = []
     # Talk mode: the trainer's notes as VS Code has them open (None until he
     # opens them) and whether he presents from the slides or the notes.
     talk_notes: TalkNotesMsg | None = None
@@ -840,6 +848,47 @@ async def get_wiki_takeaways():
     return WikiTakeaways(slugs=current_takeaways())
 
 
+# Participants star the notes they found interesting, so they shine for the whole group
+# (daemon/wiki/stars.py says why a star can't be forged or stuffed). Every graph gets
+# the counts only; who starred what stays on this machine.
+async def _broadcast_wiki_stars() -> None:
+    broadcast(WikiStarsMsg(counts=wiki_stars.star_counts()))
+
+
+_wiki_stars_fanout = LoopThrottle("wiki-stars", 1.0, _broadcast_wiki_stars)
+
+
+@router.get("/wiki/stars", response_model=WikiStars)
+async def get_wiki_stars(request: Request):
+    pid = request.headers.get("x-participant-id")
+    mine = wiki_stars.stars_of(pid) if pid and pid in participant_state.participant_names else []
+    return WikiStars(counts=wiki_stars.star_counts(), mine=mine)
+
+
+@router.post("/wiki/star", response_model=WikiStars)
+async def star_wiki_note(request: Request, body: WikiStarToggle):
+    pid = request.headers.get("x-participant-id")
+    if not pid:
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+    if pid not in participant_state.participant_names:
+        return JSONResponse({"error": "Join the session first"}, status_code=403)
+    notes = published_notes()
+    if notes is None or body.slug not in notes:
+        return JSONResponse({"error": "No such note in the published wiki"}, status_code=404)
+    if not wiki_stars.allow(pid):
+        return JSONResponse({"error": "Too many stars, slow down"}, status_code=429)
+    counts = await asyncio.to_thread(wiki_stars.set_star, pid, body.slug, body.starred)
+    if counts is None:
+        return JSONResponse({"error": "No active session"}, status_code=404)
+    from daemon import log
+
+    name = participant_state.participant_names.get(pid, "?")
+    log.info("wiki", f"{name} {'★ starred' if body.starred else '☆ un-starred'} {body.slug} "
+                     f"({counts.get(body.slug, 0)})")
+    await _wiki_stars_fanout.request()
+    return WikiStars(counts=counts, mine=wiki_stars.stars_of(pid))
+
+
 @router.get("/state", response_model=ParticipantStateResponse)
 async def get_participant_state(request: Request):
     """Return full personalised state for a participant — used on page load and WS reconnect."""
@@ -905,6 +954,9 @@ async def get_participant_state(request: Request):
         "wiki_note": misc_state.wiki_note,
         # The notes the trainer starred as key takeaways: they glow on every graph
         "wiki_takeaways": current_takeaways(),
+        # The notes participants starred (counts only) and this participant's own stars
+        "wiki_stars": wiki_stars.star_counts(),
+        "wiki_my_stars": wiki_stars.stars_of(pid),
         # Talk mode: the notes on screen in VS Code, and slides vs notes
         "talk_notes": misc_state.talk_notes if ps.mode == "talk" else None,
         "presenter_view": misc_state.presenter_view,
@@ -988,6 +1040,8 @@ async def delete_participant(
     )
     await _notify_host_participant_list()
     await _publish_scores_after_purge()
+    if report.removed.get("wiki_star"):
+        await _broadcast_wiki_stars()
     return report
 
 

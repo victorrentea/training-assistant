@@ -119,6 +119,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/WikiTakeaways'
       x-feature: notes_summary
+  /api/participant/wiki/stars:
+    get:
+      tags:
+      - participant
+      summary: Get Wiki Stars
+      operationId: get_wiki_stars_api_participant_wiki_stars_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiStars'
+      x-feature: notes_summary
+  /api/participant/wiki/star:
+    post:
+      tags:
+      - participant
+      summary: Star Wiki Note
+      operationId: star_wiki_note_api_participant_wiki_star_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WikiStarToggle'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiStars'
+      x-feature: notes_summary
   /api/participant/state:
     get:
       tags:
@@ -3820,6 +3854,18 @@ components:
           type: array
           title: Wiki Takeaways
           default: []
+        wiki_stars:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Wiki Stars
+          default: {}
+        wiki_my_stars:
+          items:
+            type: string
+          type: array
+          title: Wiki My Stars
+          default: []
         talk_notes:
           anyOf:
           - $ref: '#/components/schemas/TalkNotesMsg'
@@ -4791,6 +4837,39 @@ components:
       title: WikiNotePosition
       description: Which wiki note the host has open in the graph's popover; None
         when none is.
+    WikiStarToggle:
+      properties:
+        slug:
+          type: string
+          maxLength: 300
+          minLength: 1
+          pattern: ^[^\x00-\x1f\x7f:\\?#]+$
+          title: Slug
+        starred:
+          type: boolean
+          title: Starred
+      type: object
+      required:
+      - slug
+      - starred
+      title: WikiStarToggle
+      description: A participant stars (or un-stars) a wiki note as interesting, for
+        the whole group.
+    WikiStars:
+      properties:
+        counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Counts
+        mine:
+          items:
+            type: string
+          type: array
+          title: Mine
+      type: object
+      title: WikiStars
+      description: The counts, plus the notes the asking participant starred themselves.
     WikiTakeawayToggle:
       properties:
         slug:

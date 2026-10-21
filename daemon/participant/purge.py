@@ -162,5 +162,12 @@ def purge_participant(pid: str) -> PurgeReport:
     drop("uploaded_files", misc_state.uploaded_files)
     drop("bug_report_history", misc_state.bug_reports_sent)
 
+    # ── Wiki stars: withdrawn from the notes they starred ────────────────────
+    from daemon.wiki.stars import forget_participant
+
+    withdrawn = forget_participant(pid)
+    if withdrawn:
+        counts["wiki_star"] = withdrawn
+
     report.removed = counts
     return report

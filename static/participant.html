@@ -5309,6 +5309,7 @@ function _setDuplicateIndicator(isDup) {
     _hostSummaryScroll = state.summary_scroll || null;
     _hostWikiNote = state.wiki_note || null;
     _onIncomingWikiTakeaways(state.wiki_takeaways);
+    _onIncomingWikiStars(state.wiki_stars, state.wiki_my_stars);
     var saved = _computeLandingView({
       urlTab: location.pathname.split('/')[2] || '',
       savedView: LS.getView(),
@@ -5407,6 +5408,7 @@ function _applyState(msg) {
     _onIncomingHostWikiNote(msg.wiki_note);
   }
   if (msg.wiki_takeaways !== undefined) _onIncomingWikiTakeaways(msg.wiki_takeaways);
+  if (msg.wiki_stars !== undefined) _onIncomingWikiStars(msg.wiki_stars, msg.wiki_my_stars);
   if (msg.summary_updated_at !== undefined) {
     var summaryNav = document.querySelector('[data-nav="summary"]');
     summaryNav.style.display = msg.summary_updated_at ? '' : 'none';
@@ -5645,7 +5647,7 @@ function _aiShareBuildCard(q) {
     card.innerHTML = head + '<div class="aishare-choices">' + q.options.map(function (text, idx) {
       return '<button class="poll-option-btn aishare-opt" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
         '<div class="row"><span><span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true"></span>' + _escHtml(text) + '</span>' +
-        (multi ? '<span class="aishare-heart" role="button" tabindex="0" title="My favourite"></span>' : '') + '</div></button>';
+        (multi ? '<span class="aishare-heart" role="button" tabindex="0" data-tip="My favourite"></span>' : '') + '</div></button>';
     }).join('') + '</div>';
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
       var idx = +btn.dataset.i;
@@ -6163,6 +6165,7 @@ function _handleWsMessage(msg) {
     case 'wiki_updated': _applyWiki(msg.updated_at); break;
     case 'wiki_note': _onIncomingHostWikiNote(msg.slug); break;
     case 'wiki_takeaways': _onIncomingWikiTakeaways(msg.slugs); break;
+    case 'wiki_stars': _onIncomingWikiStars(msg.counts); break;
     case 'agenda_updated': {
       document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
       if (msg.has_agenda) {
@@ -7545,7 +7548,10 @@ function _onWikiFrameMessage(e) {
   var frame = document.getElementById('wiki-frame');
   if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;
   var msg = e.data || {};
-  if (msg.type === 'wiki-ready') { _wikiFrameReady = true; _applyHostWikiFollow(); _postWikiTakeaways(); }
+  if (msg.type === 'wiki-ready') { _wikiFrameReady = true; _applyHostWikiFollow(); _postWikiTakeaways(); _postWikiStars(); }
+  else if (msg.type === 'wiki-star' && typeof msg.slug === 'string' && typeof msg.starred === 'boolean') {
+    _starWikiNote(msg.slug, msg.starred);
+  }
 }
 
 // ── Wiki key takeaways ──
@@ -7564,6 +7570,44 @@ function _postWikiTakeaways() {
 function _onIncomingWikiTakeaways(slugs) {
   _wikiTakeaways = Array.isArray(slugs) ? slugs : [];
   _postWikiTakeaways();
+}
+
+// ── Wiki stars ──
+// Participants star the notes they found interesting, and those shine for the whole
+// group, the trainer included (Victor, 2026-10-21). The wiki in the frame never sees
+// this participant's UUID: it asks this page ('wiki-star'), which sends the click with
+// the X-Participant-ID like every other vote. Everyone gets the counts (state, the
+// `wiki_stars` broadcast); only this participant's own stars come back with its state
+// and its clicks.
+var _wikiStarCounts = {};
+var _wikiMyStars = [];
+
+function _postWikiStars() {
+  var frame = document.getElementById('wiki-frame');
+  if (!_wikiFrameReady || !frame || !frame.contentWindow) return;
+  frame.contentWindow.postMessage({ type: 'wiki-stars', counts: _wikiStarCounts, mine: _wikiMyStars }, location.origin);
+}
+
+function _onIncomingWikiStars(counts, mine) {
+  _wikiStarCounts = counts && typeof counts === 'object' ? counts : {};
+  if (Array.isArray(mine)) _wikiMyStars = mine;
+  _postWikiStars();
+}
+
+async function _starWikiNote(slug, starred) {
+  try {
+    var r = await fetch('/' + _sessionId + '/api/participant/wiki/star', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+      body: JSON.stringify({ slug: slug, starred: starred })
+    });
+    if (r.ok) {
+      var json = await r.json();
+      _onIncomingWikiStars(json.counts, json.mine);
+      return;
+    }
+  } catch (err) { /* offline: the star goes back below */ }
+  _postWikiStars(); // not saved: the wiki shows what is really stored
 }
 
 // Over the wiki's top-right corner on a desktop (the note popover keeps clear of

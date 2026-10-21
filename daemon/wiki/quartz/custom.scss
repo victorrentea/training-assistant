@@ -348,29 +348,44 @@ body {
   user-select: none;
 }
 
-// Bottom-right of the full graph (patch-graph.py): what the wiki was written from, on
-// one line. Full contrast (white on dark, the text colour on light): the dim grey it had
-// was unreadable on the projector (Victor, 2026-10-19).
-// Inside the participant page it sits above the emoji bar floating in that corner.
+// Top-right of the full graph (patch-graph.py): what the wiki was written from, as a
+// bullet list (a line along the bottom until Victor, 2026-10-21). Full contrast (white
+// on dark, the text colour on light): the dim grey it had was unreadable on the
+// projector (Victor, 2026-10-19).
 .graph-sources {
   position: absolute;
   right: 0.9rem;
-  bottom: 0.8rem;
+  top: 0.9rem;
   z-index: 1;
   white-space: nowrap;
   font-family: var(--bodyFont);
   font-size: 0.72rem;
+  line-height: 1.45;
   color: var(--dark);
   opacity: 1;
   pointer-events: none;
+  // Zoomed in, labels and dots run under it.
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--light) 85%, transparent);
+
+  ul {
+    margin: 0.15rem 0 0;
+    padding-left: 1rem;
+  }
+
+  li {
+    margin: 0;
+  }
 }
 
 :root[saved-theme="dark"] .graph-sources {
   color: #fff;
 }
 
+// Below the Follow pill the participant page floats over the wiki's top-right corner.
 .wiki-embedded .graph-sources {
-  bottom: 7rem;
+  top: 5rem;
 }
 
 // Under 900px the participant page's emoji bar and feedback card float over the bottom

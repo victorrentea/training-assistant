@@ -518,6 +518,35 @@ class WikiTakeawaysMsg(WikiTakeaways):
     type: Literal["wiki_takeaways"] = "wiki_takeaways"
 
 
+class WikiStarToggle(BaseModel):
+    """A participant stars (or un-stars) a wiki note as interesting, for the whole group."""
+    slug: str = Field(min_length=1, max_length=300, pattern=WIKI_SLUG_PATTERN)
+    starred: bool
+
+    @field_validator("slug")
+    @classmethod
+    def _stays_inside_the_site(cls, slug: str) -> str:
+        if slug.startswith("//") or ".." in slug:
+            raise ValueError("a wiki slug is a path inside the site")
+        return slug
+
+
+class WikiStarCounts(BaseModel):
+    """How many participants starred each wiki note (notes nobody starred are left out).
+
+    Counts only, never who: the same for every participant."""
+    counts: dict[str, int] = Field(default_factory=dict)
+
+
+class WikiStars(WikiStarCounts):
+    """The counts, plus the notes the asking participant starred themselves."""
+    mine: list[str] = Field(default_factory=list)
+
+
+class WikiStarsMsg(WikiStarCounts):
+    type: Literal["wiki_stars"] = "wiki_stars"
+
+
 # ── Talk notes (the trainer's notes file, shown live on the talk phones) ─────────
 
 TALK_NOTES_MAX_CHARS = 200_000
@@ -683,6 +712,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "wiki_updated": WikiUpdatedMsg,
     "wiki_note": WikiNoteMsg,
     "wiki_takeaways": WikiTakeawaysMsg,
+    "wiki_stars": WikiStarsMsg,
     "talk_notes": TalkNotesMsg,
     "presenter_view": PresenterViewMsg,
     # Files
@@ -789,6 +819,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "wiki_updated": "notes_summary",
     "wiki_note": "notes_summary",
     "wiki_takeaways": "notes_summary",
+    "wiki_stars": "notes_summary",
     "talk_notes": "notes_summary",
     "presenter_view": "notes_summary",
     # Files

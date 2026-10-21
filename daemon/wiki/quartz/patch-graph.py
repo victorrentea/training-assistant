@@ -18,14 +18,24 @@ PATCHES = [
     # Seen/unseen instead of Quartz's teal "visited": a note never opened
     # on this browser is the high-contrast grey, one already read the dim one
     # (note-pane.ts keeps the list), so what is left to read stands out.
+    # A shining note (a takeaway, or starred by participants) is a yellow star: its
+    # dot and its label turn the burst's gold, the label outlined in black so it stays
+    # readable over the burst (Victor, 2026-10-21).
     ("""    } else if (visited.has(d.id) || d.id.startsWith("tags/")) {
       return computedStyleMap["--tertiary"]
     } else {
       return computedStyleMap["--gray"]
     }""",
-     """    } else {
+     """    } else if (shineOf(d.id) > 0) {
+      return computedStyleMap["--wiki-takeaway"]
+    } else {
       return isSeen(d.id) ? computedStyleMap["--wiki-seen"] : computedStyleMap["--wiki-unseen"]
     }"""),
+    ("""        fill: computedStyleMap["--dark"],
+        fontFamily: computedStyleMap["--bodyFont"],""",
+     """        fill: shineOf(nodeId) > 0 ? computedStyleMap["--wiki-takeaway"] : computedStyleMap["--dark"],
+        stroke: shineOf(nodeId) > 0 ? SHINING_LABEL_STROKE : undefined,
+        fontFamily: computedStyleMap["--bodyFont"],"""),
     # Labels visible from the start and hanging under the node, not floating above it.
     ("""      alpha: 0,
       anchor: { x: 0.5, y: 1.2 },""",
@@ -76,20 +86,23 @@ PATCHES = [
   stage.addChild(ring)
   const ringColor = computedStyleMap["--wiki-follow-ring"]
   let ringedNode: NodeRenderData | null = null
-  // Key takeaways (graph-takeaway.ts): a golden starburst over the edges, under the
-  // dots, and a star left of each dot, above everything - clickable on the trainer's
-  // machine only. Not the topic glow's container: the two never depend on each other.
+  // Key takeaways and participants' stars (graph-takeaway.ts): a golden starburst over
+  // the edges, under the dots, and a star left of each dot, above everything - the
+  // trainer's takeaway on his machine, the participant's own star in the participant
+  // page. Not the topic glow's container: the two never depend on each other.
+  // From level 3 a soft glow spreads under the bursts, under every dot's burst.
+  const takeawayHazeContainer = new Container({ zIndex: 1.4, isRenderGroup: true, eventMode: "none" })
   const takeawayGlowContainer = new Container({ zIndex: 1.5, isRenderGroup: true, eventMode: "none" })
   const starsContainer = new Container({ zIndex: 4.5, eventMode: "passive" })
-  stage.addChild(takeawayGlowContainer, starsContainer)
+  stage.addChild(takeawayHazeContainer, takeawayGlowContainer, starsContainer)
   const takeawayColors: TakeawayColors = {
     on: computedStyleMap["--wiki-takeaway"],
     off: computedStyleMap["--wiki-takeaway-off"],
     halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
   }
-  const trainer = onHostMachine()
   let starredIds: ReadonlySet<string> = new Set()
+  let shineIds: ReadonlySet<string> = new Set() // the shining dots: their edges are rays
   // For a test (the canvas has no DOM): where the starred dots and the other ends of
   // their edges are on screen right now.
   ;(graph as HTMLElement & { takeawaysOnScreen?: () => unknown }).takeawaysOnScreen = () => {
@@ -131,9 +144,11 @@ PATCHES = [
     if (badge) badgesContainer.addChild(badge)
     const glow = makeGlow(noteGlow.get(nodeId), nodeRadius(n), glowColor)
     if (glow) glowContainer.addChild(glow)
-    const takeaway = new TakeawayMark(nodeRadius(n), takeawayColors, trainer, (on) => toggleTakeaway(nodeId, on))
-    takeaway.set(isTakeaway(nodeId))
-    takeawayGlowContainer.addChild(takeaway.burst)
+    const takeaway = new TakeawayMark(nodeRadius(n), takeawayColors, starMode(), (on) =>
+      starMode() === "voter" ? toggleStar(nodeId, on) : toggleTakeaway(nodeId, on))
+    takeaway.set(dotShine(nodeId))
+    takeawayHazeContainer.addChild(takeaway.glow)
+    takeawayGlowContainer.addChild(takeaway.burst, takeaway.flare)
     starsContainer.addChild(takeaway.star)
 """),
     ("""        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
@@ -176,10 +191,10 @@ PATCHES = [
      """      const lit = l.active || selectedEdge(l)
       const tx = linkData.target.x! + width / 2
       const ty = linkData.target.y! + height / 2
-      // A key takeaway's edges are rays of its star (graph-takeaway.ts); the purple of a
+      // A shining dot's edges are rays of its star (graph-takeaway.ts); the purple of a
       // hovered or open dot still wins.
-      const raySource = !lit && starredIds.has(linkData.source.id)
-      const rayTarget = !lit && starredIds.has(linkData.target.id)
+      const raySource = !lit && shineIds.has(linkData.source.id)
+      const rayTarget = !lit && shineIds.has(linkData.target.id)
       if (raySource || rayTarget) {
         drawRay(l.gfx, linkData.source.x! + width / 2, linkData.source.y! + height / 2, tx, ty,
           raySource, rayTarget, takeawayColors.on, l.color, 0.6 / currentTransform.k, l.alpha * 0.6)
@@ -238,7 +253,9 @@ PATCHES = [
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { loadGlow, makeGlow } from "./graph-glow"\n'
      'import { TakeawayColors, TakeawayMark, drawRay } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, isSeen, isTakeaway, onHostMachine, setShowHome, showHome, toggleNote, toggleTakeaway, warmNote } from "./note-pane"'),
+     'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     '// The black outline of a shining note\'s yellow label, over its burst.\n'
+     'const SHINING_LABEL_STROKE = { color: "#000000", width: 4, join: "round" as const }'),
     # PixiJS listens for pointermove on the whole document, so a pointer over the note
     # popover still lit the dot under it (Victor, 2026-10-14). Only a move over the canvas
     # reaches the dots; leaving it for the popover is the canvas's own pointerleave, which
@@ -297,15 +314,38 @@ PATCHES = [
     ring(id) {
       ringedNode = nodeRenderData.find((n) => n.simulationData.id === id) ?? null
     },
-    takeaways(slugs) {
-      starredIds = slugs
-      for (const n of nodeRenderData) n.takeaway?.set(slugs.has(n.simulationData.id))
-      // The canvas has no DOM: what it shows as starred, and which dots draw a star
-      // beside them, readable from a test.
+    shine() {
+      const takeaways = new Set<string>()
+      const shining = new Set<string>()
+      const levels: Record<string, number> = {}
+      for (const n of nodeRenderData) {
+        const d = dotShine(n.simulationData.id)
+        if (d.takeaway) takeaways.add(n.simulationData.id)
+        if (d.level > 0) {
+          shining.add(n.simulationData.id)
+          levels[n.simulationData.id] = d.level
+        }
+        n.takeaway?.set(d)
+        n.color = color(n.simulationData)
+        n.label.style.fill = d.level > 0 ? takeawayColors.on : computedStyleMap["--dark"]
+        n.label.style.stroke = d.level > 0 ? SHINING_LABEL_STROKE : undefined
+      }
+      starredIds = takeaways
+      shineIds = shining
+      if (!dragging) renderPixiFromD3()
+      // The canvas has no DOM: what it shows as starred, which dots draw a star beside
+      // them and what each reads, and which ones shine, readable from a test.
       const ids = (keep: (n: NodeRenderData) => boolean) =>
         JSON.stringify(nodeRenderData.filter(keep).map((n) => n.simulationData.id))
-      graph.dataset.takeaways = ids((n) => slugs.has(n.simulationData.id))
+      graph.dataset.takeaways = ids((n) => takeaways.has(n.simulationData.id))
       graph.dataset.starsShown = ids((n) => n.takeaway?.starShown ?? false)
+      graph.dataset.shining = ids((n) => shining.has(n.simulationData.id))
+      graph.dataset.levels = JSON.stringify(levels)
+      graph.dataset.stars = JSON.stringify(
+        Object.fromEntries(
+          nodeRenderData.filter((n) => n.takeaway?.starShown).map((n) => [n.simulationData.id, n.takeaway!.starText]),
+        ),
+      )
     },
     dots() {
       const rect = app.canvas.getBoundingClientRect()
@@ -380,6 +420,7 @@ PATCHES = [
     reset.className = "graph-reset"
     reset.textContent = "⟲ Reset layout"
     reset.addEventListener("click", () => {
+      saveView(null) // back to fitting the whole graph in the window
       cleanupGlobalGraphs()
       void renderGlobalGraph()
     })
@@ -390,16 +431,21 @@ PATCHES = [
     home.textContent = "⌂ Home"
     home.classList.toggle("on", showHome())
     home.addEventListener("click", () => {
+      saveView(null) // the layout changes: the view left on the old one means nothing
       setShowHome(!showHome())
       home.classList.toggle("on", showHome())
       cleanupGlobalGraphs()
       void renderGlobalGraph()
     })
-    // Bottom-right, in grey: what the wiki was written from (Victor, 2026-10-16).
+    // Top-right, as a list: what the wiki was written from (Victor, 2026-10-16; a line
+    // along the bottom until 2026-10-21).
     const sources = document.createElement("div")
     sources.className = "graph-sources"
-    sources.textContent =
-      "Sources: browser history · opened files · slides viewed · notes · transcription · screenshots · internet research"
+    const sourcesList = document.createElement("ul")
+    for (const source of ["browser history", "opened files", "slides viewed", "notes", "transcription", "screenshots", "internet research"]) {
+      sourcesList.appendChild(Object.assign(document.createElement("li"), { textContent: source }))
+    }
+    sources.append(Object.assign(document.createElement("div"), { textContent: "Sources" }), sourcesList)
     container.append(reset, home, sources)
     // Only on the trainer's machine, right of Home: the notes he opens here are the ones
     // his participants' Follow rings in yellow (Victor, 2026-10-16).
@@ -429,7 +475,9 @@ PATCHES = [
   zoomIdentity,"""),
     # Best fit (Victor, 2026-10-12): once the layout settles, the full graph zooms and pans so
     # every dot and label is in the frame — embedded in a talk page, its edges fell outside.
-    # Once per render: a dot dragged later must not make the whole view jump.
+    # Once per render: a dot dragged later must not make the whole view jump. Only without
+    # a view the reader left (note-pane.ts savedView): a reload puts that one back at once
+    # and stays put, it never zooms out on its own (Victor, 2026-10-21).
     ("""  if (enableZoom) {
     select<HTMLCanvasElement, NodeData>(app.canvas).call(
       zoom<HTMLCanvasElement, NodeData>()
@@ -441,8 +489,18 @@ PATCHES = [
 """),
     ("""  if (isGlobal) connectGraph(paneGraph)
 """,
-     """  if (isGlobal && enableZoom) {
-    let fitted = false
+     """  const keptView = isGlobal && enableZoom ? savedView() : null
+  if (isGlobal && enableZoom) {
+    zoomBehavior.on("zoom.remember", (e: { transform: { x: number; y: number; k: number }; sourceEvent: unknown }) => {
+      if (e.sourceEvent) saveView(e.transform) // the reader's own wheel, pinch or drag
+    })
+    if (keptView) {
+      select<HTMLCanvasElement, NodeData>(app.canvas).call(
+        zoomBehavior.transform,
+        zoomIdentity.translate(keptView.x, keptView.y).scale(keptView.k),
+      )
+    }
+    let fitted = keptView !== null
     simulation.on("end.fit", () => {
       if (fitted || stopAnimation) return
       fitted = true

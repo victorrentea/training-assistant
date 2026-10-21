@@ -5,14 +5,26 @@
 //
 // On the trainer's machine every dot not starred yet has a hollow star he clicks, on its
 // left, mid-height: the top corners hold the link count and the picture badges
-// (graph-badges.ts), the label hangs below. A starred dot shows no star at all, for
-// anyone: the starburst says it (Victor, 2026-10-19); the trainer un-stars it from the
-// note popover's star. Elsewhere nothing on the graph is clickable.
+// (graph-badges.ts), the label hangs below. A takeaway shows no star of his: the
+// starburst says it (Victor, 2026-10-19); he un-stars it from the note popover's star.
 //
-// note-pane.ts keeps the starred set and the toggle; builder.py copies this file next
-// to graph.inline.ts, and patch-graph.py makes one TakeawayMark per dot, puts its star
-// and its burst in containers of their own and places them in its animation loop.
-import { Color, Graphics, Sprite, Text, Texture } from "pixi.js"
+// Participants star the notes they found interesting, and those shine for the whole
+// group with the same gold starburst; the dot and its label turn yellow too, like a
+// star, the label outlined in black to stay readable over the burst (Victor,
+// 2026-10-21). In the participant page's Wiki tab every dot has a star to click,
+// filled once it's theirs; everywhere, the star shows how many starred the note
+// ("3☆"), none when nobody did. The trainer keeps his hollow star for key takeaways.
+//
+// Five levels of shine, climbing as stars pile up on the same note (his takeaway counts
+// as one star): 1 is the takeaway's starburst as it was, 2 a brighter star, and 3 to 5
+// add a soft glow under it that spreads wider each level. The rays along the edges
+// stay the same at every level.
+//
+// note-pane.ts keeps the starred sets, the counts and the toggles; builder.py copies
+// this file next to graph.inline.ts, and patch-graph.py makes one TakeawayMark per dot,
+// puts its star and its burst in containers of their own and places them in its
+// animation loop.
+import { Color, Graphics, Rectangle, Sprite, Text, Texture } from "pixi.js"
 
 export type TakeawayColors = {
   on: string // the burst
@@ -22,13 +34,64 @@ export type TakeawayColors = {
 }
 
 const STAR_FONT = 11
+// Around the glyph, in graph units: the star alone is a fingertip's fraction on a phone.
+const STAR_HIT_PAD = 5
 // U+FE0E: the text glyph, not the emoji, so it takes the theme's colour.
 const HOLLOW = "☆︎"
+const FILLED = "★︎"
+
+// Who is looking decides what the star by a dot does: the trainer stars key takeaways,
+// a participant in the participant page stars what they found interesting, anyone
+// else (the wiki in a tab of its own) only sees the counts.
+export type StarMode = "trainer" | "voter" | "viewer"
+
+// What a dot shows: whether the trainer starred it, how many participants did, whether
+// this participant is one of them, and its level of shine (0: none, up to MAX_LEVEL).
+export type DotShine = { takeaway: boolean; count: number; mine: boolean; level: number }
+
+// The stars a note needs for each level, the trainer's takeaway counting as one: a
+// level each for the first three, then a little harder to climb.
+const LEVEL_AT = [1, 2, 3, 5, 8]
+export const MAX_LEVEL = LEVEL_AT.length
+
+export function shineLevel(takeaway: boolean, count: number): number {
+  const stars = count + (takeaway ? 1 : 0)
+  return LEVEL_AT.filter((at) => stars >= at).length
+}
+
+// Per level (index 0 = level 1): the burst's size (times the takeaway's), whether a
+// second, offset burst brightens it, and the glow under it (size times the dot's
+// diameter, alpha; 0 for none).
+const LEVELS = [
+  { burst: 1, flare: false, glow: 0, glowAlpha: 0 },
+  { burst: 1.2, flare: true, glow: 0, glowAlpha: 0 },
+  { burst: 1.3, flare: true, glow: 9, glowAlpha: 0.3 },
+  { burst: 1.4, flare: true, glow: 13, glowAlpha: 0.4 },
+  { burst: 1.5, flare: true, glow: 17, glowAlpha: 0.5 },
+]
 
 // Drawn once, white, tinted per theme: a soft round core and eight rays, four long and
 // four short - a star's sparkle, where the topic glow is a plain round haze.
 let texture: Texture | null = null
+let haze: Texture | null = null
 const TEXTURE_SIZE = 256
+
+// The glow under a shining note's burst from level 3: a plain round haze, white.
+function hazeTexture(): Texture {
+  if (haze) return haze
+  const canvas = document.createElement("canvas")
+  canvas.width = canvas.height = TEXTURE_SIZE
+  const ctx = canvas.getContext("2d")!
+  const c = TEXTURE_SIZE / 2
+  const g = ctx.createRadialGradient(c, c, 0, c, c, c)
+  g.addColorStop(0, "rgba(255,255,255,1)")
+  g.addColorStop(0.4, "rgba(255,255,255,0.45)")
+  g.addColorStop(1, "rgba(255,255,255,0)")
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE)
+  haze = Texture.from(canvas)
+  return haze
+}
 
 function burstTexture(): Texture {
   if (texture) return texture
@@ -70,31 +133,33 @@ function burstTexture(): Texture {
 export class TakeawayMark {
   readonly star: Text
   readonly burst: Sprite
-  private starred = false
-  private clickable: boolean
+  readonly flare: Sprite // a second burst over the first, from level 2: a brighter star
+  readonly glow: Sprite // under the bursts, from level 3, wider each level
+  private shine: DotShine = { takeaway: false, count: 0, mine: false, level: 0 }
+  private readonly mode: StarMode
+  private readonly colors: TakeawayColors
+  private readonly size: number
+  private readonly r: number
 
-  // clickable: the trainer's machine. onToggle gets what the star should become.
-  constructor(
-    r: number,
-    colors: TakeawayColors,
-    clickable: boolean,
-    onToggle: (starred: boolean) => void,
-  ) {
-    this.clickable = clickable
-    this.burst = new Sprite({
-      texture: burstTexture(),
-      anchor: 0.5,
-      eventMode: "none",
-      tint: colors.on,
-      visible: false,
-    })
-    this.burst.width = this.burst.height = 2 * r * 6.5
+  // onToggle gets what the star should become: the takeaway for the trainer, the
+  // participant's own star for a voter.
+  constructor(r: number, colors: TakeawayColors, mode: StarMode, onToggle: (starred: boolean) => void) {
+    this.mode = mode
+    this.colors = colors
+    this.size = 2 * r * 6.5
+    this.r = r
+    const sprite = (texture: Texture) =>
+      new Sprite({ texture, anchor: 0.5, eventMode: "none", tint: colors.on, visible: false })
+    this.burst = sprite(burstTexture())
+    this.burst.width = this.burst.height = this.size
+    this.flare = sprite(burstTexture())
+    this.glow = sprite(hazeTexture())
     this.star = new Text({
       text: HOLLOW,
       anchor: { x: 1, y: 0.5 },
-      eventMode: clickable ? "static" : "none",
-      cursor: clickable ? "pointer" : "default",
-      visible: clickable,
+      eventMode: "none",
+      cursor: "pointer",
+      visible: false,
       style: {
         fontSize: STAR_FONT,
         fill: colors.off,
@@ -103,33 +168,75 @@ export class TakeawayMark {
       },
       resolution: window.devicePixelRatio * 4,
     })
-    if (clickable) {
-      this.star.on("pointertap", (e) => {
-        e.stopPropagation()
-        onToggle(!this.starred)
-      })
+    this.star.on("pointertap", (e) => {
+      e.stopPropagation()
+      onToggle(this.mode === "voter" ? !this.shine.mine : !this.shine.takeaway)
+    })
+    this.set(this.shine)
+  }
+
+  set(shine: DotShine) {
+    this.shine = shine
+    const { takeaway, count, mine, level } = shine
+    const look = level > 0 ? LEVELS[Math.min(level, MAX_LEVEL) - 1] : null
+    this.burst.visible = look !== null
+    this.flare.visible = look?.flare ?? false
+    this.glow.visible = (look?.glow ?? 0) > 0
+    if (look) {
+      this.burst.width = this.burst.height = this.size * look.burst
+      this.flare.width = this.flare.height = this.size * look.burst * 0.85
+      this.flare.alpha = 0.85
+      this.glow.width = this.glow.height = 2 * this.r * look.glow
+      this.glow.alpha = look.glowAlpha
     }
+    const n = count > 0 ? String(count) : ""
+    let text = n + HOLLOW
+    let visible = count > 0
+    let clickable = false
+    if (this.mode === "voter") {
+      text = n + (mine ? FILLED : HOLLOW)
+      visible = clickable = true
+    } else if (this.mode === "trainer" && !takeaway) {
+      // His hollow star stars a takeaway; a takeaway shows no star of his, only the
+      // participants' count, if any.
+      visible = clickable = true
+    } else if (count > 0) {
+      text = n + FILLED
+    }
+    this.star.text = text
+    const b = this.star.getLocalBounds()
+    this.star.hitArea = new Rectangle(
+      b.x - STAR_HIT_PAD,
+      b.y - STAR_HIT_PAD,
+      b.width + 2 * STAR_HIT_PAD,
+      b.height + 2 * STAR_HIT_PAD,
+    )
+    this.star.visible = visible
+    this.star.eventMode = clickable ? "static" : "none"
+    this.star.cursor = clickable ? "pointer" : "default"
+    this.star.style.fill = mine || count > 0 ? this.colors.on : this.colors.off
   }
 
-  set(starred: boolean) {
-    if (starred === this.starred) return
-    this.starred = starred
-    this.burst.visible = starred
-    this.star.visible = this.clickable && !starred
-  }
-
-  // Whether its star is drawn: for a test, the canvas has no DOM.
+  // Whether its star is drawn, and what it reads: for a test, the canvas has no DOM.
   get starShown(): boolean {
     return this.star.visible
+  }
+
+  get starText(): string {
+    return this.star.visible ? this.star.text.replace(/\uFE0E/g, "") : ""
   }
 
   // The dot is at (x, y) with radius r. The burst turns slowly, so it reads as alive
   // without pulsing like the yellow Follow ring.
   place(x: number, y: number, r: number, time: number) {
     this.star.position.set(x - r - 2.5, y + 1.5)
-    if (this.starred) {
+    if (this.shine.level > 0) {
       this.burst.position.set(x, y)
       this.burst.rotation = time / 6000
+      // Turned the other way and offset half a ray: the two together sparkle more.
+      this.flare.position.set(x, y)
+      this.flare.rotation = Math.PI / 8 - time / 9000
+      this.glow.position.set(x, y)
     }
   }
 }

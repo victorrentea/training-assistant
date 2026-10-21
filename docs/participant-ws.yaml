@@ -54,6 +54,7 @@ channels:
           - $ref: '#/components/messages/wiki_updated'
           - $ref: '#/components/messages/wiki_note'
           - $ref: '#/components/messages/wiki_takeaways'
+          - $ref: '#/components/messages/wiki_stars'
           - $ref: '#/components/messages/talk_notes'
           - $ref: '#/components/messages/presenter_view'
           - $ref: '#/components/messages/files_count_updated'
@@ -828,6 +829,22 @@ components:
             items:
               type: string
             description: Quartz simple slugs of every starred note, sorted (the whole set, not a delta)
+
+    wiki_stars:
+      summary: A participant starred or un-starred a wiki note as interesting — every graph shows how many starred each note, and the starred ones shine (throttled to one per second)
+      x-feature: notes_summary
+      payload:
+        type: object
+        required: [type]
+        properties:
+          type:
+            type: string
+            enum: [wiki_stars]
+          counts:
+            type: object
+            additionalProperties:
+              type: integer
+            description: How many participants starred each note, by Quartz simple slug; notes nobody starred are left out. Counts only, never who (the whole map, not a delta)
 
     feedback_form_updated:
       summary: End-of-session participant feedback form link published or retracted

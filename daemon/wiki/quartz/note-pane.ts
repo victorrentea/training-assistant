@@ -12,10 +12,12 @@
 // Participants can follow the trainer: whichever note Victor opens on his machine
 // gets a pulsing yellow ring around its dot on theirs (see "Following the trainer"
 // below). He can also star a note as a key takeaway: its dot glows golden on every
-// graph (see "Key takeaways" below).
+// graph (see "Key takeaways" below), and so can the participants, for the notes they
+// found interesting (see "Participants' stars" below).
 //
 // Copied next to graph.inline.ts by daemon/wiki/builder.py; patch-graph.py makes the
 // full graph register here (connectGraph) and call toggleNote() on a click.
+import { DotShine, StarMode, shineLevel } from "./graph-takeaway"
 import {
   SimpleSlug,
   getFullSlug,
@@ -30,8 +32,9 @@ export type PaneGraph = {
   highlight(slug: SimpleSlug | null): void
   // The yellow ring around the note the trainer has open (null: none).
   ring(slug: SimpleSlug | null): void
-  // The notes the trainer starred as key takeaways: a filled star and a golden glow.
-  takeaways(slugs: ReadonlySet<SimpleSlug>): void
+  // The trainer's takeaways or the participants' stars changed: every dot shines and
+  // its star reads as dotShine() says.
+  shine(): void
   // Every dot on screen, each with its label: what the popover should leave in view.
   dots(): Dot[]
   // The open dot's edges on screen, the purple ones: the popover keeps off them too.
@@ -101,6 +104,29 @@ export function setShowHome(show: boolean) {
   } catch {}
 }
 
+// Where the reader left the full graph's zoom and pan, remembered on this browser per
+// site: a reload puts them back instead of zooming out to fit everything again (Victor,
+// 2026-10-21). Only a zoom or pan of the reader's own is remembered; Reset layout and
+// the Home pill forget it, and the graph fits itself to the window again.
+export type View = { x: number; y: number; k: number }
+const viewKey = () => `wiki-view:${new URL(pathToRoot(getFullSlug(window)), window.location.href).pathname}`
+
+export function savedView(): View | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(viewKey()) ?? "null")
+    return v && [v.x, v.y, v.k].every((n) => typeof n === "number" && isFinite(n)) && v.k > 0 ? v : null
+  } catch {
+    return null
+  }
+}
+
+export function saveView(v: View | null) {
+  try {
+    if (v) localStorage.setItem(viewKey(), JSON.stringify({ x: v.x, y: v.y, k: v.k }))
+    else localStorage.removeItem(viewKey())
+  } catch {}
+}
+
 function noteUrl(slug: SimpleSlug): URL {
   return new URL(resolveRelative(getFullSlug(window), slug), window.location.toString())
 }
@@ -144,7 +170,7 @@ export function connectGraph(g: PaneGraph) {
   graph = g
   g.select(peeked)
   g.ring(ringed)
-  g.takeaways(starred)
+  g.shine()
   // The participant page sends the trainer's note once the graph can place it.
   if (!announced) {
     announced = true
@@ -212,7 +238,9 @@ function ensurePeek(): HTMLElement {
   const body = peek.querySelector(".note-peek-body") as HTMLElement
   peek.querySelector(".note-peek-close")!.addEventListener("click", hidePeek)
   peek.querySelector(".note-peek-star")!.addEventListener("click", () => {
-    if (peeked) toggleTakeaway(peeked, !starred.has(peeked))
+    if (!peeked) return
+    if (starMode() === "voter") toggleStar(peeked, !mine.has(peeked))
+    else toggleTakeaway(peeked, !starred.has(peeked))
   })
   dragByHead(peek, peek.querySelector(".note-peek-title") as HTMLElement)
   peek.addEventListener("mouseleave", () => highlight(null))
@@ -539,8 +567,8 @@ function reportOpenNote(slug: SimpleSlug | null) {
   })
 }
 
-// To the participant page around the wiki: the graph is ready.
-function tellParent(msg: { type: string }) {
+// To the participant page around the wiki: the graph is ready, or a star was clicked.
+function tellParent(msg: { type: string; [key: string]: unknown }) {
   if (embedded) window.parent.postMessage(msg, window.location.origin)
 }
 
@@ -553,6 +581,11 @@ window.addEventListener("message", (e) => {
   // The notes the trainer starred (see "Key takeaways" below), on load and on change.
   if (msg?.type === "wiki-takeaways") {
     if (Array.isArray(msg.slugs)) applyTakeaways(msg.slugs.filter((s: unknown) => typeof s === "string"))
+    return
+  }
+  // The participants' stars (see "Participants' stars" below).
+  if (msg?.type === "wiki-stars") {
+    applyStars(msg.counts, msg.mine)
     return
   }
   if (msg?.type !== "wiki-follow") return
@@ -584,27 +617,38 @@ const TAKEAWAYS_POLL_MS = 15000
 let starred = new Set<SimpleSlug>()
 let changedAt = 0 // the trainer's last click: an older answer must not undo it
 
-export function isTakeaway(slug: SimpleSlug): boolean {
-  return starred.has(slug)
-}
-
 function applyTakeaways(slugs: readonly string[]) {
   starred = new Set(slugs.map((s) => simplifySlug(s as never)))
-  graph?.takeaways(starred)
+  graph?.shine()
   showPeekStar()
 }
 
+// The popover's star, left of its ✕: the trainer's takeaway on his machine, the
+// participant's own star in the participant page, just the count anywhere else.
 function showPeekStar() {
   const button = peek?.querySelector(".note-peek-star") as HTMLButtonElement | null
   if (!peek || !button) return
-  const on = peeked !== null && starred.has(peeked)
-  const host = onHostMachine()
-  peek.classList.toggle("takeaway", on)
-  button.textContent = on ? "★\uFE0E" : "☆\uFE0E"
+  const mode = starMode()
+  const takeaway = peeked !== null && starred.has(peeked)
+  const { count, mine: own } = peeked !== null ? starsOf(peeked) : { count: 0, mine: false }
+  const on = mode === "voter" ? own : takeaway || count > 0
+  peek.classList.toggle("takeaway", peeked !== null && shineOf(peeked) > 0)
+  button.textContent = (count > 0 ? `${count} ` : "") + (on ? "★\uFE0E" : "☆\uFE0E")
   button.classList.toggle("on", on)
-  button.hidden = !host && !on
-  button.disabled = !host
-  const tip = host ? (on ? "Key takeaway - click to un-star" : "Star as a key takeaway: it glows for everyone") : "Key takeaway"
+  button.hidden = mode === "viewer" && !on
+  button.disabled = mode === "viewer"
+  const people = count === 1 ? "1 participant starred it" : `${count} participants starred it`
+  const tip =
+    mode === "trainer"
+      ? (takeaway ? "Key takeaway - click to un-star" : "Star as a key takeaway: it glows for everyone") +
+        (count > 0 ? ` · ${people}` : "")
+      : mode === "voter"
+        ? own
+          ? `You starred it - click to un-star · ${people}`
+          : "Star it if you found it interesting: it shines for everyone" + (count > 0 ? ` · ${people}` : "")
+        : takeaway
+          ? "Key takeaway" + (count > 0 ? ` · ${people}` : "")
+          : people
   button.title = tip
   button.setAttribute("aria-label", tip)
 }
@@ -634,6 +678,13 @@ function fetchTakeaways() {
       if (json && Array.isArray(json.slugs) && asked > changedAt) applyTakeaways(json.slugs)
     })
     .catch(() => {})
+  // Counts only: a wiki in a tab of its own has no participant identity to star with.
+  fetch(new URL("../api/participant/wiki/stars", site))
+    .then((res) => (res.ok ? res.json() : null))
+    .then((json: { counts?: unknown } | null) => {
+      if (json) applyStars(json.counts, [])
+    })
+    .catch(() => {})
 }
 
 if (!embedded) {
@@ -641,4 +692,63 @@ if (!embedded) {
   window.setInterval(() => {
     if (document.visibilityState === "visible") fetchTakeaways()
   }, TAKEAWAYS_POLL_MS)
+}
+
+// ── Participants' stars ──
+// Participants star the notes they found interesting; on every graph, the trainer's
+// included, those shine with the takeaways' gold starburst, in five levels as the stars
+// pile up (graph-takeaway.ts), and the star by the dot shows how many did (Victor,
+// 2026-10-21):
+//   participant's wiki (a star by a dot, or in the popover) → postMessage("wiki-star")
+//   → the participant page around it → POST /api/participant/wiki/star with its
+//   X-Participant-ID → daemon saves it in the session folder → `wiki_stars` broadcast
+//   (counts only, never who) → each participant page → postMessage("wiki-stars") → here.
+// This frame never sees the participant's UUID: the page holds it, and the daemon only
+// counts a star from someone who joined (daemon/wiki/stars.py says why it can't be
+// forged or stuffed). The page answers every click with what was really saved.
+let starCounts = new Map<SimpleSlug, number>()
+let mine = new Set<SimpleSlug>()
+
+export function starMode(): StarMode {
+  if (onHostMachine()) return "trainer"
+  return embedded ? "voter" : "viewer"
+}
+
+export function starsOf(slug: SimpleSlug): { count: number; mine: boolean } {
+  return { count: starCounts.get(slug) ?? 0, mine: mine.has(slug) }
+}
+
+// A dot's level of shine, 0 (none) to 5 (graph-takeaway.ts).
+export function shineOf(slug: SimpleSlug): number {
+  return shineLevel(starred.has(slug), starCounts.get(slug) ?? 0)
+}
+
+// Everything a dot's star and burst show (graph-takeaway.ts).
+export function dotShine(slug: SimpleSlug): DotShine {
+  return { takeaway: starred.has(slug), ...starsOf(slug), level: shineOf(slug) }
+}
+
+function applyStars(counts: unknown, own: unknown) {
+  const next = new Map<SimpleSlug, number>()
+  if (counts && typeof counts === "object") {
+    for (const [slug, n] of Object.entries(counts as Record<string, unknown>)) {
+      if (typeof n === "number" && Number.isInteger(n) && n > 0) next.set(simplifySlug(slug as never), n)
+    }
+  }
+  starCounts = next
+  if (Array.isArray(own)) {
+    mine = new Set(own.filter((s): s is string => typeof s === "string").map((s) => simplifySlug(s as never)))
+  }
+  graph?.shine()
+  showPeekStar()
+}
+
+// The participant's click, on a dot's star or in the popover: shown at once, then sent
+// to the page around the wiki, which answers with what was saved.
+export function toggleStar(slug: SimpleSlug, on: boolean) {
+  if (starMode() !== "voter") return
+  const counts = Object.fromEntries(starCounts)
+  if (on !== mine.has(slug)) counts[slug] = Math.max(0, (counts[slug] ?? 0) + (on ? 1 : -1))
+  applyStars(counts, on ? [...mine, slug] : [...mine].filter((s) => s !== slug))
+  tellParent({ type: "wiki-star", slug, starred: on })
 }
