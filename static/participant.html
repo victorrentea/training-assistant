@@ -771,6 +771,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 /* Hover/focus: the shared yellow pop-out of .side-icon. */
 .about-quick-btn { width: 1.6rem; height: 1.6rem; }
 .about-quick-btn .material-symbols-outlined { font-size: 1.05rem; }
+/* A tall activity (the AI-share survey, a long poll) scrolls instead of being
+   clipped; `safe` keeps its top reachable when it outgrows the view. */
+#activity-view { overflow-y: auto; justify-content: safe center; }
 /* AI-share slider activity */
 .aishare-card {
   --aishare-accent: var(--color-primary, #4555ba);
@@ -856,8 +859,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   gap: 0.5rem;
 }
 /* Vote count overlay: vertically centered, right edge anchored to the
-   colored fill's right edge. No background — bold black digits in dark
-   mode, white in light mode. `--fill-pct` is set inline. */
+   colored fill's right edge. No background — bold white digits.
+   `--fill-pct` is set inline. */
 .poll-option-btn .count {
   position: absolute;
   top: 50%;
@@ -866,13 +869,10 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   padding-right: 0.55rem;
   font-size: 1.1rem; font-weight: 800;
   line-height: 1;
-  color: #000;
+  color: #fff;
   pointer-events: none;
   z-index: 2;
   white-space: nowrap;
-}
-@media (prefers-color-scheme: light) {
-  .poll-option-btn .count { color: #fff; }
 }
 /* Selection marker — always present, fills only when selected. Works for
    both single-select (radio look) and multi-select (square look via
