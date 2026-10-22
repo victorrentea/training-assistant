@@ -95,7 +95,6 @@ PATCHES = [
     font: computedStyleMap["--bodyFont"],
   }
   let starredIds: ReadonlySet<string> = new Set()
-  let shineIds: ReadonlySet<string> = new Set() // the shining dots: their edges are rays
   // For a test (the canvas has no DOM): where the starred dots and the other ends of
   // their edges are on screen right now.
   ;(graph as HTMLElement & { takeawaysOnScreen?: () => unknown }).takeawaysOnScreen = () => {
@@ -188,14 +187,7 @@ PATCHES = [
      """      const lit = l.active || selectedEdge(l)
       const tx = linkData.target.x! + width / 2
       const ty = linkData.target.y! + height / 2
-      // A shining dot's edges are rays of its star (graph-takeaway.ts); the purple of a
-      // hovered or open dot still wins.
-      const raySource = !lit && shineIds.has(linkData.source.id)
-      const rayTarget = !lit && shineIds.has(linkData.target.id)
-      if (raySource || rayTarget) {
-        drawRay(l.gfx, linkData.source.x! + width / 2, linkData.source.y! + height / 2, tx, ty,
-          raySource, rayTarget, takeawayColors.on, l.color, 0.6 / currentTransform.k, l.alpha * 0.6)
-      } else if (selectedEdge(l) && !twoWay(l)) {
+      if (selectedEdge(l) && !twoWay(l)) {
         const k = currentTransform.k
         const sx = linkData.source.x! + width / 2
         const sy = linkData.source.y! + height / 2
@@ -276,7 +268,7 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import "./tooltip.js"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
-     'import { TakeawayColors, TakeawayMark, drawRay } from "./graph-takeaway"\n'
+     'import { TakeawayColors, TakeawayMark } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -358,7 +350,6 @@ PATCHES = [
         n.label.style.stroke = d.level > 0 ? SHINING_LABEL_STROKE : PLAIN_LABEL_STROKE
       }
       starredIds = takeaways
-      shineIds = shining
       if (!dragging) renderPixiFromD3()
       // The canvas has no DOM: what it shows as starred, which dots draw a star beside
       // them and what each reads, and which ones shine, readable from a test.

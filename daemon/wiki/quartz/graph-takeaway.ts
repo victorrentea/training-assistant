@@ -18,14 +18,15 @@
 // Five levels of shine, climbing as stars pile up on the same note (his takeaway counts
 // as one star): 1 a smaller, fainter starburst, 2 the takeaway's starburst as it was
 // with a brighter star over it, and 3 to 5 add a soft glow under it that spreads wider
-// each level (Victor, 2026-10-23 - level 1 was the full burst, too close to level 2). The rays along the edges
-// stay the same at every level.
+// each level (Victor, 2026-10-23 - level 1 was the full burst, too close to level 2).
+// Its edges stay plain grey lines: drawn as gold rays out of the star (2026-10-19),
+// they cluttered the picture and hid the graph's shape (Victor, 2026-10-23).
 //
 // note-pane.ts keeps the starred sets, the counts and the toggles; builder.py copies
 // this file next to graph.inline.ts, and patch-graph.py makes one TakeawayMark per dot,
 // puts its star and its burst in containers of their own and places them in its
 // animation loop.
-import { Color, Graphics, Rectangle, Sprite, Text, Texture } from "pixi.js"
+import { Rectangle, Sprite, Text, Texture } from "pixi.js"
 
 export type TakeawayColors = {
   on: string // the burst
@@ -238,49 +239,5 @@ export class TakeawayMark {
       this.flare.rotation = Math.PI / 8 - time / 9000
       this.glow.position.set(x, y)
     }
-  }
-}
-
-// An edge touching a starred dot is a ray of light out of its star (Victor, 2026-10-19):
-// gold and bright at the starred end, fading into the plain grey edge at the other end;
-// between two starred dots, gold at both ends and grey midway. Drawn as short segments
-// of stepped colour: a FillGradient per edge per frame would build a texture each time.
-const RAY_STEPS = 16
-
-// Any CSS colour the theme gives (#hex, rgb(...)), as 0-255 channels.
-function rgb(css: string): number[] {
-  return [...new Color(css.trim()).toUint8RgbArray()].slice(0, 3)
-}
-
-export function drawRay(
-  g: Graphics,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  goldAt0: boolean,
-  goldAt1: boolean,
-  gold: string,
-  grey: string,
-  width: number, // the plain edge's width, already divided by the zoom
-  alpha: number, // the plain edge's alpha
-) {
-  const a = rgb(gold)
-  const b = rgb(grey)
-  for (let i = 0; i < RAY_STEPS; i++) {
-    const t0 = i / RAY_STEPS
-    const t1 = (i + 1) / RAY_STEPS
-    const mid = (t0 + t1) / 2
-    // 1 at a gold end, 0 where the edge is plain grey.
-    const glow = Math.max(goldAt0 ? 1 - mid / (goldAt1 ? 0.5 : 1) : 0, goldAt1 ? 1 - (1 - mid) / (goldAt0 ? 0.5 : 1) : 0, 0)
-    const w = glow * glow * (3 - 2 * glow) // smoothstep: the gold holds near the star, then fades
-    const c = a.map((v, j) => Math.round(b[j] + (v - b[j]) * w))
-    g.moveTo(x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0)
-      .lineTo(x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1)
-      .stroke({
-        color: (c[0] << 16) | (c[1] << 8) | c[2],
-        alpha: alpha + (0.95 - alpha) * w,
-        width: width * (1 + 1.6 * w),
-      })
   }
 }
