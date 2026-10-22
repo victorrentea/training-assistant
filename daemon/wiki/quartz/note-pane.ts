@@ -871,7 +871,7 @@ function celebrate(hint: HTMLElement) {
   const from = hint.getBoundingClientRect()
   const x0 = from.left + from.width / 2
   const y0 = from.top + from.height / 2
-  const colors = ["#fbbf24", "#f59e0b", "#fde68a", "#8b5cf6", "#ffffff"]
+  const colors = ["#fbbf24", "#f59e0b", "#fde68a", "#22c55e", "#ffffff"]
   for (let i = 0; i < 48; i++) {
     const bit = document.createElement("div")
     bit.className = "graph-confetti"

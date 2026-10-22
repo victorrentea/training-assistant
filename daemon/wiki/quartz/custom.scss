@@ -70,7 +70,7 @@ body {
     cursor: pointer;
 
     &:hover {
-      color: #8b5cf6;
+      color: var(--dark);
       background: var(--lightgray);
     }
   }
@@ -219,14 +219,14 @@ body {
       user-select: none;
 
       &:hover {
-        color: #8b5cf6;
-        border-color: #8b5cf6;
+        color: var(--dark);
+        border-color: var(--dark);
       }
     }
 
     details.note-points[open] > summary {
-      color: #8b5cf6;
-      border-color: #8b5cf6;
+      color: var(--dark);
+      border-color: var(--dark);
     }
 
     // The emotional anchors lifted above "Details" (note-pane.ts), one per line.
@@ -337,7 +337,7 @@ body {
   }
 
   &:hover {
-    color: #8b5cf6;
+    color: var(--dark);
   }
 }
 
@@ -362,6 +362,8 @@ body {
 }
 
 // Bottom-left of the full graph (patch-graph.py): back to the layout it opened with.
+// Grey until hovered, then the text colour (white on dark): no purple on the wiki
+// any more (Victor, 2026-10-23).
 .graph-reset {
   position: absolute;
   left: 0.8rem;
@@ -371,24 +373,24 @@ body {
   border-radius: 999px;
   font-family: var(--bodyFont);
   font-size: 0.8rem;
-  color: var(--darkgray);
+  color: var(--gray);
   background: var(--light);
   border: 1px solid var(--lightgray);
   cursor: pointer;
 
   &:hover {
-    color: #8b5cf6;
-    border-color: #8b5cf6;
+    color: var(--dark);
+    border-color: var(--dark);
   }
 }
 
-// Right of Reset layout: shows or hides the Home dot; purple while it shows.
+// Right of Reset layout: shows or hides the Home dot; lit while it shows.
 .graph-home {
   left: 8.6rem;
 
   &.on {
-    color: #8b5cf6;
-    border-color: #8b5cf6;
+    color: var(--dark);
+    border-color: var(--dark);
   }
 }
 
@@ -556,7 +558,7 @@ body {
 
 // Key takeaways (graph-takeaway.ts): the trainer's starred notes get a golden starburst
 // on every graph (and a filled star in their popover). Gold, apart from the yellow
-// Follow ring and the purple selection; deeper on the light theme to show on white.
+// Follow ring; deeper on the light theme to show on white.
 // The hollow star the trainer clicks stays quiet: it is on every dot of his graph.
 :root {
   --wiki-takeaway: #d97706;
