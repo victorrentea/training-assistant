@@ -27,11 +27,11 @@ from __future__ import annotations
 import json
 import os
 import re
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-import httpx
 from pydantic import BaseModel, ValidationError
 
 from daemon import log
@@ -212,13 +212,13 @@ def load_captions(source: str) -> dict[str, ClipCaptions]:
         return {}
     try:
         if source.startswith(("http://", "https://")):
-            r = httpx.get(source, timeout=_CAPTIONS_TIMEOUT_S)
-            if r.status_code != 200:
-                return {}
-            raw = r.json()
+            # stdlib, not httpx: the summarizer's prewarm runs this module under the
+            # system python3, which has pydantic but none of the daemon's extras.
+            with urllib.request.urlopen(source, timeout=_CAPTIONS_TIMEOUT_S) as r:  # noqa: S310
+                raw = json.loads(r.read().decode("utf-8"))
         else:
             raw = json.loads(Path(source).expanduser().read_text(encoding="utf-8"))
-    except (httpx.HTTPError, OSError, ValueError):
+    except (OSError, ValueError):  # URLError and timeouts are OSErrors
         return {}
     captions: dict[str, ClipCaptions] = {}
     for file, entry in (raw.items() if isinstance(raw, dict) else []):
