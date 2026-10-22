@@ -80,7 +80,9 @@ def _prepare_quartz(qdir: Path) -> None:
     shutil.copy(ASSETS_DIR / "quartz.layout.ts", qdir)
     shutil.copy(ASSETS_DIR / "custom.scss", qdir / "quartz" / "styles" / "custom.scss")
     # The tab's favicon: the participant page's Wiki icon (Material Symbols "hub"), not
-    # Quartz's crystal (Victor, 2026-10-21): the glyph white on #3341a0, 256px.
+    # Quartz's crystal (Victor, 2026-10-21), 256px: the glyph in indigo #818cf8 on a
+    # transparent background, which reads on light and dark tab bars (Victor,
+    # 2026-10-23 - it was white on a #3341a0 square).
     shutil.copy(ASSETS_DIR / "icon.png", qdir / "quartz" / "static" / "icon.png")
     for script in ("note-pane.ts", "graph-badges.ts", "graph-takeaway.ts"):
         shutil.copy(ASSETS_DIR / script, qdir / "quartz" / "components" / "scripts" / script)
