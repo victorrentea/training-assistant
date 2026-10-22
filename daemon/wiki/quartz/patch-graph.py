@@ -237,20 +237,23 @@ PATCHES = [
         }
       }
 """),
-    # Hover: the node and its links turn purple; the rest keep their look, without the
-    # dimming Quartz applies to edges even with focusOnHover off (nodes: quartz.layout.ts).
+    # Hover: the dot's links light up in the text colour (white on dark), the dot itself
+    # unchanged; the open dot's links too, and that dot alone turns purple (Victor,
+    # 2026-10-23 - links and dot were purple on hover). The rest keep their look,
+    # without the dimming Quartz applies to edges even with focusOnHover off (nodes:
+    # quartz.layout.ts).
     ("alpha = l.active ? 1 : 0.2",
      "alpha = 1"),
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
-     'l.color = l.active || selectedEdge(l) ? "#8b5cf6" : computedStyleMap["--lightgray"]'),
+     'l.color = l.active || selectedEdge(l) ? computedStyleMap["--dark"] : computedStyleMap["--lightgray"]'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
      """      // Repainted, not tinted: a tint multiplies, so on light theme's dark-grey dots
       // "purple" came out almost black.
-      const purple = hoveredNodeId === n.simulationData.id || selectedNodeId === n.simulationData.id
+      const purple = selectedNodeId === n.simulationData.id
       n.gfx.clear().circle(0, 0, n.radius).fill({ color: purple ? "#8b5cf6" : n.color })
       tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))"""),
-    # A hovered dot's label keeps its size: the dot turning purple says enough, and the
-    # growing label shifted the star after it (Victor, 2026-10-23).
+    # A hovered dot's label keeps its size: its lit links say enough, and the growing
+    # label shifted the star after it (Victor, 2026-10-23).
     ("const activeScale = defaultScale * 1.1",
      "const activeScale = defaultScale"),
     # Labels stay fully visible at normal zoom and fade out only when zoomed far out.
