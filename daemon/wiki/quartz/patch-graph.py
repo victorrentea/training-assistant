@@ -20,15 +20,17 @@ PATCHES = [
     # (note-pane.ts keeps the list), so what is left to read stands out.
     # A shining note (a takeaway, or starred by participants) is a yellow star: its
     # label turns the burst's gold, outlined in black so it stays readable over the
-    # burst (Victor, 2026-10-21). Its dot keeps the seen/unseen colour like any other,
-    # so a starred note not read yet still shows it (Victor, 2026-10-23 - it was gold).
+    # burst (Victor, 2026-10-21). Its dot is gold once read, but white like any note not
+    # read yet, so an unread starred note stands out (Victor, 2026-10-23).
     ("""    } else if (visited.has(d.id) || d.id.startsWith("tags/")) {
       return computedStyleMap["--tertiary"]
     } else {
       return computedStyleMap["--gray"]
     }""",
-     """    } else {
-      return isSeen(d.id) ? computedStyleMap["--wiki-seen"] : computedStyleMap["--wiki-unseen"]
+     """    } else if (!isSeen(d.id)) {
+      return computedStyleMap["--wiki-unseen"]
+    } else {
+      return shineOf(d.id) > 0 ? computedStyleMap["--wiki-takeaway"] : computedStyleMap["--wiki-seen"]
     }"""),
     ("""        fill: computedStyleMap["--dark"],
         fontFamily: computedStyleMap["--bodyFont"],""",
@@ -180,12 +182,11 @@ PATCHES = [
     # the stage scales by the zoom factor k, so divide the width by k. A lit edge
     # (hovered dot, a link hovered in the note popover, or an edge of the dot whose
     # note is open) is thicker, to stand out.
-    # The edges of the open dot also show their direction (Victor, 2026-10-16): an
-    # arrowhead where the edge enters the dot its link points to. Quartz keeps A→B and
-    # B→A as two edges on the same line, so a two-way link gets a head at each end.
-    # A one-way lit edge is drawn as dashes creeping slowly along it, from the linking
-    # note to the linked one, nothing under them (Victor, 2026-10-23 - on a faint line
-    # until then); a two-way edge stays solid. Which edges light up: litEdge().
+    # A lit edge shows its direction by motion alone, no arrowheads (Victor, 2026-10-23 -
+    # there was a head where it entered the linked dot): dashes creeping slowly along it,
+    # from the linking note to the linked one, nothing under them; a two-way link, one
+    # line of the same dashes running from its middle out to both ends (it was a solid
+    # line). Which edges light up: litEdge().
     ("""      l.gfx
         .lineTo(linkData.target.x! + width / 2, linkData.target.y! + height / 2)
         .stroke({ alpha: l.alpha, width: 1, color: l.color })
@@ -193,50 +194,41 @@ PATCHES = [
      """      const lit = litEdge(l)
       const tx = linkData.target.x! + width / 2
       const ty = linkData.target.y! + height / 2
-      if (lit && !twoWay(l)) {
+      if (lit) {
         const k = currentTransform.k
         const sx = linkData.source.x! + width / 2
         const sy = linkData.source.y! + height / 2
-        const len = Math.hypot(tx - sx, ty - sy)
-        if (len > 0) {
-          // On screen: 6px dashes, 5px gaps, moving 12px a second.
+        // Dashes from (x0, y0) toward (x1, y1), moving that way. On screen: 6px dashes,
+        // 5px gaps, 12px a second.
+        const dashes = (x0: number, y0: number, x1: number, y1: number) => {
+          const len = Math.hypot(x1 - x0, y1 - y0)
+          if (len === 0) return
           const dash = 6 / k
           const period = 11 / k
-          const ux = (tx - sx) / len
-          const uy = (ty - sy) / len
-          // A new path: the one the edge started (moveTo its source) isn't a dash.
-          l.gfx.beginPath()
+          const ux = (x1 - x0) / len
+          const uy = (y1 - y0) / len
           for (let d = ((time / 1000) * 12) / k % period - period; d < len; d += period) {
             const a = Math.max(d, 0)
             const b = Math.min(d + dash, len)
-            if (b > a) l.gfx.moveTo(sx + ux * a, sy + uy * a).lineTo(sx + ux * b, sy + uy * b)
+            if (b > a) l.gfx.moveTo(x0 + ux * a, y0 + uy * a).lineTo(x0 + ux * b, y0 + uy * b)
           }
-          l.gfx.stroke({ alpha: l.alpha, width: 1.6 / k, color: l.color })
         }
+        // A new path: the one the edge started (moveTo its source) isn't a dash.
+        l.gfx.beginPath()
+        if (!twoWay(l)) dashes(sx, sy, tx, ty)
+        // A two-way link is two edges on one line: one of them draws it, a single line
+        // whose dashes run from its middle out to both ends.
+        else if (linkData.source.id < linkData.target.id) {
+          const mx = (sx + tx) / 2
+          const my = (sy + ty) / 2
+          dashes(mx, my, tx, ty)
+          dashes(mx, my, sx, sy)
+        }
+        l.gfx.stroke({ alpha: l.alpha, width: 1.6 / k, color: l.color })
       } else {
         l.gfx
           .lineTo(tx, ty)
           .stroke({ alpha: l.alpha * (lit ? 1 : 0.6), width: (lit ? 1.6 : 0.6) / currentTransform.k, color: l.color })
-      }
-      if (lit) {
-        const k = currentTransform.k
-        const dx = linkData.target.x! - linkData.source.x!
-        const dy = linkData.target.y! - linkData.source.y!
-        const len = Math.hypot(dx, dy)
-        if (len > 0) {
-          const ux = dx / len
-          const uy = dy / len
-          // The tip on the target dot's rim; the head keeps its size on screen at any zoom.
-          const back = nodeRadius(linkData.target) + 1 / k
-          const tipX = tx - ux * back
-          const tipY = ty - uy * back
-          const baseX = tipX - (ux * 8) / k
-          const baseY = tipY - (uy * 8) / k
-          const half = 3.5 / k
-          l.gfx
-            .poly([tipX, tipY, baseX - uy * half, baseY + ux * half, baseX + uy * half, baseY - ux * half])
-            .fill({ color: l.color, alpha: l.alpha })
-        }
       }
 """),
     # Hover: the dot's links light up in the text colour (white on dark), the dot itself
@@ -267,17 +259,18 @@ PATCHES = [
     ("  let hoveredNodeId: string | null = null\n",
      "  let hoveredNodeId: string | null = null\n"
      "  let selectedNodeId: string | null = null\n"
+     "  let selectedAllRead = false // every neighbour of the open note already read\n"
      "  // Which edges light up (Victor, 2026-10-23): hovering a dot, those to notes already\n"
      "  // read - where it comes from in what you know; the open note's, those to notes not\n"
-     "  // read yet - where to explore next. And the one a link hovered in the popover\n"
-     "  // points along, from the open note to that one.\n"
+     "  // read yet - where to explore next, or all of them once every neighbour is read.\n"
+     "  // And the one a link hovered in the popover points along, to that note.\n"
      "  const otherEnd = (l: LinkRenderData, id: string) =>\n"
      "    l.simulationData.source.id === id ? l.simulationData.target.id : l.simulationData.source.id\n"
      "  const touches = (l: LinkRenderData, id: string | null) =>\n"
      "    id !== null && (l.simulationData.source.id === id || l.simulationData.target.id === id)\n"
      "  const litEdge = (l: LinkRenderData) => {\n"
      "    if (selectedNodeId !== null && touches(l, selectedNodeId)) {\n"
-     "      if (!isSeen(otherEnd(l, selectedNodeId))) return true\n"
+     "      if (selectedAllRead || !isSeen(otherEnd(l, selectedNodeId))) return true\n"
      "      if (touches(l, hoveredNodeId) && hoveredNodeId !== selectedNodeId) return true\n"
      "    }\n"
      "    // Not over the open dot itself: there, its own rule holds.\n"
@@ -343,6 +336,9 @@ PATCHES = [
   const paneGraph: PaneGraph = {
     select(id) {
       selectedNodeId = id
+      selectedAllRead =
+        id !== null &&
+        linkRenderData.every((l) => !touches(l, id) || isSeen(otherEnd(l, id)))
       for (const n of nodeRenderData) n.color = color(n.simulationData)
       if (!dragging) renderPixiFromD3()
     },
