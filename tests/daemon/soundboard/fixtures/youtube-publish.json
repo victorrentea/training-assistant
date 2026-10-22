@@ -1,8 +1,4 @@
 {
-  "53b_7_rings.mp3": {"sha256": "aa", "videoId": "abc123", "url": "https://youtu.be/abc123",
-                      "visibility": "unlisted", "copyright": "claimed", "title": "#53b 7 Rings",
-                      "publishedAt": "2026-10-22T18:00:00+03:00"},
-  "61_hallelujah.mp3": {"sha256": "bb", "videoId": "def456", "url": "https://youtu.be/def456",
-                        "visibility": "public", "copyright": "none", "title": "#61 Hallelujah",
-                        "publishedAt": "2026-10-22T18:05:00+03:00"}
+  "KD_1Z8iUDho": {"fingerprint": "f1", "title": "Argentina — Don't cry for me, Argentina", "url": "https://youtu.be/bA-wE2QVQzE", "visibility": "public", "videoId": "bA-wE2QVQzE"},
+  "rR4n-0KYeKQ": {"fingerprint": "f2", "title": "LGTM", "url": "https://youtu.be/lgtm", "visibility": "unlisted", "videoId": "lgtm"}
 }

@@ -1,4 +1,4 @@
-"""Query the soundboard clips the room heard in a time range.
+"""Query the played shorts (the tablet's Video Snippets) the room saw in a time range.
 
     python3 -m daemon.soundboard.query <from_iso> <to_iso> [--json]
 
@@ -16,27 +16,16 @@ import json
 import sys
 from pathlib import Path
 
-from daemon.soundboard.presses import (
-    BURST_GAP_S,
-    captions_source,
-    ledger_path,
-    moments_between,
-    press_log_path,
-    tiles_path,
-)
+from daemon.soundboard.plays import BURST_GAP_S, ledger_path, moments_between, play_log_path
 from daemon.transcript.query import _resolve_query_range
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Soundboard clips fired in an ISO time interval")
+    parser = argparse.ArgumentParser(description="Video Snippets played in an ISO time interval")
     parser.add_argument("from_iso", help="Start ISO datetime: YYYY-MM-DDTHH:MM[:SS][±HH:MM]")
     parser.add_argument("to_iso", help="End ISO datetime: YYYY-MM-DDTHH:MM[:SS][±HH:MM]")
-    parser.add_argument("--press-log", type=Path, default=None, help=f"default: {press_log_path()}")
-    parser.add_argument("--tiles", type=Path, default=None, help=f"default: {tiles_path()}")
+    parser.add_argument("--play-log", type=Path, default=None, help=f"default: {play_log_path()}")
     parser.add_argument("--ledger", type=Path, default=None, help=f"default: {ledger_path()}")
-    parser.add_argument(
-        "--captions", default=None, help=f"URL or JSON file; '' to skip. default: {captions_source()}"
-    )
     parser.add_argument("--burst-gap", type=float, default=BURST_GAP_S, help="seconds (default: %(default)s)")
     parser.add_argument("--json", action="store_true", help="one JSON document instead of JSON lines")
     return parser
@@ -51,13 +40,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     moments = moments_between(
-        query.start,
-        query.end,
-        press_log=args.press_log,
-        tiles_file=args.tiles,
-        captions=args.captions,
-        ledger_file=args.ledger,
-        burst_gap_s=args.burst_gap,
+        query.start, query.end, play_log=args.play_log, ledger_file=args.ledger, burst_gap_s=args.burst_gap
     )
     if args.json:
         doc = {

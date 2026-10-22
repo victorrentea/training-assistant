@@ -1,9 +1,0 @@
-{
-  "02_siren.mp3": {"durationSeconds": 4.0, "cues": []},
-  "53_rain.mp3": {"durationSeconds": 8.0, "cues": [{"start": 0.0, "end": 8.0, "text": "💸 make it rain"}]},
-  "53b_7_rings.mp3": {"durationSeconds": 12.4, "cues": [
-    {"start": 0.0, "end": 6.0, "text": "♪ I want it, I got it ♪"},
-    {"start": 6.0, "end": 12.4, "text": "♪ I see it, I like it ♪"}]},
-  "61_hallelujah.mp3": {"durationSeconds": 17.1, "cues": [{"start": 0.0, "end": 17.1, "text": "♪ Hallelujah ♪"}]},
-  "62_lionel_richie.mp3": {"durationSeconds": 9.0, "cues": [{"start": 0.0, "end": 9.0, "text": "♪ Hello, is it me you're looking for? ♪"}]}
-}
