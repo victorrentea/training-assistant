@@ -1,7 +1,7 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
-// opening: a tiny picture at the dot's top-left when the note shows a slide or a
-// screenshot, at its top-right 🔗 for the note's external links, with "×3" after it
-// from two up, and right of it, at mid-height, one row for its emotional anchors: ⚓ for
+// opening: a tiny picture left of the dot when the note shows a slide or a screenshot,
+// 🔗 above it for the note's external links, with "×3" after it from two up, and right
+// of it, at mid-height, one row for its emotional anchors: ⚓ for
 // each moment the summarizer tags and 🎬 for each short played in the room, ⚓⚓🎬
 // (both are the same thing: a moment that moved the room). Each emoji has a dark halo
 // hugging its outline, like the star's, so it reads over the takeaway glow; none, no
@@ -142,18 +142,22 @@ export class NoteBadge extends Container {
     for (const child of [this.picture, this.links, this.anchors]) if (child) this.addChild(child)
   }
 
-  // The dot is at (x, y) with radius r. The picture's inner corner sits on the dot's
-  // rim at 45° up-left, the 🔗's bottom-left corner at 45° up-right; the ⚓🎬 row right
-  // of the dot, at its middle height, always there (Victor, 2026-10-23 - it was under
-  // the 🔗, wherever that left room). Over a ⚓ row the 🔗 rises clear of it.
+  // The dot is at (x, y) with radius r. Around it, each at its middle: the picture on
+  // its left, the ⚓🎬 row on its right, mirroring it, and the 🔗 right above it (Victor,
+  // 2026-10-23 - they sat at 45° on the rim, the picture up-left, the 🔗 up-right).
   place(x: number, y: number, r: number) {
-    const rim = r * Math.SQRT1_2
+    const gap = 1.5
     this.position.set(x, y)
-    this.picture?.position.set(-rim - 0.5 - PICTURE_W, -rim - 0.5)
-    const anchorsBottom = EMOJI_FONT / 2
-    this.anchors?.position.set(r + 1.5, anchorsBottom)
-    const linksBottom = -rim + 1.5
-    this.links?.position.set(rim - 0.5, this.anchors ? Math.min(linksBottom, anchorsBottom - EMOJI_FONT - 1) : linksBottom)
+    this.picture?.position.set(-r - gap - PICTURE_W, PICTURE_H / 2)
+    this.anchors?.position.set(r + gap, (this.anchors?.height ?? 0) / 2) // its line box, bottom-anchored
+    if (this.links) this.links.position.set(-this.linksWidth / 2, -r - gap)
+  }
+
+  // The 🔗's picture is about 1em wide, its measured width more: the ×N, when there, from
+  // where it starts.
+  private get linksWidth(): number {
+    const count = this.links?.children[1]
+    return count ? count.x + count.width : EMOJI_FONT
   }
 }
 

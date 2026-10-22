@@ -410,6 +410,58 @@ body {
   user-select: none;
 }
 
+// Bottom-right, for a participant who hasn't starred a note yet (note-pane.ts): the
+// size of the pills on the left, in the takeaway gold, a sweep of light crossing it
+// every few seconds.
+.graph-star-hint {
+  position: fixed;
+  right: 0.8rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  overflow: hidden;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-family: var(--bodyFont);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--wiki-takeaway);
+  background: var(--light);
+  border: 1px solid var(--wiki-takeaway);
+  pointer-events: none;
+  user-select: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+    transform: translateX(-120%);
+    animation: graph-star-hint-sweep 5s ease-in-out 1.5s infinite;
+  }
+}
+
+@keyframes graph-star-hint-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  25%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+// What a participant's first star throws from that pill.
+.graph-confetti {
+  position: fixed;
+  z-index: 10002;
+  width: 7px;
+  height: 11px;
+  margin: -5px 0 0 -3px;
+  border-radius: 1px;
+  pointer-events: none;
+}
+
 // Top-right of the full graph (patch-graph.py): what the wiki was written from, as a
 // bullet list (a line along the bottom until Victor, 2026-10-21). Full contrast (white
 // on dark, the text colour on light): the dim grey it had was unreadable on the
@@ -482,6 +534,13 @@ body {
   // No room on a phone: the emoji bar takes the bottom, the pills the top.
   .graph-sources {
     display: none;
+  }
+
+  // Above the participant page's emoji bar.
+  .graph-star-hint {
+    bottom: calc(88px + 0.6rem);
+    padding: 0.45rem 0.9rem;
+    font-size: 0.9rem;
   }
 }
 

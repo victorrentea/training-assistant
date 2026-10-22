@@ -149,11 +149,11 @@ PATCHES = [
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
       // The star right after the note's name, on its line (graph-takeaway.ts).
       // The star after the name, as one more word of it: a word space after its last
-      // letter (the label's width takes in its outline, 2 of its own units each side),
-      // a little under its font size (Victor, 2026-10-23).
+      // letter (the label's width takes in its outline, half of it each side), no
+      // taller than a capital letter (Victor, 2026-10-23).
       const em = (n.label.style.fontSize as number) * n.label.scale.x
-      const textEnd = n.label.width / 2 - 2 * n.label.scale.x
-      n.takeaway?.place(x + width / 2, y + height / 2, textEnd + 0.25 * em, n.radius + 2 + n.label.height / 2, 0.85 * em, time)
+      const textEnd = n.label.width / 2 - (SHINING_LABEL_STROKE.width / 2) * n.label.scale.x
+      n.takeaway?.place(x + width / 2, y + height / 2, textEnd + 0.25 * em, n.radius + 2 + n.label.height / 2, 0.68 * em, time)
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
@@ -273,7 +273,7 @@ PATCHES = [
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
      '// gaining one when starred jumped down and pushed its star away (Victor, 2026-10-23).\n'
-     'const SHINING_LABEL_STROKE = { color: "#000000", width: 4, join: "round" as const }\n'
+     'const SHINING_LABEL_STROKE = { color: "#000000", width: 2.5, join: "round" as const }\n'
      'const PLAIN_LABEL_STROKE = { ...SHINING_LABEL_STROKE, alpha: 0 }'),
     # PixiJS listens for pointermove on the whole document, so a pointer over the note
     # popover still lit the dot under it (Victor, 2026-10-14). Only a move over the canvas

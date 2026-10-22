@@ -819,6 +819,7 @@ function applyStars(counts: unknown, own: unknown) {
   starCounts = next
   if (Array.isArray(own)) {
     mine = new Set(own.filter((s): s is string => typeof s === "string").map((s) => simplifySlug(s as never)))
+    showStarHint()
   }
   graph?.shine()
   showPeekStar()
@@ -830,6 +831,64 @@ export function toggleStar(slug: SimpleSlug, on: boolean) {
   if (starMode() !== "voter") return
   const counts = Object.fromEntries(starCounts)
   if (on !== mine.has(slug)) counts[slug] = Math.max(0, (counts[slug] ?? 0) + (on ? 1 : -1))
+  if (on && starHint) celebrate(starHint)
   applyStars(counts, on ? [...mine, slug] : [...mine].filter((s) => s !== slug))
   tellParent({ type: "wiki-star", slug, starred: on })
+}
+
+// A participant who hasn't starred anything yet sees a gold pill at the graph's
+// bottom-right, "Please star your favorites", a sweep of light crossing it now and then.
+// Their first star throws confetti from it toward the middle of the wiki and the pill
+// goes for good; someone who already starred never sees it (Victor, 2026-10-23). Shown
+// only once the page around the wiki has said which stars are theirs.
+let starHint: HTMLElement | null = null
+let starHintDone = false
+
+function showStarHint() {
+  if (starMode() !== "voter" || starHintDone) return
+  if (mine.size > 0) {
+    starHintDone = true
+    starHint?.remove()
+    starHint = null
+    return
+  }
+  if (starHint) return
+  starHint = Object.assign(document.createElement("div"), {
+    className: "graph-star-hint",
+    textContent: "☆\uFE0E Please star your favorites",
+  })
+  document.body.append(starHint)
+}
+
+function celebrate(hint: HTMLElement) {
+  starHintDone = true
+  starHint = null
+  const from = hint.getBoundingClientRect()
+  const x0 = from.left + from.width / 2
+  const y0 = from.top + from.height / 2
+  const colors = ["#fbbf24", "#f59e0b", "#fde68a", "#8b5cf6", "#ffffff"]
+  for (let i = 0; i < 48; i++) {
+    const bit = document.createElement("div")
+    bit.className = "graph-confetti"
+    bit.style.left = `${x0}px`
+    bit.style.top = `${y0}px`
+    bit.style.background = colors[i % colors.length]
+    document.body.append(bit)
+    // Toward the middle of the window, fanned out, each a little short or long of it.
+    const dx = (innerWidth / 2 - x0) * (0.5 + Math.random()) + (Math.random() - 0.5) * innerWidth * 0.5
+    const dy = (innerHeight / 2 - y0) * (0.5 + Math.random()) + (Math.random() - 0.5) * innerHeight * 0.5
+    const spin = (Math.random() - 0.5) * 1440
+    bit
+      .animate(
+        [
+          { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
+          { transform: `translate(${dx}px, ${dy}px) rotate(${spin}deg)`, opacity: 1, offset: 0.75 },
+          { transform: `translate(${dx}px, ${dy + 60}px) rotate(${spin * 1.3}deg)`, opacity: 0 },
+        ],
+        { duration: 1400 + Math.random() * 600, easing: "cubic-bezier(0.2, 0.7, 0.3, 1)" },
+      )
+      .finished.then(() => bit.remove())
+  }
+  hint.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(1.15)" }], { duration: 500, fill: "forwards" })
+    .finished.then(() => hint.remove())
 }
