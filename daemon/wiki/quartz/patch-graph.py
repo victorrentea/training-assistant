@@ -19,16 +19,15 @@ PATCHES = [
     # on this browser is the high-contrast grey, one already read the dim one
     # (note-pane.ts keeps the list), so what is left to read stands out.
     # A shining note (a takeaway, or starred by participants) is a yellow star: its
-    # dot and its label turn the burst's gold, the label outlined in black so it stays
-    # readable over the burst (Victor, 2026-10-21).
+    # label turns the burst's gold, outlined in black so it stays readable over the
+    # burst (Victor, 2026-10-21). Its dot keeps the seen/unseen colour like any other,
+    # so a starred note not read yet still shows it (Victor, 2026-10-23 - it was gold).
     ("""    } else if (visited.has(d.id) || d.id.startsWith("tags/")) {
       return computedStyleMap["--tertiary"]
     } else {
       return computedStyleMap["--gray"]
     }""",
-     """    } else if (shineOf(d.id) > 0) {
-      return computedStyleMap["--wiki-takeaway"]
-    } else {
+     """    } else {
       return isSeen(d.id) ? computedStyleMap["--wiki-seen"] : computedStyleMap["--wiki-unseen"]
     }"""),
     ("""        fill: computedStyleMap["--dark"],

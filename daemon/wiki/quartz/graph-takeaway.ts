@@ -9,9 +9,9 @@
 // right there, without opening the note (Victor, 2026-10-22).
 //
 // Participants star the notes they found interesting, and those shine for the whole
-// group with the same gold starburst; the dot and its label turn yellow too, like a
-// star, the label outlined in black to stay readable over the burst (Victor,
-// 2026-10-21). In the participant page's Wiki tab every dot has a star to click,
+// group with the same gold starburst; the label turns yellow too, like a star,
+// outlined in black to stay readable over the burst (Victor, 2026-10-21); the dot keeps
+// its read/unread colour (2026-10-23). In the participant page's Wiki tab every dot has a star to click,
 // filled once it's theirs; elsewhere it shows, filled, once anyone starred the note,
 // the trainer included. The trainer's star is his takeaway.
 //
