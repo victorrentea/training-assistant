@@ -92,6 +92,15 @@ PATCHES = [
   stage.addChild(takeawayHazeContainer, takeawayGlowContainer, starsContainer)
   const hovered = hoverGlow(computedStyleMap["--dark"])
   stage.addChild(hovered)
+  // Comets carrying new stars onto their dots (graph-takeaway.ts drawComet): above the
+  // dots and badges, under the stars by the labels.
+  const cometGfx = new Graphics({ zIndex: 4.4, eventMode: "none" })
+  stage.addChild(cometGfx)
+  type Comet = { id: string; d: DotShine; sx: number; sy: number; start: number }
+  const comets: Comet[] = []
+  const flashes: { id: string; start: number }[] = []
+  const shownTotal = new Map<string, number>() // stars per dot as last drawn
+  let shownOnce = false // the first shine() just draws: no comet for stars already there
   const takeawayColors: TakeawayColors = {
     on: computedStyleMap["--wiki-takeaway"],
     off: computedStyleMap["--wiki-takeaway-off"],
@@ -291,7 +300,7 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import "./tooltip.js"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
-     'import { TakeawayColors, TakeawayMark, baselineOf, hoverGlow } from "./graph-takeaway"\n'
+     'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawComet, drawFlash, hoverGlow } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, resetSeen, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -363,19 +372,32 @@ PATCHES = [
       const takeaways = new Set<string>()
       const shining = new Set<string>()
       const levels: Record<string, number> = {}
+      const now = performance.now()
       for (const n of nodeRenderData) {
         const d = dotShine(n.simulationData.id)
+        const id = n.simulationData.id
+        const total = d.count + (d.takeaway ? 1 : 0)
+        const before = shownTotal.get(id) ?? 0
+        shownTotal.set(id, total)
+        const flying = comets.find((c) => c.id === id)
+        if (flying) flying.d = d // lands with the latest count
+        else if (shownOnce && total > before && n.simulationData.x !== undefined) {
+          // From above the window, a little left of the dot, in graph units.
+          const { x: tx, y: ty, k } = currentTransform
+          comets.push({ id, d, start: now, sx: n.simulationData.x! + width / 2 - 140 / k, sy: (-40 - ty) / k })
+        }
         if (d.takeaway) takeaways.add(n.simulationData.id)
         if (d.level > 0) {
           shining.add(n.simulationData.id)
           levels[n.simulationData.id] = d.level
         }
-        n.takeaway?.set(d)
+        if (!comets.some((c) => c.id === id)) n.takeaway?.set(d) // else on impact
         n.color = color(n.simulationData)
         n.label.style.fill = d.level > 0 ? takeawayColors.on : computedStyleMap["--dark"]
         n.label.style.stroke = d.level > 0 ? SHINING_LABEL_STROKE : PLAIN_LABEL_STROKE
       }
       starredIds = takeaways
+      shownOnce = true
       if (!dragging) renderPixiFromD3()
       // The canvas has no DOM: what it shows as starred, which dots draw a star beside
       // them and what each reads, and which ones shine, readable from a test.
@@ -694,6 +716,33 @@ PATCHES = [
      """  function animate(time: number) {
     if (stopAnimation) return
     hovered.visible = hoveredNodeId !== null
+    cometGfx.clear()
+    for (const c of [...comets]) {
+      const n = nodeRenderData.find((m) => m.simulationData.id === c.id)
+      if (!n || n.simulationData.x === undefined) {
+        comets.splice(comets.indexOf(c), 1)
+        continue
+      }
+      const nx = n.simulationData.x! + width / 2
+      const ny = n.simulationData.y! + height / 2
+      const p = (time - c.start) / COMET_MS
+      if (p >= 1) {
+        comets.splice(comets.indexOf(c), 1)
+        n.takeaway?.set(c.d)
+        flashes.push({ id: c.id, start: time })
+        continue
+      }
+      drawComet(cometGfx, c.sx, c.sy, nx, ny, Math.max(0, p), currentTransform.k, takeawayColors.on)
+    }
+    for (const f of [...flashes]) {
+      const n = nodeRenderData.find((m) => m.simulationData.id === f.id)
+      const q = (time - f.start) / FLASH_MS
+      if (!n || q >= 1) {
+        flashes.splice(flashes.indexOf(f), 1)
+        continue
+      }
+      drawFlash(cometGfx, n.simulationData.x! + width / 2, n.simulationData.y! + height / 2, n.radius, q, takeawayColors.on)
+    }
 """),
 ]
 

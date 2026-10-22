@@ -26,7 +26,7 @@
 // this file next to graph.inline.ts, and patch-graph.py makes one TakeawayMark per dot,
 // puts its star and its burst in containers of their own and places them in its
 // animation loop.
-import { CanvasTextMetrics, Rectangle, Sprite, Text, TextStyle, Texture, fontStringFromTextStyle } from "pixi.js"
+import { CanvasTextMetrics, Graphics, Rectangle, Sprite, Text, TextStyle, Texture, fontStringFromTextStyle } from "pixi.js"
 
 export type TakeawayColors = {
   on: string // the burst
@@ -255,4 +255,49 @@ export class TakeawayMark {
 // line half the outline down, then the font's ascent (measureFont caches per font).
 export function baselineOf(style: TextStyle, stroke: number): number {
   return stroke / 2 + CanvasTextMetrics.measureFont(fontStringFromTextStyle(style)).ascent
+}
+
+// A new star on a note arrives as a comet (Victor, 2026-10-23): it falls from above the
+// window onto the dot in COMET_MS, its tail fading behind it, and the dot's burst grows
+// to its new level only on impact, with a short flash. Drawn in graph units, like the
+// dots: k is the zoom, to keep the comet's size on screen.
+export const COMET_MS = 900
+export const FLASH_MS = 450
+
+export function drawComet(
+  g: Graphics,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  p: number, // 0..1 of the flight
+  k: number,
+  gold: string,
+) {
+  const at = (q: number) => {
+    const e = q * q // falling faster as it nears
+    return [x0 + (x1 - x0) * e, y0 + (y1 - y0) * e]
+  }
+  const steps = 14
+  const tail = 0.3 // of the flight, behind the head
+  for (let i = 0; i < steps; i++) {
+    const qa = Math.max(0, p - (tail * (i + 1)) / steps)
+    const qb = Math.max(0, p - (tail * i) / steps)
+    if (qb <= qa) continue
+    const [ax, ay] = at(qa)
+    const [bx, by] = at(qb)
+    const fade = 1 - i / steps
+    g.moveTo(ax, ay)
+      .lineTo(bx, by)
+      .stroke({ color: gold, alpha: 0.9 * fade, width: ((3.2 * fade + 0.4) / k), cap: "round" })
+  }
+  const [hx, hy] = at(p)
+  g.circle(hx, hy, 3.4 / k).fill({ color: gold, alpha: 0.5 })
+  g.circle(hx, hy, 1.8 / k).fill({ color: 0xffffff, alpha: 1 })
+}
+
+// The flash where a comet lands: a ring of light widening and fading out, q 0..1.
+export function drawFlash(g: Graphics, x: number, y: number, r: number, q: number, gold: string) {
+  g.circle(x, y, r * (1.5 + 4 * q)).fill({ color: gold, alpha: 0.45 * (1 - q) })
+  g.circle(x, y, r * (1 + 2 * q)).fill({ color: 0xffffff, alpha: 0.6 * (1 - q) })
 }
