@@ -2,7 +2,7 @@
 // is only ever read in a popover by the cursor. There is no side pane: it covered a
 // third of the graph (Victor, 2026-10-09). Only a click on a dot opens its note -
 // popping up on hover got in the way of just looking at the graph (same day). Its dot
-// turns purple and the popover stays until Esc, a second click on that dot, or a
+// lights up white and the popover stays until Esc, a second click on that dot, or a
 // click on another dot. A link inside the note swaps the popover to that note in
 // place, without ever leaving the graph; hovering one lights up its dot and the edge
 // to it from the note shown.

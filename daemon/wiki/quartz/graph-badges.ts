@@ -1,6 +1,6 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
 // opening: a tiny picture left of the dot when the note shows a slide or a screenshot,
-// above it a link glyph (a box with an arrow leaving it) for the note's external links,
+// above it a small white link glyph (a box with an arrow leaving it) for the note's external links,
 // with "×3" after it from two up, and right of it, at mid-height, one row for its
 // emotional anchors: ⚓ for each moment the summarizer tags and 🎬 for each short played
 // in the room, ⚓⚓🎬 (both are the same thing: a moment that moved the room). Each has
@@ -23,7 +23,7 @@ type Badges = { img: boolean; links: number; anchors?: number; shorts?: number }
 
 export type BadgeColors = {
   img: string // the picture glyph
-  link: string // the link glyph
+  link: string // the link glyph: the text colour
   count: string // the "×3" after it
   halo: string // the page background, behind the picture so edges don't run through it
   font: string
@@ -83,7 +83,7 @@ function times(n: number, colors: BadgeColors): Container {
     const count = new Text({
       eventMode: "none",
       text: `×${n}`,
-      anchor: { x: 0, y: 1 },
+      anchor: { x: 0, y: 0.5 },
       style: {
         fontSize: EMOJI_FONT * 0.8,
         fontWeight: "600",
@@ -93,33 +93,36 @@ function times(n: number, colors: BadgeColors): Container {
       },
       resolution: window.devicePixelRatio * 4,
     })
-    count.position.set(LINK_W + 1.5, 0.5)
+    // Mid-height of the glyph's box, not of the whole glyph with its arrow.
+    count.position.set(LINK_W + 1, -LINK_BOX / 2)
     row.addChild(count)
   }
   return row
 }
 
 // A box with an arrow leaving it by its open top-right corner: "goes out of the wiki",
-// drawn rather than the 🔗 emoji, so it takes the theme's link blue and an outline
-// (Victor, 2026-10-23). Bottom-left corner at (0, 0).
-const LINK_W = 9
+// drawn rather than the 🔗 emoji, so it takes the text colour (white on dark) and an
+// outline, half an emoji's size (Victor, 2026-10-23). Bottom-left corner at (0, 0).
+const LINK_W = 5
+const LINK_BOX = (7.5 * LINK_W) / 9 // the box's height
 function linkGlyph(colors: BadgeColors): Graphics {
   const g = new Graphics({ eventMode: "none" })
+  const k = LINK_W / 9 // drawn on a 9-unit grid
   const draw = () =>
     g
-      .moveTo(3.5, -7.5)
-      .lineTo(0, -7.5)
+      .moveTo(3.5 * k, -7.5 * k)
+      .lineTo(0, -7.5 * k)
       .lineTo(0, 0)
-      .lineTo(7.5, 0)
-      .lineTo(7.5, -4)
-      .moveTo(3.5, -4)
-      .lineTo(LINK_W, -9.5)
-      .moveTo(5, -9.5)
-      .lineTo(LINK_W, -9.5)
-      .lineTo(LINK_W, -5.5)
-  draw().stroke({ color: OUTLINE, width: 3.6, cap: "round", join: "round" })
+      .lineTo(7.5 * k, 0)
+      .lineTo(7.5 * k, -4 * k)
+      .moveTo(3.5 * k, -4 * k)
+      .lineTo(9 * k, -9.5 * k)
+      .moveTo(5 * k, -9.5 * k)
+      .lineTo(9 * k, -9.5 * k)
+      .lineTo(9 * k, -5.5 * k)
+  draw().stroke({ color: OUTLINE, width: 2.6, cap: "round", join: "round" })
   g.beginPath()
-  draw().stroke({ color: colors.link, width: 1.4, cap: "round", join: "round" })
+  draw().stroke({ color: colors.link, width: 1, cap: "round", join: "round" })
   return g
 }
 
@@ -181,13 +184,8 @@ export class NoteBadge extends Container {
     this.position.set(x, y)
     this.picture?.position.set(-r - gap - PICTURE_W, PICTURE_H / 2)
     this.anchors?.position.set(r + gap, (this.anchors?.height ?? 0) / 2) // its line box, bottom-anchored
-    if (this.links) this.links.position.set(-this.linksWidth / 2, -r - gap)
-  }
-
-  // The link glyph and its ×N, when there.
-  private get linksWidth(): number {
-    const count = this.links?.children[1]
-    return count ? count.x + count.width : LINK_W
+    // The glyph itself centred over the dot; its ×N, when there, sticks out to the right.
+    this.links?.position.set(-LINK_W / 2, -r - gap)
   }
 }
 

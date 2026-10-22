@@ -26,7 +26,7 @@
 // this file next to graph.inline.ts, and patch-graph.py makes one TakeawayMark per dot,
 // puts its star and its burst in containers of their own and places them in its
 // animation loop.
-import { Rectangle, Sprite, Text, Texture } from "pixi.js"
+import { CanvasTextMetrics, Rectangle, Sprite, Text, TextStyle, Texture, fontStringFromTextStyle } from "pixi.js"
 
 export type TakeawayColors = {
   on: string // the burst
@@ -160,7 +160,7 @@ export class TakeawayMark {
     this.glow = sprite(hazeTexture())
     this.star = new Text({
       text: HOLLOW,
-      anchor: { x: 0, y: 0.5 },
+      anchor: { x: 0, y: 0 },
       eventMode: "none",
       cursor: "pointer",
       visible: false,
@@ -223,14 +223,17 @@ export class TakeawayMark {
     return this.star.visible ? this.star.text.replace(/\uFE0E/g, "") : ""
   }
 
-  // The dot is at (x, y); its star's glyph starts at (x + dx, y + dy), mid-height, after
-  // the label, `size` high: a size a little under the label's font, so the star reads
-  // as one more word of the name (Victor, 2026-10-23). The burst turns slowly, so it reads as alive
+  // The dot is at (x, y); its star's glyph starts at x + dx, sitting on the label's
+  // baseline at y + baseline, drawn at font size `size`, so it reads as one more letter
+  // of the name (Victor, 2026-10-23). The burst turns slowly, so it reads as alive
   // without pulsing like the yellow Follow ring.
-  place(x: number, y: number, dx: number, dy: number, size: number, time: number) {
+  place(x: number, y: number, dx: number, baseline: number, size: number, time: number) {
     const scale = size / STAR_FONT
     this.star.scale.set(scale)
-    this.star.position.set(x + dx - (STAR_STROKE / 2) * scale, y + dy)
+    this.star.position.set(
+      x + dx - (STAR_STROKE / 2) * scale,
+      y + baseline - baselineOf(this.star.style, STAR_STROKE) * scale,
+    )
     if (this.shine.level > 0) {
       this.burst.position.set(x, y)
       this.burst.rotation = time / 6000
@@ -240,4 +243,10 @@ export class TakeawayMark {
       this.glow.position.set(x, y)
     }
   }
+}
+
+// How far below a text's top its baseline is, in its own units: Pixi draws the first
+// line half the outline down, then the font's ascent (measureFont caches per font).
+export function baselineOf(style: TextStyle, stroke: number): number {
+  return stroke / 2 + CanvasTextMetrics.measureFont(fontStringFromTextStyle(style)).ascent
 }

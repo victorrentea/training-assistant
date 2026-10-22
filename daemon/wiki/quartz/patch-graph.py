@@ -70,7 +70,7 @@ PATCHES = [
   const noteBadges = await loadBadges(fullSlug)
   const badgeColors: BadgeColors = {
     img: computedStyleMap["--wiki-badge-img"],
-    link: computedStyleMap["--wiki-badge-link"],
+    link: computedStyleMap["--dark"],
     count: computedStyleMap["--dark"],
     halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
@@ -150,12 +150,13 @@ PATCHES = [
       }
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
       // The star right after the note's name, on its line (graph-takeaway.ts).
-      // The star after the name, as one more word of it: a word space after its last
-      // letter (the label's width takes in its outline, half of it each side), no
-      // taller than a capital letter (Victor, 2026-10-23).
+      // The star after the name, like one more letter of it: a letter's gap after its
+      // last one (the label's width takes in its outline, half of it each side), on its
+      // baseline, no taller than a capital (Victor, 2026-10-23).
       const em = (n.label.style.fontSize as number) * n.label.scale.x
       const textEnd = n.label.width / 2 - (SHINING_LABEL_STROKE.width / 2) * n.label.scale.x
-      n.takeaway?.place(x + width / 2, y + height / 2, textEnd + 0.25 * em, n.radius + 2 + n.label.height / 2, 0.68 * em, time)
+      const baseline = n.radius + 2 + baselineOf(n.label.style, SHINING_LABEL_STROKE.width) * n.label.scale.y
+      n.takeaway?.place(x + width / 2, y + height / 2, textEnd + 0.06 * em, baseline, 0.68 * em, time)
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
@@ -168,7 +169,6 @@ PATCHES = [
     "--wiki-seen",
     "--wiki-unseen",
     "--wiki-badge-img",
-    "--wiki-badge-link",
     "--wiki-follow-ring",
     "--wiki-takeaway",
     "--wiki-takeaway-off",
@@ -238,19 +238,19 @@ PATCHES = [
       }
 """),
     # Hover: the dot's links light up in the text colour (white on dark), the dot itself
-    # unchanged; the open dot's links too, and that dot alone turns purple (Victor,
-    # 2026-10-23 - links and dot were purple on hover). The rest keep their look,
-    # without the dimming Quartz applies to edges even with focusOnHover off (nodes:
-    # quartz.layout.ts).
+    # unchanged; the open dot's links too, and that dot turns the same bright white, apart
+    # from the grey of a read note (Victor, 2026-10-23 - links and dot were purple). The
+    # rest keep their look, without the dimming Quartz applies to edges even with
+    # focusOnHover off (nodes: quartz.layout.ts).
     ("alpha = l.active ? 1 : 0.2",
      "alpha = 1"),
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
      'l.color = l.active || selectedEdge(l) ? computedStyleMap["--dark"] : computedStyleMap["--lightgray"]'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
-     """      // Repainted, not tinted: a tint multiplies, so on light theme's dark-grey dots
-      // "purple" came out almost black.
-      const purple = selectedNodeId === n.simulationData.id
-      n.gfx.clear().circle(0, 0, n.radius).fill({ color: purple ? "#8b5cf6" : n.color })
+     """      // Repainted, not tinted (a tint multiplies, and can't brighten a grey dot): the
+      // open dot in the text colour; a dot turns grey once its note is read (isSeen).
+      const open = selectedNodeId === n.simulationData.id
+      n.gfx.clear().circle(0, 0, n.radius).fill({ color: open ? computedStyleMap["--dark"] : n.color })
       tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))"""),
     # A hovered dot's label keeps its size: its lit links say enough, and the growing
     # label shifted the star after it (Victor, 2026-10-23).
@@ -260,7 +260,7 @@ PATCHES = [
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
     # Note popover (note-pane.ts): the full graph is the wiki's main screen. The dot
-    # whose note is open stays purple (selectedNodeId) until the popover closes, and
+    # whose note is open stays lit (selectedNodeId) until the popover closes, and
     # so do its edges, whatever the pointer hovers meanwhile.
     ("  let hoveredNodeId: string | null = null\n",
      "  let hoveredNodeId: string | null = null\n"
@@ -278,7 +278,7 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import "./tooltip.js"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
-     'import { TakeawayColors, TakeawayMark } from "./graph-takeaway"\n'
+     'import { TakeawayColors, TakeawayMark, baselineOf } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
