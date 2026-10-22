@@ -1,14 +1,14 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
 // opening: a tiny picture left of the dot when the note shows a slide or a screenshot,
-// 🔗 above it for the note's external links, with "×3" after it from two up, and right
-// of it, at mid-height, one row for its emotional anchors: ⚓ for
-// each moment the summarizer tags and 🎬 for each short played in the room, ⚓⚓🎬
-// (both are the same thing: a moment that moved the room). Each emoji has a dark halo
-// hugging its outline, like the star's, so it reads over the takeaway glow; none, no
-// row (Victor, 2026-10-23 - it was 🌐 and ⚓ with a lowered count, ⚓₂, on a disc of the
-// page background, which read as a black blob on the glow; repeated chains, 🔗🔗🔗🔗,
-// read as a mess; before that "↗3"). A detail, not a key number: it was "🔗3" in bold,
-// which drew the eye before the note titles (Victor, 2026-10-16).
+// above it a link glyph (a box with an arrow leaving it) for the note's external links,
+// with "×3" after it from two up, and right of it, at mid-height, one row for its
+// emotional anchors: ⚓ for each moment the summarizer tags and 🎬 for each short played
+// in the room, ⚓⚓🎬 (both are the same thing: a moment that moved the room). Each has
+// the labels' black outline, so it reads over the takeaway glow; none, no row (Victor,
+// 2026-10-23 - it was a 🔗 emoji, before that 🌐, and ⚓ with a lowered count, ⚓₂, on a
+// disc of the page background, which read as a black blob on the glow; repeated chains,
+// 🔗🔗🔗🔗, read as a mess; before that "↗3"). A detail, not a key number: it was "🔗3"
+// in bold, which drew the eye before the note titles (Victor, 2026-10-16).
 //
 // daemon/wiki/builder.py scans the built pages into note-badges.json at the site
 // root and copies this file next to graph.inline.ts; patch-graph.py makes the graph
@@ -23,7 +23,8 @@ type Badges = { img: boolean; links: number; anchors?: number; shorts?: number }
 
 export type BadgeColors = {
   img: string // the picture glyph
-  count: string // the "×3" after 🔗
+  link: string // the link glyph
+  count: string // the "×3" after it
   halo: string // the page background, behind the picture so edges don't run through it
   font: string
 }
@@ -71,16 +72,13 @@ function picture(colors: BadgeColors): Graphics {
 }
 
 // Bottom-left corner at (0, 0): ⚓ per moment, then 🎬 per short.
-function anchors(moments: number, shorts: number, colors: BadgeColors): Container {
-  return new Container({
-    eventMode: "none",
-    children: [emojiText(ANCHOR.repeat(moments) + SHORT.repeat(shorts), colors)],
-  })
+function anchors(moments: number, shorts: number): Container {
+  return outlined(emojiText(ANCHOR.repeat(moments) + SHORT.repeat(shorts)))
 }
 
-// Bottom-left corner at (0, 0): the emoji once, then "×n" from two up.
-function times(emoji: string, n: number, colors: BadgeColors): Container {
-  const row = new Container({ eventMode: "none", children: [emojiText(emoji, colors)] })
+// Bottom-left corner at (0, 0): the link glyph, then "×n" from two up.
+function times(n: number, colors: BadgeColors): Container {
+  const row = new Container({ eventMode: "none", children: [linkGlyph(colors)] })
   if (n > 1) {
     const count = new Text({
       eventMode: "none",
@@ -91,29 +89,62 @@ function times(emoji: string, n: number, colors: BadgeColors): Container {
         fontWeight: "600",
         fill: colors.count,
         fontFamily: colors.font,
-        stroke: { color: colors.halo, width: 3, join: "round" },
+        stroke: { color: OUTLINE, width: 2.5, join: "round" },
       },
       resolution: window.devicePixelRatio * 4,
     })
-    // Right after the emoji's picture, about 1em wide: its measured width runs further.
-    count.position.set(EMOJI_FONT + 0.5, -0.5)
+    count.position.set(LINK_W + 1.5, 0.5)
     row.addChild(count)
   }
   return row
 }
 
-function emojiText(text: string, colors: BadgeColors): Text {
+// A box with an arrow leaving it by its open top-right corner: "goes out of the wiki",
+// drawn rather than the 🔗 emoji, so it takes the theme's link blue and an outline
+// (Victor, 2026-10-23). Bottom-left corner at (0, 0).
+const LINK_W = 9
+function linkGlyph(colors: BadgeColors): Graphics {
+  const g = new Graphics({ eventMode: "none" })
+  const draw = () =>
+    g
+      .moveTo(3.5, -7.5)
+      .lineTo(0, -7.5)
+      .lineTo(0, 0)
+      .lineTo(7.5, 0)
+      .lineTo(7.5, -4)
+      .moveTo(3.5, -4)
+      .lineTo(LINK_W, -9.5)
+      .moveTo(5, -9.5)
+      .lineTo(LINK_W, -9.5)
+      .lineTo(LINK_W, -5.5)
+  draw().stroke({ color: OUTLINE, width: 3.6, cap: "round", join: "round" })
+  g.beginPath()
+  draw().stroke({ color: colors.link, width: 1.4, cap: "round", join: "round" })
+  return g
+}
+
+// The labels' black outline, around an emoji: a stroke outlines an emoji's picture
+// badly, so eight black copies of it, a hair off in each direction, sit behind it.
+const OUTLINE = "#000000"
+function outlined(text: Text): Container {
+  const row = new Container({ eventMode: "none" })
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI) / 4
+    const copy = emojiText(text.text)
+    copy.tint = 0x000000
+    copy.position.set(Math.cos(a) * 0.9, Math.sin(a) * 0.9)
+    row.addChild(copy)
+  }
+  row.addChild(text)
+  return row
+}
+
+function emojiText(text: string): Text {
   return new Text({
     eventMode: "none",
     text,
     anchor: { x: 0, y: 1 },
-    style: {
-      fontSize: EMOJI_FONT,
-      fontFamily: EMOJI_FONTS,
-      letterSpacing: -1.5,
-      // A stroke outlines an emoji's picture badly; a tight shadow, unshifted, rings it.
-      dropShadow: { color: colors.halo, alpha: 1, blur: 1.5, distance: 0, angle: 0 },
-    },
+    style: { fontSize: EMOJI_FONT, fontFamily: EMOJI_FONTS, letterSpacing: -1.5 },
     resolution: window.devicePixelRatio * 4,
   })
 }
@@ -122,13 +153,12 @@ function emojiText(text: string, colors: BadgeColors): Text {
 // a colour emoji.
 const EMOJI_FONTS = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
 // \uFE0F: the emoji, not the text glyph.
-const LINK = "\u{1F517}"
 const ANCHOR = "\u2693\uFE0F"
 const SHORT = "\u{1F3AC}"
 
 export class NoteBadge extends Container {
   private picture: Graphics | null
-  private links: Container | null // 🔗×N
+  private links: Container | null // the link glyph, ×N
   private anchors: Container | null // ⚓⚓🎬
 
   constructor(badges: Badges, colors: BadgeColors) {
@@ -136,15 +166,16 @@ export class NoteBadge extends Container {
     const moments = badges.anchors ?? 0
     const shorts = badges.shorts ?? 0
     this.picture = badges.img ? picture(colors) : null
-    this.links = badges.links > 0 ? times(LINK, badges.links, colors) : null
-    this.anchors = moments + shorts > 0 ? anchors(moments, shorts, colors) : null
+    this.links = badges.links > 0 ? times(badges.links, colors) : null
+    this.anchors = moments + shorts > 0 ? anchors(moments, shorts) : null
     // addChild() with no child throws
     for (const child of [this.picture, this.links, this.anchors]) if (child) this.addChild(child)
   }
 
   // The dot is at (x, y) with radius r. Around it, each at its middle: the picture on
-  // its left, the ⚓🎬 row on its right, mirroring it, and the 🔗 right above it (Victor,
-  // 2026-10-23 - they sat at 45° on the rim, the picture up-left, the 🔗 up-right).
+  // its left, the ⚓🎬 row on its right, mirroring it, and the links right above it
+  // (Victor, 2026-10-23 - they sat at 45° on the rim, the picture up-left, the links
+  // up-right).
   place(x: number, y: number, r: number) {
     const gap = 1.5
     this.position.set(x, y)
@@ -153,11 +184,10 @@ export class NoteBadge extends Container {
     if (this.links) this.links.position.set(-this.linksWidth / 2, -r - gap)
   }
 
-  // The 🔗's picture is about 1em wide, its measured width more: the ×N, when there, from
-  // where it starts.
+  // The link glyph and its ×N, when there.
   private get linksWidth(): number {
     const count = this.links?.children[1]
-    return count ? count.x + count.width : EMOJI_FONT
+    return count ? count.x + count.width : LINK_W
   }
 }
 

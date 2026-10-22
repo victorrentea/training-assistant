@@ -70,7 +70,8 @@ PATCHES = [
   const noteBadges = await loadBadges(fullSlug)
   const badgeColors: BadgeColors = {
     img: computedStyleMap["--wiki-badge-img"],
-    count: computedStyleMap["--darkgray"],
+    link: computedStyleMap["--wiki-badge-link"],
+    count: computedStyleMap["--dark"],
     halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
   }
@@ -167,6 +168,7 @@ PATCHES = [
     "--wiki-seen",
     "--wiki-unseen",
     "--wiki-badge-img",
+    "--wiki-badge-link",
     "--wiki-follow-ring",
     "--wiki-takeaway",
     "--wiki-takeaway-off",

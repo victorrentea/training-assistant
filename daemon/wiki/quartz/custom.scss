@@ -545,13 +545,15 @@ body {
 }
 
 // Badges on the graph's dots (graph-badges.ts): a picture when the note shows a slide
-// or a screenshot (the 🔗, ⚓ and 🎬 next to it are emoji, in their own colours).
+// or a screenshot, and the link glyph (the ⚓ and 🎬 are emoji, in their own colours).
 :root {
   --wiki-badge-img: #d97706;
+  --wiki-badge-link: #2563eb;
 }
 
 :root[saved-theme="dark"] {
   --wiki-badge-img: #fbbf24;
+  --wiki-badge-link: #60a5fa;
 }
 
 // The ring a follower sees around the note the trainer has open (patch-graph.py):
