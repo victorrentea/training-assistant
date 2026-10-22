@@ -58,13 +58,14 @@ PATCHES = [
     nodeRenderData.push(nodeRenderDatum)"""),
     ("n.label.position.set(x + width / 2, y + height / 2)",
      "n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)"),
-    # Badges on the dots (graph-badges.ts): a picture, and 🔗 ⚓ 🎬 once per link, anchor, short,
-    # so the notes worth opening stand out. In a container of their own, above the dots:
-    # the zoom handler fades every label when zoomed out, and the badges must stay.
+    # Badges on the dots (graph-badges.ts): a picture, 🔗 ⚓ 🎬, so the notes worth opening
+    # stand out. In a container of their own: the zoom handler fades every label when
+    # zoomed out, and the badges must stay. The lowest layer but the edges: a title is
+    # never hidden under them (Victor, 2026-10-23 - they were above the labels).
     ("""  stage.addChild(nodesContainer, labelsContainer, linkContainer)
 """,
      """  stage.addChild(nodesContainer, labelsContainer, linkContainer)
-  const badgesContainer = new Container<NoteBadge>({ zIndex: 4, isRenderGroup: true, eventMode: "none" })
+  const badgesContainer = new Container<NoteBadge>({ zIndex: 1.2, isRenderGroup: true, eventMode: "none" })
   stage.addChild(badgesContainer)
   const noteBadges = await loadBadges(fullSlug)
   const badgeColors: BadgeColors = {
