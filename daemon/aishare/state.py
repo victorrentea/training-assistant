@@ -38,7 +38,9 @@ QUESTIONS: list[dict] = [
     {"id": "code_review", "kind": "choice", "text": "Do you have a code-review skill / agent?", "options": YES_NO_IDK},
     {"id": "nontech_pr", "kind": "choice", "text": "Ever received a PR written by a non-developer (e.g. PO, business)?", "options": YES_NO},
     {"id": "ai_generated", "kind": "slider", "text": "How much% of the code you🫵 write is AI-generated?",
-     "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 90},
+     "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 90,
+     "future_link": {"text": "½ of devs by end of 2026 ↗",
+                     "url": "https://www.youtube.com/watch?v=wc8FBhQtdsA&t=2405s"}},
     {"id": "review", "kind": "slider", "text": "How much of that do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
 ]

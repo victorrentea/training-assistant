@@ -2299,6 +2299,10 @@ components:
           - type: integer
           - type: 'null'
           title: Future
+        future_link:
+          anyOf:
+          - $ref: '#/components/schemas/AiShareLink'
+          - type: 'null'
         link:
           anyOf:
           - $ref: '#/components/schemas/AiShareLink'

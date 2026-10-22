@@ -5715,7 +5715,7 @@ function _aiShareUpdateCard(card, q) {
       // The curve sits right over the slider: x=0/100 at the thumb centres.
       var plotH = Math.round(Math.max(140, Math.min(280, window.innerHeight * 0.28)));
       AiShareChart.render({ plot: plot }, res.values, { me: answered ? mine : null, inset: 11, height: plotH,
-        id: 'pax-' + q.id, label: q.text, future: q.future });
+        id: 'pax-' + q.id, label: q.text, future: q.future, futureLink: q.future_link });
     } else if (window.AiShareChart) {
       AiShareChart.reset({ plot: plot });
     }

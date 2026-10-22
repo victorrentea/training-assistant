@@ -2677,7 +2677,7 @@ function _renderEngagementPopover() {
       block.querySelector('.aishare-host-block-count').textContent = res.count ? `${res.count} ${res.count === 1 ? 'answer' : 'answers'}` : '';
       if (q.kind === 'slider') {
         AiShareChart.render({ plot: block.querySelector('.aishare-plot') }, res.values || [],
-          { axis: true, inset: 11, id: 'host-' + q.id, label: q.text, future: q.future, height: plotH });
+          { axis: true, inset: 11, id: 'host-' + q.id, label: q.text, future: q.future, futureLink: q.future_link, height: plotH });
       } else {
         let counts = res.counts || [];
         if (q.host_options) {

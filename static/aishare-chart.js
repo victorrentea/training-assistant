@@ -12,6 +12,7 @@
  *   opts.id      unique per chart on the page (gradient ids)
  *   opts.label   aria-label of the chart
  *   opts.future  (optional) from this % on the curve is painted green
+ *   opts.futureLink  (optional) {text, url} — a link under the green slice's % label
  *
  * A smoothed density (Gaussian KDE, reflected at 0/100 so the bell does not
  * leak past the axis), one dot per answer sitting on the curve, and the average
@@ -123,9 +124,17 @@
     var futureLine = el('path', { fill: 'none', stroke: FUTURE_COLOR, 'stroke-width': 2.5, 'stroke-linejoin': 'round' }, svg);
     if (future != null) {
       // Name the green slice at its foot: "90%" and up.
-      var fl = el('text', { x: (X(future) + X(100)) / 2, y: y0 - 8, 'text-anchor': 'middle', fill: FUTURE_COLOR,
+      var link = opts.futureLink;
+      var fl = el('text', { x: (X(future) + X(100)) / 2, y: y0 - (link ? 26 : 8), 'text-anchor': 'middle', fill: FUTURE_COLOR,
         'font-size': 13, 'font-weight': 800, 'pointer-events': 'none' }, svg);
       fl.textContent = future + '%';
+      if (link) {
+        // Under the label, right-aligned to 100% so it fits on a phone: where the % comes from.
+        var a = el('a', { href: link.url, target: '_blank', rel: 'noopener', class: 'aishare-future-link' }, svg);
+        var lt = el('text', { x: X(100), y: y0 - 8, 'text-anchor': 'end', fill: FUTURE_COLOR,
+          'font-size': 12, 'font-weight': 700, 'text-decoration': 'underline', cursor: 'pointer' }, a);
+        lt.textContent = link.text;
+      }
     }
     if (opts.axis) el('line', { x1: X(0), x2: X(100), y1: y0 - 0.75, y2: y0 - 0.75, stroke: 'var(--aishare-muted)', 'stroke-width': 1.5 }, svg);
 

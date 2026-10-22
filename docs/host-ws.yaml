@@ -215,6 +215,15 @@ components:
                     url:
                       type: string
                   description: "turns link.text inside the question text into a link"
+                future_link:
+                  nullable: true
+                  type: object
+                  properties:
+                    text:
+                      type: string
+                    url:
+                      type: string
+                  description: "slider: a link under the green slice's % label"
           results:
             type: array
             description: Anonymous per-question results (no names, no UUIDs), in question order
