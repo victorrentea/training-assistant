@@ -3,17 +3,17 @@
 // (Victor, 2026-10-19). Unrelated to the teal topic glow (graph-glow.ts): that one comes
 // from an LLM score at build time, this one from a click of the trainer, during the day.
 //
-// On the trainer's machine every dot not starred yet has a hollow star he clicks, on its
-// left, mid-height: the top corners hold the link count and the picture badges
-// (graph-badges.ts), the label hangs below. A takeaway shows no star of his: the
-// starburst says it (Victor, 2026-10-19); he un-stars it from the note popover's star.
+// On the trainer's machine every dot has a star he clicks, on its left, mid-height: the
+// top corners hold the link count and the picture badges (graph-badges.ts), the label
+// hangs below. Hollow until he stars the note, filled after; a click on it un-stars it
+// right there, without opening the note (Victor, 2026-10-22).
 //
 // Participants star the notes they found interesting, and those shine for the whole
 // group with the same gold starburst; the dot and its label turn yellow too, like a
 // star, the label outlined in black to stay readable over the burst (Victor,
 // 2026-10-21). In the participant page's Wiki tab every dot has a star to click,
-// filled once it's theirs; everywhere, the star shows how many starred the note
-// ("3☆"), none when nobody did. The trainer keeps his hollow star for key takeaways.
+// filled once it's theirs; everywhere, the star shows how many starred the note, the
+// trainer included ("3☆"), none when nobody did. The trainer's star is his takeaway.
 //
 // Five levels of shine, climbing as stars pile up on the same note (his takeaway counts
 // as one star): 1 is the takeaway's starburst as it was, 2 a brighter star, and 3 to 5
@@ -189,21 +189,13 @@ export class TakeawayMark {
       this.glow.width = this.glow.height = 2 * this.r * look.glow
       this.glow.alpha = look.glowAlpha
     }
-    const n = count > 0 ? String(count) : ""
-    let text = n + HOLLOW
-    let visible = count > 0
-    let clickable = false
-    if (this.mode === "voter") {
-      text = n + (mine ? FILLED : HOLLOW)
-      visible = clickable = true
-    } else if (this.mode === "trainer" && !takeaway) {
-      // His hollow star stars a takeaway; a takeaway shows no star of his, only the
-      // participants' count, if any.
-      visible = clickable = true
-    } else if (count > 0) {
-      text = n + FILLED
-    }
-    this.star.text = text
+    // Everyone's stars, his takeaway counting as one, as for the level of shine.
+    const total = count + (takeaway ? 1 : 0)
+    // Filled when it's the reader's own: the trainer's takeaway, the participant's star.
+    const own = this.mode === "trainer" ? takeaway : this.mode === "voter" ? mine : total > 0
+    const clickable = this.mode !== "viewer"
+    const visible = clickable || total > 0
+    this.star.text = (total > 0 ? String(total) : "") + (own ? FILLED : HOLLOW)
     const b = this.star.getLocalBounds()
     this.star.hitArea = new Rectangle(
       b.x - STAR_HIT_PAD,
@@ -214,7 +206,7 @@ export class TakeawayMark {
     this.star.visible = visible
     this.star.eventMode = clickable ? "static" : "none"
     this.star.cursor = clickable ? "pointer" : "default"
-    this.star.style.fill = mine || count > 0 ? this.colors.on : this.colors.off
+    this.star.style.fill = own || total > 0 ? this.colors.on : this.colors.off
   }
 
   // Whether its star is drawn, and what it reads: for a test, the canvas has no DOM.

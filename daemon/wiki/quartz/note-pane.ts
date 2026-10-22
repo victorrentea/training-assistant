@@ -483,7 +483,8 @@ function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | n
 // A note without a lead paragraph shows whole. Its slides stay out of the fold, between
 // the lead and "Details" (Victor, 2026-10-15): a picture is worth showing up front. So
 // do its emotional anchors (⚓ *the story*, Victor, 2026-10-16), one line each: the
-// story is what makes the point stick.
+// story is what makes the point stick. Then its external links, one short line each, so
+// the reader sees at once where to go (Victor, 2026-10-22); they stay in the points too.
 function foldPoints(body: HTMLElement) {
   const article = body.querySelector("article")
   const lead = article?.firstElementChild
@@ -504,12 +505,51 @@ function foldPoints(body: HTMLElement) {
     line.append("⚓ ", em.cloneNode(true))
     return line
   })
+  const links = linkList(own)
   const details = document.createElement("details")
   details.className = "note-points"
   const summary = document.createElement("summary")
   summary.textContent = "Details"
   details.append(summary, ...rest.filter((e) => !slides.includes(e)))
-  article.append(...slides, ...lines, details)
+  article.append(...slides, ...lines, ...(links ? [links] : []), details)
+}
+
+// The note's external links as a short list: the note's own word for each (a link
+// written as a bare URL says nothing more) and, after it, the site it goes to.
+function linkList(own: Element[]): HTMLElement | null {
+  const seenHrefs = new Set<string>()
+  const items: HTMLElement[] = []
+  for (const a of own.flatMap((e) => [...e.querySelectorAll<HTMLAnchorElement>("a.external")])) {
+    if (seenHrefs.has(a.href)) continue
+    seenHrefs.add(a.href)
+    let site: string
+    try {
+      site = new URL(a.href).hostname.replace(/^www\./, "")
+    } catch {
+      continue
+    }
+    const text = a.textContent?.trim() ?? ""
+    const link = document.createElement("a")
+    link.className = "external"
+    link.href = a.href
+    link.target = "_blank"
+    link.rel = "noopener"
+    link.textContent = !text || /^https?:|^www\./.test(text) || text === site ? site : text
+    const item = document.createElement("li")
+    item.append(link)
+    if (link.textContent !== site) {
+      const where = document.createElement("span")
+      where.className = "note-link-site"
+      where.textContent = site
+      item.append(" ", where)
+    }
+    items.push(item)
+  }
+  if (items.length === 0) return null
+  const list = document.createElement("ul")
+  list.className = "note-links"
+  list.append(...items)
+  return list
 }
 
 // Not on a pan or zoom of the graph: the note being read stays open while the reader
@@ -612,8 +652,11 @@ document.addEventListener("keydown", (e) => {
 // Who is the trainer: the same as for Follow - the ON_HOST_MACHINE cookie shows the
 // hollow stars, and only his browser reaches the daemon on 127.0.0.1 anyway.
 // A wiki in a tab of its own has no participant page around it: it asks the daemon
-// (through Railway) for the set on load, and again every few seconds.
+// (through Railway) for the set on load, and again every few seconds. On the trainer's
+// machine it asks his own daemon, every second or two: a participant's star shows up
+// on his graph live (Victor, 2026-10-22), for no load on Railway.
 const TAKEAWAYS_POLL_MS = 15000
+const TRAINER_POLL_MS = 1500
 let starred = new Set<SimpleSlug>()
 let changedAt = 0 // the trainer's last click: an older answer must not undo it
 
@@ -624,18 +667,21 @@ function applyTakeaways(slugs: readonly string[]) {
 }
 
 // The popover's star, left of its ✕: the trainer's takeaway on his machine, the
-// participant's own star in the participant page, just the count anywhere else.
+// participant's own star in the participant page, just the count anywhere else. The
+// count goes before it, as "3×★" on one line (Victor, 2026-10-22), and takes in the
+// trainer's takeaway, like the star by the dot: his click shows at once as one more.
 function showPeekStar() {
   const button = peek?.querySelector(".note-peek-star") as HTMLButtonElement | null
   if (!peek || !button) return
   const mode = starMode()
   const takeaway = peeked !== null && starred.has(peeked)
-  const { count, mine: own } = peeked !== null ? starsOf(peeked) : { count: 0, mine: false }
-  const on = mode === "voter" ? own : takeaway || count > 0
+  const { count, mine: voted } = peeked !== null ? starsOf(peeked) : { count: 0, mine: false }
+  const total = count + (takeaway ? 1 : 0)
+  const own = mode === "trainer" ? takeaway : mode === "voter" ? voted : total > 0
   peek.classList.toggle("takeaway", peeked !== null && shineOf(peeked) > 0)
-  button.textContent = (count > 0 ? `${count} ` : "") + (on ? "★\uFE0E" : "☆\uFE0E")
-  button.classList.toggle("on", on)
-  button.hidden = mode === "viewer" && !on
+  button.textContent = (total > 0 ? `${total}×` : "") + (own ? "★\uFE0E" : "☆\uFE0E")
+  button.classList.toggle("on", own)
+  button.hidden = mode === "viewer" && total === 0
   button.disabled = mode === "viewer"
   const people = count === 1 ? "1 participant starred it" : `${count} participants starred it`
   const tip =
@@ -643,7 +689,7 @@ function showPeekStar() {
       ? (takeaway ? "Key takeaway - click to un-star" : "Star as a key takeaway: it glows for everyone") +
         (count > 0 ? ` · ${people}` : "")
       : mode === "voter"
-        ? own
+        ? voted
           ? `You starred it - click to un-star · ${people}`
           : "Star it if you found it interesting: it shines for everyone" + (count > 0 ? ` · ${people}` : "")
         : takeaway
@@ -672,14 +718,15 @@ export function toggleTakeaway(slug: SimpleSlug, on: boolean) {
 function fetchTakeaways() {
   const asked = Date.now()
   const site = new URL(pathToRoot(getFullSlug(window)), window.location.href)
-  fetch(new URL("../api/participant/wiki/takeaways", site))
+  const api = onHostMachine() ? `${HOST_DAEMON}/api/participant/` : new URL("../api/participant/", site)
+  fetch(new URL("wiki/takeaways", api))
     .then((res) => (res.ok ? res.json() : null))
     .then((json: { slugs?: string[] } | null) => {
       if (json && Array.isArray(json.slugs) && asked > changedAt) applyTakeaways(json.slugs)
     })
     .catch(() => {})
   // Counts only: a wiki in a tab of its own has no participant identity to star with.
-  fetch(new URL("../api/participant/wiki/stars", site))
+  fetch(new URL("wiki/stars", api))
     .then((res) => (res.ok ? res.json() : null))
     .then((json: { counts?: unknown } | null) => {
       if (json) applyStars(json.counts, [])
@@ -689,9 +736,12 @@ function fetchTakeaways() {
 
 if (!embedded) {
   fetchTakeaways()
-  window.setInterval(() => {
-    if (document.visibilityState === "visible") fetchTakeaways()
-  }, TAKEAWAYS_POLL_MS)
+  window.setInterval(
+    () => {
+      if (document.visibilityState === "visible") fetchTakeaways()
+    },
+    onHostMachine() ? TRAINER_POLL_MS : TAKEAWAYS_POLL_MS,
+  )
 }
 
 // ── Participants' stars ──

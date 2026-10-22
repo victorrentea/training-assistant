@@ -68,12 +68,15 @@ body {
 
   // Left of the ✕ (note-pane.ts): the trainer stars the note as a key takeaway; for
   // everyone else it only shows, filled, on a starred note.
+  // "3×★" on one line: it grows to the left, away from the ✕.
   .note-peek-star {
     position: absolute;
     top: 0.45rem;
     right: 2.75rem;
-    width: 2.2rem;
+    min-width: 2.2rem;
     height: 2.2rem;
+    padding: 0 0.35rem;
+    white-space: nowrap;
     border: none;
     border-radius: 999px;
     background: none;
@@ -110,7 +113,7 @@ body {
 
   .note-peek-title {
     margin: 0;
-    padding: 0.8rem 5.2rem 0.2rem 1.1rem;
+    padding: 0.8rem 6.6rem 0.2rem 1.1rem;
     font-size: 1.5rem;
     line-height: 1.2;
     // The handle that drags the popover (note-pane.ts): no text selection on a drag.
@@ -199,6 +202,21 @@ body {
     // The emotional anchors lifted above "Details" (note-pane.ts), one per line.
     p.note-anchor {
       margin: 0.25rem 0;
+    }
+
+    // The note's external links, right before "Details": one short line each.
+    ul.note-links {
+      margin: 0.3rem 0;
+      padding-left: 1.1rem;
+
+      li {
+        margin: 0.1rem 0;
+      }
+
+      .note-link-site {
+        color: var(--gray);
+        font-size: 0.85em;
+      }
     }
 
     // Tight around the rule above "See also" and under the note's last line (Victor,
