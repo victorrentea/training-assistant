@@ -2,8 +2,9 @@
 // opening: a tiny picture left of the dot when the note shows a slide or a screenshot,
 // above it a small white link glyph (a box with an arrow leaving it) for the note's external links,
 // with "×3" after it from two up, and right of it, at mid-height, one row for its
-// emotional anchors: ⚓ for each moment the summarizer tags and 🎬 for each short played
-// in the room, ⚓⚓🎬 (both are the same thing: a moment that moved the room). Each has
+// emotional anchors: 🎬 for the shorts played in the room and ⚓ for the moments the
+// summarizer tags, each with ×N from two up (both are the same thing: a moment that
+// moved the room). Each has
 // the labels' black outline, so it reads over the takeaway glow; none, no row (Victor,
 // 2026-10-23 - it was a 🔗 emoji, before that 🌐, and ⚓ with a lowered count, ⚓₂, on a
 // disc of the page background, which read as a black blob on the glow; repeated chains,
@@ -80,32 +81,57 @@ function picture(colors: BadgeColors): Graphics {
 }
 
 // Bottom-left corner at (0, 0): ⚓ per moment, then 🎬 per short.
-function anchors(moments: number, shorts: number): Container {
-  return outlined(emojiText(ANCHOR.repeat(moments) + SHORT.repeat(shorts)))
+// Bottom-left corner at (0, 0): 🎬 then ⚓, each once, with "×n" after it from two up,
+// like the links' count (Victor, 2026-10-23 - ⚓⚓🎬, one emoji per item, ran long).
+function anchors(moments: number, shorts: number, colors: BadgeColors): Container {
+  const row = new Container({ eventMode: "none" })
+  let x = 0
+  for (const [emoji, n] of [
+    [SHORT, shorts],
+    [ANCHOR, moments],
+  ] as const) {
+    if (n === 0) continue
+    const glyph = outlined(emojiText(emoji))
+    glyph.x = x
+    row.addChild(glyph)
+    x += EMOJI_FONT + 0.6 // the emoji's picture is about 1em wide, its measured width more
+    if (n > 1) {
+      const count = countText(n, colors)
+      count.position.set(x - 0.6, -EMOJI_FONT * 0.55)
+      row.addChild(count)
+      x += count.width + 0.6
+    }
+  }
+  return row
 }
 
 // Bottom-left corner at (0, 0): the link glyph, then "×n" from two up.
 function times(n: number, colors: BadgeColors): Container {
   const row = new Container({ eventMode: "none", children: [linkGlyph(colors)] })
   if (n > 1) {
-    const count = new Text({
-      eventMode: "none",
-      text: `×${n}`,
-      anchor: { x: 0, y: 0.5 },
-      style: {
-        fontSize: EMOJI_FONT * 0.8,
-        fontWeight: "600",
-        fill: colors.count,
-        fontFamily: colors.font,
-        stroke: { color: OUTLINE, width: 2.5, join: "round" },
-      },
-      resolution: window.devicePixelRatio * 4,
-    })
+    const count = countText(n, colors)
     // Mid-height of the glyph's box, not of the whole glyph with its arrow.
     count.position.set(LINK_W - 0.4, -LINK_BOX / 2 + 0.6)
     row.addChild(count)
   }
   return row
+}
+
+// "×n", small and grey: a detail, it mustn't jump out. Left edge, mid-height at (0, 0).
+function countText(n: number, colors: BadgeColors): Text {
+  return new Text({
+    eventMode: "none",
+    text: `×${n}`,
+    anchor: { x: 0, y: 0.5 },
+    style: {
+      fontSize: EMOJI_FONT * 0.8,
+      fontWeight: "600",
+      fill: colors.count,
+      fontFamily: colors.font,
+      stroke: { color: OUTLINE, width: 2.5, join: "round" },
+    },
+    resolution: window.devicePixelRatio * 4,
+  })
 }
 
 // A box with an arrow leaving it by its open top-right corner: "goes out of the wiki",
@@ -170,7 +196,7 @@ const SHORT = "\u{1F3AC}"
 export class NoteBadge extends Container {
   private picture: Graphics | null
   private links: Container | null // the link glyph, ×N
-  private anchors: Container | null // ⚓⚓🎬
+  private anchors: Container | null // 🎬×N ⚓×N
 
   constructor(badges: Badges, colors: BadgeColors) {
     super({ eventMode: "none" })
@@ -178,7 +204,7 @@ export class NoteBadge extends Container {
     const shorts = badges.shorts ?? 0
     this.picture = badges.img ? picture(colors) : null
     this.links = badges.links > 0 ? times(badges.links, colors) : null
-    this.anchors = moments + shorts > 0 ? anchors(moments, shorts) : null
+    this.anchors = moments + shorts > 0 ? anchors(moments, shorts, colors) : null
     // addChild() with no child throws
     for (const child of [this.picture, this.links, this.anchors]) if (child) this.addChild(child)
   }
@@ -194,7 +220,8 @@ export class NoteBadge extends Container {
     this.anchors?.position.set(r + gap, (this.anchors?.height ?? 0) / 2) // its line box, bottom-anchored
     // The glyph's box centred over the dot, its arrow left out of the reckoning; its ×N,
     // when there, sticks out to the right.
-    this.links?.position.set(-LINK_BOX / 2, -r - gap)
+    // As far from the dot as the ⚓🎬 row: the glyph's outline takes some of the gap.
+    this.links?.position.set(-LINK_BOX / 2, -r - gap - 1.5)
   }
 }
 

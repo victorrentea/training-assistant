@@ -388,7 +388,8 @@ function leastCovering(at: Point, w: number, h: number, top: number, bottom: num
 
 // A soft beam from the open dot to its popover, under it, so the eye sees where the
 // note comes from (Victor, 2026-10-23): the outline of the dot's disc and the
-// popover's corners together, its sides tangent to the dot, strongest at the dot. In the colour of the open dot's lit links,
+// popover's corners together, its sides tangent to the dot, strongest at the dot. Its
+// edges stand out, its middle barely tinted. In the colour of the open dot's lit links,
 // the text colour (white on dark); gold, like its burst, when the note shines. Redrawn
 // every frame while the popover is open: the graph moves, zooms and gets dragged under it.
 let beam: SVGSVGElement | null = null
@@ -401,9 +402,11 @@ function ensureBeam(): SVGSVGElement {
   beam.classList.add("note-beam")
   beam.innerHTML = `
     <defs><linearGradient id="note-beam-fill" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-opacity="0.16"/><stop offset="1" stop-opacity="0.03"/>
+      <stop offset="0" stop-opacity="0.07"/><stop offset="1" stop-opacity="0.01"/>
+    </linearGradient><linearGradient id="note-beam-edge" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-opacity="0.5"/><stop offset="1" stop-opacity="0.12"/>
     </linearGradient></defs>
-    <polygon fill="url(#note-beam-fill)"/>`
+    <polygon fill="url(#note-beam-fill)" stroke="url(#note-beam-edge)" stroke-width="1.5" stroke-linejoin="round"/>`
   document.body.append(beam)
   return beam
 }
@@ -429,14 +432,15 @@ function followWithBeam() {
         return [dot.x + dot.r * Math.cos(a), dot.y + dot.r * Math.sin(a)]
       })
       svg.querySelector("polygon")!.setAttribute("points", hull([...rim, ...corners]).join(" "))
-      const fill = svg.querySelector("linearGradient")!
       const color = peek!.classList.contains("takeaway") ? "var(--wiki-takeaway)" : "var(--dark)"
-      // A style, not the stop-color attribute: an attribute doesn't read CSS variables.
-      fill.querySelectorAll("stop").forEach((stop) => (stop.style.stopColor = color))
-      fill.setAttribute("x1", `${dot.x}`)
-      fill.setAttribute("y1", `${dot.y}`)
-      fill.setAttribute("x2", `${(box.left + box.right) / 2}`)
-      fill.setAttribute("y2", `${(box.top + box.bottom) / 2}`)
+      svg.querySelectorAll("linearGradient").forEach((gradient) => {
+        // A style, not the stop-color attribute: an attribute doesn't read CSS variables.
+        gradient.querySelectorAll("stop").forEach((stop) => (stop.style.stopColor = color))
+        gradient.setAttribute("x1", `${dot.x}`)
+        gradient.setAttribute("y1", `${dot.y}`)
+        gradient.setAttribute("x2", `${(box.left + box.right) / 2}`)
+        gradient.setAttribute("y2", `${(box.top + box.bottom) / 2}`)
+      })
     }
     if (dot !== null && peek?.classList.contains("open")) beamFrame = requestAnimationFrame(draw)
     else svg.style.display = "none"
