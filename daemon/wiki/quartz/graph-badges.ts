@@ -84,14 +84,15 @@ function picture(colors: BadgeColors): Graphics {
 // Bottom-left corner at (0, 0): 🎬 then ⚓, each once, with "×n" after it from two up,
 // like the links' count (Victor, 2026-10-23 - ⚓⚓🎬, one emoji per item, ran long).
 function anchors(moments: number, shorts: number, colors: BadgeColors): Container {
-  const row = new Container({ eventMode: "none" })
+  const row = new Container({ eventMode: "passive" })
   let x = 0
-  for (const [emoji, n] of [
-    [SHORT, shorts],
-    [ANCHOR, moments],
+  for (const [emoji, n, name] of [
+    [SHORT, shorts, "Short"],
+    [ANCHOR, moments, "Emotional anchor"],
   ] as const) {
     if (n === 0) continue
     const glyph = outlined(emojiText(emoji))
+    namedAfterAWhile(glyph, name)
     glyph.x = x
     row.addChild(glyph)
     x += EMOJI_FONT + 0.6 // the emoji's picture is about 1em wide, its measured width more
@@ -107,7 +108,9 @@ function anchors(moments: number, shorts: number, colors: BadgeColors): Containe
 
 // Bottom-left corner at (0, 0): the link glyph, then "×n" from two up.
 function times(n: number, colors: BadgeColors): Container {
-  const row = new Container({ eventMode: "none", children: [linkGlyph(colors)] })
+  const glyph = linkGlyph(colors)
+  namedAfterAWhile(glyph, "Link")
+  const row = new Container({ eventMode: "passive", children: [glyph] })
   if (n > 1) {
     const count = countText(n, colors)
     // Mid-height of the glyph's box, not of the whole glyph with its arrow.
@@ -199,10 +202,11 @@ export class NoteBadge extends Container {
   private anchors: Container | null // 🎬×N ⚓×N
 
   constructor(badges: Badges, colors: BadgeColors) {
-    super({ eventMode: "none" })
+    super({ eventMode: "passive" })
     const moments = badges.anchors ?? 0
     const shorts = badges.shorts ?? 0
     this.picture = badges.img ? picture(colors) : null
+    if (this.picture) namedAfterAWhile(this.picture, "Screenshot")
     this.links = badges.links > 0 ? times(badges.links, colors) : null
     this.anchors = moments + shorts > 0 ? anchors(moments, shorts, colors) : null
     // addChild() with no child throws
@@ -230,4 +234,35 @@ export function makeBadge(badges: Badges | undefined, colors: BadgeColors): Note
   return badges && (badges.img || badges.links + (badges.anchors ?? 0) + (badges.shorts ?? 0) > 0)
     ? new NoteBadge(badges, colors)
     : null
+}
+
+// A badge says what it is when the pointer rests on it for 1.5 s (Victor, 2026-10-23):
+// "Screenshot", "Link", "Short", "Emotional anchor", "Favorite" (graph-takeaway.ts). In
+// the look of the app's tooltips (static/tooltip.js), which only reach DOM elements.
+const NAME_DELAY_MS = 1500
+let nameTip: HTMLDivElement | null = null
+let nameTimer = 0
+
+export function namedAfterAWhile(target: Container, name: string) {
+  target.eventMode = "static"
+  target.on("pointerover", (e) => {
+    window.clearTimeout(nameTimer)
+    const { clientX: x, clientY: y } = e
+    nameTimer = window.setTimeout(() => showName(name, x, y), NAME_DELAY_MS)
+  })
+  target.on("pointerout", hideName)
+  target.on("pointerdown", hideName)
+}
+
+function showName(name: string, x: number, y: number) {
+  nameTip ??= document.body.appendChild(Object.assign(document.createElement("div"), { className: "graph-badge-name" }))
+  nameTip.textContent = name
+  nameTip.style.left = `${x}px`
+  nameTip.style.top = `${y - 14}px`
+  nameTip.classList.add("visible")
+}
+
+function hideName() {
+  window.clearTimeout(nameTimer)
+  nameTip?.classList.remove("visible")
 }

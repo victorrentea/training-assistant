@@ -26,6 +26,7 @@
 // this file next to graph.inline.ts, and patch-graph.py makes one TakeawayMark per dot,
 // puts its star and its burst in containers of their own and places them in its
 // animation loop.
+import { namedAfterAWhile } from "./graph-badges"
 import { CanvasTextMetrics, Graphics, Rectangle, Sprite, Text, TextStyle, Texture, fontStringFromTextStyle } from "pixi.js"
 
 export type TakeawayColors = {
@@ -146,6 +147,7 @@ export class TakeawayMark {
   readonly flare: Sprite // a second burst over the first, from level 2: a brighter star
   readonly glow: Sprite // under the bursts, from level 3, wider each level
   private shine: DotShine = { takeaway: false, count: 0, mine: false, level: 0 }
+  private hovered = false // the pointer on the star
   private readonly mode: StarMode
   private readonly colors: TakeawayColors
   private readonly size: number
@@ -182,6 +184,17 @@ export class TakeawayMark {
       e.stopPropagation()
       onToggle(this.mode === "voter" ? !this.shine.mine : !this.shine.takeaway)
     })
+    // Under the pointer an empty star fills, gold: a preview of the click, which then
+    // keeps it filled (Victor, 2026-10-23).
+    this.star.on("pointerover", () => {
+      this.hovered = true
+      this.set(this.shine)
+    })
+    namedAfterAWhile(this.star, "Favorite")
+    this.star.on("pointerout", () => {
+      this.hovered = false
+      this.set(this.shine)
+    })
     this.set(this.shine)
   }
 
@@ -206,7 +219,8 @@ export class TakeawayMark {
     const own = this.mode === "trainer" ? takeaway : this.mode === "voter" ? mine : total > 0
     const clickable = this.mode !== "viewer"
     const visible = clickable || total > 0
-    this.star.text = own ? FILLED : HOLLOW
+    const lit = own || (this.hovered && clickable)
+    this.star.text = lit ? FILLED : HOLLOW
     const b = this.star.getLocalBounds()
     this.star.hitArea = new Rectangle(
       b.x - STAR_HIT_PAD,
@@ -217,7 +231,7 @@ export class TakeawayMark {
     this.star.visible = visible
     this.star.eventMode = clickable ? "static" : "none"
     this.star.cursor = clickable ? "pointer" : "default"
-    this.star.style.fill = own || total > 0 ? this.colors.on : this.colors.off
+    this.star.style.fill = lit || total > 0 ? this.colors.on : this.colors.off
   }
 
   // Whether its star is drawn, and what it reads: for a test, the canvas has no DOM.

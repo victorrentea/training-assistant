@@ -248,6 +248,16 @@ function ensurePeek(): HTMLElement {
     <div class="note-peek-body"></div>`
   const body = peek.querySelector(".note-peek-body") as HTMLElement
   peek.querySelector(".note-peek-close")!.addEventListener("click", hidePeek)
+  // Under the pointer an empty star fills: a preview of the click (Victor, 2026-10-23).
+  const starButton = peek.querySelector(".note-peek-star") as HTMLButtonElement
+  starButton.addEventListener("mouseenter", () => {
+    if (!starButton.disabled) starButton.classList.add("hovered")
+    showPeekStar()
+  })
+  starButton.addEventListener("mouseleave", () => {
+    starButton.classList.remove("hovered")
+    showPeekStar()
+  })
   peek.querySelector(".note-peek-star")!.addEventListener("click", () => {
     if (!peeked) return
     if (starMode() === "voter") toggleStar(peeked, !mine.has(peeked))
@@ -745,7 +755,8 @@ function showPeekStar() {
   const own = mode === "trainer" ? takeaway : mode === "voter" ? voted : total > 0
   peek.classList.toggle("takeaway", peeked !== null && shineOf(peeked) > 0)
   const times = Object.assign(document.createElement("span"), { className: "note-peek-count", textContent: `×${total}` })
-  button.replaceChildren(own ? "★\uFE0E" : "☆\uFE0E", ...(total > 1 ? [times] : []))
+  const lit = own || button.classList.contains("hovered")
+  button.replaceChildren(lit ? "★\uFE0E" : "☆\uFE0E", ...(total > 1 ? [times] : []))
   button.classList.toggle("on", own)
   button.hidden = mode === "viewer" && total === 0
   button.disabled = mode === "viewer"

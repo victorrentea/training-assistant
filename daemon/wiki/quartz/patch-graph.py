@@ -67,7 +67,7 @@ PATCHES = [
     ("""  stage.addChild(nodesContainer, labelsContainer, linkContainer)
 """,
      """  stage.addChild(nodesContainer, labelsContainer, linkContainer)
-  const badgesContainer = new Container<NoteBadge>({ zIndex: 1.8, isRenderGroup: true, eventMode: "none" })
+  const badgesContainer = new Container<NoteBadge>({ zIndex: 1.8, isRenderGroup: true, eventMode: "passive" })
   stage.addChild(badgesContainer)
   const noteBadges = await loadBadges(fullSlug)
   const badgeColors: BadgeColors = {
@@ -244,15 +244,15 @@ PATCHES = [
           .stroke({ alpha: l.alpha * (lit ? 1 : 0.6), width: (lit ? 1.6 : 0.6) / currentTransform.k, color: l.color })
       }
 """),
-    # Hover: the dot's links light up in the text colour (white on dark), the dot itself
-    # unchanged; the open dot's links too, and that dot turns the same bright white, apart
-    # from the grey of a read note (Victor, 2026-10-23 - links and dot were purple). The
-    # rest keep their look, without the dimming Quartz applies to edges even with
-    # focusOnHover off (nodes: quartz.layout.ts).
+    # Hover: the dot's links light up (white to unread notes, grey to read ones:
+    # litColor), the dot itself unchanged; the open dot's links too, and that dot turns
+    # bright white (Victor, 2026-10-23 - links and dot were purple). The rest keep their
+    # look, without the dimming Quartz applies to edges even with focusOnHover off
+    # (nodes: quartz.layout.ts).
     ("alpha = l.active ? 1 : 0.2",
      "alpha = 1"),
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
-     'l.color = litEdge(l) ? computedStyleMap["--dark"] : computedStyleMap["--lightgray"]'),
+     'l.color = litEdge(l) ? litColor(l) : computedStyleMap["--lightgray"]'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
      """      // Repainted, not tinted (a tint multiplies, and can't brighten a grey dot): the
       // open dot in the text colour; a dot turns grey once its note is read (isSeen).
@@ -273,50 +273,18 @@ PATCHES = [
      "  let hoveredNodeId: string | null = null\n"
      "  let selectedNodeId: string | null = null\n"
      "  let selectedAllRead = false // every neighbour of the open note already read\n"
-     "  // Which edges light up (Victor, 2026-10-23), so the graph shows what is known and\n"
-     "  // what is left to explore around a note:\n"
-     "  // - hovering a read note: its links with unread neighbours, if any; else all the\n"
-     "  //   links coming into it;\n"
-     "  // - hovering an unread note: its links coming in from read notes, if any (else its\n"
-     "  //   links with read neighbours); without read neighbours, the links coming into it;\n"
-     "  // - the open note: its links with unread neighbours, if any; once all are read,\n"
-     "  //   the links going out of it (and the one a link hovered in its popover points along).\n"
-     "  // A two-way link counts as both coming in and going out.\n"
+     "  // Every link of the hovered or the open note lights up and moves; its colour tells\n"
+     "  // where it leads (Victor, 2026-10-23): bright white to a note not read yet, grey -\n"
+     "  // the read dots' colour, discreet - to one already read.\n"
      "  const otherEnd = (l: LinkRenderData, id: string) =>\n"
      "    l.simulationData.source.id === id ? l.simulationData.target.id : l.simulationData.source.id\n"
      "  const touches = (l: LinkRenderData, id: string | null) =>\n"
      "    id !== null && (l.simulationData.source.id === id || l.simulationData.target.id === id)\n"
-     "  const neighboursSeen = (id: string) => {\n"
-     "    let seen = 0, unseen = 0, seenInto = 0\n"
-     "    for (const e of linkRenderData) {\n"
-     "      if (!touches(e, id)) continue\n"
-     "      if (!isSeen(otherEnd(e, id))) unseen++\n"
-     "      else {\n"
-     "        seen++\n"
-     "        if (e.simulationData.target.id === id || twoWay(e)) seenInto++\n"
-     "      }\n"
-     "    }\n"
-     "    return { seen, unseen, seenInto }\n"
-     "  }\n"
-     "  // The hovered note's neighbours, read or not: worked out once per hovered note.\n"
-     "  let around = { id: null as string | null, seen: 0, unseen: 0, seenInto: 0 }\n"
-     "  const hoverAround = () => {\n"
-     "    if (around.id !== hoveredNodeId && hoveredNodeId !== null) around = { id: hoveredNodeId, ...neighboursSeen(hoveredNodeId) }\n"
-     "    return around\n"
-     "  }\n"
-     "  const litEdge = (l: LinkRenderData) => {\n"
-     "    if (selectedNodeId !== null && touches(l, selectedNodeId)) {\n"
-     "      if (touches(l, hoveredNodeId) && hoveredNodeId !== selectedNodeId) return true\n"
-     "      if (!selectedAllRead) return !isSeen(otherEnd(l, selectedNodeId))\n"
-     "      return l.simulationData.source.id === selectedNodeId || twoWay(l)\n"
-     "    }\n"
-     "    if (hoveredNodeId === null || hoveredNodeId === selectedNodeId || !touches(l, hoveredNodeId)) return false\n"
-     "    const other = isSeen(otherEnd(l, hoveredNodeId))\n"
-     "    const into = l.simulationData.target.id === hoveredNodeId || twoWay(l)\n"
-     "    if (isSeen(hoveredNodeId)) return hoverAround().unseen > 0 ? !other : into\n"
-     "    const a = hoverAround()\n"
-     "    if (a.seenInto > 0) return other && into // from what is read into what is not (Victor, 2026-10-23)\n"
-     "    return a.seen > 0 ? other : into\n"
+     "  const litEdge = (l: LinkRenderData) => touches(l, selectedNodeId) || touches(l, hoveredNodeId)\n"
+     "  const litColor = (l: LinkRenderData) => {\n"
+     "    // Seen from the hovered note when the pointer is on one, else from the open one.\n"
+     "    const from = touches(l, hoveredNodeId) ? hoveredNodeId! : selectedNodeId!\n"
+     "    return isSeen(otherEnd(l, from)) ? computedStyleMap[\"--wiki-seen\"] : computedStyleMap[\"--dark\"]\n"
      "  }\n"
      "  // A→B with B→A too: Quartz keeps them as two edges on the same line.\n"
      "  let edgeKeys: Set<string> | null = null\n"
@@ -377,7 +345,6 @@ PATCHES = [
   const paneGraph: PaneGraph = {
     select(id) {
       selectedNodeId = id
-      around = { id: null, seen: 0, unseen: 0, seenInto: 0 } // a note just read changes its neighbours' counts
       selectedAllRead =
         id !== null &&
         linkRenderData.every((l) => !touches(l, id) || isSeen(otherEnd(l, id)))
