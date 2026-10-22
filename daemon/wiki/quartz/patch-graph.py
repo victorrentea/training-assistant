@@ -185,8 +185,8 @@ PATCHES = [
     # A lit edge shows its direction by motion alone, no arrowheads (Victor, 2026-10-23 -
     # there was a head where it entered the linked dot): dashes creeping slowly along it,
     # from the linking note to the linked one, nothing under them; a two-way link, one
-    # line of the same dashes running from its middle out to both ends (it was a solid
-    # line). Which edges light up: litEdge().
+    # line of the same dashes, one way at a time (see below; it was a solid line). Which
+    # edges light up: litEdge().
     ("""      l.gfx
         .lineTo(linkData.target.x! + width / 2, linkData.target.y! + height / 2)
         .stroke({ alpha: l.alpha, width: 1, color: l.color })
@@ -216,13 +216,17 @@ PATCHES = [
         // A new path: the one the edge started (moveTo its source) isn't a dash.
         l.gfx.beginPath()
         if (!twoWay(l)) dashes(sx, sy, tx, ty)
-        // A two-way link is two edges on one line: one of them draws it, a single line
-        // whose dashes run from its middle out to both ends.
+        // A two-way link is two edges on one line: one of them draws it, one way only
+        // (Victor, 2026-10-23 - both ways at once flickered). Toward the open note while
+        // it is new (some neighbour unread): where it is reached from; away from it once
+        // all around it is read: where to go from here. Toward a hovered dot.
         else if (linkData.source.id < linkData.target.id) {
-          const mx = (sx + tx) / 2
-          const my = (sy + ty) / 2
-          dashes(mx, my, tx, ty)
-          dashes(mx, my, sx, sy)
+          const open = selectedNodeId !== null && touches(l, selectedNodeId)
+          const center = open ? selectedNodeId : hoveredNodeId
+          const toward = !open || !selectedAllRead
+          const centerIsTarget = linkData.target.id === center
+          if (toward === centerIsTarget) dashes(sx, sy, tx, ty)
+          else dashes(tx, ty, sx, sy)
         }
         l.gfx.stroke({ alpha: l.alpha, width: 1.6 / k, color: l.color })
       } else {
