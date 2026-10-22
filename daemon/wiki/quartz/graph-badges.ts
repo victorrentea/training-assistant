@@ -3,8 +3,7 @@
 // screenshot, and at its top-right a short column: 🔗 for the note's external links,
 // with "×3" after it from two up; under it, one row for its emotional anchors, ⚓ for
 // each moment the summarizer tags and 🎬 for each short played in the room, ⚓⚓🎬
-// (both are the same thing: a moment that moved the room); last, the dot's star
-// (graph-takeaway.ts), which column() places too. Each emoji has a dark halo hugging
+// (both are the same thing: a moment that moved the room). Each emoji has a dark halo hugging
 // its outline, like the star's, so it reads over the takeaway glow; none, no row, and
 // the rows under it move up (Victor, 2026-10-23 - it was 🌐 and ⚓ with a lowered
 // count, ⚓₂, on a disc of the page background, which read as a black blob on the
@@ -145,12 +144,12 @@ export class NoteBadge extends Container {
     this.rows.forEach((row) => this.addChild(row)) // addChild() with no child throws
   }
 
-  // The dot is at (x, y) with radius r; its column has `total` rows, the star's
-  // included. The picture's inner corner sits on the dot's rim, at 45° up-left.
-  place(x: number, y: number, r: number, total: number) {
+  // The dot is at (x, y) with radius r. The picture's inner corner sits on the dot's
+  // rim, at 45° up-left.
+  place(x: number, y: number, r: number) {
     this.position.set(x, y)
     this.picture?.position.set(-r * Math.SQRT1_2 - 0.5 - PICTURE_W, -r * Math.SQRT1_2 - 0.5)
-    const at = column(total, r)
+    const at = column(this.rows.length, r)
     this.rows.forEach((row, i) => row.position.set(at.left, at.top + i * ROW))
   }
 }
@@ -160,7 +159,7 @@ export class NoteBadge extends Container {
 // keeping one left edge, moved out just enough for every row to clear the dot. A
 // column too tall for that starts higher instead, its last row ending just above the
 // label, which hangs from r + 2 down.
-export function column(rows: number, r: number): { left: number; top: number; row: number } {
+function column(rows: number, r: number): { left: number; top: number; row: number } {
   const top = Math.min(-r * Math.SQRT1_2 + 1.5, r + 1 - (rows - 1) * ROW)
   let left = r * Math.SQRT1_2 - 0.5
   for (let i = 1; i < rows; i++) {

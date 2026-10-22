@@ -147,12 +147,9 @@ PATCHES = [
 """,
      """        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
       }
-      // One column right of the dot: the badges' rows, then the star (graph-badges.ts).
-      const badgeRows = n.badge?.rows.length ?? 0
-      const rows = badgeRows + (n.takeaway?.starShown ? 1 : 0)
-      const at = column(rows, n.radius)
-      n.badge?.place(x + width / 2, y + height / 2, n.radius, rows)
-      n.takeaway?.place(x + width / 2, y + height / 2, at.left, at.top + badgeRows * at.row, time)
+      n.badge?.place(x + width / 2, y + height / 2, n.radius)
+      // The star right after the note's name, on its line (graph-takeaway.ts).
+      n.takeaway?.place(x + width / 2, y + height / 2, n.label.width / 2 + 2, n.radius + 2 + n.label.height / 2, time)
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
@@ -273,7 +270,7 @@ PATCHES = [
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
      'import "./tooltip.js"\n'
-     'import { BadgeColors, NoteBadge, column, loadBadges, makeBadge } from "./graph-badges"\n'
+     'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { TakeawayColors, TakeawayMark, drawRay } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst.\n'
@@ -536,7 +533,7 @@ PATCHES = [
         if (x === undefined || y === undefined) continue
         const half = Math.max(n.radius, (n.label?.width ?? 0) / 2)
         x0 = Math.min(x0, x + width / 2 - Math.max(half, n.radius + 14))   // the picture left of the dot
-        x1 = Math.max(x1, x + width / 2 + Math.max(half, n.radius + 24))   // the badges and star right of it
+        x1 = Math.max(x1, x + width / 2 + Math.max(half + 14, n.radius + 24))   // the badges, and the star after the label
         y0 = Math.min(y0, y + height / 2 - n.radius - 14)   // the badge sits above the dot
         y1 = Math.max(y1, y + height / 2 + n.radius + 2 + (n.label?.height ?? 0))
       }

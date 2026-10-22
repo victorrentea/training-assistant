@@ -26,12 +26,12 @@ body {
 }
 
 // Hovering or clicking a dot (note-pane.ts): the note in a popover by the cursor,
-// like Obsidian's page preview; scrolls on its own. Twice its first size, all of it,
+// like Obsidian's page preview; scrolls on its own. 1.5× its first size, all of it,
 // so it reads on the projector without zooming the whole graph too (Victor,
-// 2026-10-23); --peek-u is its rem. Phones keep the first size: it is already about
+// 2026-10-23 - twice was too big); --peek-u is its rem. Phones keep the first size: it is already about
 // as wide as the screen.
 .note-peek {
-  --peek-u: 2rem;
+  --peek-u: 1.5rem;
 
   @media (max-width: 899px) {
     --peek-u: 1rem;

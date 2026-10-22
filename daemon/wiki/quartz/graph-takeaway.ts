@@ -2,11 +2,10 @@
 // every graph their dots get a filled star and a golden starburst behind them, live
 // (Victor, 2026-10-19).
 //
-// On the trainer's machine every dot has a star he clicks, last in the column at the
-// dot's top-right, under its 🔗 and ⚓ rows (graph-badges.ts), with no count: the bigger
-// burst says how many starred it, the popover gives the number; the left side keeps
-// only the picture badge (Victor, 2026-10-23 - it was "3☆" left of the dot,
-// mid-height). Hollow until he stars the note, filled after; a click on it un-stars it
+// On the trainer's machine every dot has a star he clicks, right after the note's name,
+// with no count: the bigger burst says how many starred it, the popover gives the
+// number (Victor, 2026-10-23 - it was "3☆" left of the dot, mid-height; for a moment
+// it ended the badge column at the dot's top-right). Hollow until he stars the note, filled after; a click on it un-stars it
 // right there, without opening the note (Victor, 2026-10-22).
 //
 // Participants star the notes they found interesting, and those shine for the whole
@@ -158,7 +157,7 @@ export class TakeawayMark {
     this.glow = sprite(hazeTexture())
     this.star = new Text({
       text: HOLLOW,
-      anchor: { x: 0, y: 1 },
+      anchor: { x: 0, y: 0.5 },
       eventMode: "none",
       cursor: "pointer",
       visible: false,
@@ -221,8 +220,8 @@ export class TakeawayMark {
     return this.star.visible ? this.star.text.replace(/\uFE0E/g, "") : ""
   }
 
-  // The dot is at (x, y) with radius r; its star's bottom-left corner at (x + dx,
-  // y + dy), its row in the dot's column. The burst turns slowly, so it reads as alive
+  // The dot is at (x, y); its star's left edge, mid-height, at (x + dx, y + dy), after
+  // the label. The burst turns slowly, so it reads as alive
   // without pulsing like the yellow Follow ring.
   place(x: number, y: number, dx: number, dy: number, time: number) {
     this.star.position.set(x + dx, y + dy)
