@@ -69,7 +69,8 @@ def ask(prompt: str, *, system: str, model: str, json_schema: dict | None = None
     try:
         out = json.loads(proc.stdout)
     except ValueError:
-        raise RuntimeError(f"claude -p exit {proc.returncode}: {(proc.stderr or proc.stdout).strip()[:300]}")
+        raise RuntimeError(
+            f"claude -p exit {proc.returncode}: {(proc.stderr or proc.stdout).strip()[:300]}") from None
     if proc.returncode != 0 or out.get("is_error"):
         raise RuntimeError(f"claude -p failed: {str(out.get('result') or out.get('subtype'))[:300]}")
     usage = out.get("modelUsage") or {}

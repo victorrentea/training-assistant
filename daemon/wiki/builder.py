@@ -18,7 +18,6 @@ import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 
-
 ASSETS_DIR = Path(__file__).parent / "quartz"
 BUILD_TIMEOUT_S = 300
 
