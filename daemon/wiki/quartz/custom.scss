@@ -229,8 +229,10 @@ body {
     // The note's external links, right before "Details": one short line each.
     ul.note-links {
       margin: calc(0.3 * var(--peek-u)) 0;
-      padding-left: calc(1.5 * var(--peek-u));
+      // The 🔗 in line with the ⚓ lines above it, not hanging out in an indent.
+      padding-left: 0;
       list-style-type: "🔗 ";
+      list-style-position: inside;
 
       li {
         margin: calc(0.1 * var(--peek-u)) 0;
@@ -238,11 +240,6 @@ body {
 
       li.short {
         list-style-type: "🎬 ";
-      }
-
-      .note-link-site {
-        color: var(--gray);
-        font-size: 0.85em;
       }
     }
 

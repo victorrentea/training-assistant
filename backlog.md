@@ -1,3 +1,4 @@
+- [x] direct request (2026-10-23): wiki note card: the 🔗 links line up with the ⚓ lines above them, and no longer print the site after the link (the full URL is in the hover tooltip).
 - [x] direct request (2026-10-23): **wiki graph: the dot's star sits right after the note's name, on its line**, without a count (it briefly ended the badge column); the note card is 1.5× its first size instead of 2× (too big).
 - [x] direct request (2026-10-23): the wiki graph's Sources list reads **"Zoom chat (if any)"**: an in-person day has no Zoom.
 - [x] direct request (2026-10-23): **the wiki note card shows a slide without its "Slide N — …" caption**, just the picture (CSS in `custom.scss`). Verified on the Context window card of a local build: the caption's computed display is none.

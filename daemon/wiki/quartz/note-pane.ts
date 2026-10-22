@@ -516,11 +516,10 @@ function foldPoints(body: HTMLElement) {
   article.append(...slides, ...lines, ...(links ? [links] : []), details)
 }
 
-// The note's external links as a short list, each behind a 🔗 (Victor, 2026-10-23):
-// the note's own word for each (a link written as a bare URL says nothing more), the
-// full URL in its tooltip and, after it, the site it goes to - but not after a 🎬
-// short played in the room, which takes the 🎬 for its bullet: "youtu.be" says
-// nothing there.
+// The note's external links as a short list, each behind a 🔗 (a 🎬 for a short played
+// in the room): the note's own word for each (a link written as a bare URL shows its
+// site instead), the full URL in its tooltip. No site after it any more: the tooltip
+// tells (Victor, 2026-10-23).
 const SHORT = "\u{1F3AC}" // 🎬
 
 function linkList(own: Element[]): HTMLElement | null {
@@ -547,12 +546,6 @@ function linkList(own: Element[]): HTMLElement | null {
     const item = document.createElement("li")
     if (short) item.className = "short"
     item.append(link)
-    if (link.textContent !== site && !short) {
-      const where = document.createElement("span")
-      where.className = "note-link-site"
-      where.textContent = site
-      item.append(" ", where)
-    }
     items.push(item)
   }
   if (items.length === 0) return null
