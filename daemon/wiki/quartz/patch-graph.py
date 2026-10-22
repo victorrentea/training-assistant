@@ -70,7 +70,7 @@ PATCHES = [
   const noteBadges = await loadBadges(fullSlug)
   const badgeColors: BadgeColors = {
     glyph: computedStyleMap["--dark"],
-    count: computedStyleMap["--dark"],
+    count: computedStyleMap["--gray"], // a detail: it mustn't jump out (Victor, 2026-10-23)
     font: computedStyleMap["--bodyFont"],
   }
   // The yellow ring around the note the trainer has open (Follow, note-pane.ts): above
@@ -178,8 +178,9 @@ PATCHES = [
     # arrowhead where the edge enters the dot its link points to. Quartz keeps A→B and
     # B→A as two edges on the same line, so a two-way link gets a head at each end.
     # A one-way edge of the open dot is drawn as dashes creeping slowly along it, from
-    # the linking note to the linked one, on a faint line; a two-way edge stays solid
-    # (Victor, 2026-10-23). Hovering alone doesn't animate: only the open dot.
+    # the linking note to the linked one, nothing under them (Victor, 2026-10-23 - on a
+    # faint line until then); a two-way edge stays solid. Hovering alone doesn't
+    # animate: only the open dot.
     ("""      l.gfx
         .lineTo(linkData.target.x! + width / 2, linkData.target.y! + height / 2)
         .stroke({ alpha: l.alpha, width: 1, color: l.color })
@@ -191,7 +192,6 @@ PATCHES = [
         const k = currentTransform.k
         const sx = linkData.source.x! + width / 2
         const sy = linkData.source.y! + height / 2
-        l.gfx.lineTo(tx, ty).stroke({ alpha: l.alpha * 0.3, width: 1.6 / k, color: l.color })
         const len = Math.hypot(tx - sx, ty - sy)
         if (len > 0) {
           // On screen: 6px dashes, 5px gaps, moving 12px a second.
@@ -199,7 +199,7 @@ PATCHES = [
           const period = 11 / k
           const ux = (tx - sx) / len
           const uy = (ty - sy) / len
-          // A new path: stroke() keeps the one it drew, and would draw the line again.
+          // A new path: the one the edge started (moveTo its source) isn't a dash.
           l.gfx.beginPath()
           for (let d = ((time / 1000) * 12) / k % period - period; d < len; d += period) {
             const a = Math.max(d, 0)

@@ -55,25 +55,26 @@ const PICTURE_SCALE = 0.9
 const EMOJI_FONT = 9
 
 // Frame, mountain and sun: a picture, drawn rather than the 🖼️ emoji, which is
-// mush at this size and can't take the theme's colours. In the text colour (white on
-// dark) with the labels' black outline, like the link glyph, at 0.9 of its first size
-// (Victor, 2026-10-23 - it was amber on a patch of the page background).
+// mush at this size and can't take the theme's colours. Its frame in the text colour
+// (white on dark), a green mountain and a yellow sun in it, so the pictures catch the
+// eye in the crowd; the labels' black outline, like the link glyph; 0.9 of its first
+// size (Victor, 2026-10-23 - it was all amber on a patch of the page background).
 function picture(colors: BadgeColors): Graphics {
   const w = PICTURE_W
   const h = PICTURE_H
   const g = new Graphics({ eventMode: "none" })
-  const shapes = (color: string, extra: number) =>
+  const shapes = (frame: string, mountain: string, sun: string, extra: number) =>
     g
       .roundRect(0, -h, w, h, 1.5)
-      .stroke({ color, width: 1.1 + extra, alignment: 0.5 })
+      .stroke({ color: frame, width: 1.1 + extra, alignment: 0.5 })
       .poly([1, -1, 4.2, -5, 6.2, -3, 7.3, -4.1, w - 1, -1])
-      .fill({ color })
-      .stroke({ color, width: extra, join: "round" })
+      .fill({ color: mountain })
+      .stroke({ color: mountain, width: extra, join: "round" })
       .circle(7.3, -h + 2.4, 1 + extra / 2)
-      .fill({ color })
-  shapes(OUTLINE, 1.6)
+      .fill({ color: sun })
+  shapes(OUTLINE, OUTLINE, OUTLINE, 1.6)
   g.beginPath()
-  shapes(colors.glyph, 0)
+  shapes(colors.glyph, "#22c55e", "#facc15", 0)
   g.scale.set(PICTURE_SCALE)
   return g
 }

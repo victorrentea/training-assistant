@@ -387,8 +387,8 @@ function leastCovering(at: Point, w: number, h: number, top: number, bottom: num
 }
 
 // A soft beam from the open dot to its popover, under it, so the eye sees where the
-// note comes from (Victor, 2026-10-23): the outline of the dot and the popover's
-// corners together, strongest at the dot. In the colour of the open dot's lit links,
+// note comes from (Victor, 2026-10-23): the outline of the dot's disc and the
+// popover's corners together, its sides tangent to the dot, strongest at the dot. In the colour of the open dot's lit links,
 // the text colour (white on dark); gold, like its burst, when the note shines. Redrawn
 // every frame while the popover is open: the graph moves, zooms and gets dragged under it.
 let beam: SVGSVGElement | null = null
@@ -423,7 +423,12 @@ function followWithBeam() {
         [box.right, box.bottom],
         [box.left, box.bottom],
       ]
-      svg.querySelector("polygon")!.setAttribute("points", hull([[dot.x, dot.y], ...corners]).join(" "))
+      // The dot's whole disc, not its centre: the beam's sides run tangent to it.
+      const rim = Array.from({ length: 24 }, (_, i) => {
+        const a = (i * Math.PI) / 12
+        return [dot.x + dot.r * Math.cos(a), dot.y + dot.r * Math.sin(a)]
+      })
+      svg.querySelector("polygon")!.setAttribute("points", hull([...rim, ...corners]).join(" "))
       const fill = svg.querySelector("linearGradient")!
       const color = peek!.classList.contains("takeaway") ? "var(--wiki-takeaway)" : "var(--dark)"
       // A style, not the stop-color attribute: an attribute doesn't read CSS variables.
