@@ -77,6 +77,15 @@ export function isSeen(slug: string): boolean {
   return seenNotes().has(slug)
 }
 
+// Forgets every note read on this browser: all dots white again (the "Reset seen" pill,
+// Victor, 2026-10-23).
+export function resetSeen() {
+  seen = new Set()
+  try {
+    localStorage.removeItem(seenKey())
+  } catch {}
+}
+
 function markSeen(slug: SimpleSlug) {
   const notes = seenNotes()
   if (notes.has(slug)) return

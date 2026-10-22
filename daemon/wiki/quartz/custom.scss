@@ -541,6 +541,11 @@ body {
     left: 9.9rem;
   }
 
+  // No room on a phone's top band for it.
+  .graph-reset-seen {
+    display: none;
+  }
+
   .graph-followed {
     top: 0.6rem;
     bottom: auto;

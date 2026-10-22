@@ -292,7 +292,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { TakeawayColors, TakeawayMark, baselineOf, hoverGlow } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, resetSeen, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
      '// gaining one when starred jumped down and pushed its star away (Victor, 2026-10-23).\n'
@@ -477,6 +477,16 @@ PATCHES = [
       cleanupGlobalGraphs()
       void renderGlobalGraph()
     })
+    // Right of Home: forget which notes were read here, so every dot is white again.
+    const resetSeenPill = document.createElement("button")
+    resetSeenPill.className = "graph-reset graph-reset-seen"
+    resetSeenPill.textContent = "↺ Reset seen"
+    resetSeenPill.dataset.tip = "Mark every note unread again, on this browser"
+    resetSeenPill.addEventListener("click", () => {
+      resetSeen()
+      cleanupGlobalGraphs()
+      void renderGlobalGraph()
+    })
     // Top-right, as a list: what the wiki was written from (Victor, 2026-10-16; a line
     // along the bottom until 2026-10-21). "Zoom chat": its links and books, since 2026-10-22; "(if any)", as not every day has a Zoom (Victor, 2026-10-23).
     // "played shorts": the soundboard clips the room heard, linked on YouTube where they were fired (same day).
@@ -487,7 +497,7 @@ PATCHES = [
       sourcesList.appendChild(Object.assign(document.createElement("li"), { textContent: source }))
     }
     sources.append(Object.assign(document.createElement("div"), { textContent: "Sources" }), sourcesList)
-    container.append(reset, home, sources)
+    container.append(reset, home, resetSeenPill, sources)
     // Only on the trainer's machine, right of Home: the notes he opens here are the ones
     // his participants' Follow rings in yellow (Victor, 2026-10-16).
     if (onHostMachine()) {
@@ -498,13 +508,13 @@ PATCHES = [
       container.append(followed)
     }
     // After the pills on the left: the wiki to take home (daemon/wiki/downloads.py) -
-    // the site as it looks, to open from disk, and the vault for Obsidian, read as one
-    // phrase: "Download ⤓ HTML" "⤓ for Obsidian" (Victor, 2026-10-23). The files sit in the site's downloads/ folder, next to its script.
+    // the site as it looks, to open from disk, and the vault for Obsidian, a
+    // pair: "⤓ HTML" "⤓ for Obsidian" (Victor, 2026-10-23). The files sit in the site's downloads/ folder, next to its script.
     const siteRoot = document.querySelector<HTMLScriptElement>('script[src$="postscript.js"]')?.src ?? location.href
     const downloads = document.createElement("div")
     downloads.className = "graph-downloads"
     for (const [label, file, tip] of [
-      ["Download ⤓ HTML", "wiki-site.zip", "This wiki as you see it, to open from disk: unzip, then open index.html"],
+      ["⤓ HTML", "wiki-site.zip", "This wiki as you see it, to open from disk: unzip, then open index.html"],
       ["⤓ for Obsidian", "wiki-obsidian.zip", "The notes as Markdown, a vault to open in Obsidian; stars in each note's frontmatter"],
     ]) {
       const a = Object.assign(document.createElement("a"), { className: "graph-reset", textContent: label })
@@ -515,9 +525,16 @@ PATCHES = [
     }
     // Not in a downloaded copy opened from disk: it has no downloads/ of its own.
     if (location.protocol !== "file:") container.append(downloads)
+    // On a desktop the bottom-left pills sit one after the other, 10px apart, whichever
+    // of them there are; a phone's stylesheet lays them out along the top instead.
     requestAnimationFrame(() => {
-      const last = [...container.querySelectorAll<HTMLElement>(".graph-reset:not(.graph-downloads *), .graph-followed")].pop()
-      if (last) downloads.style.left = `${last.offsetLeft + last.offsetWidth + 10}px`
+      if (innerWidth < 900) return
+      let left = 13 // 0.8rem
+      for (const pill of [reset, home, resetSeenPill, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads]) {
+        if (!pill.isConnected) continue
+        pill.style.left = `${left}px`
+        left += pill.offsetWidth + 10
+      }
     })
   }
 """),
