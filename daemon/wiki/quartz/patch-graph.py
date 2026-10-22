@@ -52,7 +52,6 @@ PATCHES = [
       active: false,
       radius: nodeRadius(n),
       badge,
-      glow,
       takeaway,
     }
 
@@ -74,12 +73,6 @@ PATCHES = [
     halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
   }
-  // The glow (graph-glow.ts): under the edges and the dots, as strong as the note's
-  // topic is common in the trainer's past sessions.
-  const glowContainer = new Container({ zIndex: 0, isRenderGroup: true, eventMode: "none" })
-  stage.addChild(glowContainer)
-  const noteGlow = await loadGlow(fullSlug)
-  const glowColor = computedStyleMap["--wiki-glow"]
   // The yellow ring around the note the trainer has open (Follow, note-pane.ts): above
   // the dots, under their labels; clicks go through it to the dot.
   const ring = new Graphics({ zIndex: 2.5, eventMode: "none" })
@@ -89,7 +82,7 @@ PATCHES = [
   // Key takeaways and participants' stars (graph-takeaway.ts): a golden starburst over
   // the edges, under the dots, and a star left of each dot, above everything - the
   // trainer's takeaway on his machine, the participant's own star in the participant
-  // page. Not the topic glow's container: the two never depend on each other.
+  // page.
   // From level 3 a soft glow spreads under the bursts, under every dot's burst.
   const takeawayHazeContainer = new Container({ zIndex: 1.4, isRenderGroup: true, eventMode: "none" })
   const takeawayGlowContainer = new Container({ zIndex: 1.5, isRenderGroup: true, eventMode: "none" })
@@ -142,8 +135,6 @@ PATCHES = [
      """    labelsContainer.addChild(label)
     const badge = makeBadge(noteBadges.get(nodeId), badgeColors)
     if (badge) badgesContainer.addChild(badge)
-    const glow = makeGlow(noteGlow.get(nodeId), nodeRadius(n), glowColor)
-    if (glow) glowContainer.addChild(glow)
     const takeaway = new TakeawayMark(nodeRadius(n), takeawayColors, starMode(), (on) =>
       starMode() === "voter" ? toggleStar(nodeId, on) : toggleTakeaway(nodeId, on))
     takeaway.set(dotShine(nodeId))
@@ -157,7 +148,6 @@ PATCHES = [
      """        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
       }
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
-      n.glow?.position.set(x + width / 2, y + height / 2)
       n.takeaway?.place(x + width / 2, y + height / 2, n.radius, time)
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
@@ -172,7 +162,6 @@ PATCHES = [
     "--wiki-unseen",
     "--wiki-badge-img",
     "--wiki-badge-link",
-    "--wiki-glow",
     "--wiki-follow-ring",
     "--wiki-takeaway",
     "--wiki-takeaway-off",
@@ -251,7 +240,6 @@ PATCHES = [
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
-     'import { loadGlow, makeGlow } from "./graph-glow"\n'
      'import { TakeawayColors, TakeawayMark, drawRay } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst.\n'

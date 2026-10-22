@@ -18,7 +18,6 @@ import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 
-from daemon.wiki.topic_frequency import write_note_glow
 
 ASSETS_DIR = Path(__file__).parent / "quartz"
 BUILD_TIMEOUT_S = 300
@@ -83,7 +82,7 @@ def _prepare_quartz(qdir: Path) -> None:
     # The tab's favicon: the participant page's Wiki icon (Material Symbols "hub"), not
     # Quartz's crystal (Victor, 2026-10-21): the glyph white on #3341a0, 256px.
     shutil.copy(ASSETS_DIR / "icon.png", qdir / "quartz" / "static" / "icon.png")
-    for script in ("note-pane.ts", "graph-badges.ts", "graph-glow.ts", "graph-takeaway.ts"):
+    for script in ("note-pane.ts", "graph-badges.ts", "graph-takeaway.ts"):
         shutil.copy(ASSETS_DIR / script, qdir / "quartz" / "components" / "scripts" / script)
     patch = subprocess.run(
         [sys.executable, str(ASSETS_DIR / "patch-graph.py"),
@@ -119,8 +118,6 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
         raise WikiBuildError(f"Quartz build failed:\n{tail}")
     _use_home_as_landing_page(wiki_dir, out_dir)
     write_note_badges(out_dir)
-    # After the build, so a failed build never spends an LLM call.
-    write_note_glow(wiki_dir, out_dir)
 
 
 BADGES_FILE = "note-badges.json"

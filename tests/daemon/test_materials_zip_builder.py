@@ -30,8 +30,6 @@ def _make_session(tmp_path):
     (folder / "~$Agenda.docx").write_bytes(b"lock")
     (folder / "wiki.zip").write_bytes(b"PK")
     (folder / ".obsidian" / "workspace.json").write_text("{}", encoding="utf-8")
-    (folder / "wiki-cache").mkdir()
-    (folder / "wiki-cache" / "topic-frequency.json").write_text("{}", encoding="utf-8")
     return folder
 
 
@@ -60,7 +58,6 @@ def test_excludes_junk_globs_and_obsidian_dir(tmp_path):
     assert "~$Agenda.docx" not in entries
     assert "wiki.zip" not in entries
     assert not any(entry.startswith(".obsidian/") for entry in entries)
-    assert not any(entry.startswith("wiki-cache/") for entry in entries)
 
 
 def test_archive_content_round_trips(tmp_path):

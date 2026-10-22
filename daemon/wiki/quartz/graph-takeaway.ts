@@ -1,7 +1,6 @@
 // Key takeaways: the trainer stars the notes his participants must leave with, and on
 // every graph their dots get a filled star and a golden starburst behind them, live
-// (Victor, 2026-10-19). Unrelated to the teal topic glow (graph-glow.ts): that one comes
-// from an LLM score at build time, this one from a click of the trainer, during the day.
+// (Victor, 2026-10-19).
 //
 // On the trainer's machine every dot has a star he clicks, on its left, mid-height: the
 // top corners hold the link count and the picture badges (graph-badges.ts), the label
@@ -71,7 +70,7 @@ const LEVELS = [
 ]
 
 // Drawn once, white, tinted per theme: a soft round core and eight rays, four long and
-// four short - a star's sparkle, where the topic glow is a plain round haze.
+// four short - a star's sparkle.
 let texture: Texture | null = null
 let haze: Texture | null = null
 const TEXTURE_SIZE = 256

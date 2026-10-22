@@ -1,9 +1,8 @@
 """Claude through the trainer's Claude subscription: `claude -p`, not the paid API.
 
 The daemon runs on his Mac, where Claude Code is logged in to his subscription, so
-its few LLM calls (debate cleanup, smart paste, the wiki's topic glow) go through the
-CLI headless instead of an API key that bills per token and stops dead once its credit
-runs out (Victor, 2026-10-22). Each call starts a bare CLI: no tools, no MCP servers,
+its few LLM calls (debate cleanup, smart paste) go through the CLI headless instead
+of an API key that bills per token and stops dead once its credit runs out (Victor, 2026-10-22). Each call starts a bare CLI: no tools, no MCP servers,
 no settings or hooks, no saved session, our own system prompt. It costs ~3 s of
 start-up on top of the model's answer, fine for calls that run in the background.
 """

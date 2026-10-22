@@ -39,7 +39,7 @@ Host panel credentials: `~/.training-assistants-secrets.env` (`HOST_USERNAME`, `
 
 Runs on the trainer's Mac (`python3 -m daemon`). Entry point: `daemon/__main__.py`.
 
-Key capabilities: quiz generation, debate AI cleanup, live summary, transcript reading, slides management, RAG. Its LLM calls (debate cleanup, smart paste, wiki topic glow) go through the trainer's Claude subscription via headless `claude -p` (`daemon/llm/claude_cli.py`), never a paid API key. Auto-update: exit code 42 signals wrapper to git pull + restart.
+Key capabilities: quiz generation, debate AI cleanup, live summary, transcript reading, slides management, RAG. Its LLM calls (debate cleanup, smart paste) go through the trainer's Claude subscription via headless `claude -p` (`daemon/llm/claude_cli.py`), never a paid API key. Auto-update: exit code 42 signals wrapper to git pull + restart.
 
 On startup the daemon opens the host panel (`http://127.0.0.1:1234/host`) in the default browser, once the local server accepts connections. `start.sh` does this **only on the first launch** (`DAEMON_OPEN_BROWSER=0` on every auto-update restart) so a push to master does not spawn a tab each time. Set `DAEMON_OPEN_BROWSER=0` to suppress it entirely.
 

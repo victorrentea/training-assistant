@@ -54,7 +54,7 @@ Person(fx_holder, "Trusted Person", "Holds a secret FX link the host handed out;
 
 System(workshop, "Workshop Live Interaction Tool", "Session-aware audience interaction tool for workshops and talks.")
 
-System_Ext(claude_api, "Claude (subscription, via claude -p)", "Used by the daemon for debate cleanup, smart paste and the wiki topic glow.")
+System_Ext(claude_api, "Claude (subscription, via claude -p)", "Used by the daemon for debate cleanup and smart paste.")
 System_Ext(macos_addons, "victor-macos-addons", "Local Mac helper exposing slide events and overlay/session notifications over WebSocket.")
 System_Ext(nominatim, "Nominatim", "Optional reverse geocoding for participant location sharing.")
 System_Ext(google_drive, "Google Drive", "Source of slide PDF exports that Railway caches for participants.")
