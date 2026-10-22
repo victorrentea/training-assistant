@@ -57,25 +57,34 @@ def _real_create_message(
     tools: list | None = None,
     timeout: float | None = None,
 ) -> anthropic.types.Message:
-    """Thin wrapper around anthropic.Anthropic().messages.create that tracks tokens."""
-    client_kwargs: dict[str, Any] = {"api_key": api_key}
-    if timeout is not None:
-        client_kwargs["timeout"] = timeout
-    client = anthropic.Anthropic(**client_kwargs)
-    kwargs: dict[str, Any] = dict(model=model, max_tokens=max_tokens, messages=messages)
-    if system:
-        kwargs["system"] = system
-    if tools:
-        kwargs["tools"] = tools
+    """One answer through the trainer's Claude subscription (daemon/llm/claude_cli.py),
+    shaped like anthropic's Message so callers stay as they were. api_key, max_tokens
+    and tools are left over from the paid API and ignored."""
+    from daemon.llm.claude_cli import ask
+
+    prompt = "\n\n".join(str(m.get("content", "")) for m in messages if m.get("role") == "user")
     t0 = time.monotonic()
-    response = client.messages.create(**kwargs)
+    answer = ask(prompt, system=system or "You are a helpful assistant.", model=model,
+                 timeout=timeout or 180.0)
     duration_ms = int((time.monotonic() - t0) * 1000)
-    in_tok = response.usage.input_tokens
-    out_tok = response.usage.output_tokens
-    cost = _usage.add(in_tok, out_tok, model)
-    short_model = model.split("-")[1] if "-" in model else model  # haiku/sonnet/opus
-    log.info("llm", f"💸 {short_model:<7} in={in_tok:<5} out={out_tok:<4} ${cost:.3f}  {duration_ms}ms")
-    return response
+    _usage.add(answer.input_tokens, answer.output_tokens, model)
+    short_model = model_family(answer.model)
+    log.info("llm", f"📦 {short_model:<7} in={answer.input_tokens:<5} out={answer.output_tokens:<4} "
+                    f"subscription (${answer.list_cost_usd:.3f} on the API)  {duration_ms}ms")
+    return anthropic.types.Message(
+        id="msg_cli",
+        type="message",
+        role="assistant",
+        content=[anthropic.types.TextBlock(type="text", text=answer.text)],
+        model=answer.model,
+        stop_reason="end_turn",
+        stop_sequence=None,
+        usage=anthropic.types.Usage(input_tokens=answer.input_tokens, output_tokens=answer.output_tokens),
+    )
+
+
+def model_family(model: str) -> str:
+    return next((f for f in ("haiku", "sonnet", "opus") if f in model), model)
 
 
 def _stub_create_message(

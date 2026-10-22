@@ -15,7 +15,7 @@ def _note(session: Path, name: str, text: str) -> None:
 @pytest.fixture
 def root(tmp_path, monkeypatch):
     """Three past AI sessions, a non-AI one and a later one that must not count, and today's."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr("daemon.llm.claude_cli.find_cli", lambda: "/usr/local/bin/claude")
     monkeypatch.setenv("TRAINING_ASSISTANTS_SECRETS_FILE", str(tmp_path / "no-secrets.env"))
     monkeypatch.delenv("LLM_ADAPTER", raising=False)
     _note(tmp_path / "2026-06-22+25 AI@Kambi", "Skills.md", "# Skills\n\nA skill lazy-loads rules.\n")
@@ -38,7 +38,7 @@ def root(tmp_path, monkeypatch):
 def _fake_claude(calls):
     """Matches by keyword, like the real model would by topic."""
 
-    def call(api_key, past_block, current_block):
+    def call(past_block, current_block):
         calls.append((past_block, current_block))
         past = {int(line.split(".")[0][1:]): line for line in past_block.splitlines() if line.startswith("P")}
         matches = []
@@ -114,8 +114,8 @@ def test_api_failure_leaves_notes_unscored_and_retries_next_build(root, monkeypa
     assert tf.score(today)[0]["Skills"] == 3
 
 
-def test_no_api_key_means_no_call_and_no_glow(root, monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY")
+def test_no_claude_cli_means_no_call_and_no_glow(root, monkeypatch):
+    monkeypatch.setattr("daemon.llm.claude_cli.find_cli", lambda: None)
     monkeypatch.setattr(tf, "call_claude", lambda *_: pytest.fail("must not call Claude"))
     assert tf.score(root / "2026-10-09 AI@JAX.London") == ({}, 3)
 

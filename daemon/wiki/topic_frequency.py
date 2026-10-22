@@ -5,12 +5,13 @@ trainings glows strongly, a topic that is new today does not glow at all.
 
 The past is every earlier AI session folder next to this one that holds a wiki/ vault.
 Note titles differ across sessions for the same idea (and some vaults are in
-Romanian), so Claude Haiku does the matching: it gets every past note (title + lead
+Romanian), so Claude Haiku does the matching, through the trainer's Claude subscription
+(daemon/llm/claude_cli.py): it gets every past note (title + lead
 sentence, deduped by title) and the current notes, and returns, per current note, the
 past notes about the same topic. The code then counts the distinct sessions those
 came from. Scores are cached per (note slug, title) in <session>/wiki-cache/ (outside
 wiki/, which is published), so a rebuild only asks about notes it has not scored yet,
-and a failed or impossible call (no key, no network) just leaves those notes unlit.
+and a failed or impossible call (no Claude CLI, no network) just leaves those notes unlit.
 """
 from __future__ import annotations
 
@@ -204,32 +205,17 @@ SCHEMA = {
 }
 
 
-def call_claude(api_key: str, past_block: str, current_block: str) -> tuple[dict, dict]:
-    """One Haiku request → (parsed answer, token usage). Patched out in tests."""
-    import anthropic
+def call_claude(past_block: str, current_block: str) -> tuple[dict, dict]:
+    """One Haiku request through the Claude subscription → (parsed answer, token usage).
+    Patched out in tests."""
+    from daemon.llm.claude_cli import ask
 
-    client = anthropic.Anthropic(api_key=api_key, timeout=180.0)
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=16000,
-        output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
-        system=[
-            {"type": "text", "text": INSTRUCTIONS},
-            # The big block every request of a session shares: cached between batches.
-            {"type": "text", "text": past_block, "cache_control": {"type": "ephemeral"}},
-        ],
-        messages=[{"role": "user", "content": current_block}],
-    )
-    if response.stop_reason != "end_turn":
-        raise RuntimeError(f"stop_reason={response.stop_reason}")
-    text = next(block.text for block in response.content if block.type == "text")
-    usage = response.usage
-    return json.loads(text), {
-        "input": usage.input_tokens,
-        "cache_write": usage.cache_creation_input_tokens or 0,
-        "cache_read": usage.cache_read_input_tokens or 0,
-        "output": usage.output_tokens,
-    }
+    answer = ask(current_block, system=f"{INSTRUCTIONS}\n\n{past_block}", model=MODEL,
+                 json_schema=SCHEMA, effort="low")
+    if answer.data is None:
+        raise RuntimeError("no structured answer")
+    return answer.data, {"input": answer.input_tokens, "cache_write": 0, "cache_read": 0,
+                         "output": answer.output_tokens}
 
 
 def cost_usd(usage: dict) -> float:
@@ -256,13 +242,12 @@ def _save_cache(path: Path, past_names: list[str], notes: dict[str, dict]) -> No
     tmp.replace(path)
 
 
-def _api_key() -> str | None:
+def _can_call() -> bool:
     if os.environ.get("LLM_ADAPTER") == "stub":
-        return None  # hermetic tests: never a real call
-    from daemon.config import load_secrets_env
+        return False  # hermetic tests: never a real call
+    from daemon.llm.claude_cli import find_cli
 
-    load_secrets_env()
-    return os.environ.get("ANTHROPIC_API_KEY") or None
+    return find_cli() is not None
 
 
 def score(session_folder: Path) -> tuple[dict[str, int], int]:
@@ -289,9 +274,8 @@ def score(session_folder: Path) -> tuple[dict[str, int], int]:
 
 
 def _score_new(todo: list[Note], sessions: list[Path], cached: dict[str, dict]) -> dict[str, dict]:
-    api_key = _api_key()
-    if not api_key:
-        log.info("wiki", f"topic glow: no Claude API key — {len(todo)} notes left unscored")
+    if not _can_call():
+        log.info("wiki", f"topic glow: no Claude CLI — {len(todo)} notes left unscored")
         return cached
     topics = past_topics(sessions)
     past_block = "<past_notes>\n" + "\n".join(
@@ -305,7 +289,7 @@ def _score_new(todo: list[Note], sessions: list[Path], cached: dict[str, dict]) 
             _line("C", i, n.title, n.lead) for i, n in enumerate(batch, 1)
         ) + "\n</current_notes>"
         try:
-            answer, usage = call_claude(api_key, past_block, current_block)
+            answer, usage = call_claude(past_block, current_block)
         except Exception as exc:  # noqa: BLE001 — the wiki must publish without the glow
             log.error("wiki", f"topic glow: Claude call failed, {len(batch)} notes unscored: {exc}")
             continue
@@ -326,9 +310,8 @@ def _score_new(todo: list[Note], sessions: list[Path], cached: dict[str, dict]) 
         _track(total, cost)
         log.info(
             "wiki",
-            f"💸 topic glow: {len(todo)} notes vs {len(topics)} past notes in {len(sessions)} sessions — "
-            f"in={total['input']} cache_w={total['cache_write']} cache_r={total['cache_read']} "
-            f"out={total['output']} ${cost:.4f}",
+            f"📦 topic glow: {len(todo)} notes vs {len(topics)} past notes in {len(sessions)} sessions — "
+            f"in={total['input']} out={total['output']} subscription (${cost:.4f} on the API)",
         )
     return cached
 

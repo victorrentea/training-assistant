@@ -68,10 +68,8 @@ def config_from_env(minutes: int = DEFAULT_MINUTES) -> "Config":
     """Build a Config from environment variables (after loading shared secrets)."""
     load_secrets_env()
     folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-macos-addons/addons-output"))
+    # Unused since the LLM calls go through the Claude subscription (daemon/llm/claude_cli.py).
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        log.error("daemon", "ANTHROPIC_API_KEY is not set")
-        sys.exit(1)
     if not folder.exists() or not folder.is_dir():
         log.error("transcript", f"Folder not found: {folder}")
         sys.exit(1)

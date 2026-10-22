@@ -2,7 +2,6 @@
 import asyncio
 import json
 import logging
-import os
 from typing import Optional
 
 import anthropic
@@ -77,17 +76,15 @@ def _extract_code_with_ai(raw_snippet: str) -> tuple[str, str | None] | None:
     Returns (code, language) or None on any failure."""
     try:
         from daemon.llm.adapter import create_message
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            return None
 
         truncated = raw_snippet[:_SMART_PASTE_INPUT_LIMIT]
+        # Through the subscription's CLI: a few seconds to start, hence the timeout.
         response = create_message(
-            api_key=api_key,
+            api_key="",
             model="claude-haiku-4-5-20251001",
             max_tokens=4096,
             messages=[{"role": "user", "content": f"{_EXTRACT_PROMPT}\n\n---\n\n{truncated}"}],
-            timeout=5.0,
+            timeout=30.0,
         )
 
         block = response.content[0]

@@ -54,7 +54,7 @@ Person(fx_holder, "Trusted Person", "Holds a secret FX link the host handed out;
 
 System(workshop, "Workshop Live Interaction Tool", "Session-aware audience interaction tool for workshops and talks.")
 
-System_Ext(claude_api, "Anthropic Claude API", "Used by the daemon for quiz generation/refinement and debate cleanup.")
+System_Ext(claude_api, "Claude (subscription, via claude -p)", "Used by the daemon for debate cleanup, smart paste and the wiki topic glow.")
 System_Ext(macos_addons, "victor-macos-addons", "Local Mac helper exposing slide events and overlay/session notifications over WebSocket.")
 System_Ext(nominatim, "Nominatim", "Optional reverse geocoding for participant location sharing.")
 System_Ext(google_drive, "Google Drive", "Source of slide PDF exports that Railway caches for participants.")
@@ -94,7 +94,7 @@ System_Boundary(workshop, "Workshop Tool") {
 }
 
 System_Ext(macos_addons, "victor-macos-addons", "Local WebSocket bridge for slide and overlay events.")
-System_Ext(claude_api, "Anthropic Claude API", "LLM used by the daemon.")
+System_Ext(claude_api, "Claude (subscription, via claude -p)", "LLM used by the daemon.")
 System_Ext(nominatim, "Nominatim", "Optional client-side reverse geocoding.")
 System_Ext(google_drive, "Google Drive", "Slide PDF origin.")
 System_Ext(host_files, "Host session files", "Session folders, normalized transcripts, ai-summary.md, uploaded files, slide manifests.")
@@ -213,7 +213,7 @@ LAYOUT_WITH_LEGEND()
 
 Container_Ext(host_spa, "Host SPA", "Vanilla JS served from localhost")
 Container_Ext(railway_backend, "Railway Backend", "FastAPI on Railway")
-System_Ext(claude_api, "Anthropic Claude API", "LLM")
+System_Ext(claude_api, "Claude (subscription, via claude -p)", "LLM")
 System_Ext(macos_addons, "victor-macos-addons", "Local WebSocket bridge")
 ContainerDb_Ext(host_files, "Host session files", "SESSIONS_FOLDER, normalized transcripts, ai-summary.md, uploads")
 ContainerDb_Ext(local_rag, "Local ChromaDB store", "~/.workshop-rag/chroma")
