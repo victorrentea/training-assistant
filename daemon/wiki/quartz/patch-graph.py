@@ -280,10 +280,32 @@ PATCHES = [
      "    l.simulationData.source.id === id ? l.simulationData.target.id : l.simulationData.source.id\n"
      "  const touches = (l: LinkRenderData, id: string | null) =>\n"
      "    id !== null && (l.simulationData.source.id === id || l.simulationData.target.id === id)\n"
-     "  const litEdge = (l: LinkRenderData) => touches(l, selectedNodeId) || touches(l, hoveredNodeId)\n"
+     "  // Hovering a note not read yet shows only how to reach it from what you know: its\n"
+     "  // links with read notes, all white - those coming in from them if any, else those\n"
+     "  // going out to them; never a link to another unread note (Victor, 2026-10-23).\n"
+     "  let hoverFrom = { id: null as string | null, into: 0 } // read notes linking into it\n"
+     "  const readInto = (id: string) => {\n"
+     "    if (hoverFrom.id !== id) {\n"
+     "      let into = 0\n"
+     "      for (const e of linkRenderData)\n"
+     "        if (touches(e, id) && isSeen(otherEnd(e, id)) && (e.simulationData.target.id === id || twoWay(e))) into++\n"
+     "      hoverFrom = { id, into }\n"
+     "    }\n"
+     "    return hoverFrom.into\n"
+     "  }\n"
+     "  const hoverLit = (l: LinkRenderData, h: string) => {\n"
+     "    if (!touches(l, h)) return false\n"
+     "    if (isSeen(h)) return true\n"
+     "    if (!isSeen(otherEnd(l, h))) return false\n"
+     "    return readInto(h) === 0 || l.simulationData.target.id === h || twoWay(l)\n"
+     "  }\n"
+     "  const litEdge = (l: LinkRenderData) =>\n"
+     "    touches(l, selectedNodeId) || (hoveredNodeId !== null && hoverLit(l, hoveredNodeId))\n"
      "  const litColor = (l: LinkRenderData) => {\n"
      "    // Seen from the hovered note when the pointer is on one, else from the open one.\n"
-     "    const from = touches(l, hoveredNodeId) ? hoveredNodeId! : selectedNodeId!\n"
+     "    const hovered = hoveredNodeId !== null && hoverLit(l, hoveredNodeId)\n"
+     "    if (hovered && !isSeen(hoveredNodeId!)) return computedStyleMap[\"--dark\"]\n"
+     "    const from = hovered ? hoveredNodeId! : selectedNodeId!\n"
      "    return isSeen(otherEnd(l, from)) ? computedStyleMap[\"--wiki-seen\"] : computedStyleMap[\"--dark\"]\n"
      "  }\n"
      "  // A→B with B→A too: Quartz keeps them as two edges on the same line.\n"
@@ -345,6 +367,7 @@ PATCHES = [
   const paneGraph: PaneGraph = {
     select(id) {
       selectedNodeId = id
+      hoverFrom = { id: null, into: 0 } // a note just read changes what links into others
       selectedAllRead =
         id !== null &&
         linkRenderData.every((l) => !touches(l, id) || isSeen(otherEnd(l, id)))
