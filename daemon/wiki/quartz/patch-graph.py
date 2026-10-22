@@ -89,6 +89,8 @@ PATCHES = [
   const takeawayGlowContainer = new Container({ zIndex: 1.5, isRenderGroup: true, eventMode: "none" })
   const starsContainer = new Container({ zIndex: 4.5, eventMode: "passive" })
   stage.addChild(takeawayHazeContainer, takeawayGlowContainer, starsContainer)
+  const hovered = hoverGlow(computedStyleMap["--dark"])
+  stage.addChild(hovered)
   const takeawayColors: TakeawayColors = {
     on: computedStyleMap["--wiki-takeaway"],
     off: computedStyleMap["--wiki-takeaway-off"],
@@ -147,6 +149,10 @@ PATCHES = [
 """,
      """        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
       }
+      if (n.simulationData.id === hoveredNodeId) {
+        hovered.position.set(x + width / 2, y + height / 2)
+        hovered.width = hovered.height = n.radius * 9
+      }
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
       // The star right after the note's name, on its line (graph-takeaway.ts).
       // The star after the name, like one more letter of it: a letter's gap after its
@@ -178,18 +184,17 @@ PATCHES = [
     # The edges of the open dot also show their direction (Victor, 2026-10-16): an
     # arrowhead where the edge enters the dot its link points to. Quartz keeps A→B and
     # B→A as two edges on the same line, so a two-way link gets a head at each end.
-    # A one-way edge of the open dot is drawn as dashes creeping slowly along it, from
-    # the linking note to the linked one, nothing under them (Victor, 2026-10-23 - on a
-    # faint line until then); a two-way edge stays solid. Hovering alone doesn't
-    # animate: only the open dot.
+    # A one-way lit edge is drawn as dashes creeping slowly along it, from the linking
+    # note to the linked one, nothing under them (Victor, 2026-10-23 - on a faint line
+    # until then); a two-way edge stays solid. Which edges light up: litEdge().
     ("""      l.gfx
         .lineTo(linkData.target.x! + width / 2, linkData.target.y! + height / 2)
         .stroke({ alpha: l.alpha, width: 1, color: l.color })
 """,
-     """      const lit = l.active || selectedEdge(l)
+     """      const lit = litEdge(l)
       const tx = linkData.target.x! + width / 2
       const ty = linkData.target.y! + height / 2
-      if (selectedEdge(l) && !twoWay(l)) {
+      if (lit && !twoWay(l)) {
         const k = currentTransform.k
         const sx = linkData.source.x! + width / 2
         const sy = linkData.source.y! + height / 2
@@ -214,7 +219,7 @@ PATCHES = [
           .lineTo(tx, ty)
           .stroke({ alpha: l.alpha * (lit ? 1 : 0.6), width: (lit ? 1.6 : 0.6) / currentTransform.k, color: l.color })
       }
-      if (selectedEdge(l)) {
+      if (lit) {
         const k = currentTransform.k
         const dx = linkData.target.x! - linkData.source.x!
         const dy = linkData.target.y! - linkData.source.y!
@@ -243,7 +248,7 @@ PATCHES = [
     ("alpha = l.active ? 1 : 0.2",
      "alpha = 1"),
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
-     'l.color = l.active || selectedEdge(l) ? computedStyleMap["--dark"] : computedStyleMap["--lightgray"]'),
+     'l.color = litEdge(l) ? computedStyleMap["--dark"] : computedStyleMap["--lightgray"]'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
      """      // Repainted, not tinted (a tint multiplies, and can't brighten a grey dot): the
       // open dot in the text colour; a dot turns grey once its note is read (isSeen).
@@ -263,9 +268,23 @@ PATCHES = [
     ("  let hoveredNodeId: string | null = null\n",
      "  let hoveredNodeId: string | null = null\n"
      "  let selectedNodeId: string | null = null\n"
-     "  const selectedEdge = (l: LinkRenderData) =>\n"
-     "    selectedNodeId !== null &&\n"
-     "    (l.simulationData.source.id === selectedNodeId || l.simulationData.target.id === selectedNodeId)\n"
+     "  // Which edges light up (Victor, 2026-10-23): hovering a dot, those to notes already\n"
+     "  // read - where it comes from in what you know; the open note's, those to notes not\n"
+     "  // read yet - where to explore next. And the one a link hovered in the popover\n"
+     "  // points along, from the open note to that one.\n"
+     "  const otherEnd = (l: LinkRenderData, id: string) =>\n"
+     "    l.simulationData.source.id === id ? l.simulationData.target.id : l.simulationData.source.id\n"
+     "  const touches = (l: LinkRenderData, id: string | null) =>\n"
+     "    id !== null && (l.simulationData.source.id === id || l.simulationData.target.id === id)\n"
+     "  const litEdge = (l: LinkRenderData) => {\n"
+     "    if (selectedNodeId !== null && touches(l, selectedNodeId)) {\n"
+     "      if (!isSeen(otherEnd(l, selectedNodeId))) return true\n"
+     "      if (touches(l, hoveredNodeId) && hoveredNodeId !== selectedNodeId) return true\n"
+     "    }\n"
+     "    // Not over the open dot itself: there, its own rule holds.\n"
+     "    if (hoveredNodeId === null || hoveredNodeId === selectedNodeId) return false\n"
+     "    return l.active && touches(l, hoveredNodeId) && isSeen(otherEnd(l, hoveredNodeId))\n"
+     "  }\n"
      "  // A→B with B→A too: Quartz keeps them as two edges on the same line.\n"
      "  let edgeKeys: Set<string> | null = null\n"
      "  const twoWay = (l: LinkRenderData) => {\n"
@@ -276,7 +295,7 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import "./tooltip.js"\n'
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
-     'import { TakeawayColors, TakeawayMark, baselineOf } from "./graph-takeaway"\n'
+     'import { TakeawayColors, TakeawayMark, baselineOf, hoverGlow } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -651,6 +670,14 @@ PATCHES = [
 """,
      """    label.scale.set(1 / scale)
     labelSize.set(nodeId, { w: label.width, h: label.height })
+"""),
+    # The hover glow (graph-takeaway.ts hoverGlow) shows while a dot is hovered.
+    ("""  function animate(time: number) {
+    if (stopAnimation) return
+""",
+     """  function animate(time: number) {
+    if (stopAnimation) return
+    hovered.visible = hoveredNodeId !== null
 """),
 ]
 

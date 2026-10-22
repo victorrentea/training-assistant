@@ -81,6 +81,12 @@ let haze: Texture | null = null
 const TEXTURE_SIZE = 256
 
 // The glow under a shining note's burst from level 3: a plain round haze, white.
+// Under a hovered dot, under any burst: a soft glow in the text colour (white on dark),
+// so a hover shows even when none of the dot's edges light up (Victor, 2026-10-23).
+export function hoverGlow(color: string): Sprite {
+  return new Sprite({ texture: hazeTexture(), anchor: 0.5, eventMode: "none", tint: color, alpha: 0.3, visible: false, zIndex: 1.3 })
+}
+
 function hazeTexture(): Texture {
   if (haze) return haze
   const canvas = document.createElement("canvas")
