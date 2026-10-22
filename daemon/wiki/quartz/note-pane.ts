@@ -401,7 +401,7 @@ function ensureBeam(): SVGSVGElement {
   beam.classList.add("note-beam")
   beam.innerHTML = `
     <defs><linearGradient id="note-beam-fill" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-opacity="0.32"/><stop offset="1" stop-opacity="0.06"/>
+      <stop offset="0" stop-opacity="0.16"/><stop offset="1" stop-opacity="0.03"/>
     </linearGradient></defs>
     <polygon fill="url(#note-beam-fill)"/>`
   document.body.append(beam)
@@ -539,8 +539,8 @@ function foldPoints(body: HTMLElement) {
 
 // The note's external links as a short list, each behind a 🔗 (a 🎬 for a short played
 // in the room): the note's own word for each (a link written as a bare URL shows its
-// site instead), the full URL in its tooltip. No site after it any more: the tooltip
-// tells (Victor, 2026-10-23).
+// site instead), the full URL in its tooltip, and the site it goes to after an em dash,
+// in grey (Victor, 2026-10-23) - not after a short: "youtu.be" says nothing there.
 const SHORT = "\u{1F3AC}" // 🎬
 
 function linkList(own: Element[]): HTMLElement | null {
@@ -567,6 +567,9 @@ function linkList(own: Element[]): HTMLElement | null {
     const item = document.createElement("li")
     if (short) item.className = "short"
     item.append(link)
+    if (link.textContent !== site && !short) {
+      item.append(Object.assign(document.createElement("span"), { className: "note-link-site", textContent: ` — ${site}` }))
+    }
     items.push(item)
   }
   if (items.length === 0) return null
@@ -692,9 +695,10 @@ function applyTakeaways(slugs: readonly string[]) {
 
 // The popover's star, right after its title (Victor, 2026-10-23 - it was left of the
 // ✕): the trainer's takeaway on his machine, the participant's own star in the
-// participant page, just the count anywhere else. The count goes before it, as "3×★"
-// on one line (Victor, 2026-10-22), and takes in the trainer's takeaway, like the
-// burst on the dot: his click shows at once as one more. The graph shows no count:
+// participant page, just the count anywhere else. The count follows it, small and
+// white, from two up, like the ×5 after a dot's 🔗: "★×3" (Victor, 2026-10-23 - it was
+// "3×★" in gold, "1×★" for one), and takes in the trainer's takeaway, like the burst on
+// the dot: his click shows at once as one more. The graph shows no count:
 // the bigger burst says it. A shining note's popover glows gold, like its dot.
 function showPeekStar() {
   const button = peek?.querySelector(".note-peek-star") as HTMLButtonElement | null
@@ -705,7 +709,8 @@ function showPeekStar() {
   const total = count + (takeaway ? 1 : 0)
   const own = mode === "trainer" ? takeaway : mode === "voter" ? voted : total > 0
   peek.classList.toggle("takeaway", peeked !== null && shineOf(peeked) > 0)
-  button.textContent = (total > 0 ? `${total}×` : "") + (own ? "★\uFE0E" : "☆\uFE0E")
+  const times = Object.assign(document.createElement("span"), { className: "note-peek-count", textContent: `×${total}` })
+  button.replaceChildren(own ? "★\uFE0E" : "☆\uFE0E", ...(total > 1 ? [times] : []))
   button.classList.toggle("on", own)
   button.hidden = mode === "viewer" && total === 0
   button.disabled = mode === "viewer"

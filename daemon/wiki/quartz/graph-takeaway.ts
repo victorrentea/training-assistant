@@ -34,7 +34,9 @@ export type TakeawayColors = {
   font: string
 }
 
+// The size the star is drawn at; place() scales it to the label's font.
 const STAR_FONT = 10
+const STAR_STROKE = 3 // its dark halo, half of it each side of the glyph
 // Around the glyph, in graph units: the star alone is a fingertip's fraction on a phone.
 const STAR_HIT_PAD = 5
 // U+FE0E: the text glyph, not the emoji, so it takes the theme's colour.
@@ -165,7 +167,7 @@ export class TakeawayMark {
         fontSize: STAR_FONT,
         fill: colors.off,
         fontFamily: colors.font,
-        stroke: { color: colors.halo, width: 3, join: "round" },
+        stroke: { color: colors.halo, width: STAR_STROKE, join: "round" },
       },
       resolution: window.devicePixelRatio * 4,
     })
@@ -220,11 +222,14 @@ export class TakeawayMark {
     return this.star.visible ? this.star.text.replace(/\uFE0E/g, "") : ""
   }
 
-  // The dot is at (x, y); its star's left edge, mid-height, at (x + dx, y + dy), after
-  // the label. The burst turns slowly, so it reads as alive
+  // The dot is at (x, y); its star's glyph starts at (x + dx, y + dy), mid-height, after
+  // the label, `size` high: a size a little under the label's font, so the star reads
+  // as one more word of the name (Victor, 2026-10-23). The burst turns slowly, so it reads as alive
   // without pulsing like the yellow Follow ring.
-  place(x: number, y: number, dx: number, dy: number, time: number) {
-    this.star.position.set(x + dx, y + dy)
+  place(x: number, y: number, dx: number, dy: number, size: number, time: number) {
+    const scale = size / STAR_FONT
+    this.star.scale.set(scale)
+    this.star.position.set(x + dx - (STAR_STROKE / 2) * scale, y + dy)
     if (this.shine.level > 0) {
       this.burst.position.set(x, y)
       this.burst.rotation = time / 6000

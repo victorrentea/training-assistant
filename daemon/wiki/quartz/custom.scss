@@ -76,7 +76,7 @@ body {
   }
 
   // Right after the title (note-pane.ts): the trainer stars the note as a key takeaway;
-  // for everyone else it only shows, filled, on a starred note. "3×★" on one line.
+  // for everyone else it only shows, filled, on a starred note. "★×3" on one line.
   .note-peek-star {
     flex: none;
     min-width: calc(2.2 * var(--peek-u));
@@ -97,6 +97,14 @@ body {
 
     &.on {
       color: var(--wiki-takeaway);
+    }
+
+    // How many starred it, like the ×5 after a dot's 🔗: small, plain text colour.
+    .note-peek-count {
+      margin-left: 0.08em;
+      font-size: 0.55em;
+      font-weight: 600;
+      color: var(--dark);
     }
 
     &:hover:not(:disabled) {
@@ -240,6 +248,11 @@ body {
 
       li.short {
         list-style-type: "🎬 ";
+      }
+
+      .note-link-site {
+        color: var(--gray);
+        font-size: 0.85em;
       }
     }
 

@@ -1,14 +1,14 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
 // opening: a tiny picture at the dot's top-left when the note shows a slide or a
-// screenshot, and at its top-right a short column: 🔗 for the note's external links,
-// with "×3" after it from two up; under it, one row for its emotional anchors, ⚓ for
+// screenshot, at its top-right 🔗 for the note's external links, with "×3" after it
+// from two up, and right of it, at mid-height, one row for its emotional anchors: ⚓ for
 // each moment the summarizer tags and 🎬 for each short played in the room, ⚓⚓🎬
-// (both are the same thing: a moment that moved the room). Each emoji has a dark halo hugging
-// its outline, like the star's, so it reads over the takeaway glow; none, no row, and
-// the rows under it move up (Victor, 2026-10-23 - it was 🌐 and ⚓ with a lowered
-// count, ⚓₂, on a disc of the page background, which read as a black blob on the
-// glow; repeated chains, 🔗🔗🔗🔗, read as a mess; before that "↗3"). A detail, not a key number: it was "🔗3" in bold, which drew the
-// eye before the note titles (Victor, 2026-10-16).
+// (both are the same thing: a moment that moved the room). Each emoji has a dark halo
+// hugging its outline, like the star's, so it reads over the takeaway glow; none, no
+// row (Victor, 2026-10-23 - it was 🌐 and ⚓ with a lowered count, ⚓₂, on a disc of the
+// page background, which read as a black blob on the glow; repeated chains, 🔗🔗🔗🔗,
+// read as a mess; before that "↗3"). A detail, not a key number: it was "🔗3" in bold,
+// which drew the eye before the note titles (Victor, 2026-10-16).
 //
 // daemon/wiki/builder.py scans the built pages into note-badges.json at the site
 // root and copies this file next to graph.inline.ts; patch-graph.py makes the graph
@@ -53,7 +53,6 @@ export function loadBadges(fullSlug: FullSlug): Promise<Map<SimpleSlug, Badges>>
 const PICTURE_W = 10
 const PICTURE_H = 8
 const EMOJI_FONT = 9
-const ROW = 11 // from one row's bottom to the next one's
 
 // Frame, mountain and sun: a picture, drawn rather than the 🖼️ emoji, which is
 // mush at this size and can't take the theme's colours.
@@ -129,45 +128,33 @@ const SHORT = "\u{1F3AC}"
 
 export class NoteBadge extends Container {
   private picture: Graphics | null
-  readonly rows: Container[] // 🔗 then ⚓🎬, top to bottom, only those with a count
+  private links: Container | null // 🔗×N
+  private anchors: Container | null // ⚓⚓🎬
 
   constructor(badges: Badges, colors: BadgeColors) {
     super({ eventMode: "none" })
-    this.picture = badges.img ? picture(colors) : null
     const moments = badges.anchors ?? 0
     const shorts = badges.shorts ?? 0
-    this.rows = [
-      badges.links > 0 ? times(LINK, badges.links, colors) : null,
-      moments + shorts > 0 ? anchors(moments, shorts, colors) : null,
-    ].filter((row): row is Container => row !== null)
-    if (this.picture) this.addChild(this.picture)
-    this.rows.forEach((row) => this.addChild(row)) // addChild() with no child throws
+    this.picture = badges.img ? picture(colors) : null
+    this.links = badges.links > 0 ? times(LINK, badges.links, colors) : null
+    this.anchors = moments + shorts > 0 ? anchors(moments, shorts, colors) : null
+    // addChild() with no child throws
+    for (const child of [this.picture, this.links, this.anchors]) if (child) this.addChild(child)
   }
 
   // The dot is at (x, y) with radius r. The picture's inner corner sits on the dot's
-  // rim, at 45° up-left.
+  // rim at 45° up-left, the 🔗's bottom-left corner at 45° up-right; the ⚓🎬 row right
+  // of the dot, at its middle height, always there (Victor, 2026-10-23 - it was under
+  // the 🔗, wherever that left room). Over a ⚓ row the 🔗 rises clear of it.
   place(x: number, y: number, r: number) {
+    const rim = r * Math.SQRT1_2
     this.position.set(x, y)
-    this.picture?.position.set(-r * Math.SQRT1_2 - 0.5 - PICTURE_W, -r * Math.SQRT1_2 - 0.5)
-    const at = column(this.rows.length, r)
-    this.rows.forEach((row, i) => row.position.set(at.left, at.top + i * ROW))
+    this.picture?.position.set(-rim - 0.5 - PICTURE_W, -rim - 0.5)
+    const anchorsBottom = EMOJI_FONT / 2
+    this.anchors?.position.set(r + 1.5, anchorsBottom)
+    const linksBottom = -rim + 1.5
+    this.links?.position.set(rim - 0.5, this.anchors ? Math.min(linksBottom, anchorsBottom - EMOJI_FONT - 1) : linksBottom)
   }
-}
-
-// The column right of a dot of radius r, as offsets from its centre: the bottom-left
-// corner of its first row on the rim at 45° up-right, each next row ROW lower,
-// keeping one left edge, moved out just enough for every row to clear the dot. A
-// column too tall for that starts higher instead, its last row ending just above the
-// label, which hangs from r + 2 down.
-function column(rows: number, r: number): { left: number; top: number; row: number } {
-  const top = Math.min(-r * Math.SQRT1_2 + 1.5, r + 1 - (rows - 1) * ROW)
-  let left = r * Math.SQRT1_2 - 0.5
-  for (let i = 1; i < rows; i++) {
-    const bottom = top + i * ROW
-    const nearest = bottom - ROW < 0 && bottom > 0 ? 0 : Math.min(Math.abs(bottom), Math.abs(bottom - ROW))
-    if (nearest < r) left = Math.max(left, Math.sqrt(r * r - nearest * nearest) + 1)
-  }
-  return { left, top, row: ROW }
 }
 
 export function makeBadge(badges: Badges | undefined, colors: BadgeColors): NoteBadge | null {

@@ -149,8 +149,12 @@ PATCHES = [
       }
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
       // The star right after the note's name, on its line (graph-takeaway.ts).
-      // The label's width takes in its outline, 2 units each side: the star tucks into it.
-      n.takeaway?.place(x + width / 2, y + height / 2, n.label.width / 2 - 1, n.radius + 2 + n.label.height / 2, time)
+      // The star after the name, as one more word of it: a word space after its last
+      // letter (the label's width takes in its outline, 2 of its own units each side),
+      // a little under its font size (Victor, 2026-10-23).
+      const em = (n.label.style.fontSize as number) * n.label.scale.x
+      const textEnd = n.label.width / 2 - 2 * n.label.scale.x
+      n.takeaway?.place(x + width / 2, y + height / 2, textEnd + 0.25 * em, n.radius + 2 + n.label.height / 2, 0.85 * em, time)
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
