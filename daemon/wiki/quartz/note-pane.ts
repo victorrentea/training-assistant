@@ -389,7 +389,8 @@ function leastCovering(at: Point, w: number, h: number, top: number, bottom: num
 // A soft beam from the open dot to its popover, under it, so the eye sees where the
 // note comes from (Victor, 2026-10-23): the outline of the dot's disc and the
 // popover's corners together, its sides tangent to the dot, strongest at the dot. Its
-// edges stand out, its middle barely tinted. In the colour of the open dot's lit links,
+// edges stand out and fade inward to nothing in its middle: a wide blurred outline,
+// clipped to the inside, under a thin crisp one (Victor, 2026-10-23). In the colour of the open dot's lit links,
 // the text colour (white on dark); gold, like its burst, when the note shines. Redrawn
 // every frame while the popover is open: the graph moves, zooms and gets dragged under it.
 let beam: SVGSVGElement | null = null
@@ -402,11 +403,15 @@ function ensureBeam(): SVGSVGElement {
   beam.classList.add("note-beam")
   beam.innerHTML = `
     <defs><linearGradient id="note-beam-fill" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-opacity="0.07"/><stop offset="1" stop-opacity="0.01"/>
+      <stop offset="0" stop-opacity="0.35"/><stop offset="1" stop-opacity="0.08"/>
     </linearGradient><linearGradient id="note-beam-edge" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-opacity="0.5"/><stop offset="1" stop-opacity="0.12"/>
-    </linearGradient></defs>
-    <polygon fill="url(#note-beam-fill)" stroke="url(#note-beam-edge)" stroke-width="1.5" stroke-linejoin="round"/>`
+    </linearGradient>
+    <clipPath id="note-beam-inside"><polygon/></clipPath>
+    <filter id="note-beam-soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter></defs>
+    <polygon fill="none" stroke="url(#note-beam-fill)" stroke-width="36" stroke-linejoin="round"
+      clip-path="url(#note-beam-inside)" filter="url(#note-beam-soft)"/>
+    <polygon fill="none" stroke="url(#note-beam-edge)" stroke-width="1.5" stroke-linejoin="round"/>`
   document.body.append(beam)
   return beam
 }
@@ -431,7 +436,8 @@ function followWithBeam() {
         const a = (i * Math.PI) / 12
         return [dot.x + dot.r * Math.cos(a), dot.y + dot.r * Math.sin(a)]
       })
-      svg.querySelector("polygon")!.setAttribute("points", hull([...rim, ...corners]).join(" "))
+      const points = hull([...rim, ...corners]).join(" ")
+      svg.querySelectorAll("polygon").forEach((polygon) => polygon.setAttribute("points", points))
       const color = peek!.classList.contains("takeaway") ? "var(--wiki-takeaway)" : "var(--dark)"
       svg.querySelectorAll("linearGradient").forEach((gradient) => {
         // A style, not the stop-color attribute: an attribute doesn't read CSS variables.

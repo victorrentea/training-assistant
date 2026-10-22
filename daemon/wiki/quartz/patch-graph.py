@@ -70,7 +70,7 @@ PATCHES = [
   stage.addChild(badgesContainer)
   const noteBadges = await loadBadges(fullSlug)
   const badgeColors: BadgeColors = {
-    glyph: computedStyleMap["--dark"],
+    glyph: "#9ca3af", // the grey of the ⚓ emoji, so the drawn glyphs match it (Victor, 2026-10-23)
     count: computedStyleMap["--gray"], // a detail: it mustn't jump out (Victor, 2026-10-23)
     font: computedStyleMap["--bodyFont"],
   }

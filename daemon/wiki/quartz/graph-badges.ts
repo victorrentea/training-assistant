@@ -1,6 +1,6 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
 // opening: a tiny picture left of the dot when the note shows a slide or a screenshot,
-// above it a small white link glyph (a box with an arrow leaving it) for the note's external links,
+// above it a small grey link glyph (a box with an arrow leaving it) for the note's external links,
 // with "×3" after it from two up, and right of it, at mid-height, one row for its
 // emotional anchors: 🎬 for the shorts played in the room and ⚓ for the moments the
 // summarizer tags, each with ×N from two up (both are the same thing: a moment that
@@ -23,7 +23,7 @@ import { FullSlug, SimpleSlug, pathToRoot, simplifySlug } from "../../util/path"
 type Badges = { img: boolean; links: number; anchors?: number; shorts?: number }
 
 export type BadgeColors = {
-  glyph: string // the drawn glyphs, picture and link: the text colour
+  glyph: string // the drawn glyphs, picture frame and link: the ⚓ emoji's grey
   count: string // the "×3" after it
   font: string
 }
@@ -56,8 +56,8 @@ const PICTURE_SCALE = 0.9
 const EMOJI_FONT = 9
 
 // Frame, mountain and sun: a picture, drawn rather than the 🖼️ emoji, which is
-// mush at this size and can't take the theme's colours. Its frame in the text colour
-// (white on dark), a green mountain and a yellow sun in it, so the pictures catch the
+// mush at this size and can't take the theme's colours. Its frame in the ⚓'s grey,
+// a green mountain and a yellow sun in it, so the pictures catch the
 // eye in the crowd; the labels' black outline, like the link glyph; 0.9 of its first
 // size (Victor, 2026-10-23 - it was all amber on a patch of the page background).
 function picture(colors: BadgeColors): Graphics {
@@ -135,7 +135,7 @@ function countText(n: number, colors: BadgeColors): Text {
 }
 
 // A box with an arrow leaving it by its open top-right corner: "goes out of the wiki",
-// drawn rather than the 🔗 emoji, so it takes the text colour (white on dark) and an
+// drawn rather than the 🔗 emoji, so it takes the ⚓'s grey and an
 // outline, half an emoji's size (Victor, 2026-10-23). Bottom-left corner at (0, 0).
 const LINK_W = 5
 const LINK_BOX = (7.5 * LINK_W) / 9 // the box's side
