@@ -28,7 +28,7 @@ QUESTIONS: list[dict] = [
     {"id": "agents_md", "kind": "choice", "text": "Do you have an AGENTS.md / CLAUDE.md in your project?",
      "options": YES_NO_IDK, "host_options": ["Yes", "No / don't know"], "host_option_of": [0, 1, 1]},
     {"id": "knowledge_base", "kind": "choice",
-     "text": "Does your company have a (Markdown) knowledge base for your agents to use (e.g. LLM Wiki)?",
+     "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki)?",
      "link": {"text": "LLM Wiki", "url": "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"},
      "options": ["Yes", "No / I don't know"]},
     {"id": "mcp", "kind": "choice", "text": "Ever used an MCP tool?", "options": YES_NO_IDK},
