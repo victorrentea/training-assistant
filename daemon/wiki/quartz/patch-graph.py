@@ -277,8 +277,8 @@ PATCHES = [
      "  // what is left to explore around a note:\n"
      "  // - hovering a read note: its links with unread neighbours, if any; else all the\n"
      "  //   links coming into it;\n"
-     "  // - hovering an unread note: its links with read neighbours, if any; else the\n"
-     "  //   links coming into it;\n"
+     "  // - hovering an unread note: its links coming in from read notes, if any (else its\n"
+     "  //   links with read neighbours); without read neighbours, the links coming into it;\n"
      "  // - the open note: its links with unread neighbours, if any; once all are read,\n"
      "  //   the links going out of it (and the one a link hovered in its popover points along).\n"
      "  // A two-way link counts as both coming in and going out.\n"
@@ -287,12 +287,19 @@ PATCHES = [
      "  const touches = (l: LinkRenderData, id: string | null) =>\n"
      "    id !== null && (l.simulationData.source.id === id || l.simulationData.target.id === id)\n"
      "  const neighboursSeen = (id: string) => {\n"
-     "    let seen = 0, unseen = 0\n"
-     "    for (const e of linkRenderData) if (touches(e, id)) isSeen(otherEnd(e, id)) ? seen++ : unseen++\n"
-     "    return { seen, unseen }\n"
+     "    let seen = 0, unseen = 0, seenInto = 0\n"
+     "    for (const e of linkRenderData) {\n"
+     "      if (!touches(e, id)) continue\n"
+     "      if (!isSeen(otherEnd(e, id))) unseen++\n"
+     "      else {\n"
+     "        seen++\n"
+     "        if (e.simulationData.target.id === id || twoWay(e)) seenInto++\n"
+     "      }\n"
+     "    }\n"
+     "    return { seen, unseen, seenInto }\n"
      "  }\n"
      "  // The hovered note's neighbours, read or not: worked out once per hovered note.\n"
-     "  let around: { id: string | null; seen: number; unseen: number } = { id: null, seen: 0, unseen: 0 }\n"
+     "  let around = { id: null as string | null, seen: 0, unseen: 0, seenInto: 0 }\n"
      "  const hoverAround = () => {\n"
      "    if (around.id !== hoveredNodeId && hoveredNodeId !== null) around = { id: hoveredNodeId, ...neighboursSeen(hoveredNodeId) }\n"
      "    return around\n"
@@ -307,7 +314,9 @@ PATCHES = [
      "    const other = isSeen(otherEnd(l, hoveredNodeId))\n"
      "    const into = l.simulationData.target.id === hoveredNodeId || twoWay(l)\n"
      "    if (isSeen(hoveredNodeId)) return hoverAround().unseen > 0 ? !other : into\n"
-     "    return hoverAround().seen > 0 ? other : into\n"
+     "    const a = hoverAround()\n"
+     "    if (a.seenInto > 0) return other && into // from what is read into what is not (Victor, 2026-10-23)\n"
+     "    return a.seen > 0 ? other : into\n"
      "  }\n"
      "  // A→B with B→A too: Quartz keeps them as two edges on the same line.\n"
      "  let edgeKeys: Set<string> | null = null\n"
@@ -368,7 +377,7 @@ PATCHES = [
   const paneGraph: PaneGraph = {
     select(id) {
       selectedNodeId = id
-      around = { id: null, seen: 0, unseen: 0 } // a note just read changes its neighbours' counts
+      around = { id: null, seen: 0, unseen: 0, seenInto: 0 } // a note just read changes its neighbours' counts
       selectedAllRead =
         id !== null &&
         linkRenderData.every((l) => !touches(l, id) || isSeen(otherEnd(l, id)))
