@@ -16,7 +16,7 @@
 // load the JSON before it creates its dots, put one NoteBadge per badged dot in a
 // container of its own (not the labels', which fades out when zoomed out) and place
 // it in its animation loop.
-import { Container, Graphics, Text } from "pixi.js"
+import { Container, Graphics, Rectangle, Text } from "pixi.js"
 import { FullSlug, SimpleSlug, pathToRoot, simplifySlug } from "../../util/path"
 
 // No anchors or shorts: a site built before them.
@@ -236,15 +236,18 @@ export function makeBadge(badges: Badges | undefined, colors: BadgeColors): Note
     : null
 }
 
-// A badge says what it is when the pointer rests on it for 1.5 s (Victor, 2026-10-23):
+// A badge says what it is when the pointer rests on it for 1 s (Victor, 2026-10-23):
 // "Screenshot", "Link", "Short", "Emotional anchor", "Favorite" (graph-takeaway.ts). In
 // the look of the app's tooltips (static/tooltip.js), which only reach DOM elements.
-const NAME_DELAY_MS = 1500
+const NAME_DELAY_MS = 1000
 let nameTip: HTMLDivElement | null = null
 let nameTimer = 0
 
 export function namedAfterAWhile(target: Container, name: string) {
   target.eventMode = "static"
+  // Its own box to hit: an emoji is a container of text copies that take no pointer.
+  const box = target.getLocalBounds()
+  target.hitArea = new Rectangle(box.x - 1, box.y - 1, box.width + 2, box.height + 2)
   target.on("pointerover", (e) => {
     window.clearTimeout(nameTimer)
     const { clientX: x, clientY: y } = e
