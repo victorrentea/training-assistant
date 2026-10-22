@@ -567,6 +567,14 @@ function foldPoints(body: HTMLElement) {
 // in grey (Victor, 2026-10-23) - not after a short: "youtu.be" says nothing there.
 const SHORT = "\u{1F3AC}" // 🎬
 
+// "…/docs/en/memory" → "memory", "…/wiki/Progressive_disclosure" → "Progressive
+// disclosure"; the site when the address has no path.
+function pageName(href: string, site: string): string {
+  const last = new URL(href).pathname.split("/").filter(Boolean).pop() ?? ""
+  const name = decodeURIComponent(last).replace(/\.[a-z]+$/i, "").replace(/[-_]+/g, " ").trim()
+  return name || site
+}
+
 function linkList(own: Element[]): HTMLElement | null {
   const seenHrefs = new Set<string>()
   const items: HTMLElement[] = []
@@ -587,7 +595,10 @@ function linkList(own: Element[]): HTMLElement | null {
     link.target = "_blank"
     link.rel = "noopener"
     link.dataset.tip = a.href
-    link.textContent = !text || /^https?:|^www\./.test(text) || text === site ? site : text
+    // A number or a scrap of a word says nothing out of its sentence ("200"): the
+    // page's own name from its address instead (Victor, 2026-10-23).
+    const meaningless = /^[\d\s.,%$€]+$/.test(text) || text.length <= 2
+    link.textContent = !text || /^https?:|^www\./.test(text) || text === site ? site : meaningless ? pageName(a.href, site) : text
     const item = document.createElement("li")
     if (short) item.className = "short"
     item.append(link)
