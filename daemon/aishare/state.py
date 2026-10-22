@@ -33,7 +33,7 @@ QUESTIONS: list[dict] = [
      "options": ["Yes", "No / I don't know"]},
     {"id": "mcp", "kind": "choice", "text": "Ever used an MCP tool?", "options": YES_NO_IDK},
     {"id": "skill", "kind": "choice", "text": "Ever created a skill?", "options": YES_NO},
-    {"id": "plugins", "kind": "choice", "text": "Do you have any company plugins installed in your agent?", "options": YES_NO_IDK},
+    {"id": "plugins", "kind": "choice", "text": "Do you have any company / team plugins installed in your agent?", "options": YES_NO_IDK},
     {"id": "custom_agent", "kind": "choice", "text": "Ever created a custom agent (.md)?", "options": YES_NO},
     {"id": "code_review", "kind": "choice", "text": "Do you have a code-review skill / agent?", "options": YES_NO_IDK},
     {"id": "nontech_pr", "kind": "choice", "text": "Ever received a PR written by a non-developer (e.g. PO, business)?", "options": YES_NO},
