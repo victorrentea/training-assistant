@@ -19,6 +19,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 ASSETS_DIR = Path(__file__).parent / "quartz"
+TOOLTIP_JS = Path(__file__).parents[2] / "static" / "tooltip.js"
 BUILD_TIMEOUT_S = 300
 
 # Same exclusions as the materials zip, plus the vault's own settings folder.
@@ -83,6 +84,8 @@ def _prepare_quartz(qdir: Path) -> None:
     shutil.copy(ASSETS_DIR / "icon.png", qdir / "quartz" / "static" / "icon.png")
     for script in ("note-pane.ts", "graph-badges.ts", "graph-takeaway.ts"):
         shutil.copy(ASSETS_DIR / script, qdir / "quartz" / "components" / "scripts" / script)
+    # The app's one tooltip component (data-tip), so the wiki doesn't grow a second one.
+    shutil.copy(TOOLTIP_JS, qdir / "quartz" / "components" / "scripts" / "tooltip.js")
     patch = subprocess.run(
         [sys.executable, str(ASSETS_DIR / "patch-graph.py"),
          str(qdir / "quartz" / "components" / "scripts" / "graph.inline.ts")],

@@ -1,12 +1,14 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
 // opening: a tiny picture at the dot's top-left when the note shows a slide or a
 // screenshot, and at its top-right a short column: 🔗 for the note's external links,
-// ⚓ under it for its emotional anchors (the ⚓ moments the summarizer tags), then 🎬
-// for the shorts played in the room. Each emoji is repeated once per item, 🔗🔗🔗 for
-// three links, straight on the edges with nothing behind; none, no row, and the rows
-// under it move up (Victor, 2026-10-23 - it was 🌐 and ⚓ with a lowered count, ⚓₂,
-// on a disc of the page background, which read as a black blob on the takeaway glow;
-// before that "↗3"). A detail, not a key number: it was "🔗3" in bold, which drew the
+// with "×3" after it from two up; under it, one row for its emotional anchors, ⚓ for
+// each moment the summarizer tags and 🎬 for each short played in the room, ⚓⚓🎬
+// (both are the same thing: a moment that moved the room); last, the dot's star
+// (graph-takeaway.ts), which column() places too. Each emoji has a dark halo hugging
+// its outline, like the star's, so it reads over the takeaway glow; none, no row, and
+// the rows under it move up (Victor, 2026-10-23 - it was 🌐 and ⚓ with a lowered
+// count, ⚓₂, on a disc of the page background, which read as a black blob on the
+// glow; repeated chains, 🔗🔗🔗🔗, read as a mess; before that "↗3"). A detail, not a key number: it was "🔗3" in bold, which drew the
 // eye before the note titles (Victor, 2026-10-16).
 //
 // daemon/wiki/builder.py scans the built pages into note-badges.json at the site
@@ -22,6 +24,7 @@ type Badges = { img: boolean; links: number; anchors?: number; shorts?: number }
 
 export type BadgeColors = {
   img: string // the picture glyph
+  count: string // the "×3" after 🔗
   halo: string // the page background, behind the picture so edges don't run through it
   font: string
 }
@@ -51,7 +54,7 @@ export function loadBadges(fullSlug: FullSlug): Promise<Map<SimpleSlug, Badges>>
 const PICTURE_W = 10
 const PICTURE_H = 8
 const EMOJI_FONT = 9
-const ROW = 10 // from one row's bottom to the next one's
+const ROW = 11 // from one row's bottom to the next one's
 
 // Frame, mountain and sun: a picture, drawn rather than the 🖼️ emoji, which is
 // mush at this size and can't take the theme's colours.
@@ -69,13 +72,50 @@ function picture(colors: BadgeColors): Graphics {
     .fill({ color: colors.img })
 }
 
-// Bottom-left corner at (0, 0): the emoji, n times.
-function repeated(emoji: string, n: number): Text {
+// Bottom-left corner at (0, 0): ⚓ per moment, then 🎬 per short.
+function anchors(moments: number, shorts: number, colors: BadgeColors): Container {
+  return new Container({
+    eventMode: "none",
+    children: [emojiText(ANCHOR.repeat(moments) + SHORT.repeat(shorts), colors)],
+  })
+}
+
+// Bottom-left corner at (0, 0): the emoji once, then "×n" from two up.
+function times(emoji: string, n: number, colors: BadgeColors): Container {
+  const row = new Container({ eventMode: "none", children: [emojiText(emoji, colors)] })
+  if (n > 1) {
+    const count = new Text({
+      eventMode: "none",
+      text: `×${n}`,
+      anchor: { x: 0, y: 1 },
+      style: {
+        fontSize: EMOJI_FONT * 0.8,
+        fontWeight: "600",
+        fill: colors.count,
+        fontFamily: colors.font,
+        stroke: { color: colors.halo, width: 3, join: "round" },
+      },
+      resolution: window.devicePixelRatio * 4,
+    })
+    // Right after the emoji's picture, about 1em wide: its measured width runs further.
+    count.position.set(EMOJI_FONT + 0.5, -0.5)
+    row.addChild(count)
+  }
+  return row
+}
+
+function emojiText(text: string, colors: BadgeColors): Text {
   return new Text({
     eventMode: "none",
-    text: emoji.repeat(n),
+    text,
     anchor: { x: 0, y: 1 },
-    style: { fontSize: EMOJI_FONT, fontFamily: EMOJI_FONTS, letterSpacing: -1.5 },
+    style: {
+      fontSize: EMOJI_FONT,
+      fontFamily: EMOJI_FONTS,
+      letterSpacing: -1.5,
+      // A stroke outlines an emoji's picture badly; a tight shadow, unshifted, rings it.
+      dropShadow: { color: colors.halo, alpha: 1, blur: 1.5, distance: 0, angle: 0 },
+    },
     resolution: window.devicePixelRatio * 4,
   })
 }
@@ -90,40 +130,45 @@ const SHORT = "\u{1F3AC}"
 
 export class NoteBadge extends Container {
   private picture: Graphics | null
-  private rows: Text[] // 🔗, ⚓ then 🎬, top to bottom, only those with a count
+  readonly rows: Container[] // 🔗 then ⚓🎬, top to bottom, only those with a count
 
   constructor(badges: Badges, colors: BadgeColors) {
     super({ eventMode: "none" })
     this.picture = badges.img ? picture(colors) : null
-    this.rows = (
-      [
-        [LINK, badges.links],
-        [ANCHOR, badges.anchors ?? 0],
-        [SHORT, badges.shorts ?? 0],
-      ] as const
-    )
-      .filter(([, n]) => n > 0)
-      .map(([emoji, n]) => repeated(emoji, n))
+    const moments = badges.anchors ?? 0
+    const shorts = badges.shorts ?? 0
+    this.rows = [
+      badges.links > 0 ? times(LINK, badges.links, colors) : null,
+      moments + shorts > 0 ? anchors(moments, shorts, colors) : null,
+    ].filter((row): row is Container => row !== null)
     if (this.picture) this.addChild(this.picture)
     this.rows.forEach((row) => this.addChild(row)) // addChild() with no child throws
   }
 
-  // The dot is at (x, y) with radius r. The picture's inner corner sits on the dot's
-  // rim, at 45° up-left; the first row's bottom-left corner at 45° up-right, and the
-  // rows below it keep its left edge, moved out just enough to clear the dot.
-  place(x: number, y: number, r: number) {
-    const rim = r * Math.SQRT1_2
+  // The dot is at (x, y) with radius r; its column has `total` rows, the star's
+  // included. The picture's inner corner sits on the dot's rim, at 45° up-left.
+  place(x: number, y: number, r: number, total: number) {
     this.position.set(x, y)
-    this.picture?.position.set(-rim - 0.5 - PICTURE_W, -rim - 0.5)
-    const top = -rim + 1.5
-    let left = rim - 0.5
-    for (let i = 1; i < this.rows.length; i++) {
-      const bottom = top + i * ROW
-      const nearest = bottom - ROW < 0 && bottom > 0 ? 0 : Math.min(Math.abs(bottom), Math.abs(bottom - ROW))
-      if (nearest < r) left = Math.max(left, Math.sqrt(r * r - nearest * nearest) + 1)
-    }
-    this.rows.forEach((row, i) => row.position.set(left, top + i * ROW))
+    this.picture?.position.set(-r * Math.SQRT1_2 - 0.5 - PICTURE_W, -r * Math.SQRT1_2 - 0.5)
+    const at = column(total, r)
+    this.rows.forEach((row, i) => row.position.set(at.left, at.top + i * ROW))
   }
+}
+
+// The column right of a dot of radius r, as offsets from its centre: the bottom-left
+// corner of its first row on the rim at 45° up-right, each next row ROW lower,
+// keeping one left edge, moved out just enough for every row to clear the dot. A
+// column too tall for that starts higher instead, its last row ending just above the
+// label, which hangs from r + 2 down.
+export function column(rows: number, r: number): { left: number; top: number; row: number } {
+  const top = Math.min(-r * Math.SQRT1_2 + 1.5, r + 1 - (rows - 1) * ROW)
+  let left = r * Math.SQRT1_2 - 0.5
+  for (let i = 1; i < rows; i++) {
+    const bottom = top + i * ROW
+    const nearest = bottom - ROW < 0 && bottom > 0 ? 0 : Math.min(Math.abs(bottom), Math.abs(bottom - ROW))
+    if (nearest < r) left = Math.max(left, Math.sqrt(r * r - nearest * nearest) + 1)
+  }
+  return { left, top, row: ROW }
 }
 
 export function makeBadge(badges: Badges | undefined, colors: BadgeColors): NoteBadge | null {

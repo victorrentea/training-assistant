@@ -2,17 +2,19 @@
 // every graph their dots get a filled star and a golden starburst behind them, live
 // (Victor, 2026-10-19).
 //
-// On the trainer's machine every dot has a star he clicks, on its left, mid-height: the
-// top corners hold the link count and the picture badges (graph-badges.ts), the label
-// hangs below. Hollow until he stars the note, filled after; a click on it un-stars it
+// On the trainer's machine every dot has a star he clicks, last in the column at the
+// dot's top-right, under its 🔗 and ⚓ rows (graph-badges.ts), with no count: the bigger
+// burst says how many starred it, the popover gives the number; the left side keeps
+// only the picture badge (Victor, 2026-10-23 - it was "3☆" left of the dot,
+// mid-height). Hollow until he stars the note, filled after; a click on it un-stars it
 // right there, without opening the note (Victor, 2026-10-22).
 //
 // Participants star the notes they found interesting, and those shine for the whole
 // group with the same gold starburst; the dot and its label turn yellow too, like a
 // star, the label outlined in black to stay readable over the burst (Victor,
 // 2026-10-21). In the participant page's Wiki tab every dot has a star to click,
-// filled once it's theirs; everywhere, the star shows how many starred the note, the
-// trainer included ("3☆"), none when nobody did. The trainer's star is his takeaway.
+// filled once it's theirs; elsewhere it shows, filled, once anyone starred the note,
+// the trainer included. The trainer's star is his takeaway.
 //
 // Five levels of shine, climbing as stars pile up on the same note (his takeaway counts
 // as one star): 1 a smaller, fainter starburst, 2 the takeaway's starburst as it was
@@ -156,7 +158,7 @@ export class TakeawayMark {
     this.glow = sprite(hazeTexture())
     this.star = new Text({
       text: HOLLOW,
-      anchor: { x: 1, y: 0.5 },
+      anchor: { x: 0, y: 1 },
       eventMode: "none",
       cursor: "pointer",
       visible: false,
@@ -196,7 +198,7 @@ export class TakeawayMark {
     const own = this.mode === "trainer" ? takeaway : this.mode === "voter" ? mine : total > 0
     const clickable = this.mode !== "viewer"
     const visible = clickable || total > 0
-    this.star.text = (total > 0 ? String(total) : "") + (own ? FILLED : HOLLOW)
+    this.star.text = own ? FILLED : HOLLOW
     const b = this.star.getLocalBounds()
     this.star.hitArea = new Rectangle(
       b.x - STAR_HIT_PAD,
@@ -219,10 +221,11 @@ export class TakeawayMark {
     return this.star.visible ? this.star.text.replace(/\uFE0E/g, "") : ""
   }
 
-  // The dot is at (x, y) with radius r. The burst turns slowly, so it reads as alive
+  // The dot is at (x, y) with radius r; its star's bottom-left corner at (x + dx,
+  // y + dy), its row in the dot's column. The burst turns slowly, so it reads as alive
   // without pulsing like the yellow Follow ring.
-  place(x: number, y: number, r: number, time: number) {
-    this.star.position.set(x - r - 2.5, y + 1.5)
+  place(x: number, y: number, dx: number, dy: number, time: number) {
+    this.star.position.set(x + dx, y + dy)
     if (this.shine.level > 0) {
       this.burst.position.set(x, y)
       this.burst.rotation = time / 6000

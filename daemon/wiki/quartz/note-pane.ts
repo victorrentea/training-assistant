@@ -228,12 +228,14 @@ function ensurePeek(): HTMLElement {
   if (peek) return peek
   peek = document.createElement("div")
   peek.className = "note-peek"
-  // The ✕ is what a phone has instead of Esc or a second click on a tiny dot. The
-  // star left of it marks the note a key takeaway (the trainer's machine only).
+  // The ✕ is what a phone has instead of Esc or a second click on a tiny dot. The star
+  // right after the title marks the note a key takeaway (the trainer's machine only).
   peek.innerHTML = `
-    <button class="note-peek-star" type="button"></button>
     <button class="note-peek-close" type="button" aria-label="Close">✕</button>
-    <h2 class="note-peek-title"></h2>
+    <div class="note-peek-head">
+      <h2 class="note-peek-title"></h2>
+      <button class="note-peek-star" type="button"></button>
+    </div>
     <div class="note-peek-body"></div>`
   const body = peek.querySelector(".note-peek-body") as HTMLElement
   peek.querySelector(".note-peek-close")!.addEventListener("click", hidePeek)
@@ -477,11 +479,11 @@ function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | n
   })
 }
 
-// Only the lead sentence shows at first; the bullets under it fold into a "Details"
+// Only the lead sentence shows at first; the bullets under it fold into a "More"
 // line that opens them (Victor, 2026-10-14): at the end of the day there is no time
 // to go through every note's points, and the lead is what the reader takes away.
 // A note without a lead paragraph shows whole. Its slides stay out of the fold, between
-// the lead and "Details" (Victor, 2026-10-15): a picture is worth showing up front. So
+// the lead and "More" (Victor, 2026-10-15): a picture is worth showing up front. So
 // do its emotional anchors (⚓ *the story*, Victor, 2026-10-16), one line each: the
 // story is what makes the point stick. Then its external links, one short line each, so
 // the reader sees at once where to go (Victor, 2026-10-22); they stay in the points too.
@@ -509,15 +511,18 @@ function foldPoints(body: HTMLElement) {
   const details = document.createElement("details")
   details.className = "note-points"
   const summary = document.createElement("summary")
-  summary.textContent = "Details"
+  summary.textContent = "More"
   details.append(summary, ...rest.filter((e) => !slides.includes(e)))
   article.append(...slides, ...lines, ...(links ? [links] : []), details)
 }
 
-// The note's external links as a short list: the note's own word for each (a link
-// written as a bare URL says nothing more) and, after it, the site it goes to - but
-// not after a 🎬 short played in the room: "youtu.be" says nothing there (Victor,
-// 2026-10-23).
+// The note's external links as a short list, each behind a 🔗 (Victor, 2026-10-23):
+// the note's own word for each (a link written as a bare URL says nothing more), the
+// full URL in its tooltip and, after it, the site it goes to - but not after a 🎬
+// short played in the room, which takes the 🎬 for its bullet: "youtu.be" says
+// nothing there.
+const SHORT = "\u{1F3AC}" // 🎬
+
 function linkList(own: Element[]): HTMLElement | null {
   const seenHrefs = new Set<string>()
   const items: HTMLElement[] = []
@@ -530,16 +535,19 @@ function linkList(own: Element[]): HTMLElement | null {
     } catch {
       continue
     }
-    const text = a.textContent?.trim() ?? ""
+    const short = a.textContent?.includes(SHORT) ?? false
+    const text = (a.textContent ?? "").replace(SHORT, "").trim()
     const link = document.createElement("a")
     link.className = "external"
     link.href = a.href
     link.target = "_blank"
     link.rel = "noopener"
+    link.dataset.tip = a.href
     link.textContent = !text || /^https?:|^www\./.test(text) || text === site ? site : text
     const item = document.createElement("li")
+    if (short) item.className = "short"
     item.append(link)
-    if (link.textContent !== site && !text.includes("\u{1F3AC}")) {
+    if (link.textContent !== site && !short) {
       const where = document.createElement("span")
       where.className = "note-link-site"
       where.textContent = site
@@ -668,10 +676,12 @@ function applyTakeaways(slugs: readonly string[]) {
   showPeekStar()
 }
 
-// The popover's star, left of its ✕: the trainer's takeaway on his machine, the
-// participant's own star in the participant page, just the count anywhere else. The
-// count goes before it, as "3×★" on one line (Victor, 2026-10-22), and takes in the
-// trainer's takeaway, like the star by the dot: his click shows at once as one more.
+// The popover's star, right after its title (Victor, 2026-10-23 - it was left of the
+// ✕): the trainer's takeaway on his machine, the participant's own star in the
+// participant page, just the count anywhere else. The count goes before it, as "3×★"
+// on one line (Victor, 2026-10-22), and takes in the trainer's takeaway, like the
+// burst on the dot: his click shows at once as one more. The graph shows no count:
+// the bigger burst says it. A shining note's popover glows gold, like its dot.
 function showPeekStar() {
   const button = peek?.querySelector(".note-peek-star") as HTMLButtonElement | null
   if (!peek || !button) return
@@ -697,7 +707,7 @@ function showPeekStar() {
         : takeaway
           ? "Key takeaway" + (count > 0 ? ` · ${people}` : "")
           : people
-  button.title = tip
+  button.dataset.tip = tip
   button.setAttribute("aria-label", tip)
 }
 

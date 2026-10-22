@@ -69,6 +69,7 @@ PATCHES = [
   const noteBadges = await loadBadges(fullSlug)
   const badgeColors: BadgeColors = {
     img: computedStyleMap["--wiki-badge-img"],
+    count: computedStyleMap["--darkgray"],
     halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
   }
@@ -146,8 +147,12 @@ PATCHES = [
 """,
      """        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
       }
-      n.badge?.place(x + width / 2, y + height / 2, n.radius)
-      n.takeaway?.place(x + width / 2, y + height / 2, n.radius, time)
+      // One column right of the dot: the badges' rows, then the star (graph-badges.ts).
+      const badgeRows = n.badge?.rows.length ?? 0
+      const rows = badgeRows + (n.takeaway?.starShown ? 1 : 0)
+      const at = column(rows, n.radius)
+      n.badge?.place(x + width / 2, y + height / 2, n.radius, rows)
+      n.takeaway?.place(x + width / 2, y + height / 2, at.left, at.top + badgeRows * at.row, time)
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
@@ -171,6 +176,9 @@ PATCHES = [
     # The edges of the open dot also show their direction (Victor, 2026-10-16): an
     # arrowhead where the edge enters the dot its link points to. Quartz keeps A→B and
     # B→A as two edges on the same line, so a two-way link gets a head at each end.
+    # A one-way edge of the open dot is drawn as dashes creeping slowly along it, from
+    # the linking note to the linked one, on a faint line; a two-way edge stays solid
+    # (Victor, 2026-10-23). Hovering alone doesn't animate: only the open dot.
     ("""      l.gfx
         .lineTo(linkData.target.x! + width / 2, linkData.target.y! + height / 2)
         .stroke({ alpha: l.alpha, width: 1, color: l.color })
@@ -185,6 +193,27 @@ PATCHES = [
       if (raySource || rayTarget) {
         drawRay(l.gfx, linkData.source.x! + width / 2, linkData.source.y! + height / 2, tx, ty,
           raySource, rayTarget, takeawayColors.on, l.color, 0.6 / currentTransform.k, l.alpha * 0.6)
+      } else if (selectedEdge(l) && !twoWay(l)) {
+        const k = currentTransform.k
+        const sx = linkData.source.x! + width / 2
+        const sy = linkData.source.y! + height / 2
+        l.gfx.lineTo(tx, ty).stroke({ alpha: l.alpha * 0.3, width: 1.6 / k, color: l.color })
+        const len = Math.hypot(tx - sx, ty - sy)
+        if (len > 0) {
+          // On screen: 6px dashes, 5px gaps, moving 12px a second.
+          const dash = 6 / k
+          const period = 11 / k
+          const ux = (tx - sx) / len
+          const uy = (ty - sy) / len
+          // A new path: stroke() keeps the one it drew, and would draw the line again.
+          l.gfx.beginPath()
+          for (let d = ((time / 1000) * 12) / k % period - period; d < len; d += period) {
+            const a = Math.max(d, 0)
+            const b = Math.min(d + dash, len)
+            if (b > a) l.gfx.moveTo(sx + ux * a, sy + uy * a).lineTo(sx + ux * b, sy + uy * b)
+          }
+          l.gfx.stroke({ alpha: l.alpha, width: 1.6 / k, color: l.color })
+        }
       } else {
         l.gfx
           .lineTo(tx, ty)
@@ -234,10 +263,17 @@ PATCHES = [
      "  let selectedNodeId: string | null = null\n"
      "  const selectedEdge = (l: LinkRenderData) =>\n"
      "    selectedNodeId !== null &&\n"
-     "    (l.simulationData.source.id === selectedNodeId || l.simulationData.target.id === selectedNodeId)\n"),
+     "    (l.simulationData.source.id === selectedNodeId || l.simulationData.target.id === selectedNodeId)\n"
+     "  // A→B with B→A too: Quartz keeps them as two edges on the same line.\n"
+     "  let edgeKeys: Set<string> | null = null\n"
+     "  const twoWay = (l: LinkRenderData) => {\n"
+     "    edgeKeys ??= new Set(linkRenderData.map((e) => `${e.simulationData.source.id}\\n${e.simulationData.target.id}`))\n"
+     "    return edgeKeys.has(`${l.simulationData.target.id}\\n${l.simulationData.source.id}`)\n"
+     "  }\n"),
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
-     'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
+     'import "./tooltip.js"\n'
+     'import { BadgeColors, NoteBadge, column, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { TakeawayColors, TakeawayMark, drawRay } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst.\n'
@@ -440,7 +476,7 @@ PATCHES = [
       const followed = document.createElement("div")
       followed.className = "graph-followed"
       followed.textContent = "◉ Followed by participants"
-      followed.title = "The note you open here is ringed in yellow for everyone who ticks Follow"
+      followed.dataset.tip = "The note you open here is ringed in yellow for everyone who ticks Follow"
       container.append(followed)
     }
   }
@@ -478,6 +514,9 @@ PATCHES = [
 """,
      """  const keptView = isGlobal && enableZoom ? savedView() : null
   if (isGlobal && enableZoom) {
+    // The wheel zooms; a double-click doesn't (Victor, 2026-10-23): it opened a note and
+    // zoomed in on it at once. d3 binds it on the canvas, as "dblclick.zoom".
+    select<HTMLCanvasElement, NodeData>(app.canvas).on("dblclick.zoom", null)
     zoomBehavior.on("zoom.remember", (e: { transform: { x: number; y: number; k: number }; sourceEvent: unknown }) => {
       if (e.sourceEvent) saveView(e.transform) // the reader's own wheel, pinch or drag
     })
@@ -496,8 +535,8 @@ PATCHES = [
         const { x, y } = n.simulationData
         if (x === undefined || y === undefined) continue
         const half = Math.max(n.radius, (n.label?.width ?? 0) / 2)
-        x0 = Math.min(x0, x + width / 2 - Math.max(half, n.radius + 14))   // the star left of the dot
-        x1 = Math.max(x1, x + width / 2 + half)
+        x0 = Math.min(x0, x + width / 2 - Math.max(half, n.radius + 14))   // the picture left of the dot
+        x1 = Math.max(x1, x + width / 2 + Math.max(half, n.radius + 24))   // the badges and star right of it
         y0 = Math.min(y0, y + height / 2 - n.radius - 14)   // the badge sits above the dot
         y1 = Math.max(y1, y + height / 2 + n.radius + 2 + (n.label?.height ?? 0))
       }

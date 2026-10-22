@@ -26,12 +26,21 @@ body {
 }
 
 // Hovering or clicking a dot (note-pane.ts): the note in a popover by the cursor,
-// like Obsidian's page preview; scrolls on its own.
+// like Obsidian's page preview; scrolls on its own. Twice its first size, all of it,
+// so it reads on the projector without zooming the whole graph too (Victor,
+// 2026-10-23); --peek-u is its rem. Phones keep the first size: it is already about
+// as wide as the screen.
 .note-peek {
+  --peek-u: 2rem;
+
+  @media (max-width: 899px) {
+    --peek-u: 1rem;
+  }
+
   position: fixed;
   z-index: 10000;
-  width: min(30rem, calc(100vw - 16px));
-  max-height: min(34rem, calc(100vh - 16px));
+  width: min(calc(30 * var(--peek-u)), calc(100vw - 16px));
+  max-height: min(calc(34 * var(--peek-u)), calc(100vh - 16px));
   display: none;
   flex-direction: column;
   box-sizing: border-box;
@@ -40,7 +49,7 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   background: var(--light);
   font-family: var(--bodyFont);
-  font-size: 0.9rem;
+  font-size: calc(0.9 * var(--peek-u));
   color: var(--darkgray);
 
   &.open {
@@ -49,15 +58,15 @@ body {
 
   .note-peek-close {
     position: absolute;
-    top: 0.45rem;
-    right: 0.45rem;
-    width: 2.2rem;
-    height: 2.2rem;
+    top: calc(0.45 * var(--peek-u));
+    right: calc(0.45 * var(--peek-u));
+    width: calc(2.2 * var(--peek-u));
+    height: calc(2.2 * var(--peek-u));
     border: none;
     border-radius: 999px;
     background: none;
     color: var(--darkgray);
-    font-size: 1.1rem;
+    font-size: calc(1.1 * var(--peek-u));
     cursor: pointer;
 
     &:hover {
@@ -66,22 +75,19 @@ body {
     }
   }
 
-  // Left of the ✕ (note-pane.ts): the trainer stars the note as a key takeaway; for
-  // everyone else it only shows, filled, on a starred note.
-  // "3×★" on one line: it grows to the left, away from the ✕.
+  // Right after the title (note-pane.ts): the trainer stars the note as a key takeaway;
+  // for everyone else it only shows, filled, on a starred note. "3×★" on one line.
   .note-peek-star {
-    position: absolute;
-    top: 0.45rem;
-    right: 2.75rem;
-    min-width: 2.2rem;
-    height: 2.2rem;
-    padding: 0 0.35rem;
+    flex: none;
+    min-width: calc(2.2 * var(--peek-u));
+    height: calc(2.2 * var(--peek-u));
+    padding: 0 calc(0.35 * var(--peek-u));
     white-space: nowrap;
     border: none;
     border-radius: 999px;
     background: none;
     color: var(--wiki-takeaway-off);
-    font-size: 1.25rem;
+    font-size: calc(1.25 * var(--peek-u));
     line-height: 1;
     cursor: pointer;
 
@@ -103,18 +109,27 @@ body {
     }
   }
 
-  // A starred note's popover wears the takeaway gold.
+  // The title and its star on one line, clear of the ✕.
+  .note-peek-head {
+    display: flex;
+    align-items: center;
+    gap: calc(0.3 * var(--peek-u));
+    padding: calc(0.8 * var(--peek-u)) calc(3.6 * var(--peek-u)) calc(0.2 * var(--peek-u)) calc(1.1 * var(--peek-u));
+  }
+
+  // A starred note's popover wears the takeaway gold, and glows a little like its dot
+  // (Victor, 2026-10-23).
   &.takeaway {
     border-color: var(--wiki-takeaway);
     box-shadow:
       0 0 0 1px var(--wiki-takeaway),
+      0 0 28px 2px color-mix(in srgb, var(--wiki-takeaway) 35%, transparent),
       0 10px 30px rgba(0, 0, 0, 0.3);
   }
 
   .note-peek-title {
     margin: 0;
-    padding: 0.8rem 6.6rem 0.2rem 1.1rem;
-    font-size: 1.5rem;
+    font-size: calc(1.5 * var(--peek-u));
     line-height: 1.2;
     // The handle that drags the popover (note-pane.ts): no text selection on a drag.
     cursor: grab;
@@ -133,7 +148,7 @@ body {
     // The scrollbar's room is kept even while the note fits: appearing when the points
     // open, it narrowed the text and pushed the lead's lines down (Victor, 2026-10-16).
     scrollbar-gutter: stable;
-    padding: 0 1.1rem 0.9rem;
+    padding: 0 calc(1.1 * var(--peek-u)) calc(0.9 * var(--peek-u));
 
     // The note's lead sentence (its first paragraph) is what the reader takes away;
     // larger, it holds the eye before the bullets underneath.
@@ -179,8 +194,8 @@ body {
     // The bullets folded under the lead (note-pane.ts): one line that opens them.
     details.note-points > summary {
       width: fit-content;
-      margin: 0.2rem 0 0.4rem;
-      padding: 0.3rem 0.8rem;
+      margin: calc(0.2 * var(--peek-u)) 0 calc(0.4 * var(--peek-u));
+      padding: calc(0.3 * var(--peek-u)) calc(0.8 * var(--peek-u));
       border: 1px solid var(--lightgray);
       border-radius: 999px;
       font-weight: 600;
@@ -201,16 +216,21 @@ body {
 
     // The emotional anchors lifted above "Details" (note-pane.ts), one per line.
     p.note-anchor {
-      margin: 0.25rem 0;
+      margin: calc(0.25 * var(--peek-u)) 0;
     }
 
     // The note's external links, right before "Details": one short line each.
     ul.note-links {
-      margin: 0.3rem 0;
-      padding-left: 1.1rem;
+      margin: calc(0.3 * var(--peek-u)) 0;
+      padding-left: calc(1.5 * var(--peek-u));
+      list-style-type: "🔗 ";
 
       li {
-        margin: 0.1rem 0;
+        margin: calc(0.1 * var(--peek-u)) 0;
+      }
+
+      li.short {
+        list-style-type: "🎬 ";
       }
 
       .note-link-site {
@@ -222,7 +242,7 @@ body {
     // Tight around the rule above "See also" and under the note's last line (Victor,
     // 2026-10-16): Quartz's page margins left a hole there in a popover this small.
     hr {
-      margin: 0.6rem 0 0.4rem;
+      margin: calc(0.6 * var(--peek-u)) 0 calc(0.4 * var(--peek-u));
     }
 
     details.note-points > :has(+ hr) {
@@ -231,6 +251,13 @@ body {
 
     hr + * {
       margin-top: 0;
+    }
+
+    // Under the rule: "See also" and where the note comes from - not more ideas, so no
+    // bullets like theirs (Victor, 2026-10-23).
+    hr ~ ul {
+      list-style: none;
+      padding-left: 0;
     }
 
     article > :last-child,
@@ -473,4 +500,10 @@ body {
 :root[saved-theme="dark"] {
   --wiki-takeaway: #fbbf24;
   --wiki-takeaway-off: #6b7280;
+}
+
+// The shared tooltip (static/tooltip.js, copied in by builder.py) over the note popover,
+// whose z-index is 10000.
+html #app-tooltip {
+  z-index: 10001;
 }
