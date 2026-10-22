@@ -69,10 +69,8 @@ PATCHES = [
   stage.addChild(badgesContainer)
   const noteBadges = await loadBadges(fullSlug)
   const badgeColors: BadgeColors = {
-    img: computedStyleMap["--wiki-badge-img"],
-    link: computedStyleMap["--dark"],
+    glyph: computedStyleMap["--dark"],
     count: computedStyleMap["--dark"],
-    halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
   }
   // The yellow ring around the note the trainer has open (Follow, note-pane.ts): above
@@ -168,7 +166,6 @@ PATCHES = [
     "--bodyFont",
     "--wiki-seen",
     "--wiki-unseen",
-    "--wiki-badge-img",
     "--wiki-follow-ring",
     "--wiki-takeaway",
     "--wiki-takeaway-off",
@@ -573,6 +570,64 @@ PATCHES = [
   }
   const links: SimpleLinkData[] = []
   const tags: SimpleSlug[] = []
+"""),
+    # Names don't sit on each other (Victor, 2026-10-23): besides keeping the dots apart,
+    # the layout pushes apart any two boxes that overlap, each the dot with its label
+    # under it, the badge above it and the star after the name. The labels' sizes are
+    # known once they are drawn, before the first tick; until then a dot is its own box.
+    ("""  const simulation: Simulation<NodeData, LinkData> = forceSimulation<NodeData>(graphData.nodes)
+""",
+     """  const labelSize = new Map<string, { w: number; h: number }>()
+  const labelBoxes = (() => {
+    let nodes: NodeData[] = []
+    const force = (alpha: number) => {
+      const box = (n: NodeData) => {
+        const r = nodeRadius(n)
+        const size = labelSize.get(n.id) ?? { w: 2 * r, h: 0 }
+        const half = Math.max(r + 8, size.w / 2 + 8) // the star after the name
+        return { l: n.x! - half, r: n.x! + half, t: n.y! - r - 8, b: n.y! + r + 2 + size.h }
+      }
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i]
+        if (a.x === undefined || a.y === undefined) continue
+        const ba = box(a)
+        for (let j = i + 1; j < nodes.length; j++) {
+          const c = nodes[j]
+          if (c.x === undefined || c.y === undefined) continue
+          const bc = box(c)
+          const ox = Math.min(ba.r, bc.r) - Math.max(ba.l, bc.l) + 2
+          const oy = Math.min(ba.b, bc.b) - Math.max(ba.t, bc.t) + 2
+          if (ox <= 0 || oy <= 0) continue
+          // Apart along the shorter overlap, half each, moved outright: as a velocity
+          // it was damped away and the links pulled the names back on each other.
+          const k = Math.min(1, alpha * 10)
+          if (ox < oy) {
+            const s = (a.x! < c.x! ? -1 : 1) * ox * k
+            a.x = a.x! + s / 2
+            c.x = c.x! - s / 2
+          } else {
+            const s = (a.y! < c.y! ? -1 : 1) * oy * k
+            a.y = a.y! + s / 2
+            c.y = c.y! - s / 2
+          }
+          Object.assign(ba, box(a))
+        }
+      }
+    }
+    force.initialize = (ns: NodeData[]) => (nodes = ns)
+    return force
+  })()
+  const simulation: Simulation<NodeData, LinkData> = forceSimulation<NodeData>(graphData.nodes)
+"""),
+    ("""    .force("collide", forceCollide<NodeData>((n) => nodeRadius(n) + 14).iterations(3))
+  if (graph.classList""",
+     """    .force("collide", forceCollide<NodeData>((n) => nodeRadius(n) + 14).iterations(3))
+    .force("labels", labelBoxes)
+  if (graph.classList"""),
+    ("""    label.scale.set(1 / scale)
+""",
+     """    label.scale.set(1 / scale)
+    labelSize.set(nodeId, { w: label.width, h: label.height })
 """),
 ]
 

@@ -22,10 +22,8 @@ import { FullSlug, SimpleSlug, pathToRoot, simplifySlug } from "../../util/path"
 type Badges = { img: boolean; links: number; anchors?: number; shorts?: number }
 
 export type BadgeColors = {
-  img: string // the picture glyph
-  link: string // the link glyph: the text colour
+  glyph: string // the drawn glyphs, picture and link: the text colour
   count: string // the "×3" after it
-  halo: string // the page background, behind the picture so edges don't run through it
   font: string
 }
 
@@ -53,22 +51,31 @@ export function loadBadges(fullSlug: FullSlug): Promise<Map<SimpleSlug, Badges>>
 // looked detached from it.
 const PICTURE_W = 10
 const PICTURE_H = 8
+const PICTURE_SCALE = 0.9
 const EMOJI_FONT = 9
 
 // Frame, mountain and sun: a picture, drawn rather than the 🖼️ emoji, which is
-// mush at this size and can't take the theme's colours.
+// mush at this size and can't take the theme's colours. In the text colour (white on
+// dark) with the labels' black outline, like the link glyph, at 0.9 of its first size
+// (Victor, 2026-10-23 - it was amber on a patch of the page background).
 function picture(colors: BadgeColors): Graphics {
   const w = PICTURE_W
   const h = PICTURE_H
-  return new Graphics({ eventMode: "none" })
-    .roundRect(-1, -h - 1, w + 2, h + 2, 2.5)
-    .fill({ color: colors.halo })
-    .roundRect(0, -h, w, h, 1.5)
-    .stroke({ color: colors.img, width: 1.1, alignment: 1 })
-    .poly([1, -1, 4.2, -5, 6.2, -3, 7.3, -4.1, w - 1, -1])
-    .fill({ color: colors.img })
-    .circle(7.3, -h + 2.4, 1)
-    .fill({ color: colors.img })
+  const g = new Graphics({ eventMode: "none" })
+  const shapes = (color: string, extra: number) =>
+    g
+      .roundRect(0, -h, w, h, 1.5)
+      .stroke({ color, width: 1.1 + extra, alignment: 0.5 })
+      .poly([1, -1, 4.2, -5, 6.2, -3, 7.3, -4.1, w - 1, -1])
+      .fill({ color })
+      .stroke({ color, width: extra, join: "round" })
+      .circle(7.3, -h + 2.4, 1 + extra / 2)
+      .fill({ color })
+  shapes(OUTLINE, 1.6)
+  g.beginPath()
+  shapes(colors.glyph, 0)
+  g.scale.set(PICTURE_SCALE)
+  return g
 }
 
 // Bottom-left corner at (0, 0): ⚓ per moment, then 🎬 per short.
@@ -94,7 +101,7 @@ function times(n: number, colors: BadgeColors): Container {
       resolution: window.devicePixelRatio * 4,
     })
     // Mid-height of the glyph's box, not of the whole glyph with its arrow.
-    count.position.set(LINK_W + 1, -LINK_BOX / 2)
+    count.position.set(LINK_W - 0.4, -LINK_BOX / 2 + 0.6)
     row.addChild(count)
   }
   return row
@@ -104,7 +111,7 @@ function times(n: number, colors: BadgeColors): Container {
 // drawn rather than the 🔗 emoji, so it takes the text colour (white on dark) and an
 // outline, half an emoji's size (Victor, 2026-10-23). Bottom-left corner at (0, 0).
 const LINK_W = 5
-const LINK_BOX = (7.5 * LINK_W) / 9 // the box's height
+const LINK_BOX = (7.5 * LINK_W) / 9 // the box's side
 function linkGlyph(colors: BadgeColors): Graphics {
   const g = new Graphics({ eventMode: "none" })
   const k = LINK_W / 9 // drawn on a 9-unit grid
@@ -122,7 +129,7 @@ function linkGlyph(colors: BadgeColors): Graphics {
       .lineTo(9 * k, -5.5 * k)
   draw().stroke({ color: OUTLINE, width: 2.6, cap: "round", join: "round" })
   g.beginPath()
-  draw().stroke({ color: colors.link, width: 1, cap: "round", join: "round" })
+  draw().stroke({ color: colors.glyph, width: 1, cap: "round", join: "round" })
   return g
 }
 
@@ -182,10 +189,11 @@ export class NoteBadge extends Container {
   place(x: number, y: number, r: number) {
     const gap = 1.5
     this.position.set(x, y)
-    this.picture?.position.set(-r - gap - PICTURE_W, PICTURE_H / 2)
+    this.picture?.position.set(-r - gap - PICTURE_W * PICTURE_SCALE, (PICTURE_H * PICTURE_SCALE) / 2)
     this.anchors?.position.set(r + gap, (this.anchors?.height ?? 0) / 2) // its line box, bottom-anchored
-    // The glyph itself centred over the dot; its ×N, when there, sticks out to the right.
-    this.links?.position.set(-LINK_W / 2, -r - gap)
+    // The glyph's box centred over the dot, its arrow left out of the reckoning; its ×N,
+    // when there, sticks out to the right.
+    this.links?.position.set(-LINK_BOX / 2, -r - gap)
   }
 }
 
