@@ -261,8 +261,8 @@ def test_note_badges_count_pictures_and_external_links_in_the_note_only(tmp_path
     builder.write_note_badges(tmp_path)
     badges = json.loads((tmp_path / builder.BADGES_FILE).read_text())
     assert badges == {
-        "Skills": {"img": True, "links": 2, "anchors": 0},
-        "talks/Demo": {"img": False, "links": 1, "anchors": 0},
+        "Skills": {"img": True, "links": 2, "anchors": 0, "shorts": 0},
+        "talks/Demo": {"img": False, "links": 1, "anchors": 0, "shorts": 0},
     }
 
 
@@ -282,6 +282,6 @@ def test_note_badges_count_anchors_and_a_played_short_is_not_a_link(tmp_path):
     builder.write_note_badges(tmp_path)
     badges = json.loads((tmp_path / builder.BADGES_FILE).read_text())
     assert badges == {
-        "SQL": {"img": False, "links": 1, "anchors": 4},
-        "Moments": {"img": False, "links": 0, "anchors": 1},
+        "SQL": {"img": False, "links": 1, "anchors": 2, "shorts": 2},
+        "Moments": {"img": False, "links": 0, "anchors": 1, "shorts": 0},
     }

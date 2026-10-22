@@ -515,7 +515,9 @@ function foldPoints(body: HTMLElement) {
 }
 
 // The note's external links as a short list: the note's own word for each (a link
-// written as a bare URL says nothing more) and, after it, the site it goes to.
+// written as a bare URL says nothing more) and, after it, the site it goes to - but
+// not after a 🎬 short played in the room: "youtu.be" says nothing there (Victor,
+// 2026-10-23).
 function linkList(own: Element[]): HTMLElement | null {
   const seenHrefs = new Set<string>()
   const items: HTMLElement[] = []
@@ -537,7 +539,7 @@ function linkList(own: Element[]): HTMLElement | null {
     link.textContent = !text || /^https?:|^www\./.test(text) || text === site ? site : text
     const item = document.createElement("li")
     item.append(link)
-    if (link.textContent !== site) {
+    if (link.textContent !== site && !text.includes("\u{1F3AC}")) {
       const where = document.createElement("span")
       where.className = "note-link-site"
       where.textContent = site

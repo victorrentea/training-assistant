@@ -369,7 +369,8 @@ body {
 // Top-right of the full graph (patch-graph.py): what the wiki was written from, as a
 // bullet list (a line along the bottom until Victor, 2026-10-21). Full contrast (white
 // on dark, the text colour on light): the dim grey it had was unreadable on the
-// projector (Victor, 2026-10-19).
+// projector (Victor, 2026-10-19). Faded as a whole until hovered, so it doesn't
+// compete with the graph (Victor, 2026-10-23).
 .graph-sources {
   position: absolute;
   right: 0.9rem;
@@ -380,8 +381,8 @@ body {
   font-size: 0.72rem;
   line-height: 1.45;
   color: var(--dark);
-  opacity: 1;
-  pointer-events: none;
+  opacity: 0.4;
+  transition: opacity 0.2s;
   // Zoomed in, labels and dots run under it.
   padding: 0.35rem 0.6rem;
   border-radius: 0.5rem;
@@ -394,6 +395,10 @@ body {
 
   li {
     margin: 0;
+  }
+
+  &:hover {
+    opacity: 1;
   }
 }
 
@@ -437,15 +442,13 @@ body {
 }
 
 // Badges on the graph's dots (graph-badges.ts): a picture when the note shows a slide
-// or a screenshot, and its count of external links.
+// or a screenshot (the 🔗, ⚓ and 🎬 next to it are emoji, in their own colours).
 :root {
   --wiki-badge-img: #d97706;
-  --wiki-badge-link: #2563eb;
 }
 
 :root[saved-theme="dark"] {
   --wiki-badge-img: #fbbf24;
-  --wiki-badge-link: #60a5fa;
 }
 
 // The ring a follower sees around the note the trainer has open (patch-graph.py):

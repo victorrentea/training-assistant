@@ -15,8 +15,9 @@
 // trainer included ("3☆"), none when nobody did. The trainer's star is his takeaway.
 //
 // Five levels of shine, climbing as stars pile up on the same note (his takeaway counts
-// as one star): 1 is the takeaway's starburst as it was, 2 a brighter star, and 3 to 5
-// add a soft glow under it that spreads wider each level. The rays along the edges
+// as one star): 1 a smaller, fainter starburst, 2 the takeaway's starburst as it was
+// with a brighter star over it, and 3 to 5 add a soft glow under it that spreads wider
+// each level (Victor, 2026-10-23 - level 1 was the full burst, too close to level 2). The rays along the edges
 // stay the same at every level.
 //
 // note-pane.ts keeps the starred sets, the counts and the toggles; builder.py copies
@@ -58,15 +59,15 @@ export function shineLevel(takeaway: boolean, count: number): number {
   return LEVEL_AT.filter((at) => stars >= at).length
 }
 
-// Per level (index 0 = level 1): the burst's size (times the takeaway's), whether a
-// second, offset burst brightens it, and the glow under it (size times the dot's
-// diameter, alpha; 0 for none).
+// Per level (index 0 = level 1): the burst's size (times the takeaway's) and alpha,
+// whether a second, offset burst brightens it, and the glow under it (size times the
+// dot's diameter, alpha; 0 for none).
 const LEVELS = [
-  { burst: 1, flare: false, glow: 0, glowAlpha: 0 },
-  { burst: 1.2, flare: true, glow: 0, glowAlpha: 0 },
-  { burst: 1.3, flare: true, glow: 9, glowAlpha: 0.3 },
-  { burst: 1.4, flare: true, glow: 13, glowAlpha: 0.4 },
-  { burst: 1.5, flare: true, glow: 17, glowAlpha: 0.5 },
+  { burst: 0.8, burstAlpha: 0.65, flare: false, glow: 0, glowAlpha: 0 },
+  { burst: 1.2, burstAlpha: 1, flare: true, glow: 0, glowAlpha: 0 },
+  { burst: 1.3, burstAlpha: 1, flare: true, glow: 9, glowAlpha: 0.3 },
+  { burst: 1.4, burstAlpha: 1, flare: true, glow: 13, glowAlpha: 0.4 },
+  { burst: 1.5, burstAlpha: 1, flare: true, glow: 17, glowAlpha: 0.5 },
 ]
 
 // Drawn once, white, tinted per theme: a soft round core and eight rays, four long and
@@ -183,6 +184,7 @@ export class TakeawayMark {
     this.glow.visible = (look?.glow ?? 0) > 0
     if (look) {
       this.burst.width = this.burst.height = this.size * look.burst
+      this.burst.alpha = look.burstAlpha
       this.flare.width = this.flare.height = this.size * look.burst * 0.85
       this.flare.alpha = 0.85
       this.glow.width = this.glow.height = 2 * this.r * look.glow

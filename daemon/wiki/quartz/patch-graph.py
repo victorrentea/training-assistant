@@ -58,7 +58,7 @@ PATCHES = [
     nodeRenderData.push(nodeRenderDatum)"""),
     ("n.label.position.set(x + width / 2, y + height / 2)",
      "n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)"),
-    # Badges on the dots (graph-badges.ts): a picture, and the count of external links,
+    # Badges on the dots (graph-badges.ts): a picture, and 🔗 ⚓ 🎬 once per link, anchor, short,
     # so the notes worth opening stand out. In a container of their own, above the dots:
     # the zoom handler fades every label when zoomed out, and the badges must stay.
     ("""  stage.addChild(nodesContainer, labelsContainer, linkContainer)
@@ -69,7 +69,6 @@ PATCHES = [
   const noteBadges = await loadBadges(fullSlug)
   const badgeColors: BadgeColors = {
     img: computedStyleMap["--wiki-badge-img"],
-    link: computedStyleMap["--wiki-badge-link"],
     halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
   }
@@ -161,7 +160,6 @@ PATCHES = [
     "--wiki-seen",
     "--wiki-unseen",
     "--wiki-badge-img",
-    "--wiki-badge-link",
     "--wiki-follow-ring",
     "--wiki-takeaway",
     "--wiki-takeaway-off",

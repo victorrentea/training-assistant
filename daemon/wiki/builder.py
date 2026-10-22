@@ -127,9 +127,10 @@ class _NoteScan(HTMLParser):
 
     Only the note (<article class="popover-hint">): the page chrome around it (sidebar,
     footer) is the same on every page. An anchor is a memorable moment the summarizer
-    tags with ⚓ (``⚓ *Fork bomb*``) or a short played in the room, 🎬 (linked to its
-    video or not). A 🎬 link is that short, not a source to read: it counts as an
-    anchor, not as a link.
+    tags with ⚓ (``⚓ *Fork bomb*``), counted in ``anchors``, or a short played in the
+    room, 🎬 (linked to its video or not), counted apart in ``shorts``: the graph draws
+    it as an anchor of another colour. A 🎬 link is that short, not a source to read:
+    it is not counted as a link.
     """
 
     def __init__(self) -> None:
@@ -138,6 +139,7 @@ class _NoteScan(HTMLParser):
         self.img = False
         self.links = 0
         self.anchors = 0
+        self.shorts = 0
         self.link_text: list[str] | None = None  # the open external link's text
 
     def handle_starttag(self, tag, attrs):
@@ -159,7 +161,8 @@ class _NoteScan(HTMLParser):
 
     def handle_data(self, data):
         if self.depth:
-            self.anchors += data.count(_ANCHOR) + data.count(_SHORT)
+            self.anchors += data.count(_ANCHOR)
+            self.shorts += data.count(_SHORT)
             if self.link_text is not None:
                 self.link_text.append(data)
 
@@ -169,7 +172,7 @@ _SHORT = "\U0001F3AC"  # 🎬
 
 
 def write_note_badges(out_dir: Path) -> None:
-    """Write {slug: {img, links, anchors}} for the graph's badges on its dots (patch-graph.py).
+    """Write {slug: {img, links, anchors, shorts}} for the graph's badges on its dots (patch-graph.py).
 
     The graph marks the notes worth opening: one with a picture (a slide, a screenshot),
     how many external links it holds and how many emotional anchors (⚓ moments, 🎬
@@ -185,8 +188,13 @@ def write_note_badges(out_dir: Path) -> None:
             continue
         scan = _NoteScan()
         scan.feed(page.read_text(encoding="utf-8", errors="replace"))
-        if scan.img or scan.links or scan.anchors:
-            badges[slug] = {"img": scan.img, "links": scan.links, "anchors": scan.anchors}
+        if scan.img or scan.links or scan.anchors or scan.shorts:
+            badges[slug] = {
+                "img": scan.img,
+                "links": scan.links,
+                "anchors": scan.anchors,
+                "shorts": scan.shorts,
+            }
     (out_dir / BADGES_FILE).write_text(json.dumps(badges, ensure_ascii=False), encoding="utf-8")
 
 
