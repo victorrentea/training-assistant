@@ -216,7 +216,8 @@ export class NoteBadge extends Container {
   place(x: number, y: number, r: number) {
     const gap = 1.5
     this.position.set(x, y)
-    this.picture?.position.set(-r - gap - PICTURE_W * PICTURE_SCALE, (PICTURE_H * PICTURE_SCALE) / 2)
+    // As far from the dot as the link glyph above it (Victor, 2026-10-23).
+    this.picture?.position.set(-r - gap - 1.5 - PICTURE_W * PICTURE_SCALE, (PICTURE_H * PICTURE_SCALE) / 2)
     this.anchors?.position.set(r + gap, (this.anchors?.height ?? 0) / 2) // its line box, bottom-anchored
     // The glyph's box centred over the dot, its arrow left out of the reckoning; its ×N,
     // when there, sticks out to the right.
