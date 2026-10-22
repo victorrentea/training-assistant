@@ -247,6 +247,10 @@ PATCHES = [
       const purple = hoveredNodeId === n.simulationData.id || selectedNodeId === n.simulationData.id
       n.gfx.clear().circle(0, 0, n.radius).fill({ color: purple ? "#8b5cf6" : n.color })
       tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))"""),
+    # A hovered dot's label keeps its size: the dot turning purple says enough, and the
+    # growing label shifted the star after it (Victor, 2026-10-23).
+    ("const activeScale = defaultScale * 1.1",
+     "const activeScale = defaultScale"),
     # Labels stay fully visible at normal zoom and fade out only when zoomed far out.
     ("let scaleOpacity = Math.max((scale - 1) / 3.75, 0)",
      "let scaleOpacity = Math.min(Math.max((scale - 0.5) / 0.5, 0), 1)"),
