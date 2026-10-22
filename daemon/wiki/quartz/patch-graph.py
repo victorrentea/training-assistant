@@ -494,14 +494,14 @@ PATCHES = [
       container.append(followed)
     }
     // After the pills on the left: the wiki to take home (daemon/wiki/downloads.py) -
-    // the site as it looks, to open from disk, and the vault for Obsidian (Victor,
-    // 2026-10-23). The files sit in the site's downloads/ folder, next to its script.
+    // the site as it looks, to open from disk, and the vault for Obsidian, read as one
+    // phrase: "Download ⤓ HTML" "for Obsidian" (Victor, 2026-10-23). The files sit in the site's downloads/ folder, next to its script.
     const siteRoot = document.querySelector<HTMLScriptElement>('script[src$="postscript.js"]')?.src ?? location.href
     const downloads = document.createElement("div")
     downloads.className = "graph-downloads"
     for (const [label, file, tip] of [
-      ["⤓ Download what you see", "wiki-site.zip", "This wiki as you see it, to open from disk: unzip, then open index.html"],
-      ["⤓ Download for Obsidian", "wiki-obsidian.zip", "The notes as Markdown, a vault to open in Obsidian; stars in each note's frontmatter"],
+      ["Download ⤓ HTML", "wiki-site.zip", "This wiki as you see it, to open from disk: unzip, then open index.html"],
+      ["for Obsidian", "wiki-obsidian.zip", "The notes as Markdown, a vault to open in Obsidian; stars in each note's frontmatter"],
     ]) {
       const a = Object.assign(document.createElement("a"), { className: "graph-reset", textContent: label })
       a.href = new URL(`downloads/${file}`, siteRoot).href
