@@ -438,11 +438,11 @@ PATCHES = [
       void renderGlobalGraph()
     })
     // Top-right, as a list: what the wiki was written from (Victor, 2026-10-16; a line
-    // along the bottom until 2026-10-21).
+    // along the bottom until 2026-10-21). "Zoom chat": its links and books, since 2026-10-22.
     const sources = document.createElement("div")
     sources.className = "graph-sources"
     const sourcesList = document.createElement("ul")
-    for (const source of ["browser history", "opened files", "slides viewed", "notes", "transcription", "screenshots", "internet research"]) {
+    for (const source of ["browser history", "opened files", "slides viewed", "notes", "transcription", "Zoom chat", "screenshots", "internet research"]) {
       sourcesList.appendChild(Object.assign(document.createElement("li"), { textContent: source }))
     }
     sources.append(Object.assign(document.createElement("div"), { textContent: "Sources" }), sourcesList)
