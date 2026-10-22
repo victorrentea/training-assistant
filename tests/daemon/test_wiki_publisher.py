@@ -261,6 +261,27 @@ def test_note_badges_count_pictures_and_external_links_in_the_note_only(tmp_path
     builder.write_note_badges(tmp_path)
     badges = json.loads((tmp_path / builder.BADGES_FILE).read_text())
     assert badges == {
-        "Skills": {"img": True, "links": 2},
-        "talks/Demo": {"img": False, "links": 1},
+        "Skills": {"img": True, "links": 2, "anchors": 0},
+        "talks/Demo": {"img": False, "links": 1, "anchors": 0},
+    }
+
+
+def test_note_badges_count_anchors_and_a_played_short_is_not_a_link(tmp_path):
+    chrome = '<div class="sidebar">⚓ 🎬 <a class="external" href="https://x">🎬 x</a></div>'
+    (tmp_path / "SQL.html").write_text(
+        f'{chrome}<article class="popover-hint">'
+        '<li>⚓ <em>Query de 3 pagini A4</em>: rescris</li>'
+        '<li>Bash. ⚓ <em>Fork bomb</em></li>'
+        '<li><a href="https://youtu.be/abc" class="external">🎬 Argentina<svg class="external-icon"></svg></a></li>'
+        '<li>🎬 Unlinked short</li>'
+        '<a href="https://docs" class="external">docs</a></article>'
+    )
+    (tmp_path / "Moments.html").write_text(
+        '<article class="popover-hint"><p>⚓ <em>Two dice</em></p></article>'
+    )
+    builder.write_note_badges(tmp_path)
+    badges = json.loads((tmp_path / builder.BADGES_FILE).read_text())
+    assert badges == {
+        "SQL": {"img": False, "links": 1, "anchors": 4},
+        "Moments": {"img": False, "links": 0, "anchors": 1},
     }

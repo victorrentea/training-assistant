@@ -123,9 +123,13 @@ BADGES_FILE = "note-badges.json"
 
 
 class _NoteScan(HTMLParser):
-    """Counts pictures and external links in a page's note (<article class="popover-hint">).
+    """Counts pictures, external links and emotional anchors in a page's note.
 
-    Only the note: the page chrome around it (sidebar, footer) is the same on every page.
+    Only the note (<article class="popover-hint">): the page chrome around it (sidebar,
+    footer) is the same on every page. An anchor is a memorable moment the summarizer
+    tags with ⚓ (``⚓ *Fork bomb*``) or a short played in the room, 🎬 (linked to its
+    video or not). A 🎬 link is that short, not a source to read: it counts as an
+    anchor, not as a link.
     """
 
     def __init__(self) -> None:
@@ -133,28 +137,45 @@ class _NoteScan(HTMLParser):
         self.depth = 0  # >0 while inside the note's <article>
         self.img = False
         self.links = 0
+        self.anchors = 0
+        self.link_text: list[str] | None = None  # the open external link's text
 
     def handle_starttag(self, tag, attrs):
         classes = (dict(attrs).get("class") or "").split()
         if self.depth:
             self.depth += tag == "article"
             self.img = self.img or tag == "img"
-            self.links += tag == "a" and "external" in classes
+            if tag == "a" and "external" in classes:
+                self.link_text = []
         elif tag == "article" and "popover-hint" in classes:
             self.depth = 1
 
     def handle_endtag(self, tag):
+        if self.depth and tag == "a" and self.link_text is not None:
+            self.links += _SHORT not in "".join(self.link_text)
+            self.link_text = None
         if self.depth and tag == "article":
             self.depth -= 1
 
+    def handle_data(self, data):
+        if self.depth:
+            self.anchors += data.count(_ANCHOR) + data.count(_SHORT)
+            if self.link_text is not None:
+                self.link_text.append(data)
+
+
+_ANCHOR = "\u2693"  # ⚓
+_SHORT = "\U0001F3AC"  # 🎬
+
 
 def write_note_badges(out_dir: Path) -> None:
-    """Write {slug: {img, links}} for the graph's badges on its dots (patch-graph.py).
+    """Write {slug: {img, links, anchors}} for the graph's badges on its dots (patch-graph.py).
 
-    The graph marks the notes worth opening: one with a picture (a slide, a screenshot)
-    and how many external links it holds. Slugs are Quartz's full slugs (the path
+    The graph marks the notes worth opening: one with a picture (a slide, a screenshot),
+    how many external links it holds and how many emotional anchors (⚓ moments, 🎬
+    shorts). Slugs are Quartz's full slugs (the path
     without .html, as in static/contentIndex.json), which the graph simplifies like its
-    node ids. Notes with neither are left out. index.html is listed too: either it is
+    node ids. Notes with none of them are left out. index.html is listed too: either it is
     the vault's own index note (node id "/"), or a copy of Home that no dot asks for.
     """
     badges = {}
@@ -164,8 +185,8 @@ def write_note_badges(out_dir: Path) -> None:
             continue
         scan = _NoteScan()
         scan.feed(page.read_text(encoding="utf-8", errors="replace"))
-        if scan.img or scan.links:
-            badges[slug] = {"img": scan.img, "links": scan.links}
+        if scan.img or scan.links or scan.anchors:
+            badges[slug] = {"img": scan.img, "links": scan.links, "anchors": scan.anchors}
     (out_dir / BADGES_FILE).write_text(json.dumps(badges, ensure_ascii=False), encoding="utf-8")
 
 

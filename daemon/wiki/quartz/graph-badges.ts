@@ -1,9 +1,11 @@
 // Badges on the graph's dots, so a reader sees at a glance which notes are worth
 // opening: a tiny picture at the dot's top-left when the note shows a slide or a
-// screenshot, and at its top-right how many external links it holds, as "↗3" with the
-// arrow small and low, touching the number, so it reads as coming out of the dot
-// (none: no badge; Victor, 2026-10-21 - it was "3↗" on the left, the picture on the
-// right). A detail, not a key number: it was "🔗3" in bold, which drew the eye before
+// screenshot, and at its top-right a short column: 🌐 for the note's external links,
+// then ⚓ under it for its emotional anchors (the ⚓ moments the summarizer tags, and
+// the 🎬 shorts played in the room). Each emoji carries its count as a small lowered
+// index, like ₂, only from 2 up: one link is a bare 🌐; none, no row, and the ⚓ moves
+// up into the 🌐's place (Victor, 2026-10-22 - it was "↗3", a small arrow touching the
+// count). A detail, not a key number: it was "🔗3" in bold, which drew the eye before
 // the note titles (Victor, 2026-10-16).
 //
 // daemon/wiki/builder.py scans the built pages into note-badges.json at the site
@@ -14,11 +16,11 @@
 import { Container, Graphics, Text } from "pixi.js"
 import { FullSlug, SimpleSlug, pathToRoot, simplifySlug } from "../../util/path"
 
-type Badges = { img: boolean; links: number }
+type Badges = { img: boolean; links: number; anchors?: number } // no anchors: a site built before them
 
 export type BadgeColors = {
   img: string // the picture glyph
-  link: string // the link count
+  link: string // the counts under 🌐 and ⚓
   halo: string // the page background, behind both so edges don't run through them
   font: string
 }
@@ -47,7 +49,9 @@ export function loadBadges(fullSlug: FullSlug): Promise<Map<SimpleSlug, Badges>>
 // looked detached from it.
 const PICTURE_W = 10
 const PICTURE_H = 8
-const LINK_FONT = 10
+const EMOJI_FONT = 9
+const INDEX_FONT = 6.5
+const ROW = 10 // from one row's bottom to the next one's
 
 // Frame, mountain and sun: a picture, drawn rather than the 🖼️ emoji, which is
 // mush at this size and can't take the theme's colours.
@@ -65,10 +69,10 @@ function picture(colors: BadgeColors): Graphics {
     .fill({ color: colors.img })
 }
 
-// Bottom-left corner at (0, 0): the arrow, low like a subscript, then the count right
-// after it, no space between.
-function linkCount(n: number, colors: BadgeColors): Container {
-  const text = (content: string, fontSize: number) =>
+// Bottom-left corner at (0, 0): the emoji, then its count right after it, smaller and
+// lowered like a subscript. A count of 1 is left out: the emoji alone says "one".
+function counted(emoji: string, n: number, colors: BadgeColors): Container {
+  const text = (content: string, fontSize: number, fill: string, halo: boolean, font = colors.font) =>
     new Text({
       eventMode: "none",
       text: content,
@@ -76,42 +80,73 @@ function linkCount(n: number, colors: BadgeColors): Container {
       style: {
         fontSize,
         fontWeight: "500",
-        fill: colors.link,
-        fontFamily: colors.font,
-        stroke: { color: colors.halo, width: 3, join: "round" },
+        fill,
+        fontFamily: font,
+        // A stroke outlines an emoji's picture badly: the emoji gets a disc instead.
+        stroke: halo ? { color: colors.halo, width: 3, join: "round" } : undefined,
       },
       resolution: window.devicePixelRatio * 4,
     })
-  // U+FE0E: the text arrow, not the emoji one.
-  const arrow = text("↗\uFE0E", LINK_FONT * 0.65)
-  arrow.position.set(0, 0)
-  const count = text(`${n}`, LINK_FONT)
-  count.position.set(arrow.width - 2.5, -LINK_FONT * 0.3)
-  return new Container({ eventMode: "none", children: [count, arrow] })
+  const glyph = text(emoji, EMOJI_FONT, colors.link, false, EMOJI_FONTS)
+  const w = glyph.width
+  const h = glyph.height
+  // The page background behind the emoji, so edges don't run through it.
+  const disc = new Graphics({ eventMode: "none" })
+    .circle(w / 2, -h / 2, Math.max(w, h) / 2)
+    .fill({ color: colors.halo })
+  const row = new Container({ eventMode: "none", children: [disc, glyph] })
+  if (n > 1) {
+    const index = text(`${n}`, INDEX_FONT, colors.link, true)
+    // Right after the emoji's picture, which is about 1em wide: its measured width runs
+    // further, and the index stood apart from it. Its bottom under the emoji's.
+    index.position.set(EMOJI_FONT + 0.3, INDEX_FONT * 0.55)
+    row.addChild(index)
+  }
+  return row
 }
+
+// The body font has no ⚓: left to fall back, it came out as a grey text glyph next to
+// a colour 🌐.
+const EMOJI_FONTS = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
+// \uFE0F: the emoji, not the text glyph.
+const GLOBE = "\u{1F310}"
+const ANCHOR = "\u2693\uFE0F"
 
 export class NoteBadge extends Container {
   private picture: Graphics | null
-  private links: Container | null
+  private rows: Container[] // 🌐 then ⚓, top to bottom, only those with a count
 
   constructor(badges: Badges, colors: BadgeColors) {
     super({ eventMode: "none" })
     this.picture = badges.img ? picture(colors) : null
-    this.links = badges.links > 0 ? linkCount(badges.links, colors) : null
+    this.rows = [
+      badges.links > 0 ? counted(GLOBE, badges.links, colors) : null,
+      (badges.anchors ?? 0) > 0 ? counted(ANCHOR, badges.anchors!, colors) : null,
+    ].filter((row): row is Container => row !== null)
     if (this.picture) this.addChild(this.picture)
-    if (this.links) this.addChild(this.links)
+    this.rows.forEach((row) => this.addChild(row)) // addChild() with no child throws
   }
 
-  // The dot is at (x, y) with radius r. Each badge's inner corner sits on the dot's
-  // rim, at 45° up-left (picture) and up-right (link count).
+  // The dot is at (x, y) with radius r. The picture's inner corner sits on the dot's
+  // rim, at 45° up-left; the first row's bottom-left corner at 45° up-right, and the
+  // rows below it keep its left edge, moved out just enough to clear the dot.
   place(x: number, y: number, r: number) {
     const rim = r * Math.SQRT1_2
     this.position.set(x, y)
     this.picture?.position.set(-rim - 0.5 - PICTURE_W, -rim - 0.5)
-    this.links?.position.set(rim - 0.5, -rim + 1.5)
+    const top = -rim + 1.5
+    let left = rim - 0.5
+    for (let i = 1; i < this.rows.length; i++) {
+      const bottom = top + i * ROW
+      const nearest = bottom - ROW < 0 && bottom > 0 ? 0 : Math.min(Math.abs(bottom), Math.abs(bottom - ROW))
+      if (nearest < r) left = Math.max(left, Math.sqrt(r * r - nearest * nearest) + 1)
+    }
+    this.rows.forEach((row, i) => row.position.set(left, top + i * ROW))
   }
 }
 
 export function makeBadge(badges: Badges | undefined, colors: BadgeColors): NoteBadge | null {
-  return badges && (badges.img || badges.links > 0) ? new NoteBadge(badges, colors) : null
+  return badges && (badges.img || badges.links > 0 || (badges.anchors ?? 0) > 0)
+    ? new NoteBadge(badges, colors)
+    : null
 }
