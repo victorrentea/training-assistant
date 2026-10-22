@@ -384,6 +384,22 @@ body {
   }
 }
 
+// The two downloads, right after the last pill on the left (patch-graph.py places
+// them): pills like Reset layout, side by side.
+.graph-downloads {
+  position: absolute;
+  left: 13.9rem;
+  bottom: 0.7rem;
+  z-index: 1;
+  display: flex;
+  gap: 0.5rem;
+
+  .graph-reset {
+    position: static;
+    text-decoration: none;
+  }
+}
+
 // Right of Reset layout: shows or hides the Home dot; lit while it shows.
 .graph-home {
   left: 8.6rem;
@@ -534,7 +550,8 @@ body {
   }
 
   // No room on a phone: the emoji bar takes the bottom, the pills the top.
-  .graph-sources {
+  .graph-sources,
+  .graph-downloads {
     display: none;
   }
 

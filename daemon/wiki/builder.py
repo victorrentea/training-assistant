@@ -18,6 +18,8 @@ import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
 
+from daemon.wiki.downloads import write_downloads
+
 ASSETS_DIR = Path(__file__).parent / "quartz"
 TOOLTIP_JS = Path(__file__).parents[2] / "static" / "tooltip.js"
 BUILD_TIMEOUT_S = 300
@@ -122,6 +124,7 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
         raise WikiBuildError(f"Quartz build failed:\n{tail}")
     _use_home_as_landing_page(wiki_dir, out_dir)
     write_note_badges(out_dir)
+    write_downloads(wiki_dir, title, out_dir)
 
 
 BADGES_FILE = "note-badges.json"

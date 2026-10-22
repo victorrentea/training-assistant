@@ -478,6 +478,28 @@ PATCHES = [
       followed.dataset.tip = "The note you open here is ringed in yellow for everyone who ticks Follow"
       container.append(followed)
     }
+    // After the pills on the left: the wiki to take home (daemon/wiki/downloads.py) -
+    // the site as it looks, to open from disk, and the vault for Obsidian (Victor,
+    // 2026-10-23). The files sit in the site's downloads/ folder, next to its script.
+    const siteRoot = document.querySelector<HTMLScriptElement>('script[src$="postscript.js"]')?.src ?? location.href
+    const downloads = document.createElement("div")
+    downloads.className = "graph-downloads"
+    for (const [label, file, tip] of [
+      ["⤓ Download what you see", "wiki-site.zip", "This wiki as you see it, to open from disk: unzip, then open index.html"],
+      ["⤓ Download for Obsidian", "wiki-obsidian.zip", "The notes as Markdown, a vault to open in Obsidian; stars in each note's frontmatter"],
+    ]) {
+      const a = Object.assign(document.createElement("a"), { className: "graph-reset", textContent: label })
+      a.href = new URL(`downloads/${file}`, siteRoot).href
+      a.download = file
+      a.dataset.tip = tip
+      downloads.append(a)
+    }
+    // Not in a downloaded copy opened from disk: it has no downloads/ of its own.
+    if (location.protocol !== "file:") container.append(downloads)
+    requestAnimationFrame(() => {
+      const last = [...container.querySelectorAll<HTMLElement>(".graph-reset:not(.graph-downloads *), .graph-followed")].pop()
+      if (last) downloads.style.left = `${last.offsetLeft + last.offsetWidth + 10}px`
+    })
   }
 """),
     # Without Home, which tied every note to the middle, the notes drift past the
