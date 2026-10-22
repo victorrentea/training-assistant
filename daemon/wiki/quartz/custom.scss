@@ -191,6 +191,13 @@ body {
       cursor: zoom-in;
     }
 
+    // A slide shows alone, without its "Slide 13 - ..." caption (Victor, 2026-10-23):
+    // note-pane.ts lifts each slide's paragraph (picture, line break, caption) above
+    // "More".
+    article > p:has(> img) > :is(em, br) {
+      display: none;
+    }
+
     // The bullets folded under the lead (note-pane.ts): one line that opens them.
     details.note-points > summary {
       width: fit-content;
