@@ -34,7 +34,7 @@ export type TakeawayColors = {
   font: string
 }
 
-const STAR_FONT = 11
+const STAR_FONT = 10
 // Around the glyph, in graph units: the star alone is a fingertip's fraction on a phone.
 const STAR_HIT_PAD = 5
 // U+FE0E: the text glyph, not the emoji, so it takes the theme's colour.

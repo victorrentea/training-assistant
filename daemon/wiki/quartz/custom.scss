@@ -506,6 +506,16 @@ body {
   --wiki-takeaway-off: #6b7280;
 }
 
+// The beam from the open dot to its popover (note-pane.ts), just under the popover.
+.note-beam {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  pointer-events: none;
+}
+
 // The shared tooltip (static/tooltip.js, copied in by builder.py) over the note popover,
 // whose z-index is 10000.
 html #app-tooltip {

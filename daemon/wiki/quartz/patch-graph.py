@@ -34,7 +34,7 @@ PATCHES = [
     ("""        fill: computedStyleMap["--dark"],
         fontFamily: computedStyleMap["--bodyFont"],""",
      """        fill: shineOf(nodeId) > 0 ? computedStyleMap["--wiki-takeaway"] : computedStyleMap["--dark"],
-        stroke: shineOf(nodeId) > 0 ? SHINING_LABEL_STROKE : undefined,
+        stroke: shineOf(nodeId) > 0 ? SHINING_LABEL_STROKE : PLAIN_LABEL_STROKE,
         fontFamily: computedStyleMap["--bodyFont"],"""),
     # Labels visible from the start and hanging under the node, not floating above it.
     ("""      alpha: 0,
@@ -149,7 +149,8 @@ PATCHES = [
       }
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
       // The star right after the note's name, on its line (graph-takeaway.ts).
-      n.takeaway?.place(x + width / 2, y + height / 2, n.label.width / 2 + 2, n.radius + 2 + n.label.height / 2, time)
+      // The label's width takes in its outline, 2 units each side: the star tucks into it.
+      n.takeaway?.place(x + width / 2, y + height / 2, n.label.width / 2 - 1, n.radius + 2 + n.label.height / 2, time)
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
@@ -273,8 +274,11 @@ PATCHES = [
      'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { TakeawayColors, TakeawayMark, drawRay } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
-     '// The black outline of a shining note\'s yellow label, over its burst.\n'
-     'const SHINING_LABEL_STROKE = { color: "#000000", width: 4, join: "round" as const }'),
+     '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
+     '// label has the same outline, invisible: an outline widens the text, and a label\n'
+     '// gaining one when starred jumped down and pushed its star away (Victor, 2026-10-23).\n'
+     'const SHINING_LABEL_STROKE = { color: "#000000", width: 4, join: "round" as const }\n'
+     'const PLAIN_LABEL_STROKE = { ...SHINING_LABEL_STROKE, alpha: 0 }'),
     # PixiJS listens for pointermove on the whole document, so a pointer over the note
     # popover still lit the dot under it (Victor, 2026-10-14). Only a move over the canvas
     # reaches the dots; leaving it for the popover is the canvas's own pointerleave, which
@@ -347,7 +351,7 @@ PATCHES = [
         n.takeaway?.set(d)
         n.color = color(n.simulationData)
         n.label.style.fill = d.level > 0 ? takeawayColors.on : computedStyleMap["--dark"]
-        n.label.style.stroke = d.level > 0 ? SHINING_LABEL_STROKE : undefined
+        n.label.style.stroke = d.level > 0 ? SHINING_LABEL_STROKE : PLAIN_LABEL_STROKE
       }
       starredIds = takeaways
       shineIds = shining
@@ -387,16 +391,12 @@ PATCHES = [
         }
       })
     },
-    edges() {
+    dotAt(slug) {
+      const n = nodeRenderData.find((n) => n.simulationData.id === slug)
+      if (!n) return null
       const rect = app.canvas.getBoundingClientRect()
-      const { x, y, k } = currentTransform
-      const at = (v: number, size: number, shift: number) => shift + k * (v + size / 2)
-      return linkRenderData.filter(selectedEdge).map(({ simulationData: { source, target } }) => ({
-        x1: rect.left + at(source.x!, width, x),
-        y1: rect.top + at(source.y!, height, y),
-        x2: rect.left + at(target.x!, width, x),
-        y2: rect.top + at(target.y!, height, y),
-      }))
+      const { minX, minY, maxX, maxY } = n.gfx.getBounds()
+      return { x: rect.left + (minX + maxX) / 2, y: rect.top + (minY + maxY) / 2, r: (maxX - minX) / 2 }
     },
   }
   if (isGlobal) connectGraph(paneGraph)

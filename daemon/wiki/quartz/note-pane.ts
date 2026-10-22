@@ -37,12 +37,12 @@ export type PaneGraph = {
   shine(): void
   // Every dot on screen, each with its label: what the popover should leave in view.
   dots(): Dot[]
-  // The open dot's edges on screen, the purple ones: the popover keeps off them too.
-  edges(): Segment[]
+  // Where a dot is on screen, its centre and radius (null: not in the graph).
+  dotAt(slug: SimpleSlug): Circle | null
 }
 
 type Point = { x: number; y: number }
-type Segment = { x1: number; y1: number; x2: number; y2: number }
+type Circle = Point & { r: number }
 type Box = { left: number; top: number; right: number; bottom: number }
 type Dot = Box & { id: SimpleSlug }
 
@@ -297,11 +297,9 @@ function dragByHead(el: HTMLElement, head: HTMLElement) {
   })
 }
 
-// Wherever it hides the fewest unread dots, keeping its own dot in view (Victor,
-// 2026-10-15: pinned beside the cursor, it sat on a crowded corner of the graph while
-// the top of the window was empty). Among equally good spots, the nearest to the
-// cursor. Where it fits on neither side of the cursor (a phone: the popover is about
-// as wide as the screen), below it or above it, shortened to the room there if need
+// In a corner of the window, the one that hides the fewest dots (leastCovering).
+// Where the window has hardly any room beside it (a phone: the popover is about as
+// wide as the screen), below the cursor or above it, shortened to the room there if need
 // be. Inside the participant page it keeps clear of the top band, where the page
 // floats its controls over the wiki: they would cover the popover's ✕.
 function placePeek(el: HTMLElement, at: Point) {
@@ -318,8 +316,8 @@ function placePeek(el: HTMLElement, at: Point) {
   const clampY = (y: number) => Math.max(top, Math.min(y, innerHeight - bottom - h))
   let x: number
   let y: number
-  if (at.x + gap + w <= innerWidth - 8 || at.x - gap - w >= 8) {
-    ;({ x, y } = leastCovering(at, w, h, top, bottom, gap))
+  if (innerWidth - w >= 200) {
+    ;({ x, y } = leastCovering(at, w, h, top, bottom))
   } else {
     x = clampX(at.x - w / 2)
     const below = innerHeight - bottom - (at.y + gap)
@@ -362,76 +360,98 @@ function fitPeek(el: HTMLElement) {
   el.style.maxHeight = `${innerHeight - bottom - y}px`
 }
 
-// Scans the window for the top-left corner where a w×h popover covers the fewest
-// dots: an unread one weighs as much as moving the popover 4000px further from the
-// open dot, a read one 400px. Never over the point itself, nor over the open note's dot.
-// Its purple edges outweigh all that (Victor, 2026-10-16): the popover sits as close to
-// the open dot as it can without hiding where its links go, and covers them only where
-// no spot in the window leaves them all clear.
-function leastCovering(at: Point, w: number, h: number, top: number, bottom: number, gap: number): Point {
+// In the corner of the window that hides the fewest dots, its own dot kept in view;
+// between equally good corners, the one nearest its dot (Victor, 2026-10-23 - it was
+// the spot nearest the cursor that hid the fewest unread dots and none of the open
+// dot's edges, which put it somewhere new on every click).
+function leastCovering(at: Point, w: number, h: number, top: number, bottom: number): Point {
   const dots = graph?.dots() ?? []
-  const edges = graph?.edges() ?? []
   const own = dots.find((d) => d.id === peeked)
   const near = own ? { x: (own.left + own.right) / 2, y: (own.top + own.bottom) / 2 } : at
-  const keepClear = (own ? [own] : []).concat({
-    left: at.x - gap,
-    top: at.y - gap,
-    right: at.x + gap,
-    bottom: at.y + gap,
-  })
-  const others = dots.filter((d) => d !== own)
   const overlaps = (b: Box, x: number, y: number) =>
     b.left < x + w && b.right > x && b.top < y + h && b.bottom > y
-  const steps = (lo: number, hi: number) => {
-    const vs: number[] = []
-    for (let v = lo; v < hi; v += 24) vs.push(v)
-    vs.push(Math.max(lo, hi))
-    return vs
-  }
-  // Beside the point, as it always opened: these win a tie on distance.
-  const beside = [at.x + gap, at.x - gap - w].map((x) => ({ x, y: at.y + gap }))
-  let best: Point | null = null
+  let best = { x: 8, y: top }
   let bestScore = Infinity
-  for (const c of [
-    ...beside,
-    ...steps(8, innerWidth - 8 - w).flatMap((x) => steps(top, innerHeight - bottom - h).map((y) => ({ x, y }))),
-  ]) {
-    const x = Math.max(8, Math.min(c.x, innerWidth - 8 - w))
-    const y = Math.max(top, Math.min(c.y, innerHeight - bottom - h))
-    if (keepClear.some((b) => overlaps(b, x, y))) continue
-    let score = Math.hypot(Math.max(x - near.x, 0, near.x - x - w), Math.max(y - near.y, 0, near.y - y - h))
-    for (const d of others) if (overlaps(d, x, y)) score += isSeen(d.id) ? 400 : 4000
-    for (const e of edges) if (crosses(e, x - 6, y - 6, x + w + 6, y + h + 6)) score += 100000
-    if (score < bestScore) {
-      bestScore = score
-      best = { x, y }
+  for (const x of [8, innerWidth - 8 - w]) {
+    for (const y of [top, innerHeight - bottom - h]) {
+      let score = Math.hypot(Math.max(x - near.x, 0, near.x - x - w), Math.max(y - near.y, 0, near.y - y - h))
+      if (own && overlaps(own, x, y)) score += 1e7
+      for (const d of dots) if (d !== own && overlaps(d, x, y)) score += 1e4
+      if (score < bestScore) {
+        bestScore = score
+        best = { x, y }
+      }
     }
   }
-  return best ?? { x: at.x + gap <= innerWidth - 8 - w ? at.x + gap : at.x - gap - w, y: at.y + gap }
+  return best
 }
 
-// Whether the segment runs through the box (Liang–Barsky clipping).
-function crosses(e: Segment, x0: number, y0: number, x1: number, y1: number): boolean {
-  const dx = e.x2 - e.x1
-  const dy = e.y2 - e.y1
-  let t0 = 0
-  let t1 = 1
-  for (const [p, q] of [
-    [-dx, e.x1 - x0],
-    [dx, x1 - e.x1],
-    [-dy, e.y1 - y0],
-    [dy, y1 - e.y1],
-  ]) {
-    if (p === 0) {
-      if (q < 0) return false
-    } else {
-      const t = q / p
-      if (p < 0) t0 = Math.max(t0, t)
-      else t1 = Math.min(t1, t)
-      if (t0 > t1) return false
+// A soft beam from the open dot to its popover, under it, so the eye sees where the
+// note comes from (Victor, 2026-10-23): the outline of the dot and the popover's
+// corners together, strongest at the dot. Purple like the open dot; gold, like its
+// burst, when the note shines. Redrawn every frame while the popover is open: the
+// graph moves, zooms and gets dragged under it.
+let beam: SVGSVGElement | null = null
+let beamFrame = 0
+
+function ensureBeam(): SVGSVGElement {
+  if (beam) return beam
+  const ns = "http://www.w3.org/2000/svg"
+  beam = document.createElementNS(ns, "svg")
+  beam.classList.add("note-beam")
+  beam.innerHTML = `
+    <defs><linearGradient id="note-beam-fill" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-opacity="0.32"/><stop offset="1" stop-opacity="0.06"/>
+    </linearGradient></defs>
+    <polygon fill="url(#note-beam-fill)"/>`
+  document.body.append(beam)
+  return beam
+}
+
+function followWithBeam() {
+  cancelAnimationFrame(beamFrame)
+  const svg = ensureBeam()
+  const draw = () => {
+    const dot = peek?.classList.contains("open") && peeked ? graph?.dotAt(peeked) : null
+    const box = peek?.getBoundingClientRect()
+    const inside = dot && box && dot.x > box.left && dot.x < box.right && dot.y > box.top && dot.y < box.bottom
+    svg.style.display = dot && box && !inside ? "" : "none"
+    if (dot && box && !inside) {
+      const corners = [
+        [box.left, box.top],
+        [box.right, box.top],
+        [box.right, box.bottom],
+        [box.left, box.bottom],
+      ]
+      svg.querySelector("polygon")!.setAttribute("points", hull([[dot.x, dot.y], ...corners]).join(" "))
+      const fill = svg.querySelector("linearGradient")!
+      const color = peek!.classList.contains("takeaway") ? "var(--wiki-takeaway)" : "#8b5cf6"
+      // A style, not the stop-color attribute: an attribute doesn't read CSS variables.
+      fill.querySelectorAll("stop").forEach((stop) => (stop.style.stopColor = color))
+      fill.setAttribute("x1", `${dot.x}`)
+      fill.setAttribute("y1", `${dot.y}`)
+      fill.setAttribute("x2", `${(box.left + box.right) / 2}`)
+      fill.setAttribute("y2", `${(box.top + box.bottom) / 2}`)
     }
+    if (dot !== null && peek?.classList.contains("open")) beamFrame = requestAnimationFrame(draw)
+    else svg.style.display = "none"
   }
-  return true
+  draw()
+}
+
+// The convex hull of a few points (Andrew's monotone chain), as "x,y" pairs.
+function hull(points: number[][]): string[] {
+  const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1])
+  const cross = (o: number[], a: number[], b: number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+  const half = (pts: number[][]) => {
+    const out: number[][] = []
+    for (const p of pts) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 0) out.pop()
+      out.push(p)
+    }
+    return out.slice(0, -1)
+  }
+  return [...half(sorted), ...half([...sorted].reverse())].map(([x, y]) => `${x},${y}`)
 }
 
 // By the cursor for a clicked dot; a link followed inside the popover keeps it where
@@ -456,6 +476,7 @@ async function showPeek(slug: SimpleSlug, place: Place) {
   if (place === "cursor" || !wasOpen) {
     placePeek(el, { x: mouseX, y: mouseY })
   }
+  followWithBeam()
   markSeen(slug)
   graph?.select(slug) // repaints its dot, now seen
 }
