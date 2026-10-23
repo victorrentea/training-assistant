@@ -441,26 +441,29 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
         html.dark a[target="_blank"]:hover > .side-icon {
           color: #facc15;
         }
-        /* Bug-report screenshot: thumbnail in the form + the drag-to-crop overlay. */
+        /* Bug-report screenshot: pinned in the text box corner + the floating 📷 badge. */
+        .bug-shot-corner { position: absolute; right: 1rem; bottom: 1rem; }
+        .bug-shot-add { display: flex; align-items: center; gap: .4rem; padding: .4rem .9rem; border-radius: 999px;
+          border: 1px solid rgba(127,127,127,.35); background: transparent; color: inherit; opacity: .7;
+          font-size: .875rem; font-weight: 600; cursor: pointer; }
+        .bug-shot-add:hover { opacity: 1; }
+        .bug-shot-add .material-symbols-outlined { font-size: 1.1rem; }
         .bug-shot-thumb { position: relative; display: inline-block; }
-        .bug-shot-thumb img { display: block; max-height: 5.5rem; max-width: 12rem; border-radius: .5rem;
-          border: 1px solid rgba(127,127,127,.4); }
+        .bug-shot-thumb img { display: block; max-height: 6rem; max-width: 12rem; border-radius: .5rem;
+          border: 1px solid rgba(127,127,127,.4); box-shadow: 0 2px 10px rgba(0,0,0,.25); }
         .bug-shot-remove { position: absolute; top: -.5rem; right: -.5rem; width: 1.4rem; height: 1.4rem;
           display: flex; align-items: center; justify-content: center; border-radius: 999px; border: none;
           background: #ef4444; color: #fff; cursor: pointer; }
         .bug-shot-remove .material-symbols-outlined { font-size: .9rem; }
-        #bug-shot-crop { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,.85);
-          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .75rem;
-          user-select: none; }
-        #bug-shot-crop .stage { position: relative; cursor: crosshair; line-height: 0; }
-        #bug-shot-crop .stage img { max-width: 94vw; max-height: 80vh; display: block; }
-        #bug-shot-crop .sel { position: absolute; border: 2px solid #facc15; box-shadow: 0 0 0 9999px rgba(0,0,0,.45);
-          pointer-events: none; display: none; }
-        #bug-shot-crop .hint { color: #fff; font-size: .95rem; }
-        #bug-shot-crop .bar { display: flex; gap: .75rem; }
-        #bug-shot-crop .bar button { padding: .5rem 1.1rem; border-radius: 999px; border: none; font-weight: 600;
-          cursor: pointer; background: #fff; color: #111; }
-        #bug-shot-crop .bar button.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); }
+        #bug-shot-badge { position: fixed; top: .9rem; left: 50%; transform: translateX(-50%); z-index: 9000;
+          display: flex; align-items: center; gap: .25rem; padding: .3rem .35rem .3rem .4rem; border-radius: 999px;
+          background: #facc15; color: #111; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+        #bug-shot-badge button { display: flex; align-items: center; gap: .4rem; border: none; background: none;
+          color: inherit; cursor: pointer; font-weight: 700; font-size: .9rem; border-radius: 999px; padding: .3rem .6rem; }
+        #bug-shot-badge button:hover { background: rgba(0,0,0,.1); }
+        #bug-shot-badge .shot-close { padding: .3rem; }
+        #bug-shot-badge .material-symbols-outlined { font-size: 1.25rem; }
+        #bug-shot-flash { position: fixed; inset: 0; z-index: 9001; background: #fff; pointer-events: none; }
         /* A one-shot jump: the glyph alone, never a pressed look. */
         .jump-btn { width: 1.75rem; height: 1.75rem; opacity: .7; }
         .jump-btn .material-symbols-outlined { font-size: 1.2rem; }
@@ -1224,7 +1227,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <a data-nav="report-bug" onclick="showView('report-bug')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">bug_report</span>
 <span class="text-base flex-1">Submit bug/feat</span>
-<span role="button" tabindex="0" data-tip="Screenshot the problem and attach it to a bug report" aria-label="Screenshot the problem and attach it to a bug report" onclick="event.stopPropagation(); captureBugScreenshot()" onkeydown="if(event.key==='Enter'){event.stopPropagation();this.click();}" class="bug-shot-btn side-icon material-symbols-outlined flex-shrink-0">photo_camera</span>
+<span role="button" tabindex="0" data-tip="Take a picture of this page and attach it to a bug report" aria-label="Take a picture of this page and attach it to a bug report" onclick="event.stopPropagation(); startBugScreenshotMode(this)" onkeydown="if(event.key==='Enter'){event.stopPropagation();this.click();}" class="bug-shot-btn side-icon material-symbols-outlined flex-shrink-0">photo_camera</span>
 </a>
 <!-- A div, not an <a>: the quick-contact icons inside are links, and anchors cannot nest. -->
 <div data-nav="about" onclick="showView('about')" role="link" tabindex="0" onkeydown="if(event.key==='Enter')showView('about')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
@@ -1461,22 +1464,25 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 </div>
 <!-- Report a Bug View -->
 <div id="report-bug-view" style="display:none" class="h-full flex flex-col px-16 py-12">
-  <textarea id="report-bug-textarea"
-    class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant"
-    placeholder="Report a bug or request a feature"
-    oninput="updateReportBugBtns()"></textarea>
-  <!-- Screenshot attachment: a "take one" button until there is one, then its
-       thumbnail with a remove ×. Hidden where getDisplayMedia is missing (phones). -->
-  <div id="report-bug-shot-row" class="mt-3 flex items-center gap-3" style="display:none">
-    <button type="button" id="report-bug-shot-add" onclick="captureBugScreenshot()"
-      class="flex items-center gap-2 text-sm font-semibold text-on-surface-variant hover:text-primary cursor-pointer">
-      <span class="material-symbols-outlined">photo_camera</span>
-      Attach a screenshot
-    </button>
-    <div id="report-bug-shot" class="bug-shot-thumb" style="display:none">
-      <img id="report-bug-shot-img" alt="Attached screenshot">
-      <button type="button" onclick="clearBugScreenshot()" data-tip="Remove the screenshot" aria-label="Remove the screenshot"
-        class="bug-shot-remove"><span class="material-symbols-outlined">close</span></button>
+  <!-- The screenshot sits pinned in the text box's bottom-right corner: an
+       "Attach a screenshot" pill until there is one, then its thumbnail with ×. -->
+  <div class="flex-1 flex flex-col" style="position:relative;min-height:0">
+    <textarea id="report-bug-textarea"
+      class="flex-1 w-full resize-none rounded-2xl bg-surface-container-low text-on-surface text-base p-6 outline-none focus:ring-2 focus:ring-primary placeholder:text-on-surface-variant"
+      placeholder="Report a bug or request a feature" style="padding-bottom:7.5rem"
+      oninput="updateReportBugBtns()"></textarea>
+    <div class="bug-shot-corner">
+      <button type="button" id="report-bug-shot-add" onclick="startBugScreenshotMode(this)"
+        data-tip="Browse to the broken part of the page, then take its picture"
+        class="bug-shot-add">
+        <span class="material-symbols-outlined">photo_camera</span>
+        Attach a screenshot
+      </button>
+      <div id="report-bug-shot" class="bug-shot-thumb" style="display:none">
+        <img id="report-bug-shot-img" alt="Attached screenshot">
+        <button type="button" onclick="clearBugScreenshot()" data-tip="Remove the screenshot" aria-label="Remove the screenshot"
+          class="bug-shot-remove"><span class="material-symbols-outlined">close</span></button>
+      </div>
     </div>
   </div>
   <p id="report-bug-status" class="text-sm mt-3 text-on-surface-variant"></p>
@@ -3372,16 +3378,29 @@ function sendBugReport() {
   });
 }
 // ── Screenshot attached to a bug report ──
-// getDisplayMedia lets the participant pick a screen, window or tab; we grab one
-// frame, let them drag a rectangle around the broken part, and keep it as a JPEG
-// data URL until the report is sent. Desktop browsers only — phones lack the API.
+// No screen sharing (no permission prompt, nothing outside this page): the 📷
+// flies up into a floating badge, the participant browses to the broken part,
+// and the badge's camera renders the visible page to an image (html2canvas,
+// loaded on first use) and lands them on the bug form with it attached.
 //: The report travels Railway→daemon in one WebSocket frame (1 MiB cap); the
 //: daemon refuses more than 700k base64 chars, so stay under that with margin.
 var BUG_SHOT_MAX_B64 = 650000;
 var BUG_SHOT_MAX_WIDTH = 1920;
+var HTML2CANVAS_URL = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
 var _bugShotDataUrl = null;
-function _canCaptureScreen() {
-  return !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+var _html2canvasLoading = null;
+function _loadHtml2canvas() {
+  if (window.html2canvas) return Promise.resolve(window.html2canvas);
+  if (!_html2canvasLoading) {
+    _html2canvasLoading = new Promise(function(resolve, reject) {
+      var sc = document.createElement('script');
+      sc.src = HTML2CANVAS_URL;
+      sc.onload = function() { resolve(window.html2canvas); };
+      sc.onerror = function() { _html2canvasLoading = null; reject(new Error('could not load the screenshot tool')); };
+      document.head.appendChild(sc);
+    });
+  }
+  return _html2canvasLoading;
 }
 function _bugScreenshotB64() {
   return _bugShotDataUrl ? _bugShotDataUrl.split(',')[1] : null;
@@ -3396,77 +3415,79 @@ function clearBugScreenshot() {
   _bugShotDataUrl = null;
   _renderBugScreenshot();
 }
-function _grabScreenFrame() {
-  return navigator.mediaDevices.getDisplayMedia({ video: true, audio: false, selfBrowserSurface: 'include' })
-    .then(function(stream) {
-      var video = document.createElement('video');
-      video.muted = true;
-      video.srcObject = stream;
-      return video.play()
-        // Give the browser's share picker a moment to disappear from the frame.
-        .then(function() { return new Promise(function(res) { setTimeout(res, 400); }); })
-        .then(function() {
-          var c = document.createElement('canvas');
-          c.width = video.videoWidth;
-          c.height = video.videoHeight;
-          c.getContext('2d').drawImage(video, 0, 0);
-          return c;
-        })
-        .finally(function() { stream.getTracks().forEach(function(t) { t.stop(); }); });
-    });
+function startBugScreenshotMode(fromEl) {
+  _loadHtml2canvas().catch(function() { /* reported when the picture is taken */ });
+  var badge = document.getElementById('bug-shot-badge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'bug-shot-badge';
+    badge.setAttribute('data-html2canvas-ignore', '');
+    badge.innerHTML =
+      '<button type="button" class="shot-take" data-tip="Take a picture of the page as you see it now">' +
+      '<span class="material-symbols-outlined">photo_camera</span>Take screenshot</button>' +
+      '<button type="button" class="shot-close" data-tip="Cancel the screenshot" aria-label="Cancel the screenshot">' +
+      '<span class="material-symbols-outlined">close</span></button>';
+    badge.querySelector('.shot-take').onclick = takeBugScreenshot;
+    badge.querySelector('.shot-close').onclick = stopBugScreenshotMode;
+    document.body.appendChild(badge);
+  }
+  badge.style.display = '';
+  // Fly a 📷 from the button that was clicked up into the badge, so the eye
+  // follows where the camera went.
+  var from = fromEl && fromEl.getBoundingClientRect();
+  if (from && from.width && badge.animate) {
+    var to = badge.getBoundingClientRect();
+    var dx = (from.left + from.width / 2) - (to.left + to.width / 2);
+    var dy = (from.top + from.height / 2) - (to.top + to.height / 2);
+    badge.animate([
+      { transform: 'translate(calc(-50% + ' + dx + 'px), ' + dy + 'px) scale(.25)', opacity: .4 },
+      { transform: 'translate(-50%, 0) scale(1.08)', opacity: 1, offset: .8 },
+      { transform: 'translate(-50%, 0) scale(1)', opacity: 1 }
+    ], { duration: 650, easing: 'cubic-bezier(.2,.8,.3,1)' });
+  }
+  _setReportBugStatus('', false);
 }
-function _cropScreenFrame(frame) {
-  // Resolves with a canvas (the dragged rectangle, or the whole frame), or null on cancel.
-  return new Promise(function(resolve) {
-    var ov = document.createElement('div');
-    ov.id = 'bug-shot-crop';
-    ov.innerHTML = '<div class="hint">Drag around the part that is broken</div>' +
-      '<div class="stage"><img alt=""><div class="sel"></div></div>' +
-      '<div class="bar"><button type="button" data-act="whole">Attach whole screen</button>' +
-      '<button type="button" class="ghost" data-act="cancel">Cancel</button></div>';
-    var img = ov.querySelector('img'), sel = ov.querySelector('.sel'), stage = ov.querySelector('.stage');
-    img.src = frame.toDataURL('image/png');
-    document.body.appendChild(ov);
-    var start = null, rect = null;
-    function done(result) {
-      document.removeEventListener('keydown', onKey, true);
-      ov.remove();
-      resolve(result);
-    }
-    function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); done(null); } }
-    document.addEventListener('keydown', onKey, true);
-    function pos(e) {
-      var b = img.getBoundingClientRect();
-      return { x: Math.max(0, Math.min(b.width, e.clientX - b.left)),
-               y: Math.max(0, Math.min(b.height, e.clientY - b.top)) };
-    }
-    stage.addEventListener('pointerdown', function(e) {
-      e.preventDefault();
-      stage.setPointerCapture(e.pointerId);
-      start = pos(e);
-      rect = null;
-    });
-    stage.addEventListener('pointermove', function(e) {
-      if (!start) return;
-      var p = pos(e);
-      rect = { x: Math.min(start.x, p.x), y: Math.min(start.y, p.y),
-               w: Math.abs(p.x - start.x), h: Math.abs(p.y - start.y) };
-      sel.style.cssText = 'display:block;left:' + rect.x + 'px;top:' + rect.y + 'px;width:' +
-        rect.w + 'px;height:' + rect.h + 'px';
-    });
-    stage.addEventListener('pointerup', function() {
-      start = null;
-      if (!rect || rect.w < 8 || rect.h < 8) { sel.style.display = 'none'; return; }  // a click, not a drag
-      var k = frame.width / img.getBoundingClientRect().width;
-      var out = document.createElement('canvas');
-      out.width = Math.round(rect.w * k);
-      out.height = Math.round(rect.h * k);
-      out.getContext('2d').drawImage(frame, rect.x * k, rect.y * k, out.width, out.height, 0, 0, out.width, out.height);
-      done(out);
-    });
-    ov.querySelector('[data-act="whole"]').onclick = function() { done(frame); };
-    ov.querySelector('[data-act="cancel"]').onclick = function() { done(null); };
-  });
+function stopBugScreenshotMode() {
+  var badge = document.getElementById('bug-shot-badge');
+  if (badge) badge.style.display = 'none';
+}
+function _flashScreen() {
+  var f = document.createElement('div');
+  f.id = 'bug-shot-flash';
+  document.body.appendChild(f);
+  f.animate([{ opacity: .85 }, { opacity: 0 }], { duration: 350, easing: 'ease-out' }).onfinish = function() { f.remove(); };
+}
+function takeBugScreenshot() {
+  var badge = document.getElementById('bug-shot-badge');
+  var take = badge && badge.querySelector('.shot-take');
+  if (take) take.disabled = true;
+  _loadHtml2canvas()
+    .then(function(h2c) {
+      return h2c(document.body, {
+        useCORS: true,
+        logging: false,
+        backgroundColor: getComputedStyle(document.body).backgroundColor || null,
+        x: window.scrollX, y: window.scrollY,
+        width: window.innerWidth, height: window.innerHeight,
+        windowWidth: window.innerWidth, windowHeight: window.innerHeight
+      });
+    })
+    .then(function(canvas) {
+      _flashScreen();
+      stopBugScreenshotMode();
+      _bugShotDataUrl = _toBoundedJpeg(canvas);
+      showView('report-bug');
+      _renderBugScreenshot();
+      _setReportBugStatus('Screenshot attached — now describe what went wrong.', false);
+      var ta = document.getElementById('report-bug-textarea');
+      if (ta) ta.focus();
+    })
+    .catch(function(e) {
+      stopBugScreenshotMode();
+      showView('report-bug');
+      _setReportBugStatus('Could not take the screenshot (' + ((e && e.message) || e) + ').', true);
+    })
+    .finally(function() { if (take) take.disabled = false; });
 }
 function _toBoundedJpeg(canvas) {
   var scale = Math.min(1, BUG_SHOT_MAX_WIDTH / canvas.width);
@@ -3482,36 +3503,6 @@ function _toBoundedJpeg(canvas) {
     scale *= 0.75;
   }
 }
-function captureBugScreenshot() {
-  if (!_canCaptureScreen()) {
-    showView('report-bug');
-    _setReportBugStatus('Your browser cannot take screenshots — describe the problem in words instead.', true);
-    return;
-  }
-  _grabScreenFrame()
-    .then(_cropScreenFrame)
-    .then(function(canvas) {
-      showView('report-bug');
-      if (!canvas) return;
-      _bugShotDataUrl = _toBoundedJpeg(canvas);
-      _renderBugScreenshot();
-      _setReportBugStatus('Screenshot attached — now describe what went wrong.', false);
-      var ta = document.getElementById('report-bug-textarea');
-      if (ta) ta.focus();
-    })
-    .catch(function(e) {
-      // NotAllowedError = the participant closed the share picker: not an error.
-      if (e && e.name === 'NotAllowedError') return;
-      showView('report-bug');
-      _setReportBugStatus('Could not take the screenshot (' + ((e && e.message) || e) + ').', true);
-    });
-}
-document.addEventListener('DOMContentLoaded', function() {
-  var ok = _canCaptureScreen();
-  document.querySelectorAll('.bug-shot-btn').forEach(function(b) { b.style.display = ok ? '' : 'none'; });
-  var row = document.getElementById('report-bug-shot-row');
-  if (row) row.style.display = ok ? '' : 'none';
-});
 function _bugAgentPrompt(report) {
   return [
     'You are a coding agent with access to the repository',
