@@ -1219,7 +1219,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 </a>
 <a data-nav="upload-paste" onclick="showView('upload-paste')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">upload</span>
-<span class="text-base">Upload / Paste</span>
+<span class="text-base">Send text or file</span>
 </a>
 <a data-nav="report-bug" onclick="showView('report-bug')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">bug_report</span>
@@ -1425,7 +1425,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <div id="agenda-view" style="display:none" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
   <div id="agenda-content" class="text-on-surface text-sm leading-relaxed prose max-w-none">Loading…</div>
 </div>
-<!-- Upload / Paste View -->
+<!-- Send text or file View -->
 <div id="upload-paste-view" style="display:none" class="h-full flex flex-col px-16 py-12">
   <input type="file" id="upload-input" class="hidden" onchange="uploadFileSelected(this.files)"/>
   <textarea id="paste-textarea"
