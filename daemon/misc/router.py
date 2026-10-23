@@ -72,6 +72,9 @@ class BugReportDiagnostics(BaseModel):
 class BugReportRequest(BaseModel):
     text: str
     diagnostics: BugReportDiagnostics = BugReportDiagnostics()
+    #: Optional JPEG screen capture, base64 without the ``data:`` prefix. Mailed
+    #: to Victor as an attachment — never stored, never shown to anyone else.
+    screenshot: Optional[str] = None
 
 class NotesResponse(BaseModel):
     notes_content: Optional[str] = None
@@ -153,10 +156,34 @@ MAX_BUG_REPORT_CHARS = 5000
 #: mid-workshop. Per-participant, reset when the session folder changes.
 MAX_BUG_REPORTS_PER_PARTICIPANT = 5
 MIN_SECONDS_BETWEEN_BUG_REPORTS = 20.0
+#: The report reaches the daemon inside one Railway→daemon WebSocket frame, and
+#: the websockets client caps incoming frames at 1 MiB — keep well clear of it.
+#: The page downscales/recompresses its capture to fit under this.
+MAX_BUG_SCREENSHOT_B64_CHARS = 700_000
+_JPEG_MAGIC = b"\xff\xd8\xff"
 
 def _clean_diagnostic(value: str, limit: int) -> str:
     """Keep printable characters only, then truncate. Diagnostics are attacker-controlled."""
     return "".join(ch for ch in (value or "") if ch.isprintable())[:limit].strip()
+
+
+def _decode_bug_screenshot(b64: str | None) -> tuple[bool, str | None]:
+    """Validate an optional screenshot. Returns (ok, normalised base64 or None).
+
+    Only a real JPEG is accepted, so the attachment cannot smuggle another file
+    type into Victor's inbox under a ``.jpg`` name.
+    """
+    if not b64:
+        return True, None
+    if len(b64) > MAX_BUG_SCREENSHOT_B64_CHARS:
+        return False, None
+    try:
+        raw = base64.b64decode(b64, validate=True)
+    except ValueError:
+        return False, None
+    if not raw.startswith(_JPEG_MAGIC):
+        return False, None
+    return True, b64
 
 
 def _bug_report_rate_limit(pid: str, now: float) -> str | None:
@@ -190,6 +217,10 @@ async def participant_bug_report(request: Request, body: BugReportRequest):
     if not text or len(text) > MAX_BUG_REPORT_CHARS:
         return JSONResponse({"error": "Invalid report text"}, status_code=400)
 
+    screenshot_ok, screenshot = _decode_bug_screenshot(body.screenshot)
+    if not screenshot_ok:
+        return JSONResponse({"error": "Invalid or too large screenshot"}, status_code=400)
+
     now = time.monotonic()
     limit_error = _bug_report_rate_limit(pid, now)
     if limit_error:
@@ -212,6 +243,7 @@ async def participant_bug_report(request: Request, body: BugReportRequest):
         f"Browser:     {_clean_diagnostic(d.user_agent, 256)}",
         f"Screen:      {_clean_diagnostic(d.screen, 32)}",
         f"URL:         {_clean_diagnostic(d.url, 256)}",
+        f"Screenshot:  {'attached' if screenshot else 'none'}",
         "",
         "── Report ──────────────────────────────────────────",
         text,
@@ -223,6 +255,11 @@ async def participant_bug_report(request: Request, body: BugReportRequest):
         f"🐞 Bug report from {_clean_diagnostic(reporter, 64)} ({session_name})",
         email_body,
         from_inbox=PARTICIPANT_INBOX_ID,
+        attachments=[{
+            "filename": "screenshot.jpg",
+            "content_type": "image/jpeg",
+            "content": screenshot,
+        }] if screenshot else None,
     )
     if not sent:
         return JSONResponse(

@@ -1,4 +1,6 @@
 """Tests for daemon misc participant routes."""
+import base64
+
 import pytest
 from unittest.mock import patch
 
@@ -101,7 +103,7 @@ def test_bug_report_strips_header_injection_from_diagnostics():
     # cannot forge an extra "Field: value" row (nor a header, once in a subject).
     header_block = body.split("── Report ──")[0]
     assert "\r" not in header_block
-    assert len(header_block.strip().splitlines()) == 8
+    assert len(header_block.strip().splitlines()) == 9
     assert "slidesX-Injected: yes" in header_block  # newline dropped, text kept
 
 
@@ -117,6 +119,53 @@ def test_bug_report_uses_active_session_name():
     subject, body = notify.call_args.args
     assert "2026-04-06 Architecture Masterclass" in subject
     assert "Session:     2026-04-06 Architecture Masterclass" in body
+
+
+_JPEG_B64 = base64.b64encode(b"\xff\xd8\xff\xe0fake-jpeg-payload").decode()
+
+
+def test_bug_report_attaches_the_screenshot_to_the_mail():
+    client = _client()
+    with patch("daemon.misc.router.email_notify", create=True, return_value=True) as notify:
+        resp = client.post(
+            "/api/participant/misc/bug-report",
+            json={"text": "See the picture.", "screenshot": _JPEG_B64},
+            headers={"X-Participant-ID": "p1"},
+        )
+    assert resp.status_code == 204
+    _, body = notify.call_args.args
+    assert "Screenshot:  attached" in body
+    assert notify.call_args.kwargs["attachments"] == [{
+        "filename": "screenshot.jpg",
+        "content_type": "image/jpeg",
+        "content": _JPEG_B64,
+    }]
+
+
+def test_bug_report_without_screenshot_sends_no_attachment():
+    client = _client()
+    with patch("daemon.misc.router.email_notify", create=True, return_value=True) as notify:
+        resp = _post_bug_report(client)
+    assert resp.status_code == 204
+    assert "Screenshot:  none" in notify.call_args.args[1]
+    assert notify.call_args.kwargs["attachments"] is None
+
+
+@pytest.mark.parametrize("screenshot", [
+    "not base64!!",
+    base64.b64encode(b"<html>not a jpeg</html>").decode(),  # only JPEG gets through
+    "A" * 700_004,                                          # over the WS frame budget
+])
+def test_bug_report_rejects_a_bad_screenshot(screenshot):
+    client = _client()
+    with patch("daemon.misc.router.email_notify", create=True, return_value=True) as notify:
+        resp = client.post(
+            "/api/participant/misc/bug-report",
+            json={"text": "x", "screenshot": screenshot},
+            headers={"X-Participant-ID": "p1"},
+        )
+    assert resp.status_code == 400
+    notify.assert_not_called()
 
 
 def test_bug_report_requires_participant_id():

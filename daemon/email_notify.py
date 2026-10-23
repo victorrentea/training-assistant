@@ -49,11 +49,19 @@ def _header_safe(value: str, limit: int = 120) -> str:
     return cleaned[:limit].strip()
 
 
-def notify(subject: str, body: str, from_inbox: str = _INBOX_ID) -> bool:
+def notify(
+    subject: str,
+    body: str,
+    from_inbox: str = _INBOX_ID,
+    attachments: list[dict] | None = None,
+) -> bool:
     """Send a notification email. Best-effort — never raises.
 
     Returns True only when AgentMail accepted the message, so callers can tell a
     participant "this did not reach Victor" instead of a false confirmation.
+
+    ``attachments`` are AgentMail ``SendAttachment`` dicts (snake_case keys:
+    ``filename``, ``content_type``, ``content`` as base64).
     """
     to = os.environ.get("NOTIFY_EMAIL")
     if not to:
@@ -67,6 +75,7 @@ def notify(subject: str, body: str, from_inbox: str = _INBOX_ID) -> bool:
             to=[to],
             subject=_header_safe(subject),
             text=body,
+            **({"attachments": attachments} if attachments else {}),
         )
         log.info("email", f"Sent: {subject!r} → {to}")
         return True
