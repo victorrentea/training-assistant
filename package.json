@@ -1,6 +1,7 @@
 {
   "scripts": {
     "build:css": "tailwindcss -c tailwind.config.js -i tailwind.input.css -o static/vendor/tailwind.css --minify",
+    "build:css:talk": "tailwindcss -c tailwind.talk.config.js -i tailwind.input.css -o static/vendor/tailwind-talk.css --minify",
     "watch:css": "tailwindcss -c tailwind.config.js -i tailwind.input.css -o static/vendor/tailwind.css --watch"
   },
   "devDependencies": {

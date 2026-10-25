@@ -5,15 +5,10 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Talk Mode</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon-new.svg" />
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<!-- Material Symbols -->
-<!-- Only the icons this page uses (alphabetical, as Google Fonts requires): ~3 KB instead
-     of the 1.1 MB full icon font, times every phone on the venue Wi-Fi. Add a name here
-     when a new icon is used. -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;icon_names=chevron_right,commit,download,mic,my_location,slideshow,smartphone,sticky_note_2,sync&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts: self-hosted (Inter, Space Grotesk, and a Material Symbols subset with only the
+     icons this page uses), since corporate proxies block Google Fonts. Add an icon here
+     => re-download the subset, see the header of talk-fonts.css. -->
+<link href="/static/vendor/fonts/talk-fonts.css" rel="stylesheet"/>
 <style>html:not(.fonts-ready) body{visibility:hidden}</style>
 <script>
   // Hide the page until the icon font is in (no ligature-text flash), but never
@@ -25,81 +20,6 @@
     setTimeout(reveal, 1500);
   })();
 </script>
-<!-- Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            "colors": {
-                    "on-tertiary": "#490010",
-                    "on-primary-container": "#0a0081",
-                    "primary-fixed": "#9396ff",
-                    "on-secondary-fixed-variant": "#533ea7",
-                    "inverse-primary": "#494bd7",
-                    "on-tertiary-fixed-variant": "#780021",
-                    "on-error-container": "#ffb2b9",
-                    "on-background": "#e9e1ff",
-                    "surface-container-highest": "#271c53",
-                    "inverse-surface": "#fdf8ff",
-                    "tertiary": "#ff6f7e",
-                    "on-surface-variant": "#aea5d4",
-                    "primary-container": "#9396ff",
-                    "surface": "#0f072e",
-                    "secondary-dim": "#a28efc",
-                    "surface-variant": "#271c53",
-                    "tertiary-container": "#fc4563",
-                    "surface-tint": "#a3a6ff",
-                    "surface-container-low": "#140b36",
-                    "on-surface": "#e9e1ff",
-                    "secondary-container": "#49339d",
-                    "secondary": "#a28efc",
-                    "on-primary": "#0f00a4",
-                    "on-secondary-fixed": "#361c89",
-                    "outline-variant": "#4a426b",
-                    "surface-dim": "#0f072e",
-                    "error-dim": "#d73357",
-                    "on-primary-fixed": "#000000",
-                    "secondary-fixed-dim": "#c8bbff",
-                    "background": "#0f072e",
-                    "on-secondary-container": "#d4c9ff",
-                    "on-tertiary-container": "#100001",
-                    "error-container": "#a70138",
-                    "tertiary-fixed": "#ff9099",
-                    "tertiary-dim": "#ff6f7e",
-                    "primary-dim": "#6063ee",
-                    "on-primary-fixed-variant": "#0e009d",
-                    "outline": "#78709b",
-                    "primary-fixed-dim": "#8387ff",
-                    "surface-container-lowest": "#000000",
-                    "secondary-fixed": "#d6cbff",
-                    "tertiary-fixed-dim": "#ff7986",
-                    "primary": "#a3a6ff",
-                    "inverse-on-surface": "#574f79",
-                    "on-tertiary-fixed": "#39000b",
-                    "surface-container-high": "#211749",
-                    "on-secondary": "#21006d",
-                    "surface-bright": "#2e225d",
-                    "surface-container": "#1b1140",
-                    "on-error": "#490013",
-                    "error": "#ff6e84"
-            },
-            "borderRadius": {
-                    "DEFAULT": "0.25rem",
-                    "lg": "0.5rem",
-                    "xl": "0.75rem",
-                    "full": "9999px"
-            },
-            "fontFamily": {
-                    "headline": ["Space Grotesk"],
-                    "body": ["Inter"],
-                    "label": ["Inter"]
-            }
-          },
-        },
-      }
-    </script>
 <!-- Marked.js for markdown rendering -->
 <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
 <style>
@@ -265,6 +185,10 @@
     </style>
 <script src="/static/emoji-float.js"></script>
 <script src="/static/talk-notes.js"></script>
+<!-- Tailwind CSS: prebuilt from tailwind.talk.config.js (npm run build:css:talk) instead of
+     the Play CDN, which corporate proxies block. Rebuild after adding a class.
+     Last in <head>, where the Play CDN injected its styles: Tailwind wins over the page's own <style>. -->
+<link rel="stylesheet" href="/static/vendor/tailwind-talk.css"/>
 </head>
 <body class="bg-background text-on-background font-body flex flex-col overflow-hidden">
 <!-- Desktop Warning -->
