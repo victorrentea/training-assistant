@@ -34,6 +34,7 @@ QUESTIONS: list[dict] = [
                {"text": "Codex", "url": "https://developers.openai.com/codex/pricing"}],
      "options": YES_NO},
     {"id": "agents_md", "kind": "choice", "text": "Do you have an AGENTS.md (or CLAUDE.md) in 🫵your project?",
+     "links": [{"text": "AGENTS.md", "url": "https://agents.md"}],
      "options": ["Yes", "No / I don't know"]},
     {"id": "knowledge_base", "kind": "choice",
      "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki)?",
