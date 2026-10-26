@@ -242,6 +242,10 @@ def _write_fallback_index(content: Path, title: str) -> None:
     (content / "index.md").write_text(f"---\ntitle: {json.dumps(title)}\n---\n\n{links}\n", encoding="utf-8")
 
 
+SITE_NAME = "Summary Wiki"
+TITLE_SUFFIX = f" · {SITE_NAME}"  # must match pageTitleSuffix in quartz/quartz.config.ts
+
+
 def _use_home_as_landing_page(wiki_dir: Path, out_dir: Path) -> None:
     """The summarizer names the vault's entry page Home.md, not index.md.
 
@@ -253,6 +257,9 @@ def _use_home_as_landing_page(wiki_dir: Path, out_dir: Path) -> None:
         return
     home = out_dir / "Home.html"
     if home.is_file():
+        # The hub page's tab reads "Summary Wiki", not "Home · Summary Wiki".
+        page = home.read_text(encoding="utf-8")
+        home.write_text(page.replace(f"<title>Home{TITLE_SUFFIX}</title>", f"<title>{SITE_NAME}</title>", 1), encoding="utf-8")
         shutil.copy(home, out_dir / "index.html")
 
 

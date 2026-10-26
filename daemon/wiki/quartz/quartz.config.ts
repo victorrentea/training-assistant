@@ -10,7 +10,8 @@ const config: QuartzConfig = {
   configuration: {
     // The daemon passes the session name; one build per session, never shared.
     pageTitle: process.env.WIKI_TITLE ?? "Workshop Wiki",
-    pageTitleSuffix: "",
+    // Browser tab: "<note> · Summary Wiki"; the landing page is just "Summary Wiki" (builder.py).
+    pageTitleSuffix: " · Summary Wiki",
     enableSPA: true,
     enablePopovers: true,
     analytics: null,
