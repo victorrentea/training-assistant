@@ -285,3 +285,17 @@ def test_note_badges_count_anchors_and_a_played_short_is_not_a_link(tmp_path):
         "SQL": {"img": False, "links": 1, "anchors": 2, "shorts": 2},
         "Moments": {"img": False, "links": 0, "anchors": 1, "shorts": 0},
     }
+
+
+def test_note_versions_change_with_the_note_text_or_its_pictures_only(tmp_path):
+    def versions(article: str, chrome: str = "") -> dict[str, str]:
+        (tmp_path / "Note.html").write_text(f'{chrome}<article class="popover-hint">{article}</article>')
+        (tmp_path / "Plain.html").write_text("<p>no note on this page</p>")
+        builder.write_note_badges(tmp_path)
+        return json.loads((tmp_path / builder.VERSIONS_FILE).read_text())
+
+    first = versions('<p>Lead</p><img src="slide-1.png">')
+    assert list(first) == ["Note"]  # a page without a note has no version
+    assert versions('<p>Lead</p><img src="slide-1.png">', chrome="<nav>other notes</nav>") == first
+    assert versions('<p>Lead, reworded</p><img src="slide-1.png">') != first
+    assert versions('<p>Lead</p><img src="slide-2.png">') != first

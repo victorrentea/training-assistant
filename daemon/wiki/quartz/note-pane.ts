@@ -7,7 +7,8 @@
 // place, without ever leaving the graph; hovering one lights up its dot and the edge
 // to it from the note shown.
 // Every note shown counts as seen on this browser: its dot and the links to it dim,
-// so what is left to read stands out.
+// so what is left to read stands out. One edited since it was read gets a pulsing ✏️
+// on its dot until it is opened again (see "Edited notes" below).
 //
 // Participants can follow the trainer: whichever note Victor opens on his machine
 // gets a pulsing yellow ring around its dot on theirs (see "Following the trainer"
@@ -59,18 +60,31 @@ let highlighted: SimpleSlug | null = null
 
 // Kept per site (the path holds the session id), so one training's reading doesn't
 // grey out the next one's notes. Private windows or blocked storage just start over.
+// Each note with the version read (builder.py's note-versions.json); "" for one read
+// before versions existed, or before they loaded. A list of slugs is the old format.
 const seenKey = () => `wiki-seen:${new URL(pathToRoot(getFullSlug(window)), window.location.href).pathname}`
-let seen: Set<string> | null = null
+let seen: Map<string, string> | null = null
 
-function seenNotes(): Set<string> {
+function seenNotes(): Map<string, string> {
   if (!seen) {
     try {
-      seen = new Set(JSON.parse(localStorage.getItem(seenKey()) ?? "[]"))
+      const stored = JSON.parse(localStorage.getItem(seenKey()) ?? "{}")
+      seen = new Map(
+        Array.isArray(stored)
+          ? stored.map((slug: string) => [slug, ""])
+          : Object.entries(stored).filter((e): e is [string, string] => typeof e[1] === "string"),
+      )
     } catch {
-      seen = new Set()
+      seen = new Map()
     }
   }
   return seen
+}
+
+function saveSeen() {
+  try {
+    localStorage.setItem(seenKey(), JSON.stringify(Object.fromEntries(seenNotes())))
+  } catch {}
 }
 
 export function isSeen(slug: string): boolean {
@@ -80,7 +94,7 @@ export function isSeen(slug: string): boolean {
 // Forgets every note read on this browser: all dots white again (the "Reset seen" pill,
 // Victor, 2026-10-23).
 export function resetSeen() {
-  seen = new Set()
+  seen = new Map()
   try {
     localStorage.removeItem(seenKey())
   } catch {}
@@ -88,11 +102,48 @@ export function resetSeen() {
 
 function markSeen(slug: SimpleSlug) {
   const notes = seenNotes()
-  if (notes.has(slug)) return
-  notes.add(slug)
-  try {
-    localStorage.setItem(seenKey(), JSON.stringify([...notes]))
-  } catch {}
+  const version = versions?.get(slug) ?? ""
+  if (notes.has(slug) && notes.get(slug) === version) return
+  notes.set(slug, version)
+  saveSeen()
+}
+
+// ── Edited notes ──
+// The summarizer rewrites notes during the day. A note read here whose version changed
+// since gets a ✏️ pulsing on its dot (graph-badges.ts EditPencil), on every browser
+// that read it, until it is opened there again (Victor, 2026-10-26). A note not read
+// yet needs none: its dot is still white.
+let versions: Map<string, string> | null = null
+
+function loadVersions() {
+  const url = new URL(`${pathToRoot(getFullSlug(window))}/note-versions.json`, window.location.href)
+  fetch(url)
+    .then((res) => (res.ok ? res.json() : {}))
+    .catch(() => ({})) // a site built before versions: no pencils
+    .then((json: Record<string, unknown>) => {
+      versions = new Map(
+        Object.entries(json)
+          .filter((e): e is [string, string] => typeof e[1] === "string")
+          .map(([k, v]) => [simplifySlug(k as never), v]),
+      )
+      // A note read without a known version takes this one: from now on its edits show.
+      const notes = seenNotes()
+      let backfilled = false
+      for (const [slug, read] of notes) {
+        const now = versions.get(slug)
+        if (read === "" && now) {
+          notes.set(slug, now)
+          backfilled = true
+        }
+      }
+      if (backfilled) saveSeen()
+    })
+}
+
+export function isEdited(slug: string): boolean {
+  const read = seenNotes().get(slug)
+  const now = versions?.get(slug)
+  return !!read && !!now && read !== now
 }
 
 // Whether the full graph shows the Home dot (patch-graph.py's pill), remembered on
@@ -177,6 +228,7 @@ let announced = false
 
 export function connectGraph(g: PaneGraph) {
   graph = g
+  if (!versions) loadVersions()
   g.select(peeked)
   g.ring(ringed)
   g.shine()

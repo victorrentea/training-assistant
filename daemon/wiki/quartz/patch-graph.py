@@ -53,6 +53,7 @@ PATCHES = [
       active: false,
       radius: nodeRadius(n),
       badge,
+      pencil,
       takeaway,
     }
 
@@ -70,6 +71,10 @@ PATCHES = [
   const badgesContainer = new Container<NoteBadge>({ zIndex: 1.8, isRenderGroup: true, eventMode: "passive" })
   stage.addChild(badgesContainer)
   const noteBadges = await loadBadges(fullSlug)
+  // The ✏️ on a note edited since it was read here (graph-badges.ts EditPencil): over
+  // the dots and the Follow ring.
+  const pencilsContainer = new Container<EditPencil>({ zIndex: 2.6, isRenderGroup: true, eventMode: "none" })
+  stage.addChild(pencilsContainer)
   const badgeColors: BadgeColors = {
     glyph: "#9ca3af", // the grey of the ⚓ emoji, so the drawn glyphs match it (Victor, 2026-10-23)
     count: computedStyleMap["--gray"], // a detail: it mustn't jump out (Victor, 2026-10-23)
@@ -147,6 +152,8 @@ PATCHES = [
      """    labelsContainer.addChild(label)
     const badge = makeBadge(noteBadges.get(nodeId), badgeColors)
     if (badge) badgesContainer.addChild(badge)
+    const pencil = new EditPencil()
+    pencilsContainer.addChild(pencil)
     const takeaway = new TakeawayMark(nodeRadius(n), takeawayColors, starMode(), (on) =>
       starMode() === "voter" ? toggleStar(nodeId, on) : toggleTakeaway(nodeId, on))
     takeaway.set(dotShine(nodeId))
@@ -164,6 +171,7 @@ PATCHES = [
         hovered.width = hovered.height = n.radius * 9
       }
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
+      n.pencil.show(isEdited(n.simulationData.id), x + width / 2, y + height / 2, n.radius, time)
       // The star right after the note's name, on its line (graph-takeaway.ts).
       // The star after the name, like one more letter of it: a letter's gap after its
       // last one (the label's width takes in its outline, half of it each side), on its
@@ -317,9 +325,9 @@ PATCHES = [
     ('import { D3Config } from "../Graph"',
      'import { D3Config } from "../Graph"\n'
      'import "./tooltip.js"\n'
-     'import { BadgeColors, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
+     'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawComet, drawFlash, hoverGlow } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isSeen, onHostMachine, resetSeen, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isEdited, isSeen, onHostMachine, resetSeen, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
      '// gaining one when starred jumped down and pushed its star away (Victor, 2026-10-23).\n'

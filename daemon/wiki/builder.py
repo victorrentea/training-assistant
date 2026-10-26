@@ -7,6 +7,7 @@ session, from that session's folder only — nothing from other sessions can lea
 """
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -128,6 +129,7 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
 
 
 BADGES_FILE = "note-badges.json"
+VERSIONS_FILE = "note-versions.json"
 
 
 class _NoteScan(HTMLParser):
@@ -149,16 +151,25 @@ class _NoteScan(HTMLParser):
         self.anchors = 0
         self.shorts = 0
         self.link_text: list[str] | None = None  # the open external link's text
+        self.note = False  # the page has a note at all
+        self._digest = hashlib.sha1()  # its text and pictures: what a reader sees change
+
+    @property
+    def version(self) -> str:
+        return self._digest.hexdigest()[:10]
 
     def handle_starttag(self, tag, attrs):
         classes = (dict(attrs).get("class") or "").split()
         if self.depth:
             self.depth += tag == "article"
             self.img = self.img or tag == "img"
+            if tag == "img":
+                self._digest.update(f"<img {dict(attrs).get('src')}>".encode())
             if tag == "a" and "external" in classes:
                 self.link_text = []
         elif tag == "article" and "popover-hint" in classes:
             self.depth = 1
+            self.note = True
 
     def handle_endtag(self, tag):
         if self.depth and tag == "a" and self.link_text is not None:
@@ -169,6 +180,7 @@ class _NoteScan(HTMLParser):
 
     def handle_data(self, data):
         if self.depth:
+            self._digest.update(data.encode())
             self.anchors += data.count(_ANCHOR)
             self.shorts += data.count(_SHORT)
             if self.link_text is not None:
@@ -188,14 +200,21 @@ def write_note_badges(out_dir: Path) -> None:
     without .html, as in static/contentIndex.json), which the graph simplifies like its
     node ids. Notes with none of them are left out. index.html is listed too: either it is
     the vault's own index note (node id "/"), or a copy of Home that no dot asks for.
+
+    Next to it, {slug: version} for every note: a digest of its text and pictures. A note
+    read on a browser whose version changed since gets a pulsing ✏️ on its dot there
+    (note-pane.ts), until it is opened again.
     """
     badges = {}
+    versions = {}
     for page in sorted(out_dir.rglob("*.html")):
         slug = page.relative_to(out_dir).with_suffix("").as_posix()
         if slug == "404":
             continue
         scan = _NoteScan()
         scan.feed(page.read_text(encoding="utf-8", errors="replace"))
+        if scan.note:
+            versions[slug] = scan.version
         if scan.img or scan.links or scan.anchors or scan.shorts:
             badges[slug] = {
                 "img": scan.img,
@@ -204,6 +223,7 @@ def write_note_badges(out_dir: Path) -> None:
                 "shorts": scan.shorts,
             }
     (out_dir / BADGES_FILE).write_text(json.dumps(badges, ensure_ascii=False), encoding="utf-8")
+    (out_dir / VERSIONS_FILE).write_text(json.dumps(versions, ensure_ascii=False), encoding="utf-8")
 
 
 def _write_fallback_index(content: Path, title: str) -> None:

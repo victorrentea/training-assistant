@@ -196,6 +196,59 @@ const EMOJI_FONTS = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", 
 const ANCHOR = "\u2693\uFE0F"
 const SHORT = "\u{1F3AC}"
 
+// A note edited since it was read on this browser (note-pane.ts isEdited): a ✏️ with its
+// tip on the dot's rim, up and to the right, breathing around that tip until the note
+// is opened again (Victor, 2026-10-26). One per dot, hidden while its note is unchanged.
+export class EditPencil extends Text {
+  constructor() {
+    super({
+      eventMode: "none",
+      text: PENCIL,
+      anchor: { x: tipsRight() ? 1 - PENCIL_TIP.x : PENCIL_TIP.x, y: PENCIL_TIP.y },
+      style: { fontSize: PENCIL_FONT, fontFamily: EMOJI_FONTS },
+      resolution: window.devicePixelRatio * 4,
+    })
+    this.visible = false
+  }
+
+  show(edited: boolean, x: number, y: number, r: number, time: number) {
+    this.visible = edited
+    if (!edited) return
+    const rim = r * Math.SQRT1_2
+    this.position.set(x + rim, y - rim)
+    const s = 1 + (0.25 * (1 + Math.sin(time / 250))) / 2
+    this.scale.set(tipsRight() ? -s : s, s) // mirrored, it leans up-right like the others
+  }
+}
+
+// Which way the platform's ✏️ points: Apple's tip is bottom-right, Windows' and Android's
+// bottom-left. Drawn once on a scratch canvas, where its lowest pixels are the tip.
+let pencilTipsRight: boolean | null = null
+
+function tipsRight(): boolean {
+  if (pencilTipsRight !== null) return pencilTipsRight
+  pencilTipsRight = false
+  const size = 64
+  const g = document.createElement("canvas").getContext("2d", { willReadFrequently: true })
+  if (!g) return pencilTipsRight
+  g.canvas.width = g.canvas.height = size
+  g.font = `48px ${EMOJI_FONTS}`
+  g.textBaseline = "top"
+  g.fillText(PENCIL, 0, 0)
+  const width = g.measureText(PENCIL).width
+  const { data } = g.getImageData(0, 0, size, size)
+  for (let y = size - 1; y >= 0; y--) {
+    const row = [...Array(size).keys()].filter((x) => data[(y * size + x) * 4 + 3] > 128)
+    if (row.length) return (pencilTipsRight = row.reduce((a, b) => a + b) / row.length > width / 2)
+  }
+  return pencilTipsRight
+}
+
+const PENCIL = "\u270F\uFE0F"
+const PENCIL_FONT = 12
+// Where the pencil's tip is in the ✏️ emoji's box, drawn pointing down-left.
+const PENCIL_TIP = { x: 0.1, y: 0.88 }
+
 export class NoteBadge extends Container {
   private picture: Graphics | null
   private links: Container | null // the link glyph, ×N
