@@ -620,6 +620,16 @@ html #app-tooltip {
   z-index: 10001;
 }
 
+// An emotional anchor (⚓ <span class="anchor" data-tip="…">tag</span>, written by the
+// training-summarizer): the dotted underline says there is a story behind the tag, and
+// hovering it shows that story in one sentence through the shared tooltip.
+.anchor[data-tip] {
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
 // A badge's name after the pointer rests on it (graph-badges.ts namedAfterAWhile): the
 // app tooltip's look, smaller, centred above the pointer.
 .graph-badge-name {
