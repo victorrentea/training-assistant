@@ -807,8 +807,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-status-inline { margin-left: .5rem; font-size: .9rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); white-space: nowrap; }
 .aishare-up { color: #2f9e44; }
 .aishare-down { color: #e03131; }
-/* Ranking question: a live leaderboard of pain points, voted ▲ / ▼, re-ordered as votes come in. */
-.aishare-rank { display: flex; flex-direction: column; gap: .4rem; }
+/* Ranking question: a live leaderboard of pain points, voted ▲ / ▼, re-ordered as votes come in; tiles in a grid, read row by row. */
+.aishare-rank { display: grid; grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr)); gap: .4rem; }
 .aishare-rank-row { position: relative; display: flex; align-items: center; gap: .6rem; padding: .45rem .5rem .45rem .8rem; border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font-size: .95rem; overflow: hidden; }
 @media (prefers-color-scheme: dark) { .aishare-rank-row { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); } }
 .aishare-rank-row .fill { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(69, 85, 186, 0.22); transition: width .4s ease; }
@@ -6083,7 +6083,7 @@ function _aiShareUpdateRanking(card, q, res) {
   var mine = _aiShare.myVotes[q.id] || {};
   var maxScore = Math.max.apply(null, items.map(function (it) { return Math.abs(it.score); }).concat([1]));
   var before = {};
-  list.querySelectorAll('.aishare-rank-row').forEach(function (row) { before[row.dataset.id] = row.getBoundingClientRect().top; });
+  list.querySelectorAll('.aishare-rank-row').forEach(function (row) { var r = row.getBoundingClientRect(); before[row.dataset.id] = { x: r.left, y: r.top }; });
   var keep = {};
   items.forEach(function (it, pos) {
     var id = String(it.id);
@@ -6113,10 +6113,11 @@ function _aiShareUpdateRanking(card, q, res) {
   list.querySelectorAll('.aishare-rank-row').forEach(function (row) {
     var was = before[row.dataset.id];
     if (was === undefined) return;
-    var dy = was - row.getBoundingClientRect().top;
-    if (!dy) return;
+    var now = row.getBoundingClientRect();
+    var dx = was.x - now.left, dy = was.y - now.top;
+    if (!dx && !dy) return;
     row.style.transition = 'none';
-    row.style.transform = 'translateY(' + dy + 'px)';
+    row.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
     row.getBoundingClientRect();  // commit the start position before animating back
     row.style.transition = 'transform .45s cubic-bezier(.2,.8,.2,1)';
     row.style.transform = '';
