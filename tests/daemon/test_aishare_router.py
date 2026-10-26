@@ -71,8 +71,8 @@ def test_questions_are_shipped_in_order(client, sent):
     pax = _last(sent["broadcast"], "aishare_updated")
     assert [q.id for q in pax.questions] == ["harness_work", "personal_sub", "agents_md", "knowledge_base", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr", "ai_generated", "review", "devex_pain"]
     assert pax.questions[0].kind == "multi" and pax.questions[0].options[-1] == "Other"
-    assert pax.questions[2].options == ["Yes", "No", "I don't know"]
-    assert pax.questions[2].host_options == ["Yes", "No / don't know"]
+    assert pax.questions[2].options == ["Yes", "No / I don't know"]
+    assert [l.text for l in pax.questions[1].links] == ["Claude", "Codex"]
     assert pax.questions[3].options == ["Yes", "No / I don't know"]
     assert next(q for q in pax.questions if q.id == "skill").options == ["Yes", "No"]
     assert [q.kind for q in pax.questions[-3:]] == ["slider", "slider", "ranking"]
@@ -243,20 +243,20 @@ def _ranking(msg):
 def test_ranking_starts_from_the_presets_with_no_votes(client, sent):
     client.post("/api/cur/host/aishare/start")
     items = _result(_last(sent["broadcast"], "aishare_updated"), "devex_pain").items
-    assert items[0].text == "Code review: waiting" and len(items) == 12
+    assert items[0].text == "Code review: waiting or giving" and len(items) == 10
     assert all(i.score == 0 for i in items)
 
 
 def test_votes_reorder_the_ranking_live_even_before_reveal(client, sent):
     client.post("/api/cur/host/aishare/start")
-    assert _vote(client, "u1", 3, 1).status_code == 204       # Lack of tests ▲
+    assert _vote(client, "u1", 3, 1).status_code == 204       # Tech debt ▲
     _vote(client, "u2", 3, 1)
-    _vote(client, "u2", 2, 1)                                 # Process, bureaucracy ▲
+    _vote(client, "u2", 2, 1)                                 # Bureaucracy ▲
     _vote(client, "u1", 1, -1)                                # meetings ▼
     pax = _last(sent["broadcast"], "aishare_updated")
     ranking = _ranking(pax)
-    assert ranking[:2] == [("Lack of tests", 2), ("Process, bureaucracy", 1)]
-    assert ranking[-1] == ("Meetings: long / too many", -1)
+    assert ranking[:2] == [("Tech debt: legacy code, lack of tests", 2), ("Bureaucracy: processes", 1)]
+    assert ranking[-1] == ("Meetings: too many / too long", -1)
     assert _result(pax, "devex_pain").count == 2
     assert _ranking(_last(sent["host"], "aishare_host_update")) == ranking
 
@@ -287,11 +287,11 @@ def test_added_item_gets_its_author_upvote_and_duplicates_fold(client, state, se
     resp = _add(client, "u1", "  Too many   Jira fields ")
     assert resp.status_code == 200
     new_id = resp.json()["id"]
-    assert new_id == 12
+    assert new_id == 10
     assert _add(client, "u2", "too many jira fields").json()["id"] == new_id
-    assert _add(client, "u2", "LACK OF TESTS").json()["id"] == 3      # same as a preset
+    assert _add(client, "u2", "CONTEXT SWITCHING").json()["id"] == 5      # same as a preset
     pax = _last(sent["broadcast"], "aishare_updated")
-    assert _ranking(pax)[:2] == [("Too many Jira fields", 2), ("Lack of tests", 1)]
+    assert _ranking(pax)[:2] == [("Too many Jira fields", 2), ("Context switching", 1)]
     assert "u1" not in pax.model_dump_json() and "u1" not in _last(sent["host"], "aishare_host_update").model_dump_json()
 
 
@@ -322,20 +322,16 @@ def test_ranking_snapshot_round_trips():
     restored = AiShareState()
     restored.restore(s.snapshot())
     assert restored.snapshot() == s.snapshot()
-    assert restored.votes_of("u1") == {"devex_pain": {"12": 1}}
+    assert restored.votes_of("u1") == {"devex_pain": {"10": 1}}
 
 
-def test_restore_renames_the_first_presets_keeping_their_votes():
+def test_restore_merges_no_and_i_dont_know_on_agents_md():
     s = AiShareState()
-    s.restore({"active": True,
-               "items": {"devex_pain": [{"id": 0, "text": "Long / too many meetings", "by": None},
-                                        {"id": 12, "text": "Missing documentation", "by": "u9"}]},
-               "votes": {"devex_pain": {"u1": {"0": 1}}}})
-    assert [(i["text"], i["score"]) for i in s.ranked("devex_pain")] == [
-        ("Meetings: long / too many", 1), ("Missing documentation", 0)]   # a participant's own text stays
+    s.restore({"active": True, "answers": {"agents_md": {"u1": 0, "u2": 1, "u3": 2}}})
+    assert s.answers == {"agents_md": {"u1": 0, "u2": 1, "u3": 1}}
 
 
 def test_restore_of_an_older_active_snapshot_seeds_the_ranking():
     s = AiShareState()
     s.restore({"active": True, "answers": {"ai_generated": {"u1": 40}}})
-    assert len(s.ranked("devex_pain")) == 12
+    assert len(s.ranked("devex_pain")) == 10

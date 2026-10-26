@@ -378,15 +378,17 @@ components:
                   nullable: true
                   type: integer
                   description: "slider: from this % on the curve is painted green"
-                link:
+                links:
                   nullable: true
-                  type: object
-                  properties:
-                    text:
-                      type: string
-                    url:
-                      type: string
-                  description: "turns link.text inside the question text into a link"
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      text:
+                        type: string
+                      url:
+                        type: string
+                  description: "turns each link's text inside the question text into a link"
                 future_link:
                   nullable: true
                   type: object

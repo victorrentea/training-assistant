@@ -155,7 +155,7 @@ class AiShareQuestion(BaseModel):
     high: str | None = None            # slider: label at 100%
     future: int | None = None          # slider: from here on the curve is painted green
     future_link: AiShareLink | None = None  # slider: a link under the green slice's % label (the prophecy behind it)
-    link: AiShareLink | None = None    # turns `link.text` inside the question text into a link
+    links: list[AiShareLink] | None = None  # turns each `text` inside the question text into a link
 
 
 class AiShareRankedItem(BaseModel):

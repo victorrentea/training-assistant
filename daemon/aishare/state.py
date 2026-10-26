@@ -26,53 +26,44 @@ YES_NO_IDK = ["Yes", "No", "I don't know"]
 YES_NO = ["Yes", "No"]
 
 QUESTIONS: list[dict] = [
-    {"id": "harness_work", "kind": "multi", "text": "What harness do you use at work?",
+    {"id": "harness_work", "kind": "multi", "text": "What agent harness do you use at work?",
      "hint": "…then click ❤️ on your favourite", "options": ["Claude Code / Codex", "Copilot CLI", "Copilot Chat in VS Code", "Copilot Chat in IntelliJ", "Other"],
      "other_option": 4},
-    {"id": "personal_sub", "kind": "choice", "text": "Do you have a personal Claude / Codex subscription?", "options": YES_NO},
-    {"id": "agents_md", "kind": "choice", "text": "Do you have an AGENTS.md / CLAUDE.md in your project?",
-     "options": YES_NO_IDK, "host_options": ["Yes", "No / don't know"], "host_option_of": [0, 1, 1]},
+    {"id": "personal_sub", "kind": "choice", "text": "Do you have a personal Claude / Codex subscription?",
+     "links": [{"text": "Claude", "url": "https://claude.com/pricing"},
+               {"text": "Codex", "url": "https://developers.openai.com/codex/pricing"}],
+     "options": YES_NO},
+    {"id": "agents_md", "kind": "choice", "text": "Do you have an AGENTS.md (or CLAUDE.md) in 🫵your project?",
+     "options": ["Yes", "No / I don't know"]},
     {"id": "knowledge_base", "kind": "choice",
      "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki)?",
-     "link": {"text": "LLM Wiki", "url": "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"},
+     "links": [{"text": "LLM Wiki", "url": "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"}],
      "options": ["Yes", "No / I don't know"]},
-    {"id": "mcp", "kind": "choice", "text": "Ever used an MCP tool?", "options": YES_NO_IDK},
-    {"id": "skill", "kind": "choice", "text": "Ever created a skill?", "options": YES_NO},
-    {"id": "plugins", "kind": "choice", "text": "Do you have any company / team plugins installed in your agent?", "options": YES_NO_IDK},
-    {"id": "custom_agent", "kind": "choice", "text": "Ever created a custom agent (.md)?", "options": YES_NO},
+    {"id": "mcp", "kind": "choice", "text": "Used an MCP tool?", "options": YES_NO_IDK},
+    {"id": "skill", "kind": "choice", "text": "Created a skill?", "options": YES_NO},
+    {"id": "plugins", "kind": "choice", "text": "Do you have any plugins installed in your agent? (company or team)", "options": YES_NO_IDK},
+    {"id": "custom_agent", "kind": "choice", "text": "Created a custom agent (e.g. .claude/agents/*.md)?", "options": YES_NO},
     {"id": "code_review", "kind": "choice", "text": "Do you have a code-review skill / agent?", "options": YES_NO_IDK},
-    {"id": "nontech_pr", "kind": "choice", "text": "Ever received a PR written by a non-developer (e.g. PO, business)?", "options": YES_NO},
-    {"id": "ai_generated", "kind": "slider", "text": "How much% of the code you🫵 write is AI-generated?",
+    {"id": "nontech_pr", "kind": "choice", "text": "Received a PR written by a non-developer (e.g. PO, business)?", "options": YES_NO},
+    {"id": "ai_generated", "kind": "slider", "text": "How much% of the code you🫵 push is AI-generated?",
      "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 90,
      "future_link": {"text": "½ of devs by end of 2026 ↗",
                      "url": "https://www.youtube.com/watch?v=wc8FBhQtdsA&t=2405s"}},
-    {"id": "review", "kind": "slider", "text": "How much of that do you review?",
+    {"id": "review", "kind": "slider", "text": "How much of that code do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
-    {"id": "devex_pain", "kind": "ranking", "text": "What burns your ⏱️ time, 🧠 brain and 😡 emotions?",
+    {"id": "devex_pain", "kind": "ranking", "text": "What burns your ⏱️ time, 🧠 brain or 😡 emotions?",
      "hint": "…vote ▲ / ▼, or add your own",
      # "Key: detail" — the key is shown in bold; items participants add follow the same rule.
-     "options": ["Code review: waiting", "Meetings: long / too many", "Process, bureaucracy",
-                 "Lack of tests", "Technical debt", "Requirements: unclear / volatile", "Context switching",
-                 "Permissions: lack of access", "CI: flaky tests / slow pipeline", "Build: slow / local setup",
-                 "Other teams: waiting on them", "Documentation: missing"]},
+     "options": ["Code review: waiting or giving", "Meetings: too many / too long", "Bureaucracy: processes",
+                 "Tech debt: legacy code, lack of tests", "Requirements: unclear / volatile", "Context switching",
+                 "Permissions: lack of access", "CI: slow pipeline / flaky tests", "Other teams: waiting on them",
+                 "Documentation: missing or obsolete"]},
 ]
 QUESTIONS_BY_ID = {q["id"]: q for q in QUESTIONS}
 
-# The ranking's presets as first shipped (2026-10-26, before "Key: detail"): a round
-# started then still holds them; restore renames them in place, keeping their votes.
-RENAMED_PRESETS = {
-    "Long / too many meetings": "Meetings: long / too many",
-    "Waiting for code reviews": "Code review: waiting",
-    "Bureaucracy / processes": "Process, bureaucracy",
-    "Lack of permissions / access": "Permissions: lack of access",
-    "Flaky tests / slow CI pipeline": "CI: flaky tests / slow pipeline",
-    "Unclear requirements": "Requirements: unclear / volatile",
-    "Legacy code / tech debt": "Technical debt",
-    "Interruptions / context switching": "Context switching",
-    "Slow build / local setup": "Build: slow / local setup",
-    "Waiting on other teams": "Other teams: waiting on them",
-    "Missing documentation": "Documentation: missing",
-}
+# Options merged after answers were given: old option index → new one, applied on restore.
+# agents_md: "No" and "I don't know" became one option (2026-10-26).
+MERGED_OPTIONS = {"agents_md": [0, 1, 1]}
 
 
 def valid_value(qid: str, value: int) -> bool:
@@ -279,8 +270,10 @@ class AiShareState:
         for qid, per in raw.items():
             if not isinstance(per, dict):
                 continue
-            kept = {str(pid): int(v) for pid, v in per.items()
-                    if isinstance(v, (int, float)) and valid_value(str(qid), int(v))}
+            merged = MERGED_OPTIONS.get(str(qid))
+            kept = {str(pid): merged[int(v)] if merged and 0 <= int(v) < len(merged) else int(v)
+                    for pid, v in per.items() if isinstance(v, (int, float))}
+            kept = {pid: v for pid, v in kept.items() if valid_value(str(qid), v)}
             if kept:
                 self.answers[str(qid)] = kept
         raw_others = data.get("others")
@@ -309,8 +302,7 @@ class AiShareState:
             if isinstance(its, list):
                 self.items[str(qid)] = [
                     {"id": int(it["id"]),
-                     "text": (RENAMED_PRESETS.get(str(it["text"]), str(it["text"])) if not it.get("by")
-                              else str(it["text"]))[:MAX_ITEM_LEN],
+                     "text": str(it["text"])[:MAX_ITEM_LEN],
                      "by": str(it["by"]) if it.get("by") else None}
                     for it in its if isinstance(it, dict) and isinstance(it.get("id"), int) and it.get("text")]
         if self.active:

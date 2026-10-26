@@ -2405,10 +2405,13 @@ components:
           anyOf:
           - $ref: '#/components/schemas/AiShareLink'
           - type: 'null'
-        link:
+        links:
           anyOf:
-          - $ref: '#/components/schemas/AiShareLink'
+          - items:
+              $ref: '#/components/schemas/AiShareLink'
+            type: array
           - type: 'null'
+          title: Links
       type: object
       required:
       - id
