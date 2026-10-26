@@ -83,6 +83,18 @@ class PersistedAiShareState(PersistedModel):
         default_factory=dict,
         description="question_id → participant_uuid → free text typed under the question's 'other' option",
     )
+    hearts: dict[str, dict[str, int]] = Field(
+        default_factory=dict,
+        description="question_id → participant_uuid → bitmask of a multi's ❤️ options",
+    )
+    items: dict[str, list[dict[str, Any]]] = Field(
+        default_factory=dict,
+        description="ranking question_id → its items [{id, text, by: adder's uuid | null for a preset}]",
+    )
+    votes: dict[str, dict[str, dict[str, int]]] = Field(
+        default_factory=dict,
+        description="ranking question_id → participant_uuid → item id → +1 (▲) | -1 (▼)",
+    )
     values: dict[str, int] | None = Field(
         default=None, description="legacy single-question shape (question 'ai_generated'), read on restore only",
     )

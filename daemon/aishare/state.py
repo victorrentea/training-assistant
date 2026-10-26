@@ -2,8 +2,10 @@
 
 A fixed list of questions (QUESTIONS): sliders 0..100 (e.g. "how much of your
 code does AI generate?"), Yes / No / I don't know choices (stored as the
-option index) and multi choices (stored as a bitmask of the ticked options,
-plus a bitmask of the ❤️ favourites among them). Participants answer them one after another; the host sees every
+option index), multi choices (stored as a bitmask of the ticked options,
+plus a bitmask of the ❤️ favourites among them) and a ranking (a list of items,
+seeded from its options, that participants grow and vote ▲ / ▼ on, re-ordered by
+score live for everyone). Participants answer them one after another; the host sees every
 answer live; participants see everyone's answers only after the host flips
 `revealed` on. Everything leaving the daemon is anonymous — no names, no UUIDs.
 Module-level singleton, persisted via the 3-second session-state snapshot loop
@@ -16,13 +18,16 @@ from dataclasses import dataclass, field
 MIN_VALUE = 0
 MAX_VALUE = 100
 MAX_OTHER_LEN = 60
+MAX_ITEM_LEN = 60
+MAX_ITEMS_PER_PARTICIPANT = 5
+MAX_ITEMS = 60
 
 YES_NO_IDK = ["Yes", "No", "I don't know"]
 YES_NO = ["Yes", "No"]
 
 QUESTIONS: list[dict] = [
-    {"id": "harness_work", "kind": "multi", "text": "What harness do you use at work?\n…then click ❤️ on your favourite",
-     "options": ["Claude Code / Codex", "Copilot CLI", "Copilot Chat in VS Code", "Copilot Chat in IntelliJ", "Other"],
+    {"id": "harness_work", "kind": "multi", "text": "What harness do you use at work?",
+     "hint": "…then click ❤️ on your favourite", "options": ["Claude Code / Codex", "Copilot CLI", "Copilot Chat in VS Code", "Copilot Chat in IntelliJ", "Other"],
      "other_option": 4},
     {"id": "personal_sub", "kind": "choice", "text": "Do you have a personal Claude / Codex subscription?", "options": YES_NO},
     {"id": "agents_md", "kind": "choice", "text": "Do you have an AGENTS.md / CLAUDE.md in your project?",
@@ -43,13 +48,19 @@ QUESTIONS: list[dict] = [
                      "url": "https://www.youtube.com/watch?v=wc8FBhQtdsA&t=2405s"}},
     {"id": "review", "kind": "slider", "text": "How much of that do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
+    {"id": "devex_pain", "kind": "ranking", "text": "What burns your ⏱️ time, 🧠 brain and 😡 emotions?\n…vote ▲ / ▼, or add your own",
+     # "Key: detail" — the key is shown in bold; items participants add follow the same rule.
+     "options": ["Code review: waiting", "Meetings: long / too many", "Process, bureaucracy",
+                 "Lack of tests", "Technical debt", "Requirements: unclear / volatile", "Context switching",
+                 "Permissions: lack of access", "CI: flaky tests / slow pipeline", "Build: slow / local setup",
+                 "Other teams: waiting on them", "Documentation: missing"]},
 ]
 QUESTIONS_BY_ID = {q["id"]: q for q in QUESTIONS}
 
 
 def valid_value(qid: str, value: int) -> bool:
     q = QUESTIONS_BY_ID.get(qid)
-    if q is None:
+    if q is None or q["kind"] == "ranking":  # a ranking is voted on item by item, never answered with a value
         return False
     if q["kind"] == "choice":
         return 0 <= value < len(q["options"])
@@ -75,14 +86,22 @@ class AiShareState:
     # others[question_id][participant_uuid] = what they typed after picking the "other" option
     hearts: dict[str, dict[str, int]] = field(default_factory=dict)
     # hearts[question_id][participant_uuid] = bitmask of a multi's ❤️ options, always among the ticked ones
+    items: dict[str, list[dict]] = field(default_factory=dict)
+    # items[question_id] = a ranking's items [{"id", "text", "by"}]: its options (by=None) + what participants added
+    votes: dict[str, dict[str, dict[int, int]]] = field(default_factory=dict)
+    # votes[question_id][participant_uuid][item_id] = +1 (▲) | -1 (▼)
+
+    def _seed_items(self) -> None:
+        """A ranking starts from its options; the host may delete them like any added item."""
+        for q in QUESTIONS:
+            if q["kind"] == "ranking" and q["id"] not in self.items:
+                self.items[q["id"]] = [{"id": i, "text": t, "by": None} for i, t in enumerate(q["options"])]
 
     def start(self) -> None:
         """Open a fresh round: questions enabled, previous answers dropped."""
+        self.reset()
         self.active = True
-        self.revealed = False
-        self.answers.clear()
-        self.others.clear()
-        self.hearts.clear()
+        self._seed_items()
 
     def set_value(self, pid: str, qid: str, value: int, other: str | None = None,
                   hearts: int = 0) -> bool:
@@ -116,6 +135,73 @@ class AiShareState:
         self.answers.clear()
         self.others.clear()
         self.hearts.clear()
+        self.items.clear()
+        self.votes.clear()
+
+    def _ranking_items(self, qid: str) -> list[dict] | None:
+        q = QUESTIONS_BY_ID.get(qid)
+        if not self.active or q is None or q["kind"] != "ranking":
+            return None
+        return self.items.setdefault(qid, [])
+
+    def vote(self, pid: str, qid: str, item_id: int, vote: int) -> bool:
+        """▲ (+1), ▼ (-1) or take the vote back (0). False when there is no such item."""
+        items = self._ranking_items(qid)
+        if items is None or vote not in (-1, 0, 1) or not any(it["id"] == item_id for it in items):
+            return False
+        mine = self.votes.setdefault(qid, {}).setdefault(pid, {})
+        if vote:
+            mine[item_id] = vote
+        else:
+            mine.pop(item_id, None)
+            if not mine:
+                self.votes[qid].pop(pid, None)
+        return True
+
+    def add_item(self, pid: str, qid: str, text: str) -> int | None:
+        """A participant adds an item and gives it their ▲. The same text (case aside)
+        just gets their ▲. Returns the item id, or None when not accepted."""
+        items = self._ranking_items(qid)
+        text = " ".join((text or "").split())[:MAX_ITEM_LEN]
+        if items is None or not text:
+            return None
+        same = next((it for it in items if it["text"].lower() == text.lower()), None)
+        if same is None:
+            if len(items) >= MAX_ITEMS or sum(it["by"] == pid for it in items) >= MAX_ITEMS_PER_PARTICIPANT:
+                return None
+            same = {"id": max((it["id"] for it in items), default=-1) + 1, "text": text, "by": pid}
+            items.append(same)
+        self.vote(pid, qid, same["id"], 1)
+        return same["id"]
+
+    def delete_item(self, qid: str, item_id: int) -> bool:
+        """Host moderation: the item and every vote on it are gone."""
+        items = self._ranking_items(qid)
+        if items is None or not any(it["id"] == item_id for it in items):
+            return False
+        self.items[qid] = [it for it in items if it["id"] != item_id]
+        for pid, mine in list(self.votes.get(qid, {}).items()):
+            mine.pop(item_id, None)
+            if not mine:
+                del self.votes[qid][pid]
+        return True
+
+    def ranked(self, qid: str) -> list[dict]:
+        """A ranking's items, best first: score (▲ - ▼), then most ▲, then the oldest."""
+        per_item: dict[int, list[int]] = {}
+        for mine in (self.votes.get(qid) or {}).values():
+            for item_id, v in mine.items():
+                per_item.setdefault(item_id, []).append(v)
+        out = []
+        for it in self.items.get(qid) or []:
+            vs = per_item.get(it["id"], [])
+            up, down = vs.count(1), vs.count(-1)
+            out.append({"id": it["id"], "text": it["text"], "up": up, "down": down, "score": up - down})
+        out.sort(key=lambda r: (-r["score"], -r["up"], r["id"]))
+        return out
+
+    def votes_of(self, pid: str) -> dict[str, dict[str, int]]:
+        return {qid: {str(i): v for i, v in per[pid].items()} for qid, per in self.votes.items() if per.get(pid)}
 
     def answers_of(self, pid: str) -> dict[str, int]:
         return {qid: per[pid] for qid, per in self.answers.items() if pid in per}
@@ -134,7 +220,10 @@ class AiShareState:
         for q in QUESTIONS:
             values = sorted((self.answers.get(q["id"]) or {}).values())
             item: dict = {"id": q["id"], "count": len(values)}
-            if q["kind"] == "slider":
+            if q["kind"] == "ranking":
+                item["count"] = len(self.votes.get(q["id"]) or {})
+                item["items"] = self.ranked(q["id"])
+            elif q["kind"] == "slider":
                 item["values"] = values
             else:
                 n = len(q["options"])
@@ -153,7 +242,10 @@ class AiShareState:
         return {"active": self.active, "revealed": self.revealed,
                 "answers": {qid: dict(per) for qid, per in self.answers.items()},
                 "others": {qid: dict(per) for qid, per in self.others.items()},
-                "hearts": {qid: dict(per) for qid, per in self.hearts.items()}}
+                "hearts": {qid: dict(per) for qid, per in self.hearts.items()},
+                "items": {qid: [dict(it) for it in its] for qid, its in self.items.items()},
+                "votes": {qid: {pid: {str(i): v for i, v in mine.items()} for pid, mine in per.items()}
+                          for qid, per in self.votes.items()}}
 
     def restore(self, data: dict | None) -> None:
         if not isinstance(data, dict):
@@ -194,6 +286,25 @@ class AiShareState:
                     if isinstance(h, int) and h & ticked.get(str(pid), 0)}
             if kept:
                 self.hearts[str(qid)] = kept
+        raw_items = data.get("items")
+        self.items = {}
+        for qid, its in (raw_items.items() if isinstance(raw_items, dict) else []):
+            if isinstance(its, list):
+                self.items[str(qid)] = [
+                    {"id": int(it["id"]), "text": str(it["text"])[:MAX_ITEM_LEN],
+                     "by": str(it["by"]) if it.get("by") else None}
+                    for it in its if isinstance(it, dict) and isinstance(it.get("id"), int) and it.get("text")]
+        if self.active:
+            self._seed_items()  # a snapshot from before rankings existed
+        raw_votes = data.get("votes")
+        self.votes = {}
+        for qid, per in (raw_votes.items() if isinstance(raw_votes, dict) else []):
+            ids = {it["id"] for it in self.items.get(str(qid), [])}
+            for pid, mine in (per.items() if isinstance(per, dict) else []):
+                kept = {int(i): v for i, v in (mine.items() if isinstance(mine, dict) else [])
+                        if str(i).lstrip("-").isdigit() and int(i) in ids and v in (-1, 1)}
+                if kept:
+                    self.votes.setdefault(str(qid), {})[str(pid)] = kept
 
 
 aishare_state = AiShareState()

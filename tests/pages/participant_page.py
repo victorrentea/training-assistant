@@ -90,6 +90,19 @@ class ParticipantPage:
     def choose_aishare(self, question: str, option: int) -> None:
         self._page.locator(f'[data-q="{question}"] .aishare-opt[data-i="{option}"]').click()
 
+    def vote_pain(self, text: str, up: bool = True) -> None:
+        row = self._page.locator("#aishare-questions .aishare-rank-row", has_text=text)
+        expect(row).to_have_count(1, timeout=5000)
+        row.locator(".up" if up else ".down").click()
+
+    def add_pain(self, text: str) -> None:
+        box = self._page.locator("#aishare-questions .aishare-rank-add input")
+        box.fill(text)
+        box.press("Enter")
+
+    def pain_ranking(self):
+        return self._page.locator("#aishare-questions .aishare-rank-text")
+
     def aishare_card(self, question: str):
         return self._page.locator(f'#aishare-questions [data-q="{question}"]')
 

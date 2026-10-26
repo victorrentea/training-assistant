@@ -2668,14 +2668,32 @@ function _renderEngagementPopover() {
         block.className = 'aishare-host-block';
         block.dataset.q = q.id;
         block.innerHTML = `<div class="aishare-host-block-head"><span>${q.link ? escHtml(q.text).replace(/\n([^]*)$/, '<br><span style="display:inline-block;padding-left:1.5em">$1</span>').replace(escHtml(q.link.text), `<a href="${escHtml(q.link.url)}" target="_blank" rel="noopener">${escHtml(q.link.text)}</a>`) : escHtml(q.text).replace(/\n([^]*)$/, '<br><span style="display:inline-block;padding-left:1.5em">$1</span>')}</span><span class="aishare-host-block-count"></span></div>` +
-          (q.kind === 'slider'
+          (q.kind === 'ranking' ? '<div class="aishare-host-rank"></div>' : q.kind === 'slider'
             ? `<div class="aishare-scale"><span class="aishare-end-l">${escHtml(q.low || '0%')}</span><span class="aishare-end-r">${escHtml(q.high || '100%')}</span></div><div class="aishare-plot"></div>`
             : `<div class="aishare-bars${q.kind === 'multi' ? ' multi' : ''}">${(q.host_options || q.options).map((o, i) => `<div class="aishare-bar" data-i="${i}"><span class="aishare-bar-label">${escHtml(o)}</span><span class="aishare-bar-track"><span class="aishare-bar-fill"></span></span><span class="aishare-bar-count"></span>${q.kind === 'multi' ? '<span class="aishare-bar-hearts"></span>' : ''}</div>`).join('')}</div>` +
               (q.other_option != null ? '<div class="aishare-others"></div>' : ''));
+        if (q.kind === 'ranking') {
+          block.querySelector('.aishare-host-rank').addEventListener('click', e => {
+            const del = e.target.closest('.aishare-host-rank-del');
+            if (del) deleteAiShareItem(q.id, del.dataset.id);
+          });
+        }
         box.appendChild(block);
       }
       block.querySelector('.aishare-host-block-count').textContent = res.count ? `${res.count} ${res.count === 1 ? 'answer' : 'answers'}` : '';
-      if (q.kind === 'slider') {
+      if (q.kind === 'ranking') {
+        // The leaderboard, best score first (the daemon sorts it); ✕ drops an item and its votes.
+        const items = res.items || [];
+        const max = Math.max(1, ...items.map(it => Math.abs(it.score)));
+        block.querySelector('.aishare-host-rank').innerHTML = items.map(it =>
+          `<div class="aishare-bar aishare-host-rank-row${it.score < 0 ? ' down' : ''}">` +
+            `<span class="aishare-bar-label">${escHtml(it.text).replace(/^([^:]{1,30}:)/, '<b>$1</b>')}</span>` +
+            `<span class="aishare-bar-track"><span class="aishare-bar-fill" style="width:${Math.abs(it.score) / max * 100}%"></span></span>` +
+            `<span class="aishare-bar-count">${it.score > 0 ? '+' + it.score : it.score}</span>` +
+            `<span class="aishare-host-rank-votes">▲${it.up} ▼${it.down}</span>` +
+            `<button class="aishare-host-rank-del" data-id="${it.id}" data-tip="Delete this item and its votes">✕</button>` +
+          `</div>`).join('');
+      } else if (q.kind === 'slider') {
         AiShareChart.render({ plot: block.querySelector('.aishare-plot') }, res.values || [],
           { axis: true, inset: 11, id: 'host-' + q.id, label: q.text, future: q.future, futureLink: q.future_link, height: plotH });
       } else {
@@ -2721,6 +2739,10 @@ function _renderEngagementPopover() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ revealed }),
     });
+  }
+
+  async function deleteAiShareItem(question, itemId) {
+    await fetch(API(`/aishare/items/${encodeURIComponent(question)}/${itemId}`), { method: 'DELETE' });
   }
 
   async function clearAiShare() {

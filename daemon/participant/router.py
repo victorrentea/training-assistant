@@ -269,6 +269,7 @@ class AiShareParticipantState(BaseModel):
     my_answers: dict[str, int] = {}
     my_others: dict[str, str] = {}
     my_hearts: dict[str, int] = {}
+    my_votes: dict[str, dict[str, int]] = {}  # ranking question → item id → +1 (▲) | -1 (▼)
 
 
 class WordcloudData(BaseModel):
@@ -506,7 +507,8 @@ def _build_aishare_for_participant(pid: str) -> dict:
     from daemon.aishare.state import aishare_state
 
     return {**participant_view(), "my_answers": aishare_state.answers_of(pid),
-            "my_others": aishare_state.others_of(pid), "my_hearts": aishare_state.hearts_of(pid)}
+            "my_others": aishare_state.others_of(pid), "my_hearts": aishare_state.hearts_of(pid),
+            "my_votes": aishare_state.votes_of(pid)}
 
 
 def _participant_display_names() -> list[str]:

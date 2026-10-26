@@ -142,17 +142,28 @@ class AiShareLink(BaseModel):
 
 class AiShareQuestion(BaseModel):
     id: str
-    kind: Literal["slider", "choice", "multi"]
+    kind: Literal["slider", "choice", "multi", "ranking"]
     text: str
-    options: list[str] | None = None   # choice: the answers, stored as their index; multi: tick any, stored as a bitmask
+    options: list[str] | None = None   # choice: the answers, stored as their index; multi: tick any, stored as a bitmask;
+                                       # ranking: the items it starts from
     host_options: list[str] | None = None    # choice: the host's results merge some answers into these bars
     host_option_of: list[int] | None = None  # choice: options[i] is counted under host_options[host_option_of[i]]
     other_option: int | None = None          # choice: picking this option opens a free-text box
+    hint: str | None = None            # multi: shown on the right, over the ❤️ column, once anything is ticked
     low: str | None = None             # slider: label at 0%
     high: str | None = None            # slider: label at 100%
     future: int | None = None          # slider: from here on the curve is painted green
     future_link: AiShareLink | None = None  # slider: a link under the green slice's % label (the prophecy behind it)
     link: AiShareLink | None = None    # turns `link.text` inside the question text into a link
+
+
+class AiShareRankedItem(BaseModel):
+    """One item of a ranking, with its anonymous ▲ / ▼ tally."""
+    id: int
+    text: str
+    up: int = 0
+    down: int = 0
+    score: int = 0   # up - down
 
 
 class AiShareResult(BaseModel):
@@ -163,6 +174,7 @@ class AiShareResult(BaseModel):
     counts: list[int] | None = None    # choice/multi: answers per option
     hearts: list[int] | None = None    # multi: ❤️ favourites per option
     others: list[str] | None = None    # choice, host only: what people typed under the "other" option
+    items: list[AiShareRankedItem] | None = None  # ranking: every item, best score first — live, never hidden
 
 
 class AiShareOpenedMsg(BaseModel):
@@ -173,7 +185,8 @@ class AiShareOpenedMsg(BaseModel):
 
 class AiShareUpdatedMsg(BaseModel):
     """Participant-facing snapshot. Each result carries only `count` until the
-    host reveals the answers; then `values`/`counts` too."""
+    host reveals the answers; then `values`/`counts` too. A ranking's `items`
+    are always there: watching them re-order live is the point."""
     type: Literal["aishare_updated"] = "aishare_updated"
     active: bool
     revealed: bool

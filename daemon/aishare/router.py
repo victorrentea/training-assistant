@@ -2,6 +2,8 @@
 
 Host flow: Start (everyone is routed to the Activity view with the survey) →
 optionally Reveal (everyone sees every question's answers, anonymously) → Clear.
+The ranking question is live from the start: participants add items and vote
+▲ / ▼, everyone watches the list re-order; the host may delete an item.
 """
 import logging
 
@@ -9,7 +11,14 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from daemon.aishare.state import MAX_OTHER_LEN, MAX_VALUE, QUESTIONS, aishare_state, valid_value
+from daemon.aishare.state import (
+    MAX_ITEM_LEN,
+    MAX_OTHER_LEN,
+    MAX_VALUE,
+    QUESTIONS,
+    aishare_state,
+    valid_value,
+)
 from daemon.participant.state import participant_state
 from daemon.ws_messages import (
     ActivityUpdatedMsg,
@@ -47,6 +56,21 @@ class AiShareValueRequest(BaseModel):
                         description="multi: bitmask of the ❤️ favourite options, among the ticked ones (0 = none)")
 
 
+class AiShareItemRequest(BaseModel):
+    question: str = "devex_pain"
+    text: str = Field(min_length=1, max_length=MAX_ITEM_LEN, description="the new item; the same text (case aside) just gets a ▲")
+
+
+class AiShareItemAdded(BaseModel):
+    id: int
+
+
+class AiShareVoteRequest(BaseModel):
+    question: str = "devex_pain"
+    item: int
+    vote: int = Field(ge=-1, le=1, description="+1 = ▲, -1 = ▼, 0 = take the vote back")
+
+
 def _questions() -> list[AiShareQuestion]:
     return [AiShareQuestion.model_validate(q) for q in QUESTIONS]
 
@@ -59,7 +83,8 @@ def participant_view() -> dict:
     """What any participant may see: everyone's answers only once revealed."""
     results = aishare_state.results()
     if not aishare_state.revealed:
-        results = [{"id": r["id"], "count": r["count"]} for r in results]
+        # A ranking stays visible: watching it re-order live is the point.
+        results = [{k: v for k, v in r.items() if k in ("id", "count", "items")} for r in results]
     # What people typed under "Other" goes to the host only.
     results = [{k: v for k, v in r.items() if k != "others"} for r in results]
     return {
@@ -112,6 +137,15 @@ async def reveal_aishare(body: RevealRequest):
     return Response(status_code=204)
 
 
+@host_router.delete("/items/{question}/{item_id}", status_code=204)
+async def delete_aishare_item(question: str, item_id: int):
+    """Moderation: drop a ranking item (a preset or one a participant added) with its votes."""
+    if not aishare_state.delete_item(question, item_id):
+        return JSONResponse({"error": "No such item"}, status_code=404)
+    await _push_state()
+    return Response(status_code=204)
+
+
 @host_router.post("/clear", status_code=204)
 async def clear_aishare():
     aishare_state.reset()
@@ -138,5 +172,31 @@ async def set_aishare_value(request: Request, body: AiShareValueRequest):
         return JSONResponse({"error": "Unknown question or value out of range"}, status_code=422)
     if not aishare_state.set_value(pid, body.question, body.value, body.other, body.hearts):
         return JSONResponse({"error": "AI share not active"}, status_code=409)
+    await _push_state()
+    return Response(status_code=204)
+
+
+@participant_router.post("/item", response_model=AiShareItemAdded)
+async def add_aishare_item(request: Request, body: AiShareItemRequest):
+    """Participant adds a ranking item (and their ▲ on it)."""
+    pid = request.headers.get("x-participant-id")
+    if not pid:
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+    item_id = aishare_state.add_item(pid, body.question, body.text)
+    if item_id is None:
+        return JSONResponse({"error": "Not accepted: survey not active, unknown question or too many items"},
+                            status_code=409)
+    await _push_state()
+    return AiShareItemAdded(id=item_id)
+
+
+@participant_router.post("/vote", status_code=204)
+async def vote_aishare_item(request: Request, body: AiShareVoteRequest):
+    """Participant votes ▲ / ▼ on a ranking item, or takes the vote back."""
+    pid = request.headers.get("x-participant-id")
+    if not pid:
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+    if not aishare_state.vote(pid, body.question, body.item, body.vote):
+        return JSONResponse({"error": "Not accepted: survey not active or no such item"}, status_code=409)
     await _push_state()
     return Response(status_code=204)

@@ -69,13 +69,13 @@ def test_start_routes_everyone_to_the_activity(client, pstate, sent):
 def test_questions_are_shipped_in_order(client, sent):
     client.post("/api/cur/host/aishare/start")
     pax = _last(sent["broadcast"], "aishare_updated")
-    assert [q.id for q in pax.questions] == ["harness_work", "personal_sub", "agents_md", "knowledge_base", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr", "ai_generated", "review"]
+    assert [q.id for q in pax.questions] == ["harness_work", "personal_sub", "agents_md", "knowledge_base", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr", "ai_generated", "review", "devex_pain"]
     assert pax.questions[0].kind == "multi" and pax.questions[0].options[-1] == "Other"
     assert pax.questions[2].options == ["Yes", "No", "I don't know"]
     assert pax.questions[2].host_options == ["Yes", "No / don't know"]
     assert pax.questions[3].options == ["Yes", "No / I don't know"]
     assert next(q for q in pax.questions if q.id == "skill").options == ["Yes", "No"]
-    assert [q.kind for q in pax.questions[-2:]] == ["slider", "slider"]
+    assert [q.kind for q in pax.questions[-3:]] == ["slider", "slider", "ranking"]
 
 
 def test_answer_rejected_before_start(client):
@@ -222,3 +222,110 @@ def test_restore_turns_a_legacy_single_favourite_into_a_heart():
     s.restore({"active": True, "answers": {"harness_work": {"u1": 0b10001, "u2": 0b00001}},
                "favorites": {"harness_work": {"u1": 4, "u2": 3}}})   # u2's ❤️ was not ticked
     assert s.hearts == {"harness_work": {"u1": 0b10000}}
+
+
+# ── Ranking: "What burns your ⏱️ time, 🧠 brain and 😡 emotions?" ──
+
+def _vote(client, pid, item, vote):
+    return client.post("/api/participant/aishare/vote", json={"question": "devex_pain", "item": item, "vote": vote},
+                       headers={"X-Participant-ID": pid})
+
+
+def _add(client, pid, text):
+    return client.post("/api/participant/aishare/item", json={"question": "devex_pain", "text": text},
+                       headers={"X-Participant-ID": pid})
+
+
+def _ranking(msg):
+    return [(i.text, i.score) for i in _result(msg, "devex_pain").items]
+
+
+def test_ranking_starts_from_the_presets_with_no_votes(client, sent):
+    client.post("/api/cur/host/aishare/start")
+    items = _result(_last(sent["broadcast"], "aishare_updated"), "devex_pain").items
+    assert items[0].text == "Code review: waiting" and len(items) == 12
+    assert all(i.score == 0 for i in items)
+
+
+def test_votes_reorder_the_ranking_live_even_before_reveal(client, sent):
+    client.post("/api/cur/host/aishare/start")
+    assert _vote(client, "u1", 3, 1).status_code == 204       # Lack of tests ▲
+    _vote(client, "u2", 3, 1)
+    _vote(client, "u2", 2, 1)                                 # Process, bureaucracy ▲
+    _vote(client, "u1", 1, -1)                                # meetings ▼
+    pax = _last(sent["broadcast"], "aishare_updated")
+    ranking = _ranking(pax)
+    assert ranking[:2] == [("Lack of tests", 2), ("Process, bureaucracy", 1)]
+    assert ranking[-1] == ("Meetings: long / too many", -1)
+    assert _result(pax, "devex_pain").count == 2
+    assert _ranking(_last(sent["host"], "aishare_host_update")) == ranking
+
+
+def test_vote_zero_takes_it_back_and_a_new_vote_replaces_the_old(client, state):
+    client.post("/api/cur/host/aishare/start")
+    _vote(client, "u1", 3, 1)
+    _vote(client, "u1", 3, -1)
+    assert state.votes_of("u1") == {"devex_pain": {"3": -1}}
+    _vote(client, "u1", 3, 0)
+    assert state.votes_of("u1") == {}
+
+
+def test_vote_rejected_before_start_or_on_unknown_item(client):
+    assert _vote(client, "u1", 0, 1).status_code == 409
+    client.post("/api/cur/host/aishare/start")
+    assert _vote(client, "u1", 99, 1).status_code == 409
+    assert _vote(client, "u1", 0, 2).status_code == 422
+
+
+def test_ranking_cannot_be_answered_with_a_value(client):
+    client.post("/api/cur/host/aishare/start")
+    assert _answer(client, "u1", 1, question="devex_pain").status_code == 422
+
+
+def test_added_item_gets_its_author_upvote_and_duplicates_fold(client, state, sent):
+    client.post("/api/cur/host/aishare/start")
+    resp = _add(client, "u1", "  Too many   Jira fields ")
+    assert resp.status_code == 200
+    new_id = resp.json()["id"]
+    assert new_id == 12
+    assert _add(client, "u2", "too many jira fields").json()["id"] == new_id
+    assert _add(client, "u2", "LACK OF TESTS").json()["id"] == 3      # same as a preset
+    pax = _last(sent["broadcast"], "aishare_updated")
+    assert _ranking(pax)[:2] == [("Too many Jira fields", 2), ("Lack of tests", 1)]
+    assert "u1" not in pax.model_dump_json() and "u1" not in _last(sent["host"], "aishare_host_update").model_dump_json()
+
+
+def test_a_participant_adds_at_most_five_items(client):
+    client.post("/api/cur/host/aishare/start")
+    for i in range(5):
+        assert _add(client, "u1", f"pain {i}").status_code == 200
+    assert _add(client, "u1", "pain 5").status_code == 409
+    assert _add(client, "u2", "pain 5").status_code == 200
+
+
+def test_host_deletes_an_item_with_its_votes(client, state, sent):
+    client.post("/api/cur/host/aishare/start")
+    item = _add(client, "u1", "something rude").json()["id"]
+    _vote(client, "u2", item, 1)
+    assert client.delete(f"/api/cur/host/aishare/items/devex_pain/{item}").status_code == 204
+    assert "something rude" not in _last(sent["broadcast"], "aishare_updated").model_dump_json()
+    assert state.votes == {"devex_pain": {}}
+    assert client.delete(f"/api/cur/host/aishare/items/devex_pain/{item}").status_code == 404
+
+
+def test_ranking_snapshot_round_trips():
+    s = AiShareState()
+    s.start()
+    s.add_item("u1", "devex_pain", "Too many Jira fields")
+    s.vote("u2", "devex_pain", 0, -1)
+    s.delete_item("devex_pain", 5)
+    restored = AiShareState()
+    restored.restore(s.snapshot())
+    assert restored.snapshot() == s.snapshot()
+    assert restored.votes_of("u1") == {"devex_pain": {"12": 1}}
+
+
+def test_restore_of_an_older_active_snapshot_seeds_the_ranking():
+    s = AiShareState()
+    s.restore({"active": True, "answers": {"ai_generated": {"u1": 40}}})
+    assert len(s.ranked("devex_pain")) == 12

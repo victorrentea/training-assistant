@@ -75,7 +75,8 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(other_box).to_be_visible()
         other_box.fill("Cursor")
         other_box.press("Enter")
-        # Multi: ❤️ on Claude Code / Codex ticks it too, next to Other
+        # Multi: ❤️ on Claude Code / Codex ticks it too, next to Other (the ♡ and the hint show once anything is ticked)
+        expect(alice.aishare_card("harness_work").locator(".aishare-hint")).to_be_visible()
         alice.aishare_card("harness_work").locator('.aishare-opt[data-i="0"] .aishare-heart').click()
         expect(alice.aishare_card("harness_work").locator(".aishare-opt.selected")).to_have_count(2)
         # Dragging the slider (no release yet) must not unlock the last question
@@ -87,12 +88,30 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(cards).to_have_count(len(CHOICES) + 2, timeout=5000)
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
         alice.set_aishare(30, "review")
+        # ── Last: the live leaderboard of what burns their time; a vote finishes the survey
+        expect(cards).to_have_count(len(CHOICES) + 3, timeout=5000)
+        expect(alice._page.locator("#aishare-done")).to_be_hidden()
+        expect(alice.pain_ranking().first).to_have_text("Code review: waiting")
+        alice.vote_pain("Lack of tests")
+        expect(alice.pain_ranking().first).to_have_text("Lack of tests", timeout=5000)
         expect(alice._page.locator("#aishare-done")).to_contain_text("Thank you", timeout=5000)
+        alice.add_pain("Too many Jira fields")
 
         for q in CHOICES:
             bob.choose_aishare(q, 2 if q == "agents_md" else (3 if q == "harness_work" else 0))
         bob.set_aishare(20)
         expect(bob.aishare_card("review")).to_be_visible(timeout=5000)
+        bob.set_aishare(40, "review")
+        # Bob's ▲ on Alice's item takes it to the top — Alice sees the re-order live, before any reveal
+        bob.vote_pain("Too many Jira fields")
+        expect(alice.pain_ranking().first).to_have_text("Too many Jira fields", timeout=5000)
+        bob.vote_pain("Meetings: long / too many", up=False)
+        expect(alice.pain_ranking().last).to_have_text("Meetings: long / too many", timeout=5000)
+        expect(host_raw.locator('#aishare-host-results [data-q="devex_pain"] .aishare-bar-label').first).to_have_text("Too many Jira fields", timeout=5000)
+        _shot(alice._page, "aishare-pax-ranking")
+        # The host deletes an item: gone for everyone
+        host_raw.locator('#aishare-host-results [data-q="devex_pain"] .aishare-host-rank-row', has_text="Documentation: missing").locator(".aishare-host-rank-del").click()
+        expect(alice._page.locator("#aishare-questions .aishare-rank-row", has_text="Documentation: missing")).to_have_count(0, timeout=5000)
 
         # ── Nobody sees the others yet; the host sees everything, anonymously
         expect(host_raw.locator("#aishare-host-status")).to_contain_text("2 participants", timeout=5000)
@@ -107,7 +126,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         # ── Host reveals → every question, with results, for everyone
         host.reveal_aishare(True)
         expect(alice.aishare_card("ai_generated").locator(".aishare-dot")).to_have_count(2, timeout=5000)
-        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(len(CHOICES) + 2, timeout=5000)
+        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(len(CHOICES) + 3, timeout=5000)
         expect(bob.aishare_card("agents_md").locator(".count")).to_have_text(["1", "1"])
         # Anonymous: hovering a dot tells the %, never a name.
         alice._page.wait_for_timeout(1500)  # let the dots land on the curve
@@ -125,6 +144,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         alice.wait_for_aishare()
         expect(alice._page.locator("#aishare-slider-ai_generated")).to_have_value("80", timeout=5000)
         expect(alice.aishare_card("custom_agent").locator(".aishare-opt.selected")).to_have_attribute("data-i", "1")
+        expect(alice.aishare_card("devex_pain").locator(".aishare-rank-row", has_text="Lack of tests").locator(".up.mine")).to_have_count(1)
 
         # ── Clear → the activity disappears for everyone
         host.clear_aishare()

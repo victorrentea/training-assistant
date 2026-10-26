@@ -768,6 +768,12 @@ body {
 /* Multi: who uses it (bar) and who loves it most (❤️ count). */
 .aishare-bars.multi .aishare-bar { grid-template-columns: 12rem 1fr 2.5rem 3.2rem; }
 .aishare-bar-hearts { font-weight: 700; white-space: nowrap; }
+.aishare-host-rank { display: flex; flex-direction: column; gap: .3rem; }
+.aishare-host-rank-row { grid-template-columns: 16rem 1fr 2.5rem 4.6rem 1.6rem; }
+.aishare-host-rank-row.down .aishare-bar-fill { background: var(--danger); }
+.aishare-host-rank-votes { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+.aishare-host-rank-del { width: 1.6rem; height: 1.6rem; padding: 0; border: none; border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; }
+.aishare-host-rank-del:hover { background: var(--surface2); color: var(--danger); }
 .aishare-others { display: flex; flex-wrap: wrap; gap: .35rem; margin: .45rem 0 0 12.6rem; }
 .aishare-others:empty { display: none; }
 .aishare-other-chip { padding: .1rem .55rem; border-radius: 10px; background: var(--surface2); color: var(--text); font-size: .85rem; }

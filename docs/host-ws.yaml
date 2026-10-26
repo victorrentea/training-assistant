@@ -169,7 +169,7 @@ components:
                   type: string
                 kind:
                   type: string
-                  enum: [slider, choice, multi]
+                  enum: [slider, choice, multi, ranking]
                 text:
                   type: string
                 options:
@@ -194,6 +194,10 @@ components:
                   nullable: true
                   type: integer
                   description: "choice: picking this option opens a free-text box"
+                hint:
+                  nullable: true
+                  type: string
+                  description: "multi: shown on the right, over the ❤️ column, once anything is ticked"
                 low:
                   nullable: true
                   type: string
@@ -262,6 +266,25 @@ components:
                   items:
                     type: string
                   description: "choice: what people typed under the \"other\" option (anonymous)"
+                items:
+                  nullable: true
+                  type: array
+                  items:
+                    type: object
+                    required: [id, text, up, down, score]
+                    properties:
+                      id:
+                        type: integer
+                      text:
+                        type: string
+                      up:
+                        type: integer
+                      down:
+                        type: integer
+                      score:
+                        type: integer
+                        description: up - down
+                  description: "ranking: every item, best score first; always present, even before the reveal"
     # ── Word Cloud ────────────────────────────────────────────────────────────
 
     wordcloud_updated:

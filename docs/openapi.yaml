@@ -1026,6 +1026,31 @@ paths:
         '204':
           description: Successful Response
       x-feature: aishare
+  /api/{session_id}/host/aishare/items/{question}/{item_id}:
+    delete:
+      tags:
+      - aishare
+      summary: Delete Aishare Item
+      description: 'Moderation: drop a ranking item (a preset or one a participant
+        added) with its votes.'
+      operationId: delete_aishare_item_api__session_id__host_aishare_items__question___item_id__delete
+      parameters:
+      - name: question
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Question
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: aishare
   /api/{session_id}/host/aishare/clear:
     post:
       tags:
@@ -1048,6 +1073,44 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/AiShareValueRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: aishare
+  /api/participant/aishare/item:
+    post:
+      tags:
+      - aishare
+      summary: Add Aishare Item
+      description: Participant adds a ranking item (and their ▲ on it).
+      operationId: add_aishare_item_api_participant_aishare_item_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiShareItemRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiShareItemAdded'
+      x-feature: aishare
+  /api/participant/aishare/vote:
+    post:
+      tags:
+      - aishare
+      summary: Vote Aishare Item
+      description: Participant votes ▲ / ▼ on a ranking item, or takes the vote back.
+      operationId: vote_aishare_item_api_participant_aishare_vote_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiShareVoteRequest'
         required: true
       responses:
         '204':
@@ -2187,6 +2250,31 @@ components:
       - questions
       - results
       title: AiShareHostState
+    AiShareItemAdded:
+      properties:
+        id:
+          type: integer
+          title: Id
+      type: object
+      required:
+      - id
+      title: AiShareItemAdded
+    AiShareItemRequest:
+      properties:
+        question:
+          type: string
+          title: Question
+          default: devex_pain
+        text:
+          type: string
+          maxLength: 60
+          minLength: 1
+          title: Text
+          description: the new item; the same text (case aside) just gets a ▲
+      type: object
+      required:
+      - text
+      title: AiShareItemRequest
     AiShareLink:
       properties:
         text:
@@ -2236,6 +2324,14 @@ components:
           type: object
           title: My Hearts
           default: {}
+        my_votes:
+          additionalProperties:
+            additionalProperties:
+              type: integer
+            type: object
+          type: object
+          title: My Votes
+          default: {}
       type: object
       required:
       - active
@@ -2254,6 +2350,7 @@ components:
           - slider
           - choice
           - multi
+          - ranking
           title: Kind
         text:
           type: string
@@ -2284,6 +2381,11 @@ components:
           - type: integer
           - type: 'null'
           title: Other Option
+        hint:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Hint
         low:
           anyOf:
           - type: string
@@ -2313,6 +2415,32 @@ components:
       - kind
       - text
       title: AiShareQuestion
+    AiShareRankedItem:
+      properties:
+        id:
+          type: integer
+          title: Id
+        text:
+          type: string
+          title: Text
+        up:
+          type: integer
+          title: Up
+          default: 0
+        down:
+          type: integer
+          title: Down
+          default: 0
+        score:
+          type: integer
+          title: Score
+          default: 0
+      type: object
+      required:
+      - id
+      - text
+      title: AiShareRankedItem
+      description: One item of a ranking, with its anonymous ▲ / ▼ tally.
     AiShareResult:
       properties:
         id:
@@ -2350,6 +2478,13 @@ components:
             type: array
           - type: 'null'
           title: Others
+        items:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/AiShareRankedItem'
+            type: array
+          - type: 'null'
+          title: Items
       type: object
       required:
       - id
@@ -2386,6 +2521,26 @@ components:
       required:
       - value
       title: AiShareValueRequest
+    AiShareVoteRequest:
+      properties:
+        question:
+          type: string
+          title: Question
+          default: devex_pain
+        item:
+          type: integer
+          title: Item
+        vote:
+          type: integer
+          maximum: 1.0
+          minimum: -1.0
+          title: Vote
+          description: +1 = ▲, -1 = ▼, 0 = take the vote back
+      type: object
+      required:
+      - item
+      - vote
+      title: AiShareVoteRequest
     ArgumentRequest:
       properties:
         text:
