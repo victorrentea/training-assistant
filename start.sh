@@ -14,7 +14,9 @@
 # stopped, code is pulled, and the outer loop restarts it.
 #
 # PREREQUISITES
-#   - Python 3.12+ with project dependencies installed
+#   - uv (brew install uv) — the daemon runs from the project's .venv, synced by uv
+#     before every launch, never from whatever `python3` Homebrew currently links
+#     (brew moving python3 from 3.14 to 3.15 silently dropped fastapi)
 #   - ~/.training-assistants-secrets.env with ANTHROPIC_API_KEY and TRANSCRIPTION_FOLDER
 #
 # USAGE
@@ -69,7 +71,10 @@ OPEN_BROWSER=1
 
 start_daemon() {
   mkdir -p "$(dirname "$DAEMON_LOG_FILE")"
-  DAEMON_OPEN_BROWSER="$OPEN_BROWSER" python3 -m daemon > >(tee -a "$DAEMON_LOG_FILE") 2>&1 &
+  # --inexact keeps the dev extras a developer installed; plain `uv run` would put uv's
+  # PID in DAEMON_PID, and the kill -9 in stop_all_processes would orphan the daemon.
+  uv sync --inexact --extra daemon --quiet || _log "start" "warn" "uv sync failed — starting with the current .venv"
+  DAEMON_OPEN_BROWSER="$OPEN_BROWSER" .venv/bin/python -m daemon > >(tee -a "$DAEMON_LOG_FILE") 2>&1 &
   DAEMON_PID=$!
   OPEN_BROWSER=0
 }
