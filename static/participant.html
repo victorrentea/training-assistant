@@ -802,7 +802,6 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-card:not(.ticked) .aishare-heart { visibility: hidden; }
 .aishare-head-side.aishare-fav { opacity: 0; transform: translateY(-4px); transition: opacity .35s, transform .35s; pointer-events: none; flex-direction: row; align-items: baseline; gap: .8rem; }
 .aishare-card.ticked .aishare-head-side.aishare-fav { opacity: 1; transform: none; }
-.heart-drop { position: fixed; z-index: 9999; pointer-events: none; line-height: 1; transform: translate(-50%, -50%); will-change: transform, opacity; }
 .aishare-hearts-total { font-size: 1.05rem; font-weight: 800; color: #e03131; white-space: nowrap; }
 .aishare-status-inline { margin-left: .5rem; font-size: .9rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); white-space: nowrap; }
 /* Ranking question: a live leaderboard of pain points, each 🔥 by those it burns too, re-ordered as votes come in; tiles in a grid, read row by row. */
@@ -5907,7 +5906,7 @@ function _aiShareBuildCard(q) {
       // ❤️ = one they love most (several allowed): ticks it as well; a second tap takes the heart back.
       btn.querySelector('.aishare-heart').addEventListener('click', function (e) {
         e.stopPropagation();
-        if (!((_aiShare.myHearts[q.id] || 0) >> idx & 1)) _aiShareHeartDrop(e.currentTarget);
+        if (!((_aiShare.myHearts[q.id] || 0) >> idx & 1)) _aiShareHeartBeat(e.currentTarget);
         _onAiShareMulti(q.id, (_aiShare.my[q.id] || 0) | (1 << idx), (_aiShare.myHearts[q.id] || 0) ^ (1 << idx));
       });
     });
@@ -6016,47 +6015,14 @@ function _aiShareUpdateCard(card, q) {
   }
 }
 
-// Giving a ❤️ drops one from the top of the screen onto the heart tapped: it falls,
-// shrinking to the heart's size, lands with a squash, bursts into little hearts, and the
-// heart it landed on beats once (Victor, 2026-10-26). Taking a heart back stays quiet.
-function _aiShareHeartDrop(target) {
+// Giving a ❤️ makes the heart tapped beat a little, twice (lub-dub), in place
+// (Victor, 2026-10-26: no heart falling from the top). Taking a heart back stays quiet.
+function _aiShareHeartBeat(target) {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (!document.body.animate) return;
-  var r = target.getBoundingClientRect();
-  var x = r.left + Math.min(r.width / 2, 14), y = r.top + r.height / 2; // the glyph, not its "×3"
-  var spot = function (glyph, size) {
-    var el = document.createElement('div');
-    el.className = 'heart-drop';
-    el.textContent = glyph;
-    el.style.left = x + 'px';
-    el.style.top = y + 'px';
-    el.style.fontSize = size + 'px';
-    document.body.appendChild(el);
-    return el;
-  };
-  var at = 'translate(-50%, -50%) ';
-  var fall = 820, land = 260;
-  var big = spot('❤️', 64);
-  big.animate([
-    { transform: at + 'translateY(' + (-y - 70) + 'px) scale(1) rotate(-18deg)', opacity: 0, easing: 'cubic-bezier(.55, 0, .9, .5)' },
-    { opacity: 1, offset: 0.12 },
-    { transform: at + 'scale(.3) rotate(8deg)', offset: fall / (fall + land), easing: 'ease-out' },
-    { transform: at + 'scale(.42, .2)', offset: (fall + 90) / (fall + land) },
-    { transform: at + 'scale(.3)', opacity: 0 },
-  ], { duration: fall + land, fill: 'forwards' }).onfinish = function () { big.remove(); };
-  setTimeout(function () {
-    target.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.7)' }, { transform: 'scale(.9)' }, { transform: 'scale(1)' }],
-      { duration: 450, easing: 'ease-out' });
-    for (var i = 0; i < 9; i++) {
-      var a = (i / 9) * 2 * Math.PI + Math.random() * 0.4, d = 38 + Math.random() * 30;
-      var bit = spot(['❤️', '💖', '💕'][i % 3], 12 + Math.random() * 8);
-      bit.animate([
-        { transform: at + 'scale(.4)', opacity: 1 },
-        { transform: at + 'translate(' + Math.cos(a) * d + 'px, ' + (Math.sin(a) * d - 18) + 'px) scale(1) rotate(' + (Math.random() * 60 - 30) + 'deg)', opacity: 0 },
-      ], { duration: 650 + Math.random() * 250, easing: 'cubic-bezier(.2, .7, .3, 1)', fill: 'forwards' }).onfinish =
-        (function (el) { return function () { el.remove(); }; })(bit);
-    }
-  }, fall);
+  if (!target.animate) return;
+  var beat = [{ transform: 'scale(1)' }, { transform: 'scale(1.35)', offset: .12 }, { transform: 'scale(1.05)', offset: .24 },
+    { transform: 'scale(1.25)', offset: .36 }, { transform: 'scale(1)', offset: .55 }, { transform: 'scale(1)' }];
+  target.animate(beat, { duration: 900, iterations: 2, easing: 'ease-out' });
 }
 
 // "Code review: waiting" → the key before the first colon in bold.
