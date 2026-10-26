@@ -254,7 +254,7 @@ def test_votes_reorder_the_ranking_live_even_before_reveal(client, sent):
     _vote(client, "u2", 2, 1)                                 # Bureaucracy 🔥
     pax = _last(sent["broadcast"], "aishare_updated")
     ranking = _ranking(pax)
-    assert ranking[:3] == [("Tech debt: legacy code, lack of tests", 2), ("Bureaucracy: processes", 1),
+    assert ranking[:3] == [("Tech debt: legacy code, lack of tests", 2), ("Bureaucracy", 1),
                            ("Code Review: waiting / performing", 0)]
     assert _result(pax, "devex_pain").count == 2
     assert _ranking(_last(sent["host"], "aishare_host_update")) == ranking
