@@ -108,6 +108,8 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         bob.vote_pain("Meetings: long / too many", up=False)
         expect(alice.pain_ranking().last).to_have_text("Meetings: long / too many", timeout=5000)
         expect(host_raw.locator('#aishare-host-results [data-q="devex_pain"] .aishare-bar-label').first).to_have_text("Too many Jira fields", timeout=5000)
+        alice.aishare_card("devex_pain").evaluate("el => el.scrollIntoView({block: 'start'})")
+        alice._page.evaluate("document.getElementById('access-duration-toast')?.remove()")
         _shot(alice._page, "aishare-pax-ranking")
         # The host deletes an item: gone for everyone
         host_raw.locator('#aishare-host-results [data-q="devex_pain"] .aishare-host-rank-row', has_text="Documentation: missing").locator(".aishare-host-rank-del").click()

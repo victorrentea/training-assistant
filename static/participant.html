@@ -843,6 +843,11 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-value.untouched { font-size: 1rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); padding-top: .9rem; }
 .aishare-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .aishare-head h2 { margin: 0; }
+.aishare-head-side { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
+.aishare-head-hint { font-size: 1.05rem; font-weight: 700; color: var(--color-on-surface, #2a3439); white-space: nowrap; }
+.aishare-head-side .aishare-status { font-size: .9rem; font-weight: 500; }
+@media (prefers-color-scheme: dark) { .aishare-head-hint { color: var(--color-on-surface, #dce4e9); } }
+@media (max-width: 640px) { .aishare-head:has(.aishare-head-side) { flex-direction: column; align-items: flex-start; gap: .4rem; } .aishare-head-side { align-items: flex-start; } }
 .aishare-cont { display: inline-block; padding-left: 1.5em; }
 .aishare-head h2 a { color: var(--color-primary, #4555ba); text-decoration: underline; }
 .aishare-questions { display: flex; flex-direction: column; gap: 1rem; }
@@ -5830,7 +5835,11 @@ function _aiShareBuildCard(q) {
   var card = document.createElement('div');
   card.className = 'poll-card aishare-card aishare-q';
   card.dataset.q = q.id;
-  var head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '</h2><span class="aishare-status"></span></div>';
+  // A ranking's hint sits on the title row, at the right, with the answer count under it.
+  var head = q.kind === 'ranking' && q.hint
+    ? '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '</h2><div class="aishare-head-side">' +
+        '<span class="aishare-head-hint">' + _escHtml(q.hint) + '</span><span class="aishare-status"></span></div></div>'
+    : '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '</h2><span class="aishare-status"></span></div>';
   if (q.kind === 'slider') {
     card.innerHTML = head +
       '<div class="aishare-value untouched">Drag the slider to answer</div>' +
@@ -6027,7 +6036,7 @@ function _aiShareUpdateRanking(card, q, res) {
     row.querySelector('.aishare-rank-text').innerHTML = _aiShareKeyHtml(it.text);
     row.classList.toggle('unvoted', !it.up && !it.down);
     row.querySelector('.aishare-rank-pos').textContent = (pos + 1) + '.';
-    row.querySelector('.aishare-rank-score').textContent = it.score > 0 ? '+' + it.score : it.score;
+    row.querySelector('.aishare-rank-score').textContent = it.score;
     row.querySelector('.up').classList.toggle('mine', mine[id] === 1);
     row.querySelector('.down').classList.toggle('mine', mine[id] === -1);
     row.classList.toggle('down', it.score < 0);

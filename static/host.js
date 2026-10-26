@@ -2689,7 +2689,7 @@ function _renderEngagementPopover() {
           `<div class="aishare-bar aishare-host-rank-row${it.score < 0 ? ' down' : ''}">` +
             `<span class="aishare-bar-label">${escHtml(it.text).replace(/^([^:]{1,30}:)/, '<b>$1</b>')}</span>` +
             `<span class="aishare-bar-track"><span class="aishare-bar-fill" style="width:${Math.abs(it.score) / max * 100}%"></span></span>` +
-            `<span class="aishare-bar-count">${it.score > 0 ? '+' + it.score : it.score}</span>` +
+            `<span class="aishare-bar-count">${it.score}</span>` +
             `<span class="aishare-host-rank-votes">▲${it.up} ▼${it.down}</span>` +
             `<button class="aishare-host-rank-del" data-id="${it.id}" data-tip="Delete this item and its votes">✕</button>` +
           `</div>`).join('');

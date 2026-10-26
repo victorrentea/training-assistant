@@ -325,6 +325,16 @@ def test_ranking_snapshot_round_trips():
     assert restored.votes_of("u1") == {"devex_pain": {"12": 1}}
 
 
+def test_restore_renames_the_first_presets_keeping_their_votes():
+    s = AiShareState()
+    s.restore({"active": True,
+               "items": {"devex_pain": [{"id": 0, "text": "Long / too many meetings", "by": None},
+                                        {"id": 12, "text": "Missing documentation", "by": "u9"}]},
+               "votes": {"devex_pain": {"u1": {"0": 1}}}})
+    assert [(i["text"], i["score"]) for i in s.ranked("devex_pain")] == [
+        ("Meetings: long / too many", 1), ("Missing documentation", 0)]   # a participant's own text stays
+
+
 def test_restore_of_an_older_active_snapshot_seeds_the_ranking():
     s = AiShareState()
     s.restore({"active": True, "answers": {"ai_generated": {"u1": 40}}})

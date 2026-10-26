@@ -48,7 +48,8 @@ QUESTIONS: list[dict] = [
                      "url": "https://www.youtube.com/watch?v=wc8FBhQtdsA&t=2405s"}},
     {"id": "review", "kind": "slider", "text": "How much of that do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
-    {"id": "devex_pain", "kind": "ranking", "text": "What burns your ⏱️ time, 🧠 brain and 😡 emotions?\n…vote ▲ / ▼, or add your own",
+    {"id": "devex_pain", "kind": "ranking", "text": "What burns your ⏱️ time, 🧠 brain and 😡 emotions?",
+     "hint": "…vote ▲ / ▼, or add your own",
      # "Key: detail" — the key is shown in bold; items participants add follow the same rule.
      "options": ["Code review: waiting", "Meetings: long / too many", "Process, bureaucracy",
                  "Lack of tests", "Technical debt", "Requirements: unclear / volatile", "Context switching",
@@ -56,6 +57,22 @@ QUESTIONS: list[dict] = [
                  "Other teams: waiting on them", "Documentation: missing"]},
 ]
 QUESTIONS_BY_ID = {q["id"]: q for q in QUESTIONS}
+
+# The ranking's presets as first shipped (2026-10-26, before "Key: detail"): a round
+# started then still holds them; restore renames them in place, keeping their votes.
+RENAMED_PRESETS = {
+    "Long / too many meetings": "Meetings: long / too many",
+    "Waiting for code reviews": "Code review: waiting",
+    "Bureaucracy / processes": "Process, bureaucracy",
+    "Lack of permissions / access": "Permissions: lack of access",
+    "Flaky tests / slow CI pipeline": "CI: flaky tests / slow pipeline",
+    "Unclear requirements": "Requirements: unclear / volatile",
+    "Legacy code / tech debt": "Technical debt",
+    "Interruptions / context switching": "Context switching",
+    "Slow build / local setup": "Build: slow / local setup",
+    "Waiting on other teams": "Other teams: waiting on them",
+    "Missing documentation": "Documentation: missing",
+}
 
 
 def valid_value(qid: str, value: int) -> bool:
@@ -291,7 +308,9 @@ class AiShareState:
         for qid, its in (raw_items.items() if isinstance(raw_items, dict) else []):
             if isinstance(its, list):
                 self.items[str(qid)] = [
-                    {"id": int(it["id"]), "text": str(it["text"])[:MAX_ITEM_LEN],
+                    {"id": int(it["id"]),
+                     "text": (RENAMED_PRESETS.get(str(it["text"]), str(it["text"])) if not it.get("by")
+                              else str(it["text"]))[:MAX_ITEM_LEN],
                      "by": str(it["by"]) if it.get("by") else None}
                     for it in its if isinstance(it, dict) and isinstance(it.get("id"), int) and it.get("text")]
         if self.active:
