@@ -56,7 +56,7 @@ QUESTIONS: list[dict] = [
      "hint": "… add your own",
      # "Key: detail" — the key is shown in bold; items participants add follow the same rule.
      "options": ["Code Review: waiting / performing", "Meetings: too many / too long", "Bureaucracy",
-                 "Tech debt: legacy code, lack of tests", "Requirements: unclear / volatile", "Context switching",
+                 "Tech debt: legacy code, lack of tests", "Requirements: unclear / ever-changing", "Context switching",
                  "Permissions: lack of access", "CI: slow pipeline / flaky tests", "Blocked: by other teams",
                  "Documentation: missing or obsolete"]},
 ]
@@ -75,6 +75,7 @@ RENAMED_ITEMS = {"devex_pain": {
     "Other teams: waiting on them": "Blocked: by other teams",
     "Process, bureaucracy": "Bureaucracy",
     "Bureaucracy: processes": "Bureaucracy",
+    "Requirements: unclear / volatile": "Requirements: unclear / ever-changing",
 }}
 
 
