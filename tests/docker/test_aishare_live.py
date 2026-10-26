@@ -92,7 +92,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         # ── Last: the live leaderboard of what burns their time; a vote finishes the survey
         expect(cards).to_have_count(len(CHOICES) + 3, timeout=5000)
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
-        expect(alice.pain_ranking().first).to_have_text("Code review: waiting or giving")
+        expect(alice.pain_ranking().first).to_have_text("Code Review: waiting / performing")
         alice.vote_pain("Context switching")
         expect(alice.pain_ranking().first).to_have_text("Context switching", timeout=5000)
         expect(alice._page.locator("#aishare-done")).to_contain_text("Thank you", timeout=5000)

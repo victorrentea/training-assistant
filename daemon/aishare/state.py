@@ -52,12 +52,12 @@ QUESTIONS: list[dict] = [
                      "url": "https://www.youtube.com/watch?v=wc8FBhQtdsA&t=2405s"}},
     {"id": "review", "kind": "slider", "text": "How much of that code do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
-    {"id": "devex_pain", "kind": "ranking", "text": "What burns your ⏱️ time, 🧠 brain or 😡 emotions?",
-     "hint": "…🔥 what burns you too, or add your own",
+    {"id": "devex_pain", "kind": "ranking", "text": "DevEx: What burns your ⏱️ time, 🧠 brain or 😡 emotions?",
+     "hint": "… add your own",
      # "Key: detail" — the key is shown in bold; items participants add follow the same rule.
-     "options": ["Code review: waiting or giving", "Meetings: too many / too long", "Bureaucracy: processes",
+     "options": ["Code Review: waiting / performing", "Meetings: too many / too long", "Bureaucracy: processes",
                  "Tech debt: legacy code, lack of tests", "Requirements: unclear / volatile", "Context switching",
-                 "Permissions: lack of access", "CI: slow pipeline / flaky tests", "Other teams: waiting on them",
+                 "Permissions: lack of access", "CI: slow pipeline / flaky tests", "Blocked: by other teams",
                  "Documentation: missing or obsolete"]},
 ]
 QUESTIONS_BY_ID = {q["id"]: q for q in QUESTIONS}
@@ -65,6 +65,15 @@ QUESTIONS_BY_ID = {q["id"]: q for q in QUESTIONS}
 # Options merged after answers were given: old option index → new one, applied on restore.
 # agents_md: "No" and "I don't know" became one option (2026-10-26).
 MERGED_OPTIONS = {"agents_md": [0, 1, 1]}
+
+# Seeded ranking items reworded after votes were cast: old text → new, applied on restore
+# so a running survey keeps its 🔥. Items participants added (by != None) are never renamed.
+RENAMED_ITEMS = {"devex_pain": {
+    "Code review: waiting": "Code Review: waiting / performing",
+    "Code review: waiting or giving": "Code Review: waiting / performing",
+    "Meetings: long / too many": "Meetings: too many / too long",
+    "Other teams: waiting on them": "Blocked: by other teams",
+}}
 
 
 def valid_value(qid: str, value: int) -> bool:
@@ -297,9 +306,10 @@ class AiShareState:
         self.items = {}
         for qid, its in (raw_items.items() if isinstance(raw_items, dict) else []):
             if isinstance(its, list):
+                renamed = RENAMED_ITEMS.get(str(qid), {})
                 self.items[str(qid)] = [
                     {"id": int(it["id"]),
-                     "text": str(it["text"])[:MAX_ITEM_LEN],
+                     "text": (str(it["text"]) if it.get("by") else renamed.get(str(it["text"]), str(it["text"])))[:MAX_ITEM_LEN],
                      "by": str(it["by"]) if it.get("by") else None}
                     for it in its if isinstance(it, dict) and isinstance(it.get("id"), int) and it.get("text")]
         if self.active:

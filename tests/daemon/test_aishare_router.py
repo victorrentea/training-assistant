@@ -243,7 +243,7 @@ def _ranking(msg):
 def test_ranking_starts_from_the_presets_with_no_votes(client, sent):
     client.post("/api/cur/host/aishare/start")
     items = _result(_last(sent["broadcast"], "aishare_updated"), "devex_pain").items
-    assert items[0].text == "Code review: waiting or giving" and len(items) == 10
+    assert items[0].text == "Code Review: waiting / performing" and len(items) == 10
     assert all(i.score == 0 for i in items)
 
 
@@ -255,7 +255,7 @@ def test_votes_reorder_the_ranking_live_even_before_reveal(client, sent):
     pax = _last(sent["broadcast"], "aishare_updated")
     ranking = _ranking(pax)
     assert ranking[:3] == [("Tech debt: legacy code, lack of tests", 2), ("Bureaucracy: processes", 1),
-                           ("Code review: waiting or giving", 0)]
+                           ("Code Review: waiting / performing", 0)]
     assert _result(pax, "devex_pain").count == 2
     assert _ranking(_last(sent["host"], "aishare_host_update")) == ranking
 
@@ -337,6 +337,16 @@ def test_restore_merges_no_and_i_dont_know_on_agents_md():
     s = AiShareState()
     s.restore({"active": True, "answers": {"agents_md": {"u1": 0, "u2": 1, "u3": 2}}})
     assert s.answers == {"agents_md": {"u1": 0, "u2": 1, "u3": 1}}
+
+
+def test_restore_renames_reworded_presets_but_keeps_their_votes():
+    s = AiShareState()
+    s.restore({"active": True,
+               "items": {"devex_pain": [{"id": 0, "text": "Other teams: waiting on them", "by": None},
+                                        {"id": 1, "text": "Other teams: waiting on them", "by": "u9"}]},
+               "votes": {"devex_pain": {"u1": {"0": 1}}}})
+    assert [it["text"] for it in s.items["devex_pain"]] == ["Blocked: by other teams", "Other teams: waiting on them"]
+    assert s.votes == {"devex_pain": {"u1": {0: 1}}}
 
 
 def test_restore_of_an_older_active_snapshot_seeds_the_ranking():

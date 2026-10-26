@@ -809,7 +809,6 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-rank-row { position: relative; display: flex; align-items: center; gap: .6rem; padding: .45rem .5rem .45rem .8rem; border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font-size: .95rem; overflow: hidden; }
 @media (prefers-color-scheme: dark) { .aishare-rank-row { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); } }
 .aishare-rank-row .fill { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(69, 85, 186, 0.22); transition: width .4s ease; }
-.aishare-rank-pos { position: relative; flex-shrink: 0; min-width: 1.4rem; font-weight: 800; color: var(--color-on-surface-variant, #566166); }
 .aishare-rank-text { position: relative; flex: 1; min-width: 0; overflow-wrap: break-word; transition: color .3s; }
 .aishare-rank-row.unvoted .aishare-rank-text { color: var(--color-on-surface-variant, #566166); }
 .aishare-rank-text b { font-weight: 800; }
@@ -6046,7 +6045,7 @@ function _aiShareUpdateRanking(card, q, res) {
   var before = {};
   list.querySelectorAll('.aishare-rank-row').forEach(function (row) { var r = row.getBoundingClientRect(); before[row.dataset.id] = { x: r.left, y: r.top }; });
   var keep = {};
-  items.forEach(function (it, pos) {
+  items.forEach(function (it) {
     var id = String(it.id);
     keep[id] = true;
     var row = list.querySelector('.aishare-rank-row[data-id="' + id + '"]');
@@ -6054,13 +6053,12 @@ function _aiShareUpdateRanking(card, q, res) {
       row = document.createElement('div');
       row.className = 'aishare-rank-row';
       row.dataset.id = id;
-      row.innerHTML = '<div class="fill" style="width:0%"></div><span class="aishare-rank-pos"></span>' +
+      row.innerHTML = '<div class="fill" style="width:0%"></div>' +
         '<span class="aishare-rank-text"></span>' +
         '<button class="aishare-rank-burn" aria-label="Burns me too" data-tip="Burns me too"><span class="flame">🔥</span><span class="aishare-rank-score"></span></button>';
     }
     row.querySelector('.aishare-rank-text').innerHTML = _aiShareKeyHtml(it.text);
     row.classList.toggle('unvoted', !it.score);
-    row.querySelector('.aishare-rank-pos').textContent = (pos + 1) + '.';
     row.querySelector('.aishare-rank-score').textContent = it.score;
     row.querySelector('.aishare-rank-burn').classList.toggle('mine', mine[id] === 1);
     row.querySelector('.fill').style.width = (it.score / maxScore * 100) + '%';
