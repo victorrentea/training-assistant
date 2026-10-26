@@ -516,6 +516,18 @@ body {
   }
 }
 
+// The graph's chrome is never text to pick: quick clicks on dots and drags of the
+// popover selected the Sources list and the popover's ✕ (Victor, 2026-10-26). Nothing
+// at all selects while the popover is dragged (note-pane.ts dragByHead).
+.graph-sources,
+.graph-reset,
+.graph-downloads,
+.note-peek-close,
+.note-peek-star,
+body.peek-dragging {
+  user-select: none;
+}
+
 :root[saved-theme="dark"] .graph-sources {
   color: #fff;
 }

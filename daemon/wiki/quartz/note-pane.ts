@@ -286,6 +286,8 @@ function ensurePeek(): HTMLElement {
   // Opening the points (foldPoints) grows the popover: refit it to the window. A
   // details' toggle doesn't bubble, so it is caught on the way down.
   body.addEventListener("toggle", () => peek && fitPeek(peek), true)
+  // So does a slide that loads after the popover was placed (preloadImages gave up on it).
+  body.addEventListener("load", () => peek && fitPeek(peek), true)
   document.body.appendChild(peek)
   return peek
 }
@@ -301,11 +303,14 @@ function dragByHead(el: HTMLElement, head: HTMLElement) {
     const dx = e.clientX - el.offsetLeft
     const dy = e.clientY - el.offsetTop
     head.setPointerCapture(e.pointerId)
+    document.getSelection()?.removeAllRanges()
+    document.body.classList.add("peek-dragging")
     const move = (m: PointerEvent) => {
       el.style.left = `${Math.max(-el.offsetWidth / 2, Math.min(m.clientX - dx, innerWidth - el.offsetWidth / 2))}px`
       el.style.top = `${Math.max(0, Math.min(m.clientY - dy, innerHeight - 48))}px`
     }
     const drop = () => {
+      document.body.classList.remove("peek-dragging")
       head.removeEventListener("pointermove", move)
       head.removeEventListener("pointerup", drop)
       head.removeEventListener("pointercancel", drop)
@@ -499,6 +504,7 @@ async function showPeek(slug: SimpleSlug, place: Place) {
   reportOpenNote(slug)
   highlight(null)
   const elts = await loadNote(slug).catch(() => null)
+  if (elts) await preloadImages(elts, 600)
   if (peeked !== slug) return // another note was picked meanwhile
   showNote(
     el.querySelector(".note-peek-title") as HTMLElement,
@@ -513,6 +519,21 @@ async function showPeek(slug: SimpleSlug, place: Place) {
   followWithBeam()
   markSeen(slug)
   graph?.select(slug) // repaints its dot, now seen
+}
+
+// A note's slides arrive after its text: placed without them, the popover sat in a
+// bottom corner and then grew past the window's bottom edge, to be dragged back up
+// (Victor, 2026-10-26). It waits for them a moment before it is placed; one that comes
+// later still refits it (the load listener in ensurePeek).
+function preloadImages(elts: HTMLElement[], ms: number): Promise<void> {
+  const loads = elts
+    .flatMap((e) => [...e.querySelectorAll("img")])
+    .map((img) => {
+      const pre = new Image()
+      pre.src = img.src
+      return pre.decode().catch(() => {})
+    })
+  return Promise.race([Promise.all(loads), new Promise((r) => setTimeout(r, ms))]).then(() => {})
 }
 
 function showNote(title: HTMLElement, body: HTMLElement, elts: HTMLElement[] | null) {
