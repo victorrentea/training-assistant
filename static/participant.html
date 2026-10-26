@@ -6015,14 +6015,14 @@ function _aiShareUpdateCard(card, q) {
   }
 }
 
-// Giving a ❤️ makes the heart tapped beat a little, twice (lub-dub), in place
+// Giving a ❤️ makes the heart tapped beat in place, three slow, big lub-dubs
 // (Victor, 2026-10-26: no heart falling from the top). Taking a heart back stays quiet.
 function _aiShareHeartBeat(target) {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   if (!target.animate) return;
-  var beat = [{ transform: 'scale(1)' }, { transform: 'scale(1.35)', offset: .12 }, { transform: 'scale(1.05)', offset: .24 },
-    { transform: 'scale(1.25)', offset: .36 }, { transform: 'scale(1)', offset: .55 }, { transform: 'scale(1)' }];
-  target.animate(beat, { duration: 900, iterations: 2, easing: 'ease-out' });
+  var beat = [{ transform: 'scale(1)' }, { transform: 'scale(2)', offset: .14 }, { transform: 'scale(1.3)', offset: .28 },
+    { transform: 'scale(1.75)', offset: .42 }, { transform: 'scale(1)', offset: .65 }, { transform: 'scale(1)' }];
+  target.animate(beat, { duration: 1300, iterations: 3, easing: 'ease-in-out' });
 }
 
 // "Code review: waiting" → the key before the first colon in bold.
