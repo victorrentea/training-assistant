@@ -55,7 +55,7 @@ QUESTIONS: list[dict] = [
     {"id": "devex_pain", "kind": "ranking", "text": "DevEx: What burns your ⏱️ time, 🧠 brain or 😡 emotions?",
      "hint": "… add your own",
      # "Key: detail" — the key is shown in bold; items participants add follow the same rule.
-     "options": ["Code Review: waiting / performing", "Meetings: too many / too long", "Bureaucracy: processes",
+     "options": ["Code Review: waiting / performing", "Meetings: too many / too long", "Bureaucracy",
                  "Tech debt: legacy code, lack of tests", "Requirements: unclear / volatile", "Context switching",
                  "Permissions: lack of access", "CI: slow pipeline / flaky tests", "Blocked: by other teams",
                  "Documentation: missing or obsolete"]},
@@ -73,6 +73,8 @@ RENAMED_ITEMS = {"devex_pain": {
     "Code review: waiting or giving": "Code Review: waiting / performing",
     "Meetings: long / too many": "Meetings: too many / too long",
     "Other teams: waiting on them": "Blocked: by other teams",
+    "Process, bureaucracy": "Bureaucracy",
+    "Bureaucracy: processes": "Bureaucracy",
 }}
 
 
