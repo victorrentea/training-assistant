@@ -159,12 +159,10 @@ class AiShareQuestion(BaseModel):
 
 
 class AiShareRankedItem(BaseModel):
-    """One item of a ranking, with its anonymous ▲ / ▼ tally."""
+    """One item of a ranking, with its anonymous 🔥 tally."""
     id: int
     text: str
-    up: int = 0
-    down: int = 0
-    score: int = 0   # up - down
+    score: int = 0   # how many 🔥 it got
 
 
 class AiShareResult(BaseModel):

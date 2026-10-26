@@ -429,19 +429,15 @@ components:
                   type: array
                   items:
                     type: object
-                    required: [id, text, up, down, score]
+                    required: [id, text, score]
                     properties:
                       id:
                         type: integer
                       text:
                         type: string
-                      up:
-                        type: integer
-                      down:
-                        type: integer
                       score:
                         type: integer
-                        description: up - down
+                        description: how many 🔥 it got
                   description: "ranking: every item, best score first; always present, even before the reveal"
                 hearts:
                   nullable: true

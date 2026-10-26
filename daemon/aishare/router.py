@@ -2,8 +2,8 @@
 
 Host flow: Start (everyone is routed to the Activity view with the survey) →
 optionally Reveal (everyone sees every question's answers, anonymously) → Clear.
-The ranking question is live from the start: participants add items and vote
-▲ / ▼, everyone watches the list re-order; the host may delete an item.
+The ranking question is live from the start: participants add items and 🔥
+them, everyone watches the list re-order; the host may delete an item.
 """
 import logging
 
@@ -58,7 +58,7 @@ class AiShareValueRequest(BaseModel):
 
 class AiShareItemRequest(BaseModel):
     question: str = "devex_pain"
-    text: str = Field(min_length=1, max_length=MAX_ITEM_LEN, description="the new item; the same text (case aside) just gets a ▲")
+    text: str = Field(min_length=1, max_length=MAX_ITEM_LEN, description="the new item; the same text (case aside) just gets a 🔥")
 
 
 class AiShareItemAdded(BaseModel):
@@ -68,7 +68,7 @@ class AiShareItemAdded(BaseModel):
 class AiShareVoteRequest(BaseModel):
     question: str = "devex_pain"
     item: int
-    vote: int = Field(ge=-1, le=1, description="+1 = ▲, -1 = ▼, 0 = take the vote back")
+    vote: int = Field(ge=0, le=1, description="1 = 🔥 (burns me too), 0 = take it back")
 
 
 def _questions() -> list[AiShareQuestion]:
@@ -178,7 +178,7 @@ async def set_aishare_value(request: Request, body: AiShareValueRequest):
 
 @participant_router.post("/item", response_model=AiShareItemAdded)
 async def add_aishare_item(request: Request, body: AiShareItemRequest):
-    """Participant adds a ranking item (and their ▲ on it)."""
+    """Participant adds a ranking item (and their 🔥 on it)."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
@@ -192,7 +192,7 @@ async def add_aishare_item(request: Request, body: AiShareItemRequest):
 
 @participant_router.post("/vote", status_code=204)
 async def vote_aishare_item(request: Request, body: AiShareVoteRequest):
-    """Participant votes ▲ / ▼ on a ranking item, or takes the vote back."""
+    """Participant 🔥 a ranking item (it burns them too), or takes it back."""
     pid = request.headers.get("x-participant-id")
     if not pid:
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)

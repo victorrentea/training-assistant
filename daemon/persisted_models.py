@@ -93,7 +93,7 @@ class PersistedAiShareState(PersistedModel):
     )
     votes: dict[str, dict[str, dict[str, int]]] = Field(
         default_factory=dict,
-        description="ranking question_id → participant_uuid → item id → +1 (▲) | -1 (▼)",
+        description="ranking question_id → participant_uuid → item id → 1 (🔥)",
     )
     values: dict[str, int] | None = Field(
         default=None, description="legacy single-question shape (question 'ai_generated'), read on restore only",

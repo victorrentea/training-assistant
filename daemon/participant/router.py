@@ -269,7 +269,7 @@ class AiShareParticipantState(BaseModel):
     my_answers: dict[str, int] = {}
     my_others: dict[str, str] = {}
     my_hearts: dict[str, int] = {}
-    my_votes: dict[str, dict[str, int]] = {}  # ranking question → item id → +1 (▲) | -1 (▼)
+    my_votes: dict[str, dict[str, int]] = {}  # ranking question → item id → 1 (🔥)
 
 
 class WordcloudData(BaseModel):

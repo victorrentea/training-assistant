@@ -58,7 +58,7 @@ aishare?: PersistedAiShareState{
   others?:dict[str, dict[str, string]]  # question_id → participant_uuid → free text typed under the question's 'other' option
   hearts?:dict[str, dict[str, int]]  # question_id → participant_uuid → bitmask of a multi's ❤️ options
   items?:dict[str, list[dict[str, any]]]  # ranking question_id → its items [{id, text, by: adder's uuid | null for a preset}]
-  votes?:dict[str, dict[str, dict[str, int]]]  # ranking question_id → participant_uuid → item id → +1 (▲) | -1 (▼)
+  votes?:dict[str, dict[str, dict[str, int]]]  # ranking question_id → participant_uuid → item id → 1 (🔥)
   values?:dict[str, int]  # legacy single-question shape (question 'ai_generated'), read on restore only
 }
 wordcloud?: PersistedWordCloudState{

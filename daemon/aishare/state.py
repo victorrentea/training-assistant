@@ -4,7 +4,7 @@ A fixed list of questions (QUESTIONS): sliders 0..100 (e.g. "how much of your
 code does AI generate?"), Yes / No / I don't know choices (stored as the
 option index), multi choices (stored as a bitmask of the ticked options,
 plus a bitmask of the ❤️ favourites among them) and a ranking (a list of items,
-seeded from its options, that participants grow and vote ▲ / ▼ on, re-ordered by
+seeded from its options, that participants grow and 🔥 (upvote), re-ordered by
 score live for everyone). Participants answer them one after another; the host sees every
 answer live; participants see everyone's answers only after the host flips
 `revealed` on. Everything leaving the daemon is anonymous — no names, no UUIDs.
@@ -53,7 +53,7 @@ QUESTIONS: list[dict] = [
     {"id": "review", "kind": "slider", "text": "How much of that code do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
     {"id": "devex_pain", "kind": "ranking", "text": "What burns your ⏱️ time, 🧠 brain or 😡 emotions?",
-     "hint": "…vote ▲ / ▼, or add your own",
+     "hint": "…🔥 what burns you too, or add your own",
      # "Key: detail" — the key is shown in bold; items participants add follow the same rule.
      "options": ["Code review: waiting or giving", "Meetings: too many / too long", "Bureaucracy: processes",
                  "Tech debt: legacy code, lack of tests", "Requirements: unclear / volatile", "Context switching",
@@ -98,7 +98,7 @@ class AiShareState:
     items: dict[str, list[dict]] = field(default_factory=dict)
     # items[question_id] = a ranking's items [{"id", "text", "by"}]: its options (by=None) + what participants added
     votes: dict[str, dict[str, dict[int, int]]] = field(default_factory=dict)
-    # votes[question_id][participant_uuid][item_id] = +1 (▲) | -1 (▼)
+    # votes[question_id][participant_uuid][item_id] = 1 (🔥)
 
     def _seed_items(self) -> None:
         """A ranking starts from its options; the host may delete them like any added item."""
@@ -154,9 +154,9 @@ class AiShareState:
         return self.items.setdefault(qid, [])
 
     def vote(self, pid: str, qid: str, item_id: int, vote: int) -> bool:
-        """▲ (+1), ▼ (-1) or take the vote back (0). False when there is no such item."""
+        """🔥 (1) or take it back (0). False when there is no such item."""
         items = self._ranking_items(qid)
-        if items is None or vote not in (-1, 0, 1) or not any(it["id"] == item_id for it in items):
+        if items is None or vote not in (0, 1) or not any(it["id"] == item_id for it in items):
             return False
         mine = self.votes.setdefault(qid, {}).setdefault(pid, {})
         if vote:
@@ -168,8 +168,8 @@ class AiShareState:
         return True
 
     def add_item(self, pid: str, qid: str, text: str) -> int | None:
-        """A participant adds an item and gives it their ▲. The same text (case aside)
-        just gets their ▲. Returns the item id, or None when not accepted."""
+        """A participant adds an item and gives it their 🔥. The same text (case aside)
+        just gets their 🔥. Returns the item id, or None when not accepted."""
         items = self._ranking_items(qid)
         text = " ".join((text or "").split())[:MAX_ITEM_LEN]
         if items is None or not text:
@@ -196,17 +196,13 @@ class AiShareState:
         return True
 
     def ranked(self, qid: str) -> list[dict]:
-        """A ranking's items, best first: score (▲ - ▼), then most ▲, then the oldest."""
-        per_item: dict[int, list[int]] = {}
+        """A ranking's items, best first: most 🔥, then the oldest."""
+        score: dict[int, int] = {}
         for mine in (self.votes.get(qid) or {}).values():
-            for item_id, v in mine.items():
-                per_item.setdefault(item_id, []).append(v)
-        out = []
-        for it in self.items.get(qid) or []:
-            vs = per_item.get(it["id"], [])
-            up, down = vs.count(1), vs.count(-1)
-            out.append({"id": it["id"], "text": it["text"], "up": up, "down": down, "score": up - down})
-        out.sort(key=lambda r: (-r["score"], -r["up"], r["id"]))
+            for item_id in mine:
+                score[item_id] = score.get(item_id, 0) + 1
+        out = [{"id": it["id"], "text": it["text"], "score": score.get(it["id"], 0)} for it in self.items.get(qid) or []]
+        out.sort(key=lambda r: (-r["score"], r["id"]))
         return out
 
     def votes_of(self, pid: str) -> dict[str, dict[str, int]]:
@@ -314,7 +310,7 @@ class AiShareState:
             ids = {it["id"] for it in self.items.get(str(qid), [])}
             for pid, mine in (per.items() if isinstance(per, dict) else []):
                 kept = {int(i): v for i, v in (mine.items() if isinstance(mine, dict) else [])
-                        if str(i).lstrip("-").isdigit() and int(i) in ids and v in (-1, 1)}
+                        if str(i).isdigit() and int(i) in ids and v == 1}  # a ▼ from before upvote-only is dropped
                 if kept:
                     self.votes.setdefault(str(qid), {})[str(pid)] = kept
 

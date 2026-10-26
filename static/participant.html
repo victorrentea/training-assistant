@@ -805,27 +805,24 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .heart-drop { position: fixed; z-index: 9999; pointer-events: none; line-height: 1; transform: translate(-50%, -50%); will-change: transform, opacity; }
 .aishare-hearts-total { font-size: 1.05rem; font-weight: 800; color: #e03131; white-space: nowrap; }
 .aishare-status-inline { margin-left: .5rem; font-size: .9rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); white-space: nowrap; }
-.aishare-up { color: #2f9e44; }
-.aishare-down { color: #e03131; }
-/* Ranking question: a live leaderboard of pain points, voted ▲ / ▼, re-ordered as votes come in; tiles in a grid, read row by row. */
+/* Ranking question: a live leaderboard of pain points, each 🔥 by those it burns too, re-ordered as votes come in; tiles in a grid, read row by row. */
 .aishare-rank { display: grid; grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr)); gap: .4rem; }
 .aishare-rank-row { position: relative; display: flex; align-items: center; gap: .6rem; padding: .45rem .5rem .45rem .8rem; border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font-size: .95rem; overflow: hidden; }
 @media (prefers-color-scheme: dark) { .aishare-rank-row { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); } }
 .aishare-rank-row .fill { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(69, 85, 186, 0.22); transition: width .4s ease; }
-.aishare-rank-row.down .fill { background: rgba(224, 49, 49, 0.12); }
 .aishare-rank-pos { position: relative; flex-shrink: 0; min-width: 1.4rem; font-weight: 800; color: var(--color-on-surface-variant, #566166); }
 .aishare-rank-text { position: relative; flex: 1; min-width: 0; overflow-wrap: break-word; transition: color .3s; }
 .aishare-rank-row.unvoted .aishare-rank-text { color: var(--color-on-surface-variant, #566166); }
 .aishare-rank-text b { font-weight: 800; }
-.aishare-rank-vote { position: relative; flex-shrink: 0; display: flex; align-items: center; gap: .15rem; }
-.aishare-rank-vote button { width: 2.1rem; height: 2.1rem; border-radius: 6px; border: 1.5px solid transparent; background: transparent; color: var(--color-on-surface-variant, #566166); font-size: 1rem; line-height: 1; cursor: pointer; transition: transform .1s, background .15s; }
-.aishare-rank-vote button:hover { border-color: var(--color-outline-variant, #a9b4b9); }
-.aishare-rank-vote button:active { transform: scale(.9); }
-.aishare-rank-vote .up { color: #2f9e44; }
-.aishare-rank-vote .down { color: #e03131; }
-.aishare-rank-vote .up.mine { background: #2f9e44; color: #fff; }
-.aishare-rank-vote .down.mine { background: #e03131; color: #fff; }
-.aishare-rank-score { min-width: 1.8rem; text-align: center; font-weight: 800; }
+.aishare-rank-burn { position: relative; flex-shrink: 0; display: flex; align-items: center; gap: .3rem; padding: .3rem .65rem; border-radius: 999px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: transparent; color: var(--color-on-surface, #2a3439); font: inherit; font-weight: 800; cursor: pointer; transition: transform .1s, background .15s, border-color .15s; }
+@media (prefers-color-scheme: dark) { .aishare-rank-burn { color: var(--color-on-surface, #dce4e9); } }
+.aishare-rank-burn .flame { font-size: 1.05rem; line-height: 1; filter: grayscale(1); opacity: .55; transition: filter .15s, opacity .15s, transform .15s; }
+.aishare-rank-burn:hover { border-color: #e8590c; }
+.aishare-rank-burn:hover .flame { filter: none; opacity: 1; transform: scale(1.15); }
+.aishare-rank-burn:active { transform: scale(.9); }
+.aishare-rank-burn.mine { background: #e8590c; border-color: #e8590c; color: #fff; }
+.aishare-rank-burn.mine .flame { filter: none; opacity: 1; }
+.aishare-rank-score { min-width: .8rem; text-align: center; }
 .aishare-rank-add { display: flex; gap: .5rem; margin-top: .7rem; }
 .aishare-rank-add input { flex: 1; min-width: 0; padding: .65rem .9rem; border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font: inherit; }
 .aishare-rank-add input:focus { outline: none; border-color: var(--color-primary, #4555ba); }
@@ -5796,7 +5793,7 @@ var _aiShare = { active: false, revealed: false, questions: [], results: {}, my:
 //     A multi's answer is the bitmask of its ticked options.
 // live: a slider's value while it is being dragged.
 // myHearts: bitmask of a multi's ❤️ options, always among the ticked ones.
-// myVotes: a ranking's votes, item id → +1 (▲) | -1 (▼); any vote counts as answered.
+// myVotes: a ranking's votes, item id → 1 (🔥); any vote counts as answered.
 var _aiShareSendTimers = {};
 
 function _applyAiShareState(msg) {
@@ -5844,8 +5841,8 @@ function _aiShareBuildCard(q) {
   card.dataset.q = q.id;
   var head;
   if (q.kind === 'ranking') {
-    // The hint sits on the title row, at the right, its ▲ / ▼ coloured like the buttons; no answer count.
-    var hint = _escHtml(q.hint || '').replace('▲', '<span class="aishare-up">▲</span>').replace('▼', '<span class="aishare-down">▼</span>');
+    // The hint sits on the title row, at the right; no answer count.
+    var hint = _escHtml(q.hint || '');
     head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '</h2>' +
       (q.hint ? '<div class="aishare-head-side"><span class="aishare-head-hint">' + hint + '</span></div>' : '') + '</div>';
   } else if (q.kind === 'multi' && q.hint) {
@@ -5872,12 +5869,10 @@ function _aiShareBuildCard(q) {
       '<button class="aishare-other-save" disabled>Add</button></div>';
     // One listener for every row, present and future: rows come and go with the votes.
     card.querySelector('.aishare-rank').addEventListener('click', function (e) {
-      var btn = e.target.closest('.aishare-rank-vote button');
+      var btn = e.target.closest('.aishare-rank-burn');
       if (!btn) return;
       var id = btn.closest('.aishare-rank-row').dataset.id;
-      var want = btn.classList.contains('up') ? 1 : -1;
-      var had = (_aiShare.myVotes[q.id] || {})[id] || 0;
-      _onAiShareVote(q.id, +id, had === want ? 0 : want);  // a second tap takes the vote back
+      _onAiShareVote(q.id, +id, (_aiShare.myVotes[q.id] || {})[id] ? 0 : 1);  // a second tap takes it back
     });
     var addInput = card.querySelector('.aishare-rank-add input');
     var addBtn = card.querySelector('.aishare-rank-add button');
@@ -6070,9 +6065,9 @@ function _aiShareKeyHtml(text) {
   return m ? '<b>' + _escHtml(m[1]) + ':</b> ' + _escHtml(m[2]) : '<b>' + _escHtml(text) + '</b>';
 }
 
-// Same order as the daemon: score, then most ▲, then the oldest.
+// Same order as the daemon: most 🔥, then the oldest.
 function _aiShareSortItems(items) {
-  return items.slice().sort(function (a, b) { return (b.score - a.score) || (b.up - a.up) || (a.id - b.id); });
+  return items.slice().sort(function (a, b) { return (b.score - a.score) || (a.id - b.id); });
 }
 
 // The leaderboard: rows are kept and moved, never rebuilt, so a row that climbs
@@ -6081,7 +6076,7 @@ function _aiShareUpdateRanking(card, q, res) {
   var list = card.querySelector('.aishare-rank');
   var items = _aiShareSortItems(res.items || []);
   var mine = _aiShare.myVotes[q.id] || {};
-  var maxScore = Math.max.apply(null, items.map(function (it) { return Math.abs(it.score); }).concat([1]));
+  var maxScore = Math.max.apply(null, items.map(function (it) { return it.score; }).concat([1]));
   var before = {};
   list.querySelectorAll('.aishare-rank-row').forEach(function (row) { var r = row.getBoundingClientRect(); before[row.dataset.id] = { x: r.left, y: r.top }; });
   var keep = {};
@@ -6094,18 +6089,15 @@ function _aiShareUpdateRanking(card, q, res) {
       row.className = 'aishare-rank-row';
       row.dataset.id = id;
       row.innerHTML = '<div class="fill" style="width:0%"></div><span class="aishare-rank-pos"></span>' +
-        '<span class="aishare-rank-text"></span><span class="aishare-rank-vote">' +
-        '<button class="up" aria-label="Upvote" data-tip="Burns me too">▲</button><span class="aishare-rank-score"></span>' +
-        '<button class="down" aria-label="Downvote" data-tip="Not a problem for me">▼</button></span>';
+        '<span class="aishare-rank-text"></span>' +
+        '<button class="aishare-rank-burn" aria-label="Burns me too" data-tip="Burns me too"><span class="flame">🔥</span><span class="aishare-rank-score"></span></button>';
     }
     row.querySelector('.aishare-rank-text').innerHTML = _aiShareKeyHtml(it.text);
-    row.classList.toggle('unvoted', !it.up && !it.down);
+    row.classList.toggle('unvoted', !it.score);
     row.querySelector('.aishare-rank-pos').textContent = (pos + 1) + '.';
     row.querySelector('.aishare-rank-score').textContent = it.score;
-    row.querySelector('.up').classList.toggle('mine', mine[id] === 1);
-    row.querySelector('.down').classList.toggle('mine', mine[id] === -1);
-    row.classList.toggle('down', it.score < 0);
-    row.querySelector('.fill').style.width = (Math.abs(it.score) / maxScore * 100) + '%';
+    row.querySelector('.aishare-rank-burn').classList.toggle('mine', mine[id] === 1);
+    row.querySelector('.fill').style.width = (it.score / maxScore * 100) + '%';
     list.appendChild(row);  // moves an existing row into its new place
   });
   list.querySelectorAll('.aishare-rank-row').forEach(function (row) { if (!keep[row.dataset.id]) row.remove(); });
@@ -6187,7 +6179,7 @@ function _onAiShareInput(qid, raw, commit, otherText) {
   }, commit ? 0 : 200);
 }
 
-// ▲ / ▼ on a ranking item (0 takes it back). Applied locally at once so the row
+// 🔥 on a ranking item (0 takes it back). Applied locally at once so the row
 // moves under the finger; the next WS snapshot brings everyone else's votes.
 function _onAiShareVote(qid, itemId, vote) {
   if (!_aiShare.active || !_sessionId) return;
@@ -6197,11 +6189,7 @@ function _onAiShareVote(qid, itemId, vote) {
   if (vote) mine[itemId] = vote; else delete mine[itemId];
   var res = _aiShare.results[qid];
   var it = res && (res.items || []).find(function (x) { return x.id === itemId; });
-  if (it) {
-    it.up += (vote === 1) - (had === 1);
-    it.down += (vote === -1) - (had === -1);
-    it.score = it.up - it.down;
-  }
+  if (it) it.score += vote - had;
   _renderActivityAiShare(first);
   fetch('/' + _sessionId + '/api/participant/aishare/vote', {
     method: 'POST',
@@ -6210,7 +6198,7 @@ function _onAiShareVote(qid, itemId, vote) {
   }).catch(function () { /* silent — next WS push reconciles */ });
 }
 
-// A new ranking item comes with the author's ▲; the WS snapshot puts it in its place.
+// A new ranking item comes with the author's 🔥; the WS snapshot puts it in its place.
 function _onAiShareAddItem(qid, text) {
   if (!_aiShare.active || !_sessionId) return;
   var first = !_aiShareAnswered(qid);

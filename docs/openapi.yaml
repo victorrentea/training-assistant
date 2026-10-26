@@ -1083,7 +1083,7 @@ paths:
       tags:
       - aishare
       summary: Add Aishare Item
-      description: Participant adds a ranking item (and their ▲ on it).
+      description: Participant adds a ranking item (and their 🔥 on it).
       operationId: add_aishare_item_api_participant_aishare_item_post
       requestBody:
         content:
@@ -1104,7 +1104,7 @@ paths:
       tags:
       - aishare
       summary: Vote Aishare Item
-      description: Participant votes ▲ / ▼ on a ranking item, or takes the vote back.
+      description: Participant 🔥 a ranking item (it burns them too), or takes it back.
       operationId: vote_aishare_item_api_participant_aishare_vote_post
       requestBody:
         content:
@@ -2270,7 +2270,7 @@ components:
           maxLength: 60
           minLength: 1
           title: Text
-          description: the new item; the same text (case aside) just gets a ▲
+          description: the new item; the same text (case aside) just gets a 🔥
       type: object
       required:
       - text
@@ -2426,14 +2426,6 @@ components:
         text:
           type: string
           title: Text
-        up:
-          type: integer
-          title: Up
-          default: 0
-        down:
-          type: integer
-          title: Down
-          default: 0
         score:
           type: integer
           title: Score
@@ -2443,7 +2435,7 @@ components:
       - id
       - text
       title: AiShareRankedItem
-      description: One item of a ranking, with its anonymous ▲ / ▼ tally.
+      description: One item of a ranking, with its anonymous 🔥 tally.
     AiShareResult:
       properties:
         id:
@@ -2536,9 +2528,9 @@ components:
         vote:
           type: integer
           maximum: 1.0
-          minimum: -1.0
+          minimum: 0.0
           title: Vote
-          description: +1 = ▲, -1 = ▼, 0 = take the vote back
+          description: 1 = 🔥 (burns me too), 0 = take it back
       type: object
       required:
       - item

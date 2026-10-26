@@ -103,11 +103,10 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         bob.set_aishare(20)
         expect(bob.aishare_card("review")).to_be_visible(timeout=5000)
         bob.set_aishare(40, "review")
-        # Bob's ▲ on Alice's item takes it to the top — Alice sees the re-order live, before any reveal
+        # Bob's 🔥 on Alice's item takes it to the top — Alice sees the re-order live, before any reveal
         bob.vote_pain("Too many Jira fields")
         expect(alice.pain_ranking().first).to_have_text("Too many Jira fields", timeout=5000)
-        bob.vote_pain("Meetings: too many / too long", up=False)
-        expect(alice.pain_ranking().last).to_have_text("Meetings: too many / too long", timeout=5000)
+        expect(alice._page.locator("#aishare-questions .aishare-rank-row .aishare-rank-score").first).to_have_text("2")
         expect(host_raw.locator('#aishare-host-results [data-q="devex_pain"] .aishare-bar-label').first).to_have_text("Too many Jira fields", timeout=5000)
         alice.aishare_card("devex_pain").evaluate("el => el.scrollIntoView({block: 'start'})")
         alice._page.evaluate("document.getElementById('access-duration-toast')?.remove()")

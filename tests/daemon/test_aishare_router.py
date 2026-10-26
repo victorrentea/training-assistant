@@ -249,23 +249,21 @@ def test_ranking_starts_from_the_presets_with_no_votes(client, sent):
 
 def test_votes_reorder_the_ranking_live_even_before_reveal(client, sent):
     client.post("/api/cur/host/aishare/start")
-    assert _vote(client, "u1", 3, 1).status_code == 204       # Tech debt ▲
+    assert _vote(client, "u1", 3, 1).status_code == 204       # Tech debt 🔥
     _vote(client, "u2", 3, 1)
-    _vote(client, "u2", 2, 1)                                 # Bureaucracy ▲
-    _vote(client, "u1", 1, -1)                                # meetings ▼
+    _vote(client, "u2", 2, 1)                                 # Bureaucracy 🔥
     pax = _last(sent["broadcast"], "aishare_updated")
     ranking = _ranking(pax)
-    assert ranking[:2] == [("Tech debt: legacy code, lack of tests", 2), ("Bureaucracy: processes", 1)]
-    assert ranking[-1] == ("Meetings: too many / too long", -1)
+    assert ranking[:3] == [("Tech debt: legacy code, lack of tests", 2), ("Bureaucracy: processes", 1),
+                           ("Code review: waiting or giving", 0)]
     assert _result(pax, "devex_pain").count == 2
     assert _ranking(_last(sent["host"], "aishare_host_update")) == ranking
 
 
-def test_vote_zero_takes_it_back_and_a_new_vote_replaces_the_old(client, state):
+def test_vote_zero_takes_it_back(client, state):
     client.post("/api/cur/host/aishare/start")
     _vote(client, "u1", 3, 1)
-    _vote(client, "u1", 3, -1)
-    assert state.votes_of("u1") == {"devex_pain": {"3": -1}}
+    assert state.votes_of("u1") == {"devex_pain": {"3": 1}}
     _vote(client, "u1", 3, 0)
     assert state.votes_of("u1") == {}
 
@@ -275,6 +273,7 @@ def test_vote_rejected_before_start_or_on_unknown_item(client):
     client.post("/api/cur/host/aishare/start")
     assert _vote(client, "u1", 99, 1).status_code == 409
     assert _vote(client, "u1", 0, 2).status_code == 422
+    assert _vote(client, "u1", 0, -1).status_code == 422       # upvote only: no ▼
 
 
 def test_ranking_cannot_be_answered_with_a_value(client):
@@ -317,12 +316,21 @@ def test_ranking_snapshot_round_trips():
     s = AiShareState()
     s.start()
     s.add_item("u1", "devex_pain", "Too many Jira fields")
-    s.vote("u2", "devex_pain", 0, -1)
+    s.vote("u2", "devex_pain", 0, 1)
     s.delete_item("devex_pain", 5)
     restored = AiShareState()
     restored.restore(s.snapshot())
     assert restored.snapshot() == s.snapshot()
     assert restored.votes_of("u1") == {"devex_pain": {"10": 1}}
+
+
+def test_restore_drops_downvotes_from_before_upvote_only():
+    s = AiShareState()
+    s.start()
+    snap = s.snapshot()
+    snap["votes"] = {"devex_pain": {"u1": {"0": 1, "1": -1}, "u2": {"2": -1}}}
+    s.restore(snap)
+    assert s.votes == {"devex_pain": {"u1": {0: 1}}}
 
 
 def test_restore_merges_no_and_i_dont_know_on_agents_md():

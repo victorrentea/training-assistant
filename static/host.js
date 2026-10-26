@@ -2684,13 +2684,12 @@ function _renderEngagementPopover() {
       if (q.kind === 'ranking') {
         // The leaderboard, best score first (the daemon sorts it); ✕ drops an item and its votes.
         const items = res.items || [];
-        const max = Math.max(1, ...items.map(it => Math.abs(it.score)));
+        const max = Math.max(1, ...items.map(it => it.score));
         block.querySelector('.aishare-host-rank').innerHTML = items.map(it =>
-          `<div class="aishare-bar aishare-host-rank-row${it.score < 0 ? ' down' : ''}">` +
+          `<div class="aishare-bar aishare-host-rank-row">` +
             `<span class="aishare-bar-label">${escHtml(it.text).replace(/^([^:]{1,30}:)/, '<b>$1</b>')}</span>` +
-            `<span class="aishare-bar-track"><span class="aishare-bar-fill" style="width:${Math.abs(it.score) / max * 100}%"></span></span>` +
-            `<span class="aishare-bar-count">${it.score}</span>` +
-            `<span class="aishare-host-rank-votes">▲${it.up} ▼${it.down}</span>` +
+            `<span class="aishare-bar-track"><span class="aishare-bar-fill" style="width:${it.score / max * 100}%"></span></span>` +
+            `<span class="aishare-bar-count">🔥${it.score}</span>` +
             `<button class="aishare-host-rank-del" data-id="${it.id}" data-tip="Delete this item and its votes">✕</button>` +
           `</div>`).join('');
       } else if (q.kind === 'slider') {
