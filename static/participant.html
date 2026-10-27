@@ -4224,9 +4224,10 @@ var Engagement = (function() {
 // entries or turn the mobile back-gesture into "undo tab change".
 function _setTabUrl(slug) {
   if (!_sessionId || !slug) return;
-  // Activity owns the bare session link (e.g. /67nb47 rather than /67nb47/activity)
-  // — that is the link people actually share, so it stays clean.
-  var path = slug === 'activity' ? '/' + _sessionId : '/' + _sessionId + '/' + slug;
+  // Every tab, Activity included, carries its slug: the bare /<session> link lands on
+  // the participant's last-used tab (or Slides), so only /<session>/activity reliably
+  // opens Activity for whoever receives the link.
+  var path = '/' + _sessionId + '/' + slug;
   if (location.pathname !== path) {
     try { history.replaceState(null, '', path); } catch (e) {}
   }
