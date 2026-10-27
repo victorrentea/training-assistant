@@ -1681,7 +1681,10 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
             align-items:center;gap:.5rem;padding:.5rem .9rem;border-radius:999px;
             font-weight:600;font-size:.85rem;color:#fff;background:var(--color-primary,#4555ba);
             box-shadow:0 6px 18px rgba(0,0,0,.28);user-select:none;max-width:min(88vw,22rem)">
-  <span id="attention-permission-icon">🔔</span>
+  <span id="attention-permission-icon" style="position:relative;line-height:1">🔔<span id="attention-permission-check"
+        style="display:none;position:absolute;right:-.45rem;bottom:-.3rem;width:.95rem;height:.95rem;border-radius:50%;
+               background:#1e8e3e;color:#fff;font-size:.65rem;font-weight:700;line-height:.95rem;text-align:center;
+               box-shadow:0 0 0 2px var(--color-surface,#fff)">✓</span></span>
   <span id="attention-permission-text">Enable notifications</span>
 </div>
 <!-- Attention: notification sound. Unlocked (play+pause) during the permission
@@ -3237,19 +3240,40 @@ function _updateAttentionPermissionBar() {
   var bar = document.getElementById('attention-permission-bar');
   if (!bar || bar.style.display === 'none') return;
   var icon = document.getElementById('attention-permission-icon');
+  var check = document.getElementById('attention-permission-check');
   var text = document.getElementById('attention-permission-text');
   var perm = _notificationPermission();
-  if (perm === 'granted') {
-    icon.textContent = '🔔'; text.textContent = 'Notifications on';
-    bar.style.background = 'var(--color-primary,#4555ba)'; bar.style.opacity = '0.7';
+  // Granted is a settled state, not a call to action: shrink to a bare bell
+  // with a green check so it stops covering the sidebar.
+  var granted = perm === 'granted';
+  icon.firstChild.nodeValue = perm === 'denied' ? '🔕' : '🔔';
+  check.style.display = granted ? 'block' : 'none';
+  text.style.display = granted ? 'none' : '';
+  bar.title = granted ? 'Notifications on' : '';
+  bar.style.padding = granted ? '.55rem .65rem' : '.5rem .9rem';
+  if (granted) {
+    text.textContent = 'Notifications on';
+    bar.style.background = 'var(--color-surface-container-high,#e1e9ee)'; bar.style.opacity = '0.85';
   } else if (perm === 'denied') {
-    icon.textContent = '🔕'; text.textContent = 'Notifications blocked — enable in browser settings';
+    text.textContent = 'Notifications blocked — enable in browser settings';
     bar.style.background = '#b3261e'; bar.style.opacity = '1';
   } else {
-    icon.textContent = '🔔'; text.textContent = 'Tap to enable notifications';
+    text.textContent = 'Tap to enable notifications';
     bar.style.background = 'var(--color-primary,#4555ba)'; bar.style.opacity = '1';
   }
+  _positionAttentionPermissionBar();
 }
+// Sit just above the profile card (the participant's name) instead of on top
+// of it. On a narrow screen the sidebar is off-canvas, so the corner is free.
+function _positionAttentionPermissionBar() {
+  var bar = document.getElementById('attention-permission-bar');
+  var card = document.getElementById('profile-card');
+  if (!bar) return;
+  var r = card ? card.getBoundingClientRect() : null;
+  var onScreen = r && r.width > 0 && r.right > 0 && r.top < window.innerHeight;
+  bar.style.bottom = onScreen ? (window.innerHeight - r.top + 8) + 'px' : '1rem';
+}
+window.addEventListener('resize', _positionAttentionPermissionBar);
 // Permission is requested ONLY here (a user gesture) — never on page load.
 function _onAttentionPermissionClick() {
   _unlockAttentionAudio(); // unlock in the SAME gesture so sound can play later
