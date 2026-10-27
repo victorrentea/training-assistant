@@ -463,6 +463,11 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
         #bug-shot-badge .shot-close { padding: .3rem; }
         #bug-shot-badge .material-symbols-outlined { font-size: 1.25rem; }
         #bug-shot-flash { position: fixed; inset: 0; z-index: 9001; background: #fff; pointer-events: none; }
+        /* html2canvas finds each font's baseline by putting this 1px gif inline after a
+           text span in the live page. Tailwind's preflight `img { display: block }` drops
+           it onto its own line, the baseline comes out a line too deep, and every text
+           run in the screenshot is painted low (badge numbers fall out of their pills). */
+        img[src^="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP"] { display: inline !important; }
         /* A one-shot jump: the glyph alone, never a pressed look. */
         .jump-btn { width: 1.75rem; height: 1.75rem; opacity: .7; }
         .jump-btn .material-symbols-outlined { font-size: 1.2rem; }
@@ -3552,7 +3557,8 @@ function takeBugScreenshot() {
         backgroundColor: getComputedStyle(document.body).backgroundColor || null,
         x: window.scrollX, y: window.scrollY,
         width: window.innerWidth, height: window.innerHeight,
-        windowWidth: window.innerWidth, windowHeight: window.innerHeight
+        windowWidth: window.innerWidth, windowHeight: window.innerHeight,
+        onclone: _paintPlaceholders
       });
     })
     .then(function(canvas) {
@@ -3571,6 +3577,15 @@ function takeBugScreenshot() {
       _setReportBugStatus('Could not take the screenshot (' + ((e && e.message) || e) + ').', true);
     })
     .finally(function() { if (take) take.disabled = false; });
+}
+// html2canvas never paints ::placeholder, so an empty field came out blank.
+// In its cloned document, write the hint in as the value, in the hint's color.
+function _paintPlaceholders(doc) {
+  doc.querySelectorAll('textarea[placeholder], input[placeholder]').forEach(function(el) {
+    if (el.value) return;
+    el.style.color = doc.defaultView.getComputedStyle(el, '::placeholder').color;
+    el.value = el.placeholder;
+  });
 }
 function _toBoundedJpeg(canvas) {
   var scale = Math.min(1, BUG_SHOT_MAX_WIDTH / canvas.width);
