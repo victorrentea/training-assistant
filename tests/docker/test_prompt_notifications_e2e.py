@@ -1,5 +1,6 @@
 """
-Hermetic E2E: a 🤖 prompt landing in the notes fires an OS notification.
+Hermetic E2E: a 🤖 prompt or a 📋 hand-sent line landing in the notes fires an
+OS notification.
 
 A 🤖 snippet is a prompt the trainer expects everyone to COPY, and the people who
 need telling are exactly the ones already in their IDE with this tab behind it.
@@ -9,7 +10,7 @@ alone — the attention master switch stays OFF for the whole test.
 Proves:
   🤖 append, tab unfocused  -> Notification fired (title + truncated body)
   🤖 append, tab focused    -> NO notification (the copy toaster is already there)
-  📋 append                 -> NO notification, ever (hand-sent lines stay silent)
+  📋 append, tab unfocused  -> Notification fired with its own title + tag
   first 🤖 append           -> permission pill appears although attention is OFF
 
 Marked nightly (browser context + several file-watch round trips → > 5s).
@@ -160,15 +161,17 @@ def test_robot_prompt_fires_os_notification():
         assert pax_page.locator("#attention-bell-btn").count() == 0, "bell must stay gated"
         print("Phase 2 OK: permission pill shown with attention OFF, bell still hidden")
 
-        # ── Phase 3: 📋 hand-sent line → silent
+        # ── Phase 3: 📋 hand-sent line, tab unfocused → notification fires
         _append_note(session_name, f"{CLIPBOARD} https://example.com/handout")
-        _await_condition(
-            lambda: "example.com/handout" in pax_page.locator("body").inner_text(),
+        pasted = _await_condition(
+            lambda: (pax_page.evaluate("window.__notifs") or [None, None])[1],
             timeout_ms=15000,
-            msg="The 📋 snippet never reached the participant at all",
+            msg="No OS notification fired for the 📋 hand-sent line",
         )
-        assert len(pax_page.evaluate("window.__notifs")) == 1, "📋 line must not notify"
-        print("Phase 3 OK: 📋 hand-sent line toasted but did not notify")
+        assert pasted["title"] == f"{CLIPBOARD} New from the trainer"
+        assert pasted["tag"] == "pasted"
+        assert pasted["body"] == "https://example.com/handout"
+        print("Phase 3 OK: 📋 hand-sent line fired an OS notification while unfocused")
 
         # ── Phase 4: 🤖 prompt while the tab IS focused → silent
         pax_page.evaluate("window.__focused = true")
@@ -178,7 +181,7 @@ def test_robot_prompt_fires_os_notification():
             timeout_ms=15000,
             msg="The second 🤖 snippet never reached the participant at all",
         )
-        assert len(pax_page.evaluate("window.__notifs")) == 1, (
+        assert len(pax_page.evaluate("window.__notifs")) == 2, (
             "a focused tab already shows the copy toaster — no OS ping"
         )
         print("Phase 4 OK: focused tab got the toaster but no OS notification")

@@ -3215,7 +3215,7 @@ function _notificationPermission() {
   catch (e) { return 'unsupported'; }
 }
 // Two independent reasons to offer the pill, so it stays off a fresh page: the
-// host switched attention on, or a 🤖 prompt has landed (the teachable instant —
+// host switched attention on, or a 🤖/📋 snippet has landed (the teachable instant —
 // "one just arrived; tap here to be pinged for the next"). Neither reason can
 // hide the pill while the other still holds.
 var _promptNotificationSeen = false;
@@ -3313,15 +3313,22 @@ function _handleHostNotification(msg) {
   }
 }
 
-// ── Prompt landed → OS notification ────────────────────────────────────────
-// A 🤖 snippet is a prompt the trainer expects everyone to COPY, and the people
-// who need telling are exactly the ones already in their IDE with this tab
-// behind it. Unlike the host notification above this is NOT gated by the
-// attention switch — permission is the only gate.
-var _PROMPT_NOTIFICATION_BODY_MAX = 180;
-function _maybeNotifyPrompt(text) {
+// ── Snippet landed → OS notification ───────────────────────────────────────
+// A 🤖 snippet is a prompt the trainer expects everyone to COPY; a 📋 one is
+// something the trainer sent by hand (a link, a command) for everyone to use.
+// The people who need telling are exactly the ones already in their IDE with
+// this tab behind it. Unlike the host notification above this is NOT gated by
+// the attention switch — permission is the only gate. Unmarked lines (the
+// trainer editing notes.txt directly) stay silent.
+var _NOTE_NOTIFICATION_BODY_MAX = 180;
+var _NOTE_NOTIFICATIONS = {
+  '\u{1F916}': { title: '\u{1F916} New prompt to copy', tag: 'prompt', view: 'prompts' },
+  '\u{1F4CB}': { title: '\u{1F4CB} New from the trainer', tag: 'pasted', view: 'notes' }
+};
+function _maybeNotifyNote(text) {
   var parsed = _splitNotesMarker(text);
-  if (parsed.mark !== '\u{1F916}') return;   // 📋 hand-sent lines stay silent
+  var kind = _NOTE_NOTIFICATIONS[parsed.mark];
+  if (!kind) return;
   _promptNotificationSeen = true;
   _refreshAttentionPermissionBar();
   if (_notificationPermission() !== 'granted') return;
@@ -3331,15 +3338,15 @@ function _maybeNotifyPrompt(text) {
   // face, so an OS ping would only be noise.
   if (typeof document.hasFocus === 'function' && document.hasFocus()) return;
   var body = parsed.body.trim();
-  if (body.length > _PROMPT_NOTIFICATION_BODY_MAX) {
-    body = body.slice(0, _PROMPT_NOTIFICATION_BODY_MAX - 1).trimEnd() + '…';
+  if (body.length > _NOTE_NOTIFICATION_BODY_MAX) {
+    body = body.slice(0, _NOTE_NOTIFICATION_BODY_MAX - 1).trimEnd() + '…';
   }
   try {
-    // `tag` makes a burst of prompts replace one another instead of stacking a
-    // tower of notifications no one will dismiss.
-    var n = new Notification('\u{1F916} New prompt to copy', { body: body, tag: 'prompt' });
+    // `tag` makes a burst of snippets replace one another instead of stacking
+    // a tower of notifications no one will dismiss.
+    var n = new Notification(kind.title, { body: body, tag: kind.tag });
     n.onclick = function() {
-      try { window.focus(); } catch (e) { /* best-effort */ }
+      try { window.focus(); showView(kind.view); } catch (e) { /* best-effort */ }
       n.close();
     };
   } catch (e) { /* the copy toaster already carries the snippet */ }
@@ -6490,7 +6497,7 @@ function _handleWsMessage(msg) {
     case 'notes_appended': {
       if (msg.text) {
         _showNotesToast(msg.text, msg.at);
-        _maybeNotifyPrompt(msg.text);
+        _maybeNotifyNote(msg.text);
       }
       break;
     }
