@@ -284,6 +284,7 @@ let mouseX = 0
 let mouseY = 0
 let peek: HTMLElement | null = null
 let peeked: SimpleSlug | null = null // the note the popover shows
+let placedBy: Point | null = null // where placePeek last put it from; null once dragged
 
 function ensurePeek(): HTMLElement {
   if (peek) return peek
@@ -338,8 +339,11 @@ function ensurePeek(): HTMLElement {
   // Opening the points (foldPoints) grows the popover: refit it to the window. A
   // details' toggle doesn't bubble, so it is caught on the way down.
   body.addEventListener("toggle", () => peek && fitPeek(peek), true)
-  // So does a slide that loads after the popover was placed (preloadImages gave up on it).
-  body.addEventListener("load", () => peek && fitPeek(peek), true)
+  // A slide that loads after the popover was placed (preloadImages gave up on it) picks
+  // its corner again: placed short, it took a bottom corner it no longer fits in, and
+  // ran past the window's bottom edge with room to spare in a top one (Victor,
+  // 2026-10-27). Dragged, it stays where it was dropped and only refits.
+  body.addEventListener("load", () => peek && (placedBy ? placePeek(peek, placedBy) : fitPeek(peek)), true)
   document.body.appendChild(peek)
   return peek
 }
@@ -352,6 +356,7 @@ function dragByHead(el: HTMLElement, head: HTMLElement) {
   head.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return
     e.preventDefault()
+    placedBy = null
     const dx = e.clientX - el.offsetLeft
     const dy = e.clientY - el.offsetTop
     head.setPointerCapture(e.pointerId)
@@ -379,6 +384,7 @@ function dragByHead(el: HTMLElement, head: HTMLElement) {
 // be. Inside the participant page it keeps clear of the top band, where the page
 // floats its controls over the wiki: they would cover the popover's ✕.
 function placePeek(el: HTMLElement, at: Point) {
+  placedBy = at
   const gap = 16
   const { top, bottom } = peekMargins()
   el.style.maxHeight = ""
