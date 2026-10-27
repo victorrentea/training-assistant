@@ -9,7 +9,7 @@ alone — the attention master switch stays OFF for the whole test.
 
 Proves:
   🤖 append, tab unfocused  -> Notification fired (title + truncated body)
-  🤖 append, tab focused    -> NO notification (the copy toaster is already there)
+  🤖 append, tab focused    -> Notification fired too (focus is no gate)
   📋 append, tab unfocused  -> Notification fired with its own title + tag
   first 🤖 append           -> permission pill appears although attention is OFF
 
@@ -51,7 +51,8 @@ document.hasFocus = function() { return window.__focused; };
 class FakeNotification {
   constructor(title, opts) {
     window.__notifs.push({ title: String(title), body: String((opts && opts.body) || ''),
-                           tag: String((opts && opts.tag) || '') });
+                           tag: String((opts && opts.tag) || ''),
+                           renotify: !!(opts && opts.renotify) });
   }
   close() {}
   static get permission() { return 'granted'; }
@@ -173,17 +174,16 @@ def test_robot_prompt_fires_os_notification():
         assert pasted["body"] == "https://example.com/handout"
         print("Phase 3 OK: 📋 hand-sent line fired an OS notification while unfocused")
 
-        # ── Phase 4: 🤖 prompt while the tab IS focused → silent
+        # ── Phase 4: 🤖 prompt while the tab IS focused → still notifies
         pax_page.evaluate("window.__focused = true")
         _append_note(session_name, f"{ROBOT} Second prompt while focused")
-        _await_condition(
-            lambda: "Second prompt while focused" in pax_page.locator("body").inner_text(),
+        focused = _await_condition(
+            lambda: pax_page.evaluate("window.__notifs")[2],
             timeout_ms=15000,
-            msg="The second 🤖 snippet never reached the participant at all",
+            msg="A focused tab must still get the OS notification",
         )
-        assert len(pax_page.evaluate("window.__notifs")) == 2, (
-            "a focused tab already shows the copy toaster — no OS ping"
-        )
-        print("Phase 4 OK: focused tab got the toaster but no OS notification")
+        assert focused["body"] == "Second prompt while focused"
+        assert focused["renotify"], "same-tag replacement must pop a banner again"
+        print("Phase 4 OK: focused tab got an OS notification too, with renotify")
 
         browser.close()
