@@ -2,8 +2,9 @@
 
 Host flow: Start (everyone is routed to the Activity view with the survey) →
 optionally Reveal (everyone sees every question's answers, anonymously) → Clear.
-The ranking question is live from the start: participants add items and 🔥
-them, everyone watches the list re-order; the host may delete an item.
+The ranking question is open from the start: participants add items and 🔥
+them, but until Reveal each sees only their own 🔥 (no tallies, a fixed order),
+so nobody is swayed by the crowd; the host may delete an item.
 """
 import logging
 
@@ -83,8 +84,12 @@ def participant_view() -> dict:
     """What any participant may see: everyone's answers only once revealed."""
     results = aishare_state.results()
     if not aishare_state.revealed:
-        # A ranking stays visible: watching it re-order live is the point.
+        # A ranking keeps its items (and who added what), but not their 🔥 tallies or their order:
+        # seeing what the others burned for would sway the vote.
         results = [{k: v for k, v in r.items() if k in ("id", "count", "items")} for r in results]
+        for r in results:
+            if r.get("items"):
+                r["items"] = sorted(({**it, "score": None} for it in r["items"]), key=lambda it: it["id"])
     # What people typed under "Other" goes to the host only.
     results = [{k: v for k, v in r.items() if k != "others"} for r in results]
     return {

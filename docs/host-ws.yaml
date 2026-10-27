@@ -282,6 +282,9 @@ components:
                       score:
                         type: integer
                         description: how many 🔥 it got
+                      custom:
+                        type: boolean
+                        description: added by a participant, not one of the presets
                   description: "ranking: every item, best score first; always present, even before the reveal"
     # ── Word Cloud ────────────────────────────────────────────────────────────
 

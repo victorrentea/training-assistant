@@ -162,7 +162,8 @@ class AiShareRankedItem(BaseModel):
     """One item of a ranking, with its anonymous 🔥 tally."""
     id: int
     text: str
-    score: int = 0   # how many 🔥 it got
+    score: int | None = 0   # how many 🔥 it got; None for participants until revealed
+    custom: bool = False    # added by a participant, not one of the presets
 
 
 class AiShareResult(BaseModel):
@@ -173,7 +174,7 @@ class AiShareResult(BaseModel):
     counts: list[int] | None = None    # choice/multi: answers per option
     hearts: list[int] | None = None    # multi: ❤️ favourites per option
     others: list[str] | None = None    # choice, host only: what people typed under the "other" option
-    items: list[AiShareRankedItem] | None = None  # ranking: every item, best score first — live, never hidden
+    items: list[AiShareRankedItem] | None = None  # ranking: every item, best score first; participants get no scores until revealed
 
 
 class AiShareOpenedMsg(BaseModel):

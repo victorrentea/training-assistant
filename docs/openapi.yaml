@@ -2427,9 +2427,15 @@ components:
           type: string
           title: Text
         score:
-          type: integer
+          anyOf:
+          - type: integer
+          - type: 'null'
           title: Score
           default: 0
+        custom:
+          type: boolean
+          title: Custom
+          default: false
       type: object
       required:
       - id

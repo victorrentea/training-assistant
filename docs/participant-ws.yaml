@@ -429,16 +429,20 @@ components:
                   type: array
                   items:
                     type: object
-                    required: [id, text, score]
+                    required: [id, text]
                     properties:
                       id:
                         type: integer
                       text:
                         type: string
                       score:
+                        nullable: true
                         type: integer
-                        description: how many 🔥 it got
-                  description: "ranking: every item, best score first; always present, even before the reveal"
+                        description: how many 🔥 it got; null until revealed
+                      custom:
+                        type: boolean
+                        description: added by a participant, not one of the presets
+                  description: "ranking: every item, always present; best score first once revealed, before that in the order they were added and without scores"
                 hearts:
                   nullable: true
                   type: array

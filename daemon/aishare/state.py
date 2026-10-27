@@ -76,6 +76,7 @@ RENAMED_ITEMS = {"devex_pain": {
     "Process, bureaucracy": "Bureaucracy",
     "Bureaucracy: processes": "Bureaucracy",
     "Requirements: unclear / volatile": "Requirements: unclear / ever-changing",
+    "Build: slow / local setup": "Build: slow / cumbersome",
 }}
 
 
@@ -213,7 +214,8 @@ class AiShareState:
         for mine in (self.votes.get(qid) or {}).values():
             for item_id in mine:
                 score[item_id] = score.get(item_id, 0) + 1
-        out = [{"id": it["id"], "text": it["text"], "score": score.get(it["id"], 0)} for it in self.items.get(qid) or []]
+        out = [{"id": it["id"], "text": it["text"], "score": score.get(it["id"], 0), "custom": it["by"] is not None}
+               for it in self.items.get(qid) or []]
         out.sort(key=lambda r: (-r["score"], r["id"]))
         return out
 

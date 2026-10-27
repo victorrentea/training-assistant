@@ -244,20 +244,32 @@ def test_ranking_starts_from_the_presets_with_no_votes(client, sent):
     client.post("/api/cur/host/aishare/start")
     items = _result(_last(sent["broadcast"], "aishare_updated"), "devex_pain").items
     assert items[0].text == "Code Review: waiting / performing" and len(items) == 10
-    assert all(i.score == 0 for i in items)
+    assert all(i.score is None for i in items)       # participants: no tallies before the reveal
 
 
-def test_votes_reorder_the_ranking_live_even_before_reveal(client, sent):
+def test_ranking_tallies_reach_participants_only_once_revealed(client, sent):
     client.post("/api/cur/host/aishare/start")
     assert _vote(client, "u1", 3, 1).status_code == 204       # Tech debt 🔥
     _vote(client, "u2", 3, 1)
     _vote(client, "u2", 2, 1)                                 # Bureaucracy 🔥
+    ranking = [("Tech debt: legacy code, lack of tests", 2), ("Bureaucracy", 1),
+               ("Code Review: waiting / performing", 0)]
+    assert _ranking(_last(sent["host"], "aishare_host_update"))[:3] == ranking   # the host sees it live
     pax = _last(sent["broadcast"], "aishare_updated")
-    ranking = _ranking(pax)
-    assert ranking[:3] == [("Tech debt: legacy code, lack of tests", 2), ("Bureaucracy", 1),
-                           ("Code Review: waiting / performing", 0)]
-    assert _result(pax, "devex_pain").count == 2
-    assert _ranking(_last(sent["host"], "aishare_host_update")) == ranking
+    assert _result(pax, "devex_pain").count == 2               # how many voted, but not for what
+    items = _result(pax, "devex_pain").items
+    assert all(i.score is None for i in items)
+    assert [i.id for i in items] == sorted(i.id for i in items)  # the order they were added, not the votes'
+    client.post("/api/cur/host/aishare/reveal", json={"revealed": True})
+    assert _ranking(_last(sent["broadcast"], "aishare_updated"))[:3] == ranking
+
+
+def test_items_added_by_participants_are_marked_custom(client, sent):
+    client.post("/api/cur/host/aishare/start")
+    client.post("/api/participant/aishare/item", json={"question": "devex_pain", "text": "No coffee"},
+                headers={"X-Participant-ID": "u1"})
+    items = _result(_last(sent["broadcast"], "aishare_updated"), "devex_pain").items
+    assert [i.text for i in items if i.custom] == ["No coffee"]
 
 
 def test_vote_zero_takes_it_back(client, state):
@@ -289,8 +301,8 @@ def test_added_item_gets_its_author_upvote_and_duplicates_fold(client, state, se
     assert new_id == 10
     assert _add(client, "u2", "too many jira fields").json()["id"] == new_id
     assert _add(client, "u2", "CONTEXT SWITCHING").json()["id"] == 5      # same as a preset
+    assert _ranking(_last(sent["host"], "aishare_host_update"))[:2] == [("Too many Jira fields", 2), ("Context switching", 1)]
     pax = _last(sent["broadcast"], "aishare_updated")
-    assert _ranking(pax)[:2] == [("Too many Jira fields", 2), ("Context switching", 1)]
     assert "u1" not in pax.model_dump_json() and "u1" not in _last(sent["host"], "aishare_host_update").model_dump_json()
 
 
