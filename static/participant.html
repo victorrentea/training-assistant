@@ -851,8 +851,10 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-rank-score:empty { display: none; }
 .aishare-rank-add { display: flex; gap: .5rem; margin-top: .7rem; }
 .aishare-rank-add input { flex: 1; min-width: 0; padding: .65rem .9rem; border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font: inherit; }
-.aishare-rank-add input:focus { outline: none; border-color: var(--color-primary, #4555ba); }
-@media (prefers-color-scheme: dark) { .aishare-rank-add input { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); } }
+.aishare-rank-add input { border-color: #7048e8; }
+.aishare-rank-add input::placeholder { color: #7048e8; opacity: .75; font-weight: 300; }
+.aishare-rank-add input:focus { outline: none; border-color: #5f3dc4; }
+@media (prefers-color-scheme: dark) { .aishare-rank-add input { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); border-color: #b197fc; } .aishare-rank-add input::placeholder { color: #b197fc; } .aishare-rank-add input:focus { border-color: #d0bfff; } }
 /* A tall activity (the AI-share survey, a long poll) scrolls instead of being
    clipped; `safe` keeps its top reachable when it outgrows the view. */
 #activity-view { overflow-y: auto; justify-content: safe center; }
@@ -890,7 +892,10 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-other-save:disabled { opacity: .45; cursor: default; }
 @media (prefers-color-scheme: dark) { .aishare-other input { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); } }
 .aishare-done { margin-top: 1rem; text-align: center; font-size: 1.4rem; font-weight: 800; color: var(--color-primary, #4555ba); animation: aishare-q-in .45s cubic-bezier(.2,.8,.2,1); }
-.aishare-done small { display: block; margin-top: .35rem; font-size: .85rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); }
+.aishare-anon { margin-bottom: .5rem; text-align: right; font-size: .85rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); }
+.aishare-skip { margin-left: .6rem; padding: .15rem .75rem; border-radius: 999px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: transparent; color: var(--color-on-surface-variant, #566166); font: inherit; font-size: .85rem; font-weight: 600; vertical-align: middle; cursor: pointer; transition: border-color .15s, color .15s; }
+.aishare-skip:hover { border-color: var(--color-primary, #4555ba); color: var(--color-primary, #4555ba); }
+.aishare-card.settled .aishare-skip { display: none; }
 /* Same size as the question (.poll-card h2) — it reads as the question's other half. */
 .aishare-status { flex-shrink: 0; font-size: 1.15rem; line-height: 1.4; font-weight: 700; color: var(--color-on-surface-variant, #566166); }
 .aishare-value { margin-bottom: 1rem; }
@@ -1402,8 +1407,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   </section>
   <section id="activity-aishare-section" style="display:none;" class="w-full">
     <!-- One card per question, appearing one after another (built by _renderActivityAiShare) -->
+    <div class="aishare-anon">🕶️ Anonymous: nobody sees who answered what.</div>
     <div id="aishare-questions" class="aishare-questions"></div>
-    <div id="aishare-done" class="poll-card aishare-card aishare-done" style="display:none;">🎉 Thank you — you finished!<small>Anonymous: nobody sees who answered what.</small></div>
+    <div id="aishare-done" class="poll-card aishare-card aishare-done" style="display:none;">🎉 Thank you!</div>
   </section>
 </div>
 <!-- AI Summary View -->
@@ -5872,9 +5878,27 @@ function _applyAiShareState(msg) {
   if (msg.my_others !== undefined) _aiShare.myOther = Object.assign({}, msg.my_others || {});
   if (msg.my_hearts !== undefined) _aiShare.myHearts = Object.assign({}, msg.my_hearts || {});
   if (msg.my_votes !== undefined) _aiShare.myVotes = Object.assign({}, msg.my_votes || {});
-  if (!_aiShare.active) { _aiShare.my = {}; _aiShare.live = {}; _aiShare.myOther = {}; _aiShare.myHearts = {}; _aiShare.myVotes = {}; }
+  if (!_aiShare.active) { _aiShare.my = {}; _aiShare.live = {}; _aiShare.myOther = {}; _aiShare.myHearts = {}; _aiShare.myVotes = {}; _aiShareSetSkipped({}); }
   _renderActivityAiShare();
 }
+
+// Slider questions can be skipped; the skips stay in this browser only (the daemon never sees them).
+function _aiShareSkipKey() { return 'aishare-skipped:' + _sessionId; }
+function _aiShareSkipped() {
+  try { return JSON.parse(localStorage.getItem(_aiShareSkipKey()) || '{}'); } catch (e) { return {}; }
+}
+function _aiShareSetSkipped(skipped) {
+  try { localStorage.setItem(_aiShareSkipKey(), JSON.stringify(skipped)); } catch (e) { /* private mode */ }
+}
+function _onAiShareSkip(qid) {
+  var skipped = _aiShareSkipped();
+  skipped[qid] = true;
+  _aiShareSetSkipped(skipped);
+  _renderActivityAiShare(true);
+}
+
+// Answered or skipped: the next question may come.
+function _aiShareSettled(qid) { return _aiShareAnswered(qid) || !!_aiShareSkipped()[qid]; }
 
 function _aiShareAnswered(qid) {
   if (_aiShare.myVotes[qid] && Object.keys(_aiShare.myVotes[qid]).length) return true;
@@ -5885,7 +5909,7 @@ function _aiShareAnswered(qid) {
 function _aiShareVisibleCount() {
   var qs = _aiShare.questions;
   if (_aiShare.revealed) return qs.length;
-  for (var i = 0; i < qs.length; i++) if (!_aiShareAnswered(qs[i].id)) return i + 1;
+  for (var i = 0; i < qs.length; i++) if (!_aiShareSettled(qs[i].id)) return i + 1;
   return qs.length;
 }
 
@@ -5908,17 +5932,17 @@ function _aiShareBuildCard(q) {
   card.dataset.q = q.id;
   var head;
   if (q.kind === 'ranking') {
-    // The hint sits on the title row, at the right, over how many have voted.
-    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '</h2>' +
-      '<div class="aishare-head-side">' + (q.hint ? '<span class="aishare-head-hint">' + _escHtml(q.hint) + '</span>' : '') +
-      '<span class="aishare-status"></span></div></div>';
+    // How many have voted right after the question, like a multi; the hint on the right.
+    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline"></span></h2>' +
+      (q.hint ? '<div class="aishare-head-side"><span class="aishare-head-hint">' + _escHtml(q.hint) + '</span></div>' : '') + '</div>';
   } else if (q.kind === 'multi' && q.hint) {
     // Count right after the question; on the right, once something is ticked: the hint and the ❤️ total.
     head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline"></span></h2>' +
       '<div class="aishare-head-side aishare-fav"><span class="aishare-head-hint">' + _escHtml(q.hint) + '</span>' +
       '<span class="aishare-hearts-total"></span></div></div>';
   } else {
-    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '</h2><span class="aishare-status"></span></div>';
+    var skip = q.kind === 'slider' ? '<button class="aishare-skip">Skip</button>' : '';
+    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + skip + '</h2><span class="aishare-status"></span></div>';
   }
   if (q.kind === 'slider') {
     card.innerHTML = head +
@@ -5928,6 +5952,7 @@ function _aiShareBuildCard(q) {
       '<div class="aishare-plot"></div>' +
       '<input id="aishare-slider-' + q.id + '" class="aishare-slider untouched" type="range" min="0" max="100" step="1" value="50" aria-label="' + _escHtml(q.text) + '" />';
     var slider = card.querySelector('input');
+    card.querySelector('.aishare-skip').addEventListener('click', function () { _onAiShareSkip(q.id); });
     slider.addEventListener('input', function () { _onAiShareInput(q.id, slider.value); });
     slider.addEventListener('change', function () { _onAiShareInput(q.id, slider.value, true); });
   } else if (q.kind === 'ranking') {
@@ -6012,6 +6037,7 @@ function _aiShareUpdateCard(card, q) {
   var status = card.querySelector('.aishare-status');
   if (status) status.textContent = q.kind === 'ranking' ? _aiShareRespondentsText(res.count || 0) : _aiShareCountText(res.count || 0);
   var answered = _aiShareAnswered(q.id);
+  card.classList.toggle('settled', _aiShareSettled(q.id));
   var mine = _aiShare.my[q.id];
   if (q.kind === 'ranking') {
     _aiShareUpdateRanking(card, q, res);
@@ -6185,7 +6211,7 @@ function _renderActivityAiShare(scrollToNew) {
     if (!card) { card = _aiShareBuildCard(q); list.appendChild(card); added = added || card; }
     _aiShareUpdateCard(card, q);
   });
-  var finished = qs.length > 0 && qs.every(function (q) { return _aiShareAnswered(q.id); });
+  var finished = qs.length > 0 && qs.every(function (q) { return _aiShareSettled(q.id); });
   var wasHidden = done.style.display === 'none';
   done.style.display = finished ? '' : 'none';
   if (scrollToNew) {
@@ -6772,6 +6798,7 @@ function _handleWsMessage(msg) {
       break;
     case 'aishare_opened':
       _aiShare = { active: true, revealed: false, questions: _aiShare.questions, results: {}, my: {}, live: {}, myOther: {}, myHearts: {}, myVotes: {} };
+      _aiShareSetSkipped({});
       document.getElementById('aishare-questions').innerHTML = '';
       _renderActivityAiShare();
       showView('activity');
