@@ -56,11 +56,15 @@ EMOJI_CATALOG: list[EmojiDef] = [
     EmojiDef(emoji="🌮", title="Taco break!", section="stacked", stack_of="☕"),
     EmojiDef(emoji="🍣", title="Sushi, anyone?", section="stacked", stack_of="☕"),
     EmojiDef(emoji="🍩", title="Donut break!", section="stacked", stack_of="☕"),
-    # 👍 — opinion: agree / disagree / let's debate
+    # 👍 — opinion: agree / disagree / let's debate, then a quick A/B/C vote.
+    # Appended in reverse so the stack reads A, B, C top-down.
     EmojiDef(emoji="👍", title="", section="primary"),
     EmojiDef(emoji="✅", title="Agreed. 100%.", section="stacked", stack_of="👍"),
     EmojiDef(emoji="❌", title="Nope. Disagree", section="stacked", stack_of="👍"),
     EmojiDef(emoji="⚔️", title="Let's debate this!", section="stacked", stack_of="👍"),
+    EmojiDef(emoji="🇨", title="Option C", section="stacked", stack_of="👍"),
+    EmojiDef(emoji="🇧", title="Option B", section="stacked", stack_of="👍"),
+    EmojiDef(emoji="🇦", title="Option A", section="stacked", stack_of="👍"),
     # 🤔 — thinking: idea / mind-blown / sad-lost
     EmojiDef(emoji="🤔", title="That's interesting...", section="primary"),
     EmojiDef(emoji="💡", title="Wait, I have an idea!", section="stacked", stack_of="🤔"),

@@ -21,7 +21,7 @@ def test_allowed_emoji_derived_from_catalog():
 
 def test_stacked_emoji_are_accepted():
     """A stacked emoji is a real reaction, not decoration: the daemon must take it."""
-    for emoji in ("🔥", "👏", "😂", "🍕", "🍔", "🌮", "🍣", "🍩", "✅", "❌", "⚔️", "💡", "🤯", "😢"):
+    for emoji in ("🔥", "👏", "😂", "🍕", "🍔", "🌮", "🍣", "🍩", "✅", "❌", "⚔️", "🇦", "🇧", "🇨", "💡", "🤯", "😢"):
         assert emoji in ALLOWED_EMOJI
 
 
@@ -54,7 +54,7 @@ def test_bar_groups_as_designed():
     assert stacks == {
         "❤️": ["🔥", "👏", "😂"],
         "☕": ["🍕", "🍔", "🌮", "🍣", "🍩"],
-        "👍": ["✅", "❌", "⚔️"],
+        "👍": ["✅", "❌", "⚔️", "🇨", "🇧", "🇦"],
         "🤔": ["💡", "🤯", "😢"],
     }
 
