@@ -1,7 +1,9 @@
 """The wiki notes participants star as interesting, so they shine for the whole group.
 
 A participant clicks the star by a dot in the participant page's Wiki tab (note-pane.ts
-→ the page → POST /api/participant/wiki/star); every graph then shows how many starred
+→ the page → POST /api/participant/wiki/star), or in the wiki opened in a tab of its own
+(note-pane.ts → POST, with the UUID the participant page left in localStorage); every
+graph then shows how many starred
 it, and the dot shines with the same gold starburst as the trainer's key takeaways,
 stronger the more people starred it (Victor, 2026-10-21).
 

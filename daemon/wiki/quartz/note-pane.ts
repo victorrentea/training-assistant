@@ -871,33 +871,21 @@ export function toggleTakeaway(slug: SimpleSlug, on: boolean) {
     .catch(() => applyTakeaways(before)) // not saved: the star goes back
 }
 
+function participantApi(): URL {
+  if (onHostMachine()) return new URL(`${HOST_DAEMON}/api/participant/`)
+  const site = new URL(pathToRoot(getFullSlug(window)), window.location.href)
+  return new URL("../api/participant/", site)
+}
+
 function fetchTakeaways() {
   const asked = Date.now()
-  const site = new URL(pathToRoot(getFullSlug(window)), window.location.href)
-  const api = onHostMachine() ? `${HOST_DAEMON}/api/participant/` : new URL("../api/participant/", site)
-  fetch(new URL("wiki/takeaways", api))
+  fetch(new URL("wiki/takeaways", participantApi()))
     .then((res) => (res.ok ? res.json() : null))
     .then((json: { slugs?: string[] } | null) => {
       if (json && Array.isArray(json.slugs) && asked > changedAt) applyTakeaways(json.slugs)
     })
     .catch(() => {})
-  // Counts only: a wiki in a tab of its own has no participant identity to star with.
-  fetch(new URL("wiki/stars", api))
-    .then((res) => (res.ok ? res.json() : null))
-    .then((json: { counts?: unknown } | null) => {
-      if (json) applyStars(json.counts, [])
-    })
-    .catch(() => {})
-}
-
-if (!embedded) {
-  fetchTakeaways()
-  window.setInterval(
-    () => {
-      if (document.visibilityState === "visible") fetchTakeaways()
-    },
-    onHostMachine() ? TRAINER_POLL_MS : TAKEAWAYS_POLL_MS,
-  )
+  fetchStars()
 }
 
 // ── Participants' stars ──
@@ -909,15 +897,28 @@ if (!embedded) {
 //   → the participant page around it → POST /api/participant/wiki/star with its
 //   X-Participant-ID → daemon saves it in the session folder → `wiki_stars` broadcast
 //   (counts only, never who) → each participant page → postMessage("wiki-stars") → here.
-// This frame never sees the participant's UUID: the page holds it, and the daemon only
-// counts a star from someone who joined (daemon/wiki/stars.py says why it can't be
-// forged or stuffed). The page answers every click with what was really saved.
+// The daemon only counts a star from someone who joined (daemon/wiki/stars.py says why
+// it can't be forged or stuffed), and answers every click with what was really saved.
+// A wiki in a tab of its own - the link the trainer pastes in the chat - stars too,
+// straight to the daemon, as the participant whose page left its UUID in this origin's
+// localStorage. Until 2026-10-27 it only showed the counts: that evening 20 participants
+// were on such a tab, and only the 4 in the participant page's Wiki tab could star.
+// Without that UUID (never joined on this browser) it only shows the counts.
+const PARTICIPANT_UUID_KEY = "workshop_participant_uuid" // participant.html's _myUUID
 let starCounts = new Map<SimpleSlug, number>()
 let mine = new Set<SimpleSlug>()
 
+function participantId(): string | null {
+  try {
+    return localStorage.getItem(PARTICIPANT_UUID_KEY)
+  } catch {
+    return null // blocked storage
+  }
+}
+
 export function starMode(): StarMode {
   if (onHostMachine()) return "trainer"
-  return embedded ? "voter" : "viewer"
+  return embedded || participantId() ? "voter" : "viewer"
 }
 
 export function starsOf(slug: SimpleSlug): { count: number; mine: boolean } {
@@ -951,14 +952,71 @@ function applyStars(counts: unknown, own: unknown) {
 }
 
 // The participant's click, on a dot's star or in the popover: shown at once, then sent
-// to the page around the wiki, which answers with what was saved.
+// to the page around the wiki, or straight to the daemon from a tab of its own; either
+// answers with what was saved.
 export function toggleStar(slug: SimpleSlug, on: boolean) {
   if (starMode() !== "voter") return
   const counts = Object.fromEntries(starCounts)
   if (on !== mine.has(slug)) counts[slug] = Math.max(0, (counts[slug] ?? 0) + (on ? 1 : -1))
   if (on && starHint) celebrate(starHint)
   applyStars(counts, on ? [...mine, slug] : [...mine].filter((s) => s !== slug))
-  tellParent({ type: "wiki-star", slug, starred: on })
+  if (embedded) tellParent({ type: "wiki-star", slug, starred: on })
+  else sendStar(slug, on)
+}
+
+// A tab of its own sends its clicks one at a time, in click order: sent together, a
+// quick star-unstar overtakes itself on the way and the daemon keeps the wrong one
+// (load test, 2026-10-27: a third of such double clicks ended reversed). Only the last
+// answer is shown, so the star doesn't flicker through the ones before it; while any is
+// on its way, the poll leaves the stars alone.
+let starQueue: Promise<void> = Promise.resolve()
+let starsInFlight = 0
+let starClickedAt = 0
+
+type StarsAnswer = { counts?: unknown; mine?: unknown } | null
+
+function sendStar(slug: SimpleSlug, on: boolean) {
+  const id = participantId()
+  if (!id) return
+  starClickedAt = Date.now()
+  starsInFlight++
+  starQueue = starQueue.then(() =>
+    fetch(new URL("wiki/star", participantApi()), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Participant-ID": id },
+      body: JSON.stringify({ slug, starred: on }),
+    })
+      .then((res) => (res.ok ? (res.json() as Promise<StarsAnswer>) : null))
+      .catch(() => null)
+      .then((json) => {
+        if (--starsInFlight > 0) return
+        if (json) applyStars(json.counts, json.mine)
+        else fetchStars() // not saved: the wiki shows what is really stored
+      }),
+  )
+}
+
+function fetchStars() {
+  const asked = Date.now()
+  const id = onHostMachine() ? null : participantId()
+  fetch(new URL("wiki/stars", participantApi()), { headers: id ? { "X-Participant-ID": id } : {} })
+    .then((res) => (res.ok ? (res.json() as Promise<StarsAnswer>) : null))
+    .then((json) => {
+      if (!json || starsInFlight > 0 || asked < starClickedAt) return
+      applyStars(json.counts, starMode() === "voter" ? json.mine : [])
+    })
+    .catch(() => {})
+}
+
+// After the stars' state above: the first poll reads it.
+if (!embedded) {
+  fetchTakeaways()
+  window.setInterval(
+    () => {
+      if (document.visibilityState === "visible") fetchTakeaways()
+    },
+    onHostMachine() ? TRAINER_POLL_MS : TAKEAWAYS_POLL_MS,
+  )
 }
 
 // A participant who hasn't starred anything yet sees a gold pill at the graph's

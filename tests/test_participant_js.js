@@ -617,13 +617,14 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   };
   const names = ['_isWikiViewSelected', '_isWikiFollowEnabled', '_postWikiFollow', '_applyHostWikiFollow',
     '_onIncomingHostWikiNote', '_onWikiFrameMessage', '_onWikiFollowChange',
-    '_postWikiTakeaways', '_onIncomingWikiTakeaways', '_postWikiStars', '_onIncomingWikiStars', '_starWikiNote'];
+    '_postWikiTakeaways', '_onIncomingWikiTakeaways', '_postWikiStars', '_onIncomingWikiStars', '_starWikiNote',
+    '_sendWikiStar'];
   const LS = makeLS({});
   const fetched = [];
   const fakeFetch = (url, opts) => { fetched.push({ url, opts }); return fetch ? fetch(url, opts) : Promise.reject(new Error('offline')); };
   const api = new Function('document', 'location', 'LS', '_onHostMachine', 'fetch', '_sessionId', '_myUUID',
     'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0, _wikiTakeaways = [];\n' +
-    'var _wikiStarCounts = {}, _wikiMyStars = [];\n' +
+    'var _wikiStarCounts = {}, _wikiMyStars = [], _wikiStarQueue = Promise.resolve(), _wikiStarsInFlight = 0;\n' +
     names.map((n) => extractFunction(PARTICIPANT_HTML, n)).join('\n') +
     '\nreturn { ' + names.join(', ') +
     ', hostNote: function () { return _hostWikiNote; }, isReady: function () { return _wikiFrameReady; } };'
@@ -709,11 +710,11 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-star', slug: 42, starred: true } });
   assert('a star from anything but the wiki iframe, or malformed, is never sent', w.fetched.length === 0);
   w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-star', slug: 'Autonomy', starred: true } });
-  const call = w.fetched[0];
-  assert("the wiki's star goes out with this participant's id",
-    w.fetched.length === 1 && call.url === '/sess1/api/participant/wiki/star' &&
-    call.opts.headers['X-Participant-ID'] === 'my-uuid' && JSON.parse(call.opts.body).slug === 'Autonomy');
   pendingAsync.push(new Promise((r) => setTimeout(r, 0)).then(() => {
+    const call = w.fetched[0];
+    assert("the wiki's star goes out with this participant's id",
+      w.fetched.length === 1 && call.url === '/sess1/api/participant/wiki/star' &&
+      call.opts.headers['X-Participant-ID'] === 'my-uuid' && JSON.parse(call.opts.body).slug === 'Autonomy');
     const back = w.posted.filter((p) => p.msg.type === 'wiki-stars').pop();
     assert('the saved stars are posted back into the wiki', back && back.msg.mine.join() === 'Autonomy' && back.msg.counts.Autonomy === 1);
   }));
@@ -725,6 +726,33 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   pendingAsync.push(new Promise((r) => setTimeout(r, 0)).then(() => {
     const back = w.posted.filter((p) => p.msg.type === 'wiki-stars').pop();
     assert('a star that was not saved: the wiki gets the stored state back', back && back.msg.mine.length === 0 && back.msg.counts.Autonomy === 4);
+  }));
+}
+{
+  // A quick star-unstar: the second click waits for the first answer, so the daemon
+  // gets them in click order, and the wiki is told only the last answer.
+  const answers = [];
+  const w = makeWikiFollow({ fetch: () => new Promise((resolve) => answers.push(resolve)) });
+  const reply = (mine) => answers.shift()({ ok: true, json: () => Promise.resolve({ counts: { Autonomy: mine.length }, mine }) });
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  w.api._starWikiNote('Autonomy', true);
+  w.api._starWikiNote('Autonomy', false);
+  w.api._onIncomingWikiStars({ Autonomy: 7 }); // a broadcast meanwhile
+  const starsPosted = () => w.posted.filter((p) => p.msg.type === 'wiki-stars');
+  pendingAsync.push(tick().then(() => {
+    assert('quick clicks: only the first is on its way', w.fetched.length === 1 && JSON.parse(w.fetched[0].opts.body).starred === true);
+    assert('quick clicks: nothing is posted into the wiki while they are on their way', starsPosted().length === 0);
+    reply(['Autonomy']);
+    return tick().then(tick);
+  }).then(() => {
+    assert('quick clicks: the second goes out once the first is answered',
+      w.fetched.length === 2 && JSON.parse(w.fetched[1].opts.body).starred === false);
+    assert('quick clicks: the first answer is not shown, the star does not flicker', starsPosted().length === 0);
+    reply([]);
+    return tick().then(tick);
+  }).then(() => {
+    const sent = starsPosted();
+    assert('quick clicks: the wiki gets the last answer, once', sent.length === 1 && sent[0].msg.mine.length === 0);
   }));
 }
 {

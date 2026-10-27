@@ -84,6 +84,13 @@ def test_only_a_note_of_the_published_wiki_can_be_starred(session):
     assert stars.star_counts() == {}
 
 
+def test_a_refused_star_leaves_a_trace_in_the_log(session):
+    # On the participant's screen it only flips back: the log is the one place it shows.
+    with patch("daemon.log.error") as error:
+        _star(ALICE, "Made-up-note")
+    error.assert_called_once_with("wiki", "Alice: ★ Made-up-note refused (404: No such note in the published wiki)")
+
+
 @pytest.mark.parametrize("slug", ["", "../secret", "//evil.example/x", "https://evil.example", "a?b"])
 def test_a_slug_must_be_a_path_inside_the_wiki(session, slug):
     assert _star(ALICE, slug).status_code == 422

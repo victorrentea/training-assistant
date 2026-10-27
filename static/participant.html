@@ -8023,13 +8023,25 @@ function _postWikiStars() {
   frame.contentWindow.postMessage({ type: 'wiki-stars', counts: _wikiStarCounts, mine: _wikiMyStars }, location.origin);
 }
 
+// Clicks go one at a time, in click order: sent together, a quick star-unstar overtakes
+// itself on the way and the daemon keeps the wrong one (load test, 2026-10-27: a third
+// of such double clicks ended reversed). The wiki is told only once the last one is
+// answered, so its star doesn't flicker through the ones before it.
+var _wikiStarQueue = Promise.resolve();
+var _wikiStarsInFlight = 0;
+
 function _onIncomingWikiStars(counts, mine) {
   _wikiStarCounts = counts && typeof counts === 'object' ? counts : {};
   if (Array.isArray(mine)) _wikiMyStars = mine;
-  _postWikiStars();
+  if (_wikiStarsInFlight === 0) _postWikiStars();
 }
 
-async function _starWikiNote(slug, starred) {
+function _starWikiNote(slug, starred) {
+  _wikiStarsInFlight++;
+  _wikiStarQueue = _wikiStarQueue.then(function () { return _sendWikiStar(slug, starred); });
+}
+
+async function _sendWikiStar(slug, starred) {
   try {
     var r = await fetch('/' + _sessionId + '/api/participant/wiki/star', {
       method: 'POST',
@@ -8038,11 +8050,12 @@ async function _starWikiNote(slug, starred) {
     });
     if (r.ok) {
       var json = await r.json();
-      _onIncomingWikiStars(json.counts, json.mine);
-      return;
+      _wikiStarCounts = json.counts && typeof json.counts === 'object' ? json.counts : {};
+      if (Array.isArray(json.mine)) _wikiMyStars = json.mine;
     }
   } catch (err) { /* offline: the star goes back below */ }
-  _postWikiStars(); // not saved: the wiki shows what is really stored
+  // Not saved: the wiki shows what is really stored, as last known.
+  if (--_wikiStarsInFlight === 0) _postWikiStars();
 }
 
 // Over the wiki's top-right corner on a desktop (the note popover keeps clear of

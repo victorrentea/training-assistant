@@ -867,21 +867,31 @@ async def get_wiki_stars(request: Request):
     return WikiStars(counts=wiki_stars.star_counts(), mine=mine)
 
 
+def _refused_star(pid: str | None, body: WikiStarToggle, status: int, error: str) -> JSONResponse:
+    # Logged: a refused star only flips back on the participant's screen, so without
+    # this line a star lost on the way leaves no trace anywhere (2026-10-27).
+    from daemon import log
+
+    name = participant_state.participant_names.get(pid or "", f"unknown {str(pid)[:8]}")
+    log.error("wiki", f"{name}: {'★' if body.starred else '☆'} {body.slug} refused ({status}: {error})")
+    return JSONResponse({"error": error}, status_code=status)
+
+
 @router.post("/wiki/star", response_model=WikiStars)
 async def star_wiki_note(request: Request, body: WikiStarToggle):
     pid = request.headers.get("x-participant-id")
     if not pid:
-        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+        return _refused_star(pid, body, 400, "Missing X-Participant-ID")
     if pid not in participant_state.participant_names:
-        return JSONResponse({"error": "Join the session first"}, status_code=403)
+        return _refused_star(pid, body, 403, "Join the session first")
     notes = published_notes()
     if notes is None or body.slug not in notes:
-        return JSONResponse({"error": "No such note in the published wiki"}, status_code=404)
+        return _refused_star(pid, body, 404, "No such note in the published wiki")
     if not wiki_stars.allow(pid):
-        return JSONResponse({"error": "Too many stars, slow down"}, status_code=429)
+        return _refused_star(pid, body, 429, "Too many stars, slow down")
     counts = await asyncio.to_thread(wiki_stars.set_star, pid, body.slug, body.starred)
     if counts is None:
-        return JSONResponse({"error": "No active session"}, status_code=404)
+        return _refused_star(pid, body, 404, "No active session")
     from daemon import log
 
     name = participant_state.participant_names.get(pid, "?")
