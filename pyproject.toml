@@ -28,6 +28,9 @@ daemon = [
     # which switched to httpx2 in 1.4.0 — declare it, do not inherit it.
     "httpx>=0.28",
     "pypdf>=4.0",
+    # Bug reports and notifications mail Victor through AgentMail. It used to be
+    # installed only in Homebrew's python3; the uv .venv gets nothing undeclared.
+    "agentmail>=0.1.0",
 ]
 telemetry = [
     "opentelemetry-api>=1.20",
