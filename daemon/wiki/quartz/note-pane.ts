@@ -378,7 +378,7 @@ function dragByHead(el: HTMLElement, head: HTMLElement) {
   })
 }
 
-// In a corner of the window, the one that hides the fewest dots (leastCovering).
+// In a top corner of the window, the one that hides the fewest dots (leastCovering).
 // Where the window has hardly any room beside it (a phone: the popover is about as
 // wide as the screen), below the cursor or above it, shortened to the room there if need
 // be. Inside the participant page it keeps clear of the top band, where the page
@@ -399,7 +399,7 @@ function placePeek(el: HTMLElement, at: Point) {
   let x: number
   let y: number
   if (innerWidth - w >= 200) {
-    ;({ x, y } = leastCovering(at, w, h, top, bottom))
+    ;({ x, y } = leastCovering(at, w, h, top))
   } else {
     x = clampX(at.x - w / 2)
     const below = innerHeight - bottom - (at.y + gap)
@@ -442,27 +442,28 @@ function fitPeek(el: HTMLElement) {
   el.style.maxHeight = `${innerHeight - bottom - y}px`
 }
 
-// In the corner of the window that hides the fewest dots, its own dot kept in view;
+// In the top corner of the window that hides the fewest dots, its own dot kept in view;
 // between equally good corners, the one nearest its dot (Victor, 2026-10-23 - it was
 // the spot nearest the cursor that hid the fewest unread dots and none of the open
-// dot's edges, which put it somewhere new on every click).
-function leastCovering(at: Point, w: number, h: number, top: number, bottom: number): Point {
+// dot's edges, which put it somewhere new on every click). Never a bottom one: on a
+// shared screen the call's own bars cover the bottom, and the room misses the note
+// there (Victor, 2026-10-28).
+function leastCovering(at: Point, w: number, h: number, top: number): Point {
   const dots = graph?.dots() ?? []
   const own = dots.find((d) => d.id === peeked)
   const near = own ? { x: (own.left + own.right) / 2, y: (own.top + own.bottom) / 2 } : at
   const overlaps = (b: Box, x: number, y: number) =>
     b.left < x + w && b.right > x && b.top < y + h && b.bottom > y
-  let best = { x: 8, y: top }
+  const y = top
+  let best = { x: 8, y }
   let bestScore = Infinity
   for (const x of [8, innerWidth - 8 - w]) {
-    for (const y of [top, innerHeight - bottom - h]) {
-      let score = Math.hypot(Math.max(x - near.x, 0, near.x - x - w), Math.max(y - near.y, 0, near.y - y - h))
-      if (own && overlaps(own, x, y)) score += 1e7
-      for (const d of dots) if (d !== own && overlaps(d, x, y)) score += 1e4
-      if (score < bestScore) {
-        bestScore = score
-        best = { x, y }
-      }
+    let score = Math.hypot(Math.max(x - near.x, 0, near.x - x - w), Math.max(y - near.y, 0, near.y - y - h))
+    if (own && overlaps(own, x, y)) score += 1e7
+    for (const d of dots) if (d !== own && overlaps(d, x, y)) score += 1e4
+    if (score < bestScore) {
+      bestScore = score
+      best = { x, y }
     }
   }
   return best
