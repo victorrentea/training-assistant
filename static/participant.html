@@ -137,9 +137,9 @@ body{visibility:hidden}
 #summary-content .sum-toggle:focus-visible{outline:2px solid var(--color-primary,#4555ba);outline-offset:2px}
 @media (prefers-color-scheme: dark){#summary-content .sum-toggle{background:rgba(136,146,156,.22)}}
 #agenda-content{font-size:calc(0.875rem * var(--participant-zoom))}
-#notes-scroll,#summary-scroll,#agenda-view{overflow-anchor:none}
+#notes-scroll,#summary-scroll,#agenda-scroll{overflow-anchor:none}
 /* Notes/agenda/summary get a 3× thicker scrollbar (vs. the 12px global) */
-#notes-scroll::-webkit-scrollbar,#summary-scroll::-webkit-scrollbar,#agenda-view::-webkit-scrollbar{width:36px}
+#notes-scroll::-webkit-scrollbar,#summary-scroll::-webkit-scrollbar,#agenda-scroll::-webkit-scrollbar{width:36px}
 /* Side menu scrolls on short screens (low resolution / zoomed in) instead of
    clipping the bottom items. The negative margin puts the scrollbar in the aside's
    right padding, so the rows keep their width when nothing overflows. */
@@ -1127,8 +1127,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   #feedback-cta-close { min-width: 2.5rem; min-height: 2.5rem; top: .25rem !important; right: .25rem !important; }
   /* The feedback card and the emoji bar float over the bottom of every tab: the end of
      the content scrolls up clear of them. */
-  #notes-scroll, #summary-scroll, #files-scroll, #prompts-scroll,
-  #about-view, #agenda-view, #upload-paste-view, #report-bug-view { padding-bottom: 14rem !important; }
+  #notes-scroll, #summary-scroll, #files-scroll, #prompts-scroll, #agenda-scroll,
+  #about-view, #upload-paste-view, #report-bug-view { padding-bottom: 14rem !important; }
   #upload-paste-view, #report-bug-view { overflow-y: auto; }
   #side-nav .nav-item { min-height: 44px; }
 }
@@ -1141,7 +1141,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   /* The floating toolbars (Notes, Summary, Wiki, Slides) move into the corner, and the
      text starts below them instead of under them. */
   main .absolute.top-6.right-6, main .absolute.top-4.right-6 { top: .5rem; right: .5rem; }
-  #notes-scroll, #summary-scroll { padding-top: 4.25rem !important; }
+  #notes-scroll, #summary-scroll, #agenda-scroll { padding-top: 4.25rem !important; }
   #floating-reactions { right: .5rem; left: .5rem; bottom: .75rem; }
   #emoji-main-bar { gap: .25rem; padding: .3rem; max-width: 100%; }
   /* Five buttons (six with the bell) must fit a 360px phone. */
@@ -1490,8 +1490,15 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   </div>
 </div>
 <!-- Agenda View -->
-<div id="agenda-view" style="display:none" class="h-full overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
-  <div id="agenda-content" class="text-on-surface text-sm leading-relaxed prose max-w-none">Loading…</div>
+<div id="agenda-view" style="display:none" class="relative h-full flex flex-col">
+  <div class="absolute top-6 right-6 z-20 flex items-center gap-2 p-2 rounded-full glass whisper-shadow border border-outline-variant border-opacity-10">
+    <button onclick="downloadAgenda()" class="p-2 rounded-full text-on-surface-variant transition-all flex hover-green" data-tip="Download the agenda (.docx)" aria-label="Download the agenda (.docx)">
+      <span class="material-symbols-outlined">download</span>
+    </button>
+  </div>
+  <div id="agenda-scroll" class="flex-grow overflow-y-auto px-16 py-12" onscroll="saveScroll('agenda',this)">
+    <div id="agenda-content" class="text-on-surface text-sm leading-relaxed prose max-w-none">Loading…</div>
+  </div>
 </div>
 <!-- Send text or file View -->
 <div id="upload-paste-view" style="display:none" class="h-full flex flex-col px-16 py-12">
@@ -2363,7 +2370,7 @@ function _installContentZoom() {
     ['notes-view', 'notes-scroll'],
     ['summary-view', 'summary-scroll'],
     ['files-view', 'files-scroll'],
-    ['agenda-view', 'agenda-view'],
+    ['agenda-view', 'agenda-scroll'],
   ];
   bindings.forEach(function (pair) {
     var view = document.getElementById(pair[0]);
@@ -7022,11 +7029,12 @@ function _connectWS() {
   _ws.onerror = function(e) { console.error('ws error', e); };
 }
 
+var _agendaDocx = null;  // the trainer's own .docx, kept for the download button
 async function loadAgenda() {
   if (!_agendaDirty) return;
   _agendaDirty = false;
   const el = document.getElementById('agenda-content');
-  const viewEl = document.getElementById('agenda-view');
+  const viewEl = document.getElementById('agenda-scroll');
   const priorScroll = viewEl.scrollTop || parseInt(LS.getScroll('agenda') || '0', 10);
   _suppressScrollSave.add('agenda');
   el.textContent = 'Loading…';
@@ -7035,6 +7043,7 @@ async function loadAgenda() {
     const binary = atob(data.data);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    _agendaDocx = { bytes: bytes, filename: data.filename };
     const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
     // Strip hardcoded Word colors — they're designed for white bg and invisible in dark mode
     const cleanHtml = result.value.replace(/\sstyle="([^"]*)"/g, (_, s) => {
@@ -7051,6 +7060,16 @@ async function loadAgenda() {
   } finally {
     _suppressScrollSave.delete('agenda');
   }
+}
+
+function downloadAgenda() {
+  if (!_agendaDocx) return;
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([_agendaDocx.bytes], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+  a.download = _agendaDocx.filename || 'agenda.docx';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function addAgendaProgress(container) {
