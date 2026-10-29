@@ -1,6 +1,8 @@
 FROM mcr.microsoft.com/playwright/python:v1.50.0-noble
 
-# Install backend + daemon + test dependencies
+# Install backend + daemon + test dependencies.
+# pytest and pytest-bdd pinned to uv.lock: unpinned, pip pulled pytest 9.2 + pytest-bdd 9.0,
+# which reads a FixtureManager attribute pytest 9.2 renamed - every BDD scenario errored.
 RUN pip install \
     fastapi \
     "uvicorn[standard]" \
@@ -9,8 +11,8 @@ RUN pip install \
     websockets \
     anthropic \
     httpx \
-    pytest \
-    pytest-bdd \
+    pytest==9.0.2 \
+    pytest-bdd==8.1.0 \
     pytest-playwright \
     playwright==1.50.0 \
     opentelemetry-distro \
