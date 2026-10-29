@@ -411,18 +411,38 @@ body {
   }
 }
 
-// Right of Reset layout: shows or hides the Home dot; lit while it shows.
+// The pills with a checkbox (patch-graph.py): the box before the label, sized to it.
+.graph-home,
+.graph-followed {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  // Quartz's own checkbox (base.scss), without its shift and margins for task lists.
+  input {
+    margin: 0;
+    transform: none;
+    cursor: pointer;
+  }
+}
+
+// Right of Reset layout: shows or hides the Home dot; lit while ticked.
 .graph-home {
   left: 8.6rem;
 
-  &.on {
+  input:checked {
+    border-color: var(--dark);
+    background-color: var(--dark);
+  }
+
+  &:has(input:checked) {
     color: var(--dark);
     border-color: var(--dark);
   }
 }
 
-// Right of Home, on the trainer's machine only (patch-graph.py): the notes opened here
-// are followed. In the yellow of the ring his followers see; a badge, not a button.
+// Right of Home, on the trainer's machine only (patch-graph.py): ticked, the notes opened
+// here are followed. In the yellow of the ring his followers see; grey while unticked.
 .graph-followed {
   position: absolute;
   left: 13.9rem;
@@ -432,10 +452,36 @@ body {
   border-radius: 999px;
   font-family: var(--bodyFont);
   font-size: 0.8rem;
-  color: var(--wiki-follow-ring);
+  color: var(--gray);
   background: var(--light);
-  border: 1px solid var(--wiki-follow-ring);
-  cursor: default;
+  border: 1px solid var(--lightgray);
+  cursor: pointer;
+  user-select: none;
+
+  input:checked {
+    border-color: var(--wiki-follow-ring);
+    background-color: var(--wiki-follow-ring);
+  }
+
+  &:has(input:checked) {
+    color: var(--wiki-follow-ring);
+    border-color: var(--wiki-follow-ring);
+  }
+}
+
+// Top-left of the full graph (patch-graph.py): the session's title and the trainer, in
+// the text colour, as quiet as the Sources list opposite until the graph runs under it.
+.graph-session-title {
+  position: absolute;
+  left: 0.9rem;
+  top: 0.8rem;
+  z-index: 1;
+  font-family: var(--headerFont);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--dark);
+  white-space: nowrap;
+  pointer-events: none;
   user-select: none;
 }
 
@@ -578,6 +624,7 @@ body.peek-dragging {
   }
 
   // No room on a phone: the emoji bar takes the bottom, the pills the top.
+  .graph-session-title,
   .graph-sources,
   .graph-downloads {
     display: none;

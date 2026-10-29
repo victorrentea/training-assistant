@@ -758,8 +758,28 @@ export function onHostMachine(): boolean {
   return document.cookie.split(";").some((p) => p.trim() === "ON_HOST_MACHINE=true")
 }
 
+// Whether participants follow the notes the trainer opens (patch-graph.py's checkbox),
+// remembered on this browser. On by default; off, he browses without them seeing.
+const followedKey = "wiki-followed"
+
+export function isFollowed(): boolean {
+  try {
+    return localStorage.getItem(followedKey) !== "0"
+  } catch {
+    return true
+  }
+}
+
+export function setFollowed(on: boolean) {
+  if (!on) reportOpenNote(null) // unticked: the followers' ring goes now
+  try {
+    localStorage.setItem(followedKey, on ? "1" : "0")
+  } catch {}
+  if (on) reportOpenNote(peeked) // ticked again: the ring comes back on the note open
+}
+
 function reportOpenNote(slug: SimpleSlug | null) {
-  if (slug === reported || !onHostMachine()) return
+  if (slug === reported || !onHostMachine() || !isFollowed()) return
   reported = slug
   fetch(`${HOST_DAEMON}/wiki/note`, {
     method: "POST",

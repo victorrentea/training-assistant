@@ -329,7 +329,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawComet, drawFlash, hoverGlow } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isEdited, isSeen, onHostMachine, resetSeen, saveView, savedView, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isEdited, isFollowed, isSeen, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
      '// gaining one when starred jumped down and pushed its star away (Victor, 2026-10-23).\n'
@@ -515,16 +515,20 @@ PATCHES = [
       cleanupGlobalGraphs()
       void renderGlobalGraph()
     })
-    // Next to it, the Home pill shows or hides the Home dot: it links to every note,
+    // A pill with a checkbox in it, for the settings that stay on or off (Victor, 2026-10-29).
+    const checkboxPill = (className: string, label: string, checked: boolean, onChange: (on: boolean) => void) => {
+      const pill = document.createElement("label")
+      pill.className = className
+      const box = Object.assign(document.createElement("input"), { type: "checkbox", checked })
+      box.addEventListener("change", () => onChange(box.checked))
+      pill.append(box, label)
+      return pill
+    }
+    // Next to it, Show Home shows or hides the Home dot: it links to every note,
     // so it pulls the graph into a star and hides the clusters (Victor, 2026-10-09).
-    const home = document.createElement("button")
-    home.className = "graph-reset graph-home"
-    home.textContent = "⌂ Home"
-    home.classList.toggle("on", showHome())
-    home.addEventListener("click", () => {
+    const home = checkboxPill("graph-reset graph-home", "Show Home", showHome(), (on) => {
       saveView(null) // the layout changes: the view left on the old one means nothing
-      setShowHome(!showHome())
-      home.classList.toggle("on", showHome())
+      setShowHome(on)
       cleanupGlobalGraphs()
       void renderGlobalGraph()
     })
@@ -548,14 +552,20 @@ PATCHES = [
       sourcesList.appendChild(Object.assign(document.createElement("li"), { textContent: source }))
     }
     sources.append(Object.assign(document.createElement("div"), { textContent: "Sources" }), sourcesList)
-    container.append(reset, home, resetSeenPill, sources)
+    // Top-left: whose workshop this is - the session's title (the site's, as
+    // "AI@Client", from the sidebar's page title) and the trainer (Victor, 2026-10-29).
+    const sessionTitle = document.querySelector(".page-title a")?.textContent?.trim()
+    const title = Object.assign(document.createElement("div"), {
+      className: "graph-session-title",
+      textContent: [sessionTitle, "Victor Rentea"].filter(Boolean).join(" · "),
+    })
+    container.append(title, reset, home, resetSeenPill, sources)
     // Only on the trainer's machine, right of Home: the notes he opens here are the ones
-    // his participants' Follow rings in yellow (Victor, 2026-10-16).
+    // his participants' Follow rings in yellow (Victor, 2026-10-16), while ticked: unticked,
+    // he browses without them seeing (Victor, 2026-10-29).
     if (onHostMachine()) {
-      const followed = document.createElement("div")
-      followed.className = "graph-followed"
-      followed.textContent = "◉ Followed by participants"
-      followed.dataset.tip = "The note you open here is ringed in yellow for everyone who ticks Follow"
+      const followed = checkboxPill("graph-followed", "Followed by participants", isFollowed(), setFollowed)
+      followed.dataset.tip = "Ticked, the note you open here is ringed in yellow for everyone who ticks Follow"
       container.append(followed)
     }
     // After the pills on the left: the wiki to take home (daemon/wiki/downloads.py) -
