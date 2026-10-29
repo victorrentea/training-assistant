@@ -1272,6 +1272,7 @@ def run() -> None:
                             from daemon.participant.state import (
                                 participant_state as _participant_state,
                             )
+                            from daemon.poll.state import poll_state as _poll_state
                             from daemon.qa.state import qa_state as _qa_state
                             from daemon.quiz.state import quiz_state as _quiz_state
                             from daemon.scores import scores as _scores_state
@@ -1283,6 +1284,7 @@ def run() -> None:
                             _qa_state.clear()
                             _misc_state.reset_for_new_session()
                             _quiz_state.clear()
+                            _poll_state.reset()
                             _codereview_state.clear()
                             _debate_state.reset()
                             _leaderboard_state.reset()
