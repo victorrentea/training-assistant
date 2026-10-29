@@ -291,7 +291,7 @@ function ensurePeek(): HTMLElement {
   peek = document.createElement("div")
   peek.className = "note-peek"
   // The ✕ is what a phone has instead of Esc or a second click on a tiny dot. The star
-  // right after the title marks the note a key takeaway (the trainer's machine only).
+  // by the ✕ marks the note a key takeaway (the trainer's machine only).
   peek.innerHTML = `
     <button class="note-peek-close" type="button" aria-label="Close">✕</button>
     <div class="note-peek-head">

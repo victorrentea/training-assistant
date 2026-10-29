@@ -75,7 +75,7 @@ body {
     }
   }
 
-  // Right after the title (note-pane.ts): the trainer stars the note as a key takeaway;
+  // By the ✕ (note-pane.ts): the trainer stars the note as a key takeaway;
   // for everyone else it only shows, filled, on a starred note. "★×3" on one line.
   .note-peek-star {
     flex: none;
@@ -117,12 +117,23 @@ body {
     }
   }
 
-  // The title and its star on one line, clear of the ✕.
+  // The title, then its star right by the ✕ and level with it, however many lines the
+  // title wraps to (Victor, 2026-10-29): the title takes the rest of the line, and the
+  // star's -0.35 lifts it from the head's 0.8 top padding to the ✕'s 0.45.
   .note-peek-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: calc(0.3 * var(--peek-u));
-    padding: calc(0.8 * var(--peek-u)) calc(3.6 * var(--peek-u)) calc(0.2 * var(--peek-u)) calc(1.1 * var(--peek-u));
+    padding: calc(0.8 * var(--peek-u)) calc(2.7 * var(--peek-u)) calc(0.2 * var(--peek-u)) calc(1.1 * var(--peek-u));
+
+    .note-peek-title {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .note-peek-star {
+      margin-top: calc(-0.35 * var(--peek-u));
+    }
   }
 
   // A starred note's popover wears the takeaway gold, and glows a little like its dot
