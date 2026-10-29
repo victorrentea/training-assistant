@@ -5,8 +5,26 @@ All interactions go through the real browser UI.
 from __future__ import annotations
 
 import re
+import time
 
 from playwright.sync_api import Page, expect
+
+
+def wait_until_js(page: Page, js: str, timeout: int = 5000, poll_ms: int = 100) -> None:
+    """Poll a JS predicate until truthy: the host page's stand-in for wait_for_function.
+
+    The daemon serves the host panel with a CSP lacking 'unsafe-eval', and
+    Playwright's wait_for_function compiles its predicate with eval inside the page,
+    so it throws EvalError there. page.evaluate goes through the DevTools protocol,
+    which the CSP does not restrict.
+    """
+    deadline = time.monotonic() + timeout / 1000
+    while True:
+        if page.evaluate(js):
+            return
+        if time.monotonic() >= deadline:
+            raise TimeoutError(f"JS condition not met within {timeout}ms: {js}")
+        time.sleep(poll_ms / 1000)
 
 
 class HostPage:
@@ -57,7 +75,8 @@ class HostPage:
             await new Promise(r => setTimeout(r, 250));
         }""")
         # Quiz closed: #quiz-display no longer has .voting-active
-        self._page.wait_for_function(
+        wait_until_js(
+            self._page,
             "() => !document.querySelector('#quiz-display.voting-active')",
             timeout=5000,
         )
@@ -72,7 +91,8 @@ class HostPage:
         ``#vote-progress-label`` (rendered while voting is open) guarantees the
         vote is server-registered before the quiz is closed.
         """
-        self._page.wait_for_function(
+        wait_until_js(
+            self._page,
             f"""() => {{
                 const el = document.getElementById('vote-progress-label');
                 if (!el) return false;
@@ -387,10 +407,7 @@ class HostPage:
         self._page.wait_for_selector("#tab-quiz", state="visible", timeout=15000)
         self._page.click("#tab-poll")
         # Wait for poll tab to become active
-        self._page.wait_for_function(
-            "() => document.getElementById('tab-poll') && document.getElementById('tab-poll').classList.contains('active')",
-            timeout=5000,
-        )
+        expect(self._page.locator("#tab-poll")).to_have_class(re.compile(r"\bactive\b"), timeout=5000)
         self._page.wait_for_timeout(200)
 
     def fill_poll_question(self, text: str):

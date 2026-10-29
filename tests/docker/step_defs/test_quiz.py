@@ -209,9 +209,8 @@ def host_closes_via_slider(seconds):
     avoids the noise of an HTTP polling loop in the captured trace.
     """
     _host().start_timer_via_slider(seconds)
-    _host()._page.wait_for_function(
-        "() => !document.querySelector('#quiz-display.voting-active')",
-        timeout=(seconds + 5) * 1000,
+    expect(_host()._page.locator("#quiz-display.voting-active")).to_have_count(
+        0, timeout=(seconds + 5) * 1000
     )
 
 
