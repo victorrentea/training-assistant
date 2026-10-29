@@ -70,15 +70,16 @@ def _run_mock_addon_bridge(events: list, stop_event: threading.Event) -> None:
     asyncio.run(serve())
 
 
-def test_files_md_two_participants_three_events():
+def test_files_md_two_participants_three_events(request):
     """Two participants both see correct opened-files.md after three addon events."""
     session_id = fresh_session("FilesMd")
 
     # Seed the GitHub stub:
     #   - victorrentea/training-assistant is public with default_branch=master
     #   - owner/private-repo is not seeded → stub returns 404 (treated as private)
-    #   - static/participant.html blob exists (200)
-    #   - totally/missing/path.py blob absent (not seeded → 404)
+    #   - static/participant.html exists on master (200)
+    #   - totally/missing/path.py absent (not seeded → 404)
+    #   - branch feature/x was never pushed → the link falls back to master
     _seed_github_stub(
         repos=[
             {
@@ -101,6 +102,9 @@ def test_files_md_two_participants_three_events():
     )
 
     stop = threading.Event()
+    # Release the addon-bridge port however this test ends: held, it starves the
+    # next test's bridge (and the daemon stays connected to this one).
+    request.addfinalizer(stop.set)
     events = [
         {
             "type": "git_file_opened",

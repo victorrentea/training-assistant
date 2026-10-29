@@ -6,13 +6,20 @@ the daemon's github_client.py never hits the real GitHub network.
 
 Routes:
   GET  /repos/{owner}/{repo}          → 200 {"default_branch": "..."} if seeded, else 404
-  HEAD /{owner}/{repo}/blob/{branch}/{path:rest} → 200 if seeded with status=200, else 404
+  GET  /repos/{owner}/{repo}/git/trees/{branch}?recursive=1
+                                      → 200 {"tree": [...blob paths on that branch...]}
+                                        if the branch exists, else 404
+  HEAD /{owner}/{repo}/blob/{branch}/{path:rest} → 200 if seeded on that branch, else 404
   POST /__seed  body: {"repos": [...], "blobs": [...]}  → seed in-memory state
   POST /__reset → clear all state
 
 Seed format:
   repos: [{"owner": "...", "repo": "...", "status": 200, "default_branch": "..."}]
-  blobs: [{"owner": "...", "repo": "...", "path": "...", "status": 200}]
+  blobs: [{"owner": "...", "repo": "...", "path": "...", "status": 200, "branch": "..."}]
+
+A blob without "branch" lives on the repo's default branch. A branch exists when
+it is the default branch or carries at least one seeded blob — so a captured
+feature branch that was never seeded reads as "not pushed", like on GitHub.
 
 Note: only repos with status=200 are seeded as public; absent repos return 404.
 """
@@ -27,8 +34,8 @@ MOCK_GITHUB_PORT = int(os.environ.get("MOCK_GITHUB_PORT", "9091"))
 
 # In-memory state. Key: (owner, repo) → {"default_branch": "..."}
 _repos: dict[tuple[str, str], dict] = {}
-# Key: (owner, repo, path) → True (200) or False (404)
-_blobs: dict[tuple[str, str, str], bool] = {}
+# Key: (owner, repo, branch, path) → True (200) or False (404)
+_blobs: dict[tuple[str, str, str, str], bool] = {}
 _lock = threading.Lock()
 
 
@@ -36,7 +43,25 @@ class MockGitHubHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         # /repos/{owner}/{repo}
-        parts = self.path.lstrip("/").split("/")
+        parts = self.path.split("?", 1)[0].lstrip("/").split("/")
+        if len(parts) >= 6 and parts[0] == "repos" and parts[3:5] == ["git", "trees"]:
+            owner, repo, branch = parts[1], parts[2], "/".join(parts[5:])
+            with _lock:
+                entry = _repos.get((owner, repo))
+                on_branch = sorted(
+                    p for (o, r, b, p), ok in _blobs.items()
+                    if (o, r, b) == (owner, repo, branch) and ok
+                )
+                branch_known = entry is not None and (
+                    branch == entry["default_branch"]
+                    or any((o, r, b) == (owner, repo, branch) for (o, r, b, _p) in _blobs)
+                )
+            if not branch_known:
+                self._send_json(404, {"message": "Not Found"})
+            else:
+                tree = [{"path": p, "type": "blob"} for p in on_branch]
+                self._send_json(200, {"tree": tree, "truncated": False})
+            return
         if len(parts) >= 3 and parts[0] == "repos":
             owner = parts[1]
             repo = parts[2]
@@ -58,10 +83,10 @@ class MockGitHubHandler(BaseHTTPRequestHandler):
         if len(parts) >= 5 and parts[2] == "blob":
             owner = parts[0]
             repo = parts[1]
-            # branch = parts[3]  (not used for lookup — any branch accepted)
+            branch = parts[3]
             file_path = "/".join(parts[4:])
             with _lock:
-                exists = _blobs.get((owner, repo, file_path), False)
+                exists = _blobs.get((owner, repo, branch, file_path), False)
             if exists:
                 self._send_empty(200)
             else:
@@ -94,7 +119,9 @@ class MockGitHubHandler(BaseHTTPRequestHandler):
                         key = (r["owner"], r["repo"])
                         _repos[key] = {"default_branch": r.get("default_branch", "main")}
                 for b in blobs_data:
-                    key = (b["owner"], b["repo"], b["path"])
+                    repo_entry = _repos.get((b["owner"], b["repo"]), {})
+                    branch = b.get("branch") or repo_entry.get("default_branch", "main")
+                    key = (b["owner"], b["repo"], branch, b["path"])
                     _blobs[key] = b.get("status", 200) == 200
             print(f"[mock-github] Seeded {len(repos_data)} repos, {len(blobs_data)} blobs")
             self._send_json(200, {"ok": True})
