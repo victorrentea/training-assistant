@@ -166,6 +166,12 @@ class AiShareRankedItem(BaseModel):
     custom: bool = False    # added by a participant, not one of the presets
 
 
+class AiShareOtherValue(BaseModel):
+    """One distinct value typed under a question's "Other" option — a chip anyone may tick."""
+    text: str
+    count: int | None = None   # how many ticked it; None for participants until revealed
+
+
 class AiShareResult(BaseModel):
     """Anonymous results of one question — no names, no UUIDs."""
     id: str
@@ -173,7 +179,9 @@ class AiShareResult(BaseModel):
     values: list[int] | None = None    # slider: every answer 0..100, sorted
     counts: list[int] | None = None    # choice/multi: answers per option
     hearts: list[int] | None = None    # multi: ❤️ favourites per option
-    others: list[str] | None = None    # choice, host only: what people typed under the "other" option
+    others: list[str] | None = None    # choice/multi, host only: every value ticked under the "other" option, once per participant
+    other_values: list[AiShareOtherValue] | None = None  # choice/multi: the distinct "other" values (case aside), A→Z;
+                                                         # participants get them live (to tick), counts only once revealed
     items: list[AiShareRankedItem] | None = None  # ranking: every item, best score first; participants get no scores until revealed
 
 

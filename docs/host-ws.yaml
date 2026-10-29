@@ -267,7 +267,21 @@ components:
                   type: array
                   items:
                     type: string
-                  description: "choice: what people typed under the \"other\" option (anonymous)"
+                  description: "choice/multi: every value ticked under the \"other\" option, once per participant (anonymous)"
+                other_values:
+                  nullable: true
+                  type: array
+                  items:
+                    type: object
+                    required: [text]
+                    properties:
+                      text:
+                        type: string
+                      count:
+                        nullable: true
+                        type: integer
+                        description: how many ticked it
+                  description: "choice/multi: the distinct \"other\" values (case aside), A→Z"
                 items:
                   nullable: true
                   type: array

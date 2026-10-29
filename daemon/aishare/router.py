@@ -8,13 +8,16 @@ so nobody is swayed by the crowd; the host may delete an item.
 """
 import logging
 
+from typing import Annotated
+
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 from daemon.aishare.state import (
     MAX_ITEM_LEN,
     MAX_OTHER_LEN,
+    MAX_OTHERS_PER_PARTICIPANT,
     MAX_VALUE,
     QUESTIONS,
     aishare_state,
@@ -52,7 +55,11 @@ class AiShareValueRequest(BaseModel):
     value: int = Field(ge=0, le=MAX_VALUE,
                        description="slider: 0..100; choice: the option index; multi: bitmask of the ticked options (0 = none)")
     other: str | None = Field(default=None, max_length=MAX_OTHER_LEN,
-                              description='free text typed after picking the question\'s "other" option')
+                              description='legacy: a single value under the question\'s "other" option, same as others=[other]')
+    others: list[Annotated[str, StringConstraints(max_length=MAX_OTHER_LEN)]] | None = Field(
+        default=None, max_length=MAX_OTHERS_PER_PARTICIPANT,
+        description='the values ticked under the question\'s "other" option (typed by them or picked from others\'), '
+                    'replacing the previous ones; null keeps them. On a multi, any value ticks "Other" too')
     hearts: int = Field(default=0, ge=0,
                         description="multi: bitmask of the ❤️ favourite options, among the ticked ones (0 = none)")
 
@@ -86,11 +93,14 @@ def participant_view() -> dict:
     if not aishare_state.revealed:
         # A ranking keeps its items (and who added what), but not their 🔥 tallies or their order:
         # seeing what the others burned for would sway the vote.
-        results = [{k: v for k, v in r.items() if k in ("id", "count", "items")} for r in results]
+        # The values typed under "Other" stay — they are chips anyone may tick — but without their counts.
+        results = [{k: v for k, v in r.items() if k in ("id", "count", "items", "other_values")} for r in results]
         for r in results:
             if r.get("items"):
                 r["items"] = sorted(({**it, "score": None} for it in r["items"]), key=lambda it: it["id"])
-    # What people typed under "Other" goes to the host only.
+            if r.get("other_values"):
+                r["other_values"] = [{**v, "count": None} for v in r["other_values"]]
+    # Who ticked which "Other" value (one entry each) goes to the host only.
     results = [{k: v for k, v in r.items() if k != "others"} for r in results]
     return {
         "active": aishare_state.active,
@@ -175,7 +185,7 @@ async def set_aishare_value(request: Request, body: AiShareValueRequest):
         return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
     if not valid_value(body.question, body.value):
         return JSONResponse({"error": "Unknown question or value out of range"}, status_code=422)
-    if not aishare_state.set_value(pid, body.question, body.value, body.other, body.hearts):
+    if not aishare_state.set_value(pid, body.question, body.value, body.other, body.hearts, body.others):
         return JSONResponse({"error": "AI share not active"}, status_code=409)
     await _push_state()
     return Response(status_code=204)

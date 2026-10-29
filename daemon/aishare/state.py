@@ -3,7 +3,8 @@
 A fixed list of questions (QUESTIONS): sliders 0..100 (e.g. "how much of your
 code does AI generate?"), Yes / No / I don't know choices (stored as the
 option index), multi choices (stored as a bitmask of the ticked options,
-plus a bitmask of the ❤️ favourites among them) and a ranking (a list of items,
+plus a bitmask of the ❤️ favourites among them, plus the values typed under
+"Other": shared, anonymous chips anyone may tick) and a ranking (a list of items,
 seeded from its options, that participants grow and 🔥 (upvote), re-ordered by
 score live for everyone). Participants answer them one after another; the host sees every
 answer live; participants see everyone's answers only after the host flips
@@ -18,6 +19,7 @@ from dataclasses import dataclass, field
 MIN_VALUE = 0
 MAX_VALUE = 100
 MAX_OTHER_LEN = 60
+MAX_OTHERS_PER_PARTICIPANT = 10
 MAX_ITEM_LEN = 60
 MAX_ITEMS_PER_PARTICIPANT = 5
 MAX_ITEMS = 60
@@ -93,6 +95,11 @@ def valid_value(qid: str, value: int) -> bool:
     return MIN_VALUE <= value <= MAX_VALUE
 
 
+def clean_other(text: object) -> str:
+    """One value typed under "Other": whitespace folded, cut to MAX_OTHER_LEN."""
+    return " ".join(str(text or "").split())[:MAX_OTHER_LEN]
+
+
 def picked(q: dict, value: int, option: int | None) -> bool:
     """Is `option` part of answer `value` — the chosen index, or a ticked bit of a multi?"""
     if option is None:
@@ -106,8 +113,9 @@ class AiShareState:
     revealed: bool = False
     answers: dict[str, dict[str, int]] = field(default_factory=dict)
     # answers[question_id][participant_uuid] = slider 0..100 | choice option index
-    others: dict[str, dict[str, str]] = field(default_factory=dict)
-    # others[question_id][participant_uuid] = what they typed after picking the "other" option
+    others: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    # others[question_id][participant_uuid] = the values they ticked under the "other" option —
+    # typed by them or by someone else (the distinct values are chips everyone can tick)
     hearts: dict[str, dict[str, int]] = field(default_factory=dict)
     # hearts[question_id][participant_uuid] = bitmask of a multi's ❤️ options, always among the ticked ones
     items: dict[str, list[dict]] = field(default_factory=dict)
@@ -127,24 +135,40 @@ class AiShareState:
         self.active = True
         self._seed_items()
 
+    def _canonical_others(self, qid: str, texts: list[str]) -> list[str]:
+        """De-duplicate case-insensitively; a value someone already typed keeps its first spelling."""
+        known = {t.lower(): t for ts in (self.others.get(qid) or {}).values() for t in ts}
+        out: dict[str, str] = {}
+        for raw in texts:
+            t = clean_other(raw)
+            if t and t.lower() not in out:
+                out[t.lower()] = known.get(t.lower(), t)
+        return list(out.values())[:MAX_OTHERS_PER_PARTICIPANT]
+
     def set_value(self, pid: str, qid: str, value: int, other: str | None = None,
-                  hearts: int = 0) -> bool:
+                  hearts: int = 0, others: list[str] | None = None) -> bool:
         """Record a participant's answer. Returns False when not accepted.
-        `other` is kept only alongside the question's "other" option; on a multi,
+        `others` (the values ticked under the question's "other" option; `other` is the
+        legacy single value) replaces the previous ones; None keeps them. They are kept only
+        alongside the "other" option — on a multi, ticking any of them ticks it. On a multi,
         `hearts` is the bitmask of ❤️ options (only ticked ones are kept) and value 0 withdraws the answer."""
         if not self.active or not valid_value(qid, value):
             return False
         q = QUESTIONS_BY_ID[qid]
+        if others is None and other is not None:
+            others = [other]
+        texts = None if others is None else self._canonical_others(qid, others)
+        if q["kind"] == "multi" and texts and q.get("other_option") is not None:
+            value |= 1 << q["other_option"]
         if q["kind"] == "multi" and value == 0:
             for per in (self.answers, self.others, self.hearts):
                 per.get(qid, {}).pop(pid, None)
             return True
         self.answers.setdefault(qid, {})[pid] = value
         has_other = picked(q, value, q.get("other_option"))
-        text = (other or "").strip()[:MAX_OTHER_LEN]
-        if text and has_other:
-            self.others.setdefault(qid, {})[pid] = text
-        elif other is not None or not has_other:
+        if texts and has_other:
+            self.others.setdefault(qid, {})[pid] = texts
+        elif texts is not None or not has_other:
             self.others.get(qid, {}).pop(pid, None)
         if q["kind"] == "multi":
             if hearts & value:
@@ -227,8 +251,18 @@ class AiShareState:
     def answers_of(self, pid: str) -> dict[str, int]:
         return {qid: per[pid] for qid, per in self.answers.items() if pid in per}
 
-    def others_of(self, pid: str) -> dict[str, str]:
-        return {qid: per[pid] for qid, per in self.others.items() if pid in per}
+    def others_of(self, pid: str) -> dict[str, list[str]]:
+        return {qid: list(per[pid]) for qid, per in self.others.items() if pid in per}
+
+    def other_values(self, qid: str) -> list[dict]:
+        """The distinct values typed under "Other" (case aside), each with how many ticked it,
+        alphabetically — anonymous: never who."""
+        tally: dict[str, dict] = {}
+        for ts in (self.others.get(qid) or {}).values():
+            for t in ts:
+                seen = tally.setdefault(t.lower(), {"text": t, "count": 0})
+                seen["count"] += 1
+        return sorted(tally.values(), key=lambda v: v["text"].lower())
 
     def hearts_of(self, pid: str) -> dict[str, int]:
         return {qid: per[pid] for qid, per in self.hearts.items() if pid in per}
@@ -255,14 +289,16 @@ class AiShareState:
                 else:
                     item["counts"] = [values.count(i) for i in range(n)]
                 if "other_option" in q:
-                    item["others"] = sorted((self.others.get(q["id"]) or {}).values(), key=str.lower)
+                    item["others"] = sorted((t for ts in (self.others.get(q["id"]) or {}).values() for t in ts),
+                                            key=str.lower)
+                    item["other_values"] = self.other_values(q["id"])
             out.append(item)
         return out
 
     def snapshot(self) -> dict:
         return {"active": self.active, "revealed": self.revealed,
                 "answers": {qid: dict(per) for qid, per in self.answers.items()},
-                "others": {qid: dict(per) for qid, per in self.others.items()},
+                "others": {qid: {pid: list(ts) for pid, ts in per.items()} for qid, per in self.others.items()},
                 "hearts": {qid: dict(per) for qid, per in self.hearts.items()},
                 "items": {qid: [dict(it) for it in its] for qid, its in self.items.items()},
                 "votes": {qid: {pid: {str(i): v for i, v in mine.items()} for pid, mine in per.items()}
@@ -290,11 +326,14 @@ class AiShareState:
             if kept:
                 self.answers[str(qid)] = kept
         raw_others = data.get("others")
-        self.others = {
-            str(qid): {str(pid): str(t)[:MAX_OTHER_LEN] for pid, t in per.items() if isinstance(t, str) and t.strip()}
-            for qid, per in (raw_others.items() if isinstance(raw_others, dict) else [])
-            if isinstance(per, dict)
-        }
+        self.others = {}
+        for qid, per in (raw_others.items() if isinstance(raw_others, dict) else []):
+            for pid, ts in (per.items() if isinstance(per, dict) else []):
+                # Legacy shape (before 2026-10-29): one string per participant.
+                texts = self._canonical_others(str(qid), [ts] if isinstance(ts, str) else
+                                               [t for t in ts if isinstance(t, str)] if isinstance(ts, list) else [])
+                if texts:
+                    self.others.setdefault(str(qid), {})[str(pid)] = texts
         raw_hearts = data.get("hearts")
         if not isinstance(raw_hearts, dict) and isinstance(data.get("favorites"), dict):
             # Legacy shape: a single ❤️ per participant, stored as its option index.

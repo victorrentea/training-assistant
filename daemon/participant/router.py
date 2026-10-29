@@ -267,7 +267,7 @@ class AiShareParticipantState(BaseModel):
     questions: list[AiShareQuestion]
     results: list[AiShareResult]
     my_answers: dict[str, int] = {}
-    my_others: dict[str, str] = {}
+    my_others: dict[str, list[str]] = {}  # question → the "Other" values they ticked
     my_hearts: dict[str, int] = {}
     my_votes: dict[str, dict[str, int]] = {}  # ranking question → item id → 1 (🔥)
 

@@ -67,19 +67,29 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(cards).to_have_count(1)
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
 
-        # ── Each answer brings in the next question
-        for i, q in enumerate(CHOICES):
-            alice.choose_aishare(q, {"custom_agent": 1, "harness_work": 4}.get(q, 0))
-            expect(cards).to_have_count(i + 2, timeout=5000)
-        # "Other" harness: say which one
-        other_box = alice.aishare_card("harness_work").locator(".aishare-other input")
-        expect(other_box).to_be_visible()
+        # ── A multi's first tick shows the ♡ hearts first; the next question follows 3 s later, ❤️ or not
+        harness = alice.aishare_card("harness_work")
+        alice.choose_aishare("harness_work", 4)  # Other
+        expect(harness).to_have_class(re.compile(r"\bticked\b"))
+        alice._page.wait_for_timeout(1500)
+        expect(cards).to_have_count(1)
+        expect(cards).to_have_count(2, timeout=4000)
+        # "Other": an "Any other" box (Add disabled while empty); a value added becomes a chip, ticked
+        other_box = harness.locator(".aishare-other input")
+        expect(other_box).to_have_attribute("placeholder", "Any other")
+        expect(harness.locator(".aishare-other-save")).to_be_disabled()
         other_box.fill("Cursor")
+        expect(harness.locator(".aishare-other-save")).to_be_enabled()
         other_box.press("Enter")
-        # Multi: ❤️ on Claude Code / Codex ticks it too, next to Other (the ♡ and the hint show once anything is ticked)
-        expect(alice.aishare_card("harness_work")).to_have_class(re.compile(r"\bticked\b"))
-        alice.aishare_card("harness_work").locator('.aishare-opt[data-i="0"] .aishare-heart').click()
-        expect(alice.aishare_card("harness_work").locator(".aishare-opt.selected")).to_have_count(2)
+        expect(harness.locator(".aishare-other-chip.mine")).to_have_text(["✓ Cursor"])
+        expect(other_box).to_have_value("")
+        # Multi: ❤️ on Claude Code / Codex ticks it too, next to Other
+        harness.locator('.aishare-opt[data-i="0"] .aishare-heart').click()
+        expect(harness.locator(".aishare-opt.selected")).to_have_count(2)
+        # ── Each next answer brings in the next question
+        for i, q in enumerate(CHOICES[1:], start=1):
+            alice.choose_aishare(q, {"custom_agent": 1}.get(q, 0))
+            expect(cards).to_have_count(i + 2, timeout=5000)
         # Dragging the slider (no release yet) must not unlock the last question
         alice._page.locator("#aishare-slider-ai_generated").evaluate(
             "el => { el.value = 70; el.dispatchEvent(new Event('input', {bubbles: true})); }")
@@ -100,6 +110,23 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice._page.locator("#aishare-done")).to_contain_text("Thank you", timeout=5000)
         alice.add_pain("Too many Jira fields")
 
+        # Bob sees Alice's "Other" value as a chip without ticking Other; typing it again (case aside)
+        # just ticks it, a new one adds a chip — live for Alice too, anonymous, no counts until revealed
+        bob_harness = bob.aishare_card("harness_work")
+        expect(bob_harness.locator(".aishare-other-chip")).to_have_text(["Cursor"], timeout=5000)
+        bob_box = bob_harness.locator(".aishare-other input")
+        bob_box.fill(" cursor ")
+        bob_box.press("Enter")
+        bob_box.fill("Zed")
+        bob_harness.locator(".aishare-other-save").click()
+        expect(bob_harness.locator(".aishare-other-chip")).to_have_text(["✓ Cursor", "✓ Zed"])
+        expect(bob_harness.locator('.aishare-opt[data-i="4"]')).to_have_class(re.compile(r"\bselected\b"))  # a chip ticks Other
+        expect(harness.locator(".aishare-other-chip")).to_have_text(["✓ Cursor", "Zed"], timeout=5000)
+        harness.evaluate("el => el.scrollIntoView({block: 'start'})")
+        alice._page.evaluate("document.getElementById('access-duration-toast')?.remove()")
+        _shot(alice._page, "aishare-other")
+        if SHOTS:
+            harness.screenshot(path=f"{SHOTS}/aishare-other-card.png")
         for q in CHOICES:
             bob.choose_aishare(q, 1 if q == "agents_md" else (3 if q == "harness_work" else 0))
         bob.set_aishare(20)
@@ -125,7 +152,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice._page.locator("#aishare-questions .aishare-plot svg")).to_have_count(0)
         expect(host_raw.locator('#aishare-host-results [data-q="ai_generated"] .aishare-dot')).to_have_count(2)
         expect(host_raw.locator('#aishare-host-results [data-q="agents_md"] .aishare-bar-count')).to_have_text(["1", "1"])
-        expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-other-chip')).to_have_text(["Cursor"])
+        expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-other-chip')).to_have_text(["Cursor ×2", "Zed"])
         expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-bar-hearts')).to_have_text(["❤️ ×1", "", "", "", ""])
         _shot(alice._page, "aishare-pax-hidden")
 
@@ -134,6 +161,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice.aishare_card("ai_generated").locator(".aishare-dot")).to_have_count(2, timeout=5000)
         expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(len(CHOICES) + 3, timeout=5000)
         expect(bob.aishare_card("agents_md").locator(".count")).to_have_text(["1", "1"])
+        expect(harness.locator(".aishare-other-chip")).to_have_text(["✓ Cursor×2", "Zed"])  # counts once revealed
         # The leaderboard slides into place; the top 3 (with any 🔥) catch fire
         expect(alice.pain_ranking().first).to_have_text("Too many Jira fields", timeout=5000)
         expect(alice._page.locator("#aishare-questions .aishare-rank-row .aishare-rank-score").first).to_have_text("2")

@@ -885,8 +885,16 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 @keyframes aishare-q-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .aishare-q { animation: none; } }
 .aishare-choices { display: flex; flex-direction: column; gap: .5rem; }
-.aishare-other { display: none; gap: .5rem; }
+.aishare-other { display: none; flex-direction: column; gap: .5rem; padding-left: 1.5rem; }
 .aishare-other.open { display: flex; }
+.aishare-other-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.aishare-other-chips:empty { display: none; }
+.aishare-other-chip { padding: .3rem .8rem; border-radius: 999px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: transparent; color: var(--color-on-surface, #2a3439); font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.aishare-other-chip:hover { border-color: var(--color-primary, #4555ba); }
+.aishare-other-chip.mine { background: var(--color-primary, #4555ba); border-color: var(--color-primary, #4555ba); color: #fff; }
+.aishare-other-chip .n { margin-left: .3rem; font-weight: 800; opacity: .8; }
+@media (prefers-color-scheme: dark) { .aishare-other-chip { color: var(--color-on-surface, #dce4e9); } .aishare-other-chip.mine { color: #fff; } }
+.aishare-other-add { display: flex; gap: .5rem; }
 .aishare-other input { flex: 1; min-width: 0; padding: .65rem .9rem; border-radius: 8px; border: 1.5px solid var(--color-primary, #4555ba); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font: inherit; }
 .aishare-other-save { padding: 0 1.1rem; border-radius: 8px; border: none; background: var(--color-primary, #4555ba); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 .aishare-other-save:disabled { opacity: .45; cursor: default; }
@@ -5867,13 +5875,17 @@ function _updateActivityNavLabel() {
 // Questions come from the daemon; each next one appears once the previous one
 // is answered (all of them once the host reveals the answers). Anonymous: the
 // broadcasts carry counts/values only; own answers arrive with /state.
-var _aiShare = { active: false, revealed: false, questions: [], results: {}, my: {}, live: {}, myOther: {}, myHearts: {}, myVotes: {} };
+var _aiShare = { active: false, revealed: false, questions: [], results: {}, my: {}, live: {}, myOther: {}, myHearts: {}, myVotes: {}, hold: {} };
 // my: committed answers — a slider counts once released; they unlock the next question.
 //     A multi's answer is the bitmask of its ticked options.
 // live: a slider's value while it is being dragged.
 // myHearts: bitmask of a multi's ❤️ options, always among the ticked ones.
+// myOther: the values ticked under a question's "Other" — chips anyone may tick (typed by them or by others).
 // myVotes: a ranking's votes, item id → 1 (🔥); any vote counts as answered.
+// hold: a multi just ticked for the first time keeps the next question back until then (a timestamp),
+//       so the ♡ hearts get their moment first.
 var _aiShareSendTimers = {};
+var AISHARE_HOLD_MS = 3000;
 
 function _applyAiShareState(msg) {
   _aiShare.active = !!msg.active;
@@ -5885,7 +5897,7 @@ function _applyAiShareState(msg) {
   if (msg.my_others !== undefined) _aiShare.myOther = Object.assign({}, msg.my_others || {});
   if (msg.my_hearts !== undefined) _aiShare.myHearts = Object.assign({}, msg.my_hearts || {});
   if (msg.my_votes !== undefined) _aiShare.myVotes = Object.assign({}, msg.my_votes || {});
-  if (!_aiShare.active) { _aiShare.my = {}; _aiShare.live = {}; _aiShare.myOther = {}; _aiShare.myHearts = {}; _aiShare.myVotes = {}; _aiShareSetSkipped({}); }
+  if (!_aiShare.active) { _aiShare.my = {}; _aiShare.live = {}; _aiShare.myOther = {}; _aiShare.myHearts = {}; _aiShare.myVotes = {}; _aiShare.hold = {}; _aiShareSetSkipped({}); }
   _renderActivityAiShare();
 }
 
@@ -5912,12 +5924,42 @@ function _aiShareAnswered(qid) {
   return _aiShare.my[qid] !== undefined && _aiShare.my[qid] !== null;
 }
 
-// How many questions are on screen: up to and including the first unanswered one.
+// Still keeping the next question back after a multi's first tick?
+function _aiShareHeld(qid) { return (_aiShare.hold[qid] || 0) > Date.now(); }
+
+// How many questions are on screen: up to and including the first unanswered (or held) one.
 function _aiShareVisibleCount() {
   var qs = _aiShare.questions;
   if (_aiShare.revealed) return qs.length;
-  for (var i = 0; i < qs.length; i++) if (!_aiShareSettled(qs[i].id)) return i + 1;
+  for (var i = 0; i < qs.length; i++) if (!_aiShareSettled(qs[i].id) || _aiShareHeld(qs[i].id)) return i + 1;
   return qs.length;
+}
+
+// The values ticked under "Other" (a list; an old single string still reads).
+function _aiShareMyOthers(qid) {
+  var v = _aiShare.myOther[qid];
+  return Array.isArray(v) ? v : (v ? [v] : []);
+}
+
+// Every "Other" value anyone typed, A→Z, plus own ones the next WS snapshot has not brought yet.
+function _aiShareOtherValues(qid) {
+  var res = _aiShare.results[qid] || {};
+  var all = (res.other_values || []).slice();
+  _aiShareMyOthers(qid).forEach(function (t) {
+    if (!all.some(function (v) { return v.text.toLowerCase() === t.toLowerCase(); })) all.push({ text: t, count: null });
+  });
+  return all.sort(function (a, b) { return a.text.toLowerCase().localeCompare(b.text.toLowerCase()); });
+}
+
+// New "Other" values: ticking any of them ticks "Other"; none left keeps "Other" as it is.
+function _onAiShareOthers(q, list) {
+  _aiShare.myOther[q.id] = list;
+  if (q.kind === 'multi') {
+    var mask = (_aiShare.my[q.id] || 0) | (list.length ? 1 << q.other_option : 0);
+    _onAiShareMulti(q.id, mask, (_aiShare.myHearts[q.id] || 0) & mask, list);
+  } else {
+    _onAiShareInput(q.id, q.other_option, true, list);
+  }
 }
 
 // The question text, with each `q.links[].text` in it turned into a link (opens in a new tab)
@@ -6001,6 +6043,7 @@ function _aiShareBuildCard(q) {
       // Tick / untick; unticking a ❤️ option drops its heart too.
       btn.addEventListener('click', function () {
         var mask = (_aiShare.my[q.id] || 0) ^ (1 << idx);
+        if (idx === q.other_option && !(mask >> idx & 1)) delete _aiShare.myOther[q.id];  // the daemon drops them too
         _onAiShareMulti(q.id, mask, (_aiShare.myHearts[q.id] || 0) & mask);
       });
       // ❤️ = one they love most (several allowed): ticks it as well; a second tap takes the heart back.
@@ -6011,29 +6054,36 @@ function _aiShareBuildCard(q) {
       });
     });
     if (q.other_option != null) {
-      // Picking "Other" opens a box to say which one, so nobody is left out.
+      // Under "Other": what everyone typed there, as chips anyone may tick (anonymous: only the text),
+      // and a box to add one more — it becomes a chip, ticked, for everyone at once.
       var box = document.createElement('div');
       box.className = 'aishare-other';
-      box.innerHTML = '<input type="text" maxlength="60" placeholder="Which one?" autocomplete="off" />' +
-        '<button class="aishare-other-save" disabled>Save</button>';
+      box.innerHTML = '<div class="aishare-other-chips"></div>' +
+        '<div class="aishare-other-add"><input type="text" maxlength="60" placeholder="Any other" autocomplete="off" />' +
+        '<button class="aishare-other-save" disabled>Add</button></div>';
       card.querySelector('.aishare-choices').appendChild(box);
-      var input = box.querySelector('input'), save = box.querySelector('button');
-      var sync = function () {
-        var t = input.value.trim();
-        save.disabled = !t || t === (_aiShare.myOther[q.id] || '');
-      };
+      box.querySelector('.aishare-other-chips').addEventListener('click', function (e) {
+        var chip = e.target.closest('.aishare-other-chip');
+        if (!chip) return;
+        var text = chip.dataset.text, mine = _aiShareMyOthers(q.id);
+        var ticked = mine.some(function (t) { return t.toLowerCase() === text.toLowerCase(); });
+        _onAiShareOthers(q, ticked ? mine.filter(function (t) { return t.toLowerCase() !== text.toLowerCase(); }) : mine.concat([text]));
+      });
+      var input = box.querySelector('input'), addOther = box.querySelector('button');
       var send = function () {
-        var t = input.value.trim();
+        var t = input.value.split(/\s+/).join(' ').trim();
         if (!t) return;
-        _aiShare.myOther[q.id] = t;
-        if (multi) _onAiShareMulti(q.id, (_aiShare.my[q.id] || 0) | (1 << q.other_option), _aiShare.myHearts[q.id] || 0, t);
-        else _onAiShareInput(q.id, q.other_option, true, t);
-        sync();
-        save.textContent = 'Saved ✓';
+        input.value = '';
+        addOther.disabled = true;
+        // The same value (case aside) just gets ticked, in the spelling already there.
+        var same = _aiShareOtherValues(q.id).find(function (v) { return v.text.toLowerCase() === t.toLowerCase(); });
+        var text = same ? same.text : t, mine = _aiShareMyOthers(q.id);
+        if (mine.some(function (m) { return m.toLowerCase() === text.toLowerCase(); })) return;
+        _onAiShareOthers(q, mine.concat([text]));
       };
-      input.addEventListener('input', function () { save.textContent = 'Save'; sync(); });
+      input.addEventListener('input', function () { addOther.disabled = !input.value.trim(); });
       input.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
-      save.addEventListener('click', send);
+      addOther.addEventListener('click', send);
     }
   }
   return card;
@@ -6106,12 +6156,18 @@ function _aiShareUpdateCard(card, q) {
     });
     var other = card.querySelector('.aishare-other');
     if (other) {
-      var open = picked(q.other_option);
+      var values = _aiShareOtherValues(q.id), myOthers = _aiShareMyOthers(q.id);
+      var otherTicked = picked(q.other_option);
+      // Open once "Other" is ticked, or as soon as anyone typed something there.
+      var open = otherTicked || values.length > 0;
       var wasOpen = other.classList.contains('open');
       other.classList.toggle('open', open);
-      var inp = other.querySelector('input');
-      if (open && document.activeElement !== inp && !inp.value) inp.value = _aiShare.myOther[q.id] || '';
-      if (open && !wasOpen && !_aiShare.myOther[q.id]) setTimeout(function () { inp.focus(); }, 0);
+      other.querySelector('.aishare-other-chips').innerHTML = values.map(function (v) {
+        var ticked = myOthers.some(function (t) { return t.toLowerCase() === v.text.toLowerCase(); });
+        return '<button class="aishare-other-chip' + (ticked ? ' mine' : '') + '" data-text="' + _escHtml(v.text).replace(/"/g, '&quot;') + '">' +
+          (ticked ? '✓ ' : '') + _escHtml(v.text) + (v.count > 1 ? '<span class="n">×' + v.count + '</span>' : '') + '</button>';
+      }).join('');
+      if (otherTicked && !wasOpen && !values.length) { var inp = other.querySelector('input'); setTimeout(function () { inp.focus(); }, 0); }
     }
   }
 }
@@ -6218,7 +6274,7 @@ function _renderActivityAiShare(scrollToNew) {
     if (!card) { card = _aiShareBuildCard(q); list.appendChild(card); added = added || card; }
     _aiShareUpdateCard(card, q);
   });
-  var finished = qs.length > 0 && qs.every(function (q) { return _aiShareSettled(q.id); });
+  var finished = qs.length > 0 && qs.every(function (q) { return _aiShareSettled(q.id) && !_aiShareHeld(q.id); });
   var wasHidden = done.style.display === 'none';
   done.style.display = finished ? '' : 'none';
   if (scrollToNew) {
@@ -6227,7 +6283,7 @@ function _renderActivityAiShare(scrollToNew) {
   }
 }
 
-function _onAiShareInput(qid, raw, commit, otherText) {
+function _onAiShareInput(qid, raw, commit, others) {
   if (!_aiShare.active || !_sessionId) return;
   var value = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
   var first = !_aiShareAnswered(qid);
@@ -6250,7 +6306,7 @@ function _onAiShareInput(qid, raw, commit, otherText) {
     fetch('/' + _sessionId + '/api/participant/aishare/value', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
-      body: JSON.stringify(otherText !== undefined ? { question: qid, value: value, other: otherText } : { question: qid, value: value }),
+      body: JSON.stringify(others !== undefined ? { question: qid, value: value, others: others } : { question: qid, value: value }),
     }).catch(function () { /* silent — next WS push reconciles */ });
   }, commit ? 0 : 200);
 }
@@ -6294,14 +6350,24 @@ function _onAiShareAddItem(qid, text) {
 }
 
 // A multi answer: the ticked options as a bitmask (0 withdraws it) plus the ❤️ ones, as another.
-function _onAiShareMulti(qid, mask, hearts, otherText) {
+// The first tick shows the ♡ hearts first; the next question comes AISHARE_HOLD_MS later, ❤️ or not.
+function _onAiShareMulti(qid, mask, hearts, others) {
   if (!_aiShare.active || !_sessionId) return;
   var first = !_aiShareAnswered(qid);
   if (mask) _aiShare.my[qid] = mask; else delete _aiShare.my[qid];
+  if (!mask) delete _aiShare.myOther[qid];
   if (hearts) _aiShare.myHearts[qid] = hearts; else delete _aiShare.myHearts[qid];
+  if (first && mask && !_aiShare.revealed) {
+    _aiShare.hold[qid] = Date.now() + AISHARE_HOLD_MS;
+    setTimeout(function () {
+      // No scrolling away from someone still typing their "Other" value.
+      var typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.aishare-other');
+      _renderActivityAiShare(!typing);
+    }, AISHARE_HOLD_MS + 50);
+  }
   _renderActivityAiShare(first && !!mask);
   var body = { question: qid, value: mask, hearts: hearts };
-  if (otherText !== undefined) body.other = otherText;
+  if (others !== undefined) body.others = others;
   fetch('/' + _sessionId + '/api/participant/aishare/value', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
@@ -6804,7 +6870,7 @@ function _handleWsMessage(msg) {
       _showPaxLb(msg);
       break;
     case 'aishare_opened':
-      _aiShare = { active: true, revealed: false, questions: _aiShare.questions, results: {}, my: {}, live: {}, myOther: {}, myHearts: {}, myVotes: {} };
+      _aiShare = { active: true, revealed: false, questions: _aiShare.questions, results: {}, my: {}, live: {}, myOther: {}, myHearts: {}, myVotes: {}, hold: {} };
       _aiShareSetSkipped({});
       document.getElementById('aishare-questions').innerHTML = '';
       _renderActivityAiShare();

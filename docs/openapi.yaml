@@ -2288,6 +2288,22 @@ components:
       - text
       - url
       title: AiShareLink
+    AiShareOtherValue:
+      properties:
+        text:
+          type: string
+          title: Text
+        count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Count
+      type: object
+      required:
+      - text
+      title: AiShareOtherValue
+      description: One distinct value typed under a question's "Other" option — a
+        chip anyone may tick.
     AiShareParticipantState:
       properties:
         active:
@@ -2314,7 +2330,9 @@ components:
           default: {}
         my_others:
           additionalProperties:
-            type: string
+            items:
+              type: string
+            type: array
           type: object
           title: My Others
           default: {}
@@ -2479,6 +2497,13 @@ components:
             type: array
           - type: 'null'
           title: Others
+        other_values:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/AiShareOtherValue'
+            type: array
+          - type: 'null'
+          title: Other Values
         items:
           anyOf:
           - items:
@@ -2510,7 +2535,20 @@ components:
             maxLength: 60
           - type: 'null'
           title: Other
-          description: free text typed after picking the question's "other" option
+          description: 'legacy: a single value under the question''s "other" option,
+            same as others=[other]'
+        others:
+          anyOf:
+          - items:
+              type: string
+              maxLength: 60
+            type: array
+            maxItems: 10
+          - type: 'null'
+          title: Others
+          description: the values ticked under the question's "other" option (typed
+            by them or picked from others'), replacing the previous ones; null keeps
+            them. On a multi, any value ticks "Other" too
         hearts:
           type: integer
           minimum: 0.0
