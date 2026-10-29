@@ -425,6 +425,21 @@ class HostPage:
     def toggle_poll_public(self):
         self._page.click("#poll-public")
 
+    def set_poll_multi(self, on: bool):
+        """Multi-select is part of the draft: settable only before Start."""
+        self._page.locator("#poll-multi").set_checked(on)
+
+    def set_poll_public(self, on: bool):
+        """Public = participants see live counts. Settable only before Start
+        (a new draft defaults to public)."""
+        self._page.locator("#poll-public").set_checked(on)
+
+    def expect_poll_draft_locked(self):
+        """While a poll runs its draft is frozen: options, multi and public."""
+        expect(self._page.locator(".poll-option-row").first).not_to_be_editable(timeout=3000)
+        expect(self._page.locator("#poll-multi")).to_be_disabled()
+        expect(self._page.locator("#poll-public")).to_be_disabled()
+
     def start_poll(self):
         self._page.click("#poll-start-btn")
 

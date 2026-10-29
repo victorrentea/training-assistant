@@ -25,6 +25,12 @@ DAEMON_BASE = "http://localhost:1234"
 
 @pytest.mark.nightly
 def test_poll_full_lifecycle_with_two_participants():
+    """Draft → live → stop → clear, then a second poll with a late joiner.
+
+    The draft (options, multi, public) freezes when the host presses Start, so
+    participants never see the question change under them (0dcd28d7): every choice
+    is made before Start, and what moves while the poll runs is the votes.
+    """
     session_id = fresh_session("PollE2E")
 
     with sync_playwright() as p:
@@ -43,62 +49,63 @@ def test_poll_full_lifecycle_with_two_participants():
         alice = ParticipantPage(alice_raw)
         alice.join("Alice")
 
-        # ── Step 1: host creates 2 options and starts
+        # ── Poll 1: single pick, private ─────────────────────────────────────
         host.open_poll_tab()
         host.fill_poll_question("How was the demo?")
         host.add_poll_option("A")
         host.add_poll_option("B")
+        host.add_poll_option("C")
+        host.set_poll_public(False)
         host.start_poll()
+        host.expect_poll_draft_locked()
 
-        # ── Step 2: Alice sees the poll
         alice.wait_for_poll()
         assert alice.poll_question_text() == "How was the demo?"
-        assert alice.poll_options_count() == 2
+        assert alice.poll_options_count() == 3
         assert "Pick one" in alice.poll_status_text()
 
-        # ── Step 3: Alice votes A
+        # Alice votes A, then changes her mind to B; a private poll shows no counts.
         alice.cast_poll_vote(0)
         alice_raw.wait_for_timeout(500)
         assert alice.poll_option_is_selected(0)
-        assert "Pick one" in alice.poll_status_text()
-
-        # ── Step 4: Host adds option C
-        host.add_poll_option("C")
-        host_raw.wait_for_timeout(500)
-        alice_raw.wait_for_timeout(500)
-        assert alice.poll_options_count() == 3
-
-        # ── Step 5: Alice switches to B
         alice.cast_poll_vote(1)
         alice_raw.wait_for_timeout(500)
         assert alice.poll_option_is_selected(1)
         assert not alice.poll_option_is_selected(0)
+        assert alice.poll_option_count(1) is None
 
-        # ── Step 6: Host toggles multi-select
-        host.toggle_poll_multi()
-        host_raw.wait_for_timeout(500)
-        alice_raw.wait_for_timeout(500)
-        # Alice's previous vote should be cleared per the wipe-on-flip rule
-        assert not alice.poll_option_is_selected(1)
+        # Stop freezes the votes and reveals the tally, even for a private poll.
+        host.stop_poll()
+        expect(alice_raw.locator("#poll-status-bar")).to_have_text("Voting ended", timeout=5000)
+        assert alice.poll_option_count(1) == 1
+        assert alice.poll_option_count(0) == 0
+        assert alice.poll_option_is_selected(1)
+
+        host.clear_poll()
+        expect(alice_raw.locator("#activity-poll-section")).to_be_hidden(timeout=5000)
+
+        # ── Poll 2: multi-select, public, with a late joiner ─────────────────
+        host.fill_poll_question("Which did you use?")
+        host.add_poll_option("X")
+        host.add_poll_option("Y")
+        host.add_poll_option("Z")
+        host.set_poll_multi(True)
+        host.set_poll_public(True)
+        host.start_poll()
+
+        alice.wait_for_poll()
+        assert alice.poll_question_text() == "Which did you use?"
         assert "Pick as many" in alice.poll_status_text()
-
-        # ── Step 7: Alice votes B and C
         alice.cast_poll_vote(1)
         alice.cast_poll_vote(2)
         alice_raw.wait_for_timeout(500)
         assert alice.poll_option_is_selected(1)
         assert alice.poll_option_is_selected(2)
-
-        # ── Step 8: Host enables Public
-        host.toggle_poll_public()
-        host_raw.wait_for_timeout(500)
-        alice_raw.wait_for_timeout(500)
-        # Alice now sees counts
+        # Public: live counts.
         assert alice.poll_option_count(0) == 0
         assert alice.poll_option_count(1) == 1
         assert alice.poll_option_count(2) == 1
 
-        # ── Step 9: Bob joins and votes B
         bob_ctx = browser.new_context()
         bob_raw = bob_ctx.new_page()
         bob_raw.goto(f"{BASE}/{session_id}", wait_until="networkidle")
@@ -109,19 +116,12 @@ def test_poll_full_lifecycle_with_two_participants():
         bob_raw.wait_for_timeout(500)
         alice_raw.wait_for_timeout(500)
 
-        # ── Step 10: Both see updated counts
         assert alice.poll_option_count(1) == 2
         assert bob.poll_option_count(1) == 2
 
-        # ── Step 11: Host clears
         host.clear_poll()
-        host_raw.wait_for_timeout(500)
-        alice_raw.wait_for_timeout(500)
-        bob_raw.wait_for_timeout(500)
-
-        # Activity should be gone — section hidden
-        expect(alice_raw.locator("#activity-poll-section")).to_be_hidden()
-        expect(bob_raw.locator("#activity-poll-section")).to_be_hidden()
+        expect(alice_raw.locator("#activity-poll-section")).to_be_hidden(timeout=5000)
+        expect(bob_raw.locator("#activity-poll-section")).to_be_hidden(timeout=5000)
 
         browser.close()
 
@@ -148,7 +148,7 @@ def test_poll_state_restored_on_participant_refresh():
         host.fill_poll_question("Refresh test?")
         host.add_poll_option("Yes")
         host.add_poll_option("No")
-        host.toggle_poll_public()
+        host.set_poll_public(True)
         host.start_poll()
 
         alice.wait_for_poll()
