@@ -476,6 +476,8 @@ function leastCovering(at: Point, w: number, h: number, top: number): Point {
 // clipped to the inside, under a thin crisp one (Victor, 2026-10-23). In the colour of the open dot's lit links,
 // the text colour (white on dark); gold, like its burst, when the note shines. Redrawn
 // every frame while the popover is open: the graph moves, zooms and gets dragged under it.
+// It leaves the dot itself out: laid over it, it dimmed the open dot's white, and turned
+// it cream on a shining note (Victor, 2026-10-29).
 let beam: SVGSVGElement | null = null
 let beamFrame = 0
 
@@ -491,10 +493,15 @@ function ensureBeam(): SVGSVGElement {
       <stop offset="0" stop-opacity="0.5"/><stop offset="1" stop-opacity="0.12"/>
     </linearGradient>
     <clipPath id="note-beam-inside"><polygon/></clipPath>
-    <filter id="note-beam-soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter></defs>
-    <polygon fill="none" stroke="url(#note-beam-fill)" stroke-width="36" stroke-linejoin="round"
-      clip-path="url(#note-beam-inside)" filter="url(#note-beam-soft)"/>
-    <polygon fill="none" stroke="url(#note-beam-edge)" stroke-width="1.5" stroke-linejoin="round"/>`
+    <filter id="note-beam-soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+    <mask id="note-beam-dot" maskUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%">
+      <rect width="100%" height="100%" fill="white"/><circle fill="black"/>
+    </mask></defs>
+    <g mask="url(#note-beam-dot)">
+      <polygon fill="none" stroke="url(#note-beam-fill)" stroke-width="36" stroke-linejoin="round"
+        clip-path="url(#note-beam-inside)" filter="url(#note-beam-soft)"/>
+      <polygon fill="none" stroke="url(#note-beam-edge)" stroke-width="1.5" stroke-linejoin="round"/>
+    </g>`
   document.body.append(beam)
   return beam
 }
@@ -521,6 +528,10 @@ function followWithBeam() {
       })
       const points = hull([...rim, ...corners]).join(" ")
       svg.querySelectorAll("polygon").forEach((polygon) => polygon.setAttribute("points", points))
+      const hole = svg.querySelector("mask circle")!
+      hole.setAttribute("cx", `${dot.x}`)
+      hole.setAttribute("cy", `${dot.y}`)
+      hole.setAttribute("r", `${dot.r + 0.5}`)
       const color = peek!.classList.contains("takeaway") ? "var(--wiki-takeaway)" : "var(--dark)"
       svg.querySelectorAll("linearGradient").forEach((gradient) => {
         // A style, not the stop-color attribute: an attribute doesn't read CSS variables.

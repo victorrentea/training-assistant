@@ -263,9 +263,11 @@ PATCHES = [
      'l.color = litEdge(l) ? litColor(l) : computedStyleMap["--lightgray"]'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
      """      // Repainted, not tinted (a tint multiplies, and can't brighten a grey dot): the
-      // open dot in the text colour; a dot turns grey once its note is read (isSeen).
+      // open dot at full contrast, pure white on dark, whether it was read (grey) or
+      // shines (gold) - the text colour was a dimmer white than the unread dots
+      // (Victor, 2026-10-29); a dot turns grey once its note is read (isSeen).
       const open = selectedNodeId === n.simulationData.id
-      n.gfx.clear().circle(0, 0, n.radius).fill({ color: open ? computedStyleMap["--dark"] : n.color })
+      n.gfx.clear().circle(0, 0, n.radius).fill({ color: open ? computedStyleMap["--wiki-unseen"] : n.color })
       tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))"""),
     # A hovered dot's label keeps its size: its lit links say enough, and the growing
     # label shifted the star after it (Victor, 2026-10-23).
