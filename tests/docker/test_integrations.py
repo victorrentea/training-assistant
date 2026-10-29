@@ -3,10 +3,11 @@ Hermetic E2E tests: daemon integration points.
 
 Tests that verify each daemon external integration works through the stub adapters:
 - PPTX file change detection → slide_invalidated → backend re-downloads
-- Quiz generation via stub LLM → host sees quiz preview
+- Quiz questions submitted to the queue → host sees them live
 - Session folder creation + state persistence on disk
 """
 
+import base64
 import json
 import os
 import re
@@ -142,8 +143,13 @@ def test_pptx_change_triggers_slide_invalidation():
 
 
 @pytest.mark.nightly
-def test_quiz_generation_with_stub_llm():
-    """Host requests quiz → daemon uses stub LLM → quiz preview appears on host."""
+def test_quiz_queue_submission_reaches_host_live():
+    """Questions submitted from outside (POST /quiz/queue) land in the host's queue live.
+
+    The daemon no longer generates quizzes with an LLM (052507c0): questions are
+    written elsewhere and pushed into the queue, and the host fires them from there.
+    This is the integration that replaced "stub LLM generates a quiz preview".
+    """
     session_id = fresh_session("Integration")
 
     with sync_playwright() as p:
@@ -156,64 +162,42 @@ def test_quiz_generation_with_stub_llm():
         host_page.goto(f"{DAEMON_BASE}/host/{session_id}", wait_until="networkidle")
         expect(host_page.locator("#tab-quiz")).to_be_visible(timeout=10000)
         expect(host_page.locator("#ws-badge.connected")).to_be_visible(timeout=10000)
-
-        # Click Quiz tab to see quiz controls
         host_page.click("#tab-quiz")
 
-        # Set a topic and request quiz generation
-        topic_input = host_page.locator("#quiz-topic")
-        expect(topic_input).to_be_visible(timeout=5000)
-        topic_input.fill("design patterns")
+        queue_items = host_page.locator("#queue-list li")
+        expect(queue_items).to_have_count(0, timeout=5000)
 
-        # Click the generate quiz button
-        gen_btn = host_page.locator("#gen-quiz-btn")
-        expect(gen_btn).to_be_visible(timeout=5000)
-        gen_btn.click()
-        print("Clicked generate quiz button")
-
-        # First: confirm the request was acknowledged (status shows "Waiting"/"requested")
-        _await_condition(
-            lambda: host_page.evaluate("""() => {
-                const el = document.getElementById('quiz-status');
-                if (!el) return false;
-                const text = el.textContent.toLowerCase();
-                return text.includes('waiting') || text.includes('generating')
-                    || text.includes('done') || text.includes('error');
-            }"""),
-            timeout_ms=10000,
-            msg="Quiz status did not show initial 'waiting' or 'generating'"
+        questions = [
+            {
+                "question": "Which pattern adapts one interface to another?",
+                "options": ["Adapter", "Bridge", "Visitor"],
+                "correct_indices": [0],
+            },
+            {
+                "question": "Which are creational patterns?",
+                "options": ["Builder", "Factory Method", "Observer"],
+                "correct_indices": [0, 1],
+            },
+        ]
+        req = urllib.request.Request(
+            f"{DAEMON_BASE}/api/{session_id}/host/quiz/queue",
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "Basic " + base64.b64encode(
+                    f"{HOST_USER}:{HOST_PASS}".encode()).decode(),
+            },
+            data=json.dumps({"questions": questions}).encode(),
         )
-        initial_status = host_page.evaluate("() => document.getElementById('quiz-status')?.textContent || ''")
-        print(f"Initial quiz status: '{initial_status}'")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            assert resp.status == 204, f"POST /quiz/queue returned {resp.status}"
 
-        # Then: wait for daemon to finish processing (done/error)
-        _await_condition(
-            lambda: host_page.evaluate("""() => {
-                const el = document.getElementById('quiz-status');
-                if (!el) return false;
-                const text = el.textContent.toLowerCase();
-                return text.includes('done') || text.includes('ready')
-                    || text.includes('review') || text.includes('error');
-            }"""),
-            timeout_ms=25000,
-            msg="Quiz status did not reach done/ready/error in #quiz-status"
-        )
+        # No reload: the quiz_queue_updated push makes the host re-fetch its queue.
+        expect(queue_items).to_have_count(2, timeout=10000)
+        expect(queue_items.nth(0)).to_contain_text("Which pattern adapts one interface to another?")
+        expect(queue_items.nth(1)).to_contain_text("Which are creational patterns?")
+        # A question with several correct options is flagged for the host.
+        expect(queue_items.nth(1)).to_contain_text("#multi")
+        expect(queue_items.nth(0)).not_to_contain_text("#multi")
 
-        status_text = host_page.evaluate("() => document.getElementById('quiz-status')?.textContent || ''")
-        print(f"Final quiz status: '{status_text}'")
-
-        assert "error" not in status_text.lower(), f"Quiz generation reported error: {status_text}"
-
-        # Preview card should now appear (fixed: "preview" → "quiz" key + import-binding)
-        _await_condition(
-            lambda: host_page.locator("#preview-card").is_visible(),
-            timeout_ms=8000,
-            msg="Quiz preview card did not appear"
-        )
-        preview_text = host_page.inner_text("#preview-card")
-        print(f"Quiz preview: {preview_text[:100]}")
-        assert "design pattern" in preview_text.lower() or "Bridge" in preview_text or "Adapter" in preview_text, \
-            f"Preview doesn't contain expected quiz content: {preview_text[:200]}"
-
-        print("SUCCESS: Quiz generation with stub LLM works!")
         browser.close()
