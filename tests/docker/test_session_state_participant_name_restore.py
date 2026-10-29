@@ -37,7 +37,8 @@ def _req(method: str, path: str, body: dict | None = None) -> dict:
         req.add_header("Content-Length", "0")
         req.data = b""
     with urllib.request.urlopen(req, timeout=10) as resp:
-        return json.loads(resp.read())
+        raw = resp.read()
+        return json.loads(raw) if raw else {}  # /api/session/end answers 204, no body
 
 
 def _wait_until(fn, timeout_ms: int, msg: str, poll_ms: int = 250):

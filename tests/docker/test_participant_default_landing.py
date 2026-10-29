@@ -65,7 +65,8 @@ def test_explicit_tab_choice_survives_a_reload():
 
         page.locator('[data-nav="activity"]').click()
         expect(page.locator("#activity-view")).to_be_visible(timeout=5000)
-        page.wait_for_url(f"{BASE}/{session_id}", timeout=5000)
+        # The Activity tab has its own shareable URL (8ef15a79).
+        page.wait_for_url(f"{BASE}/{session_id}/activity", timeout=5000)
 
         page.reload(wait_until="networkidle")
         ParticipantPage(page).dismiss_gate_anonymous(timeout=2000)

@@ -168,9 +168,9 @@ class TestReturningSkipsGate:
 
 # ── 2b. Gate reappears on a new session ──────────────────────────────────────
 
-class TestGateReappearsNewSession:
+class TestTypedNameCarriesIntoNewSession:
     @pytest.mark.nightly
-    def test_new_session_shows_gate_again(self, browser, session_id):
+    def test_new_session_replays_the_typed_name_without_the_gate(self, browser, session_id):
         ctx = browser.new_context()
         page = ctx.new_page()
         try:
@@ -181,11 +181,17 @@ class TestGateReappearsNewSession:
             expect(page.locator("#display-name .display-name-text")).to_have_text(
                 "Judy", timeout=10000
             )
-            # A brand-new session resets participant state; the SAME browser/UUID
-            # is now unknown to the server → the gate must reappear.
+            # Day 2 of a workshop is a brand-new session: the server has never seen
+            # this UUID, but the browser remembers the name Judy typed and replays
+            # it (1fa9534e) — she is not asked again.
             session2 = fresh_session("RealNames2")
             page.goto(f"{BASE}/{session2}", wait_until="networkidle")
-            expect(_gate(page)).to_be_visible(timeout=15000)
+            expect(page.locator("#display-name .display-name-text")).to_have_text(
+                "Judy", timeout=15000
+            )
+            expect(_gate(page)).to_be_hidden()
+            _wait_until(lambda: daemon_has_participant(session2, "Judy"), timeout_ms=5000,
+                        msg="replayed name not registered in the new session")
         finally:
             ctx.close()
 

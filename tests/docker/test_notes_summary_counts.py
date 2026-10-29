@@ -82,11 +82,15 @@ def _write_summary(session_name: str, points: int) -> None:
 
 
 def _remove_notes(session_name: str) -> None:
-    notes_path = os.path.join(SESSIONS_FOLDER, session_name, "notes.txt")
-    try:
-        os.remove(notes_path)
-    except FileNotFoundError:
-        pass
+    """Remove every notes file — any .txt counts as the session's notes, including
+    the '<session> - notes.txt' the daemon creates when the session starts."""
+    folder = os.path.join(SESSIONS_FOLDER, session_name)
+    for name in os.listdir(folder) if os.path.isdir(folder) else []:
+        if name.lower().endswith(".txt"):
+            try:
+                os.remove(os.path.join(folder, name))
+            except FileNotFoundError:
+                pass
 
 
 def _remove_summary(session_name: str) -> None:
