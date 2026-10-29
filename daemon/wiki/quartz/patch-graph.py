@@ -22,12 +22,15 @@ PATCHES = [
     # label turns the burst's gold, outlined in black so it stays readable over the
     # burst (Victor, 2026-10-21). Its dot is gold once read, but white like any note not
     # read yet, so an unread starred note stands out (Victor, 2026-10-23).
+    # The open note's dot keeps the colour it had when opened, until its popover
+    # closes: opening marks it read, but it turns grey only then (dotSeen; Victor,
+    # 2026-10-29).
     ("""    } else if (visited.has(d.id) || d.id.startsWith("tags/")) {
       return computedStyleMap["--tertiary"]
     } else {
       return computedStyleMap["--gray"]
     }""",
-     """    } else if (!isSeen(d.id)) {
+     """    } else if (!dotSeen(d.id)) {
       return computedStyleMap["--wiki-unseen"]
     } else {
       return shineOf(d.id) > 0 ? computedStyleMap["--wiki-takeaway"] : computedStyleMap["--wiki-seen"]
@@ -253,8 +256,8 @@ PATCHES = [
       }
 """),
     # Hover: the dot's links light up (white to unread notes, grey to read ones:
-    # litColor), the dot itself unchanged; the open dot's links too, and that dot turns
-    # bright white (Victor, 2026-10-23 - links and dot were purple). The rest keep their
+    # litColor), the dot itself unchanged; the open dot's links too, the dot keeping its
+    # colour (Victor, 2026-10-29 - it turned white, and purple before). The rest keep their
     # look, without the dimming Quartz applies to edges even with focusOnHover off
     # (nodes: quartz.layout.ts).
     ("alpha = l.active ? 1 : 0.2",
@@ -262,12 +265,9 @@ PATCHES = [
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
      'l.color = litEdge(l) ? litColor(l) : computedStyleMap["--lightgray"]'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
-     """      // Repainted, not tinted (a tint multiplies, and can't brighten a grey dot): the
-      // open dot at full contrast, pure white on dark, whether it was read (grey) or
-      // shines (gold) - the text colour was a dimmer white than the unread dots
-      // (Victor, 2026-10-29); a dot turns grey once its note is read (isSeen).
-      const open = selectedNodeId === n.simulationData.id
-      n.gfx.clear().circle(0, 0, n.radius).fill({ color: open ? computedStyleMap["--wiki-unseen"] : n.color })
+     """      // Repainted, not tinted (a tint multiplies, and can't brighten a grey dot): a dot
+      // turns grey once its note is read (isSeen) and its popover closed.
+      n.gfx.clear().circle(0, 0, n.radius).fill({ color: n.color })
       tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))"""),
     # A hovered dot's label keeps its size: its lit links say enough, and the growing
     # label shifted the star after it (Victor, 2026-10-23).
@@ -329,7 +329,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawComet, drawFlash, hoverGlow } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, dotShine, isEdited, isFollowed, isSeen, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
      '// gaining one when starred jumped down and pushed its star away (Victor, 2026-10-23).\n'

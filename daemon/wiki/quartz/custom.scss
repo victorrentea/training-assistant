@@ -117,6 +117,34 @@ body {
     }
   }
 
+  // Before the star (note-pane.ts): a crossed eye marks the note unread again. Grey like
+  // the ✕; in the text colour, on a pill, while the note is marked unread.
+  .note-peek-unseen {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(2.2 * var(--peek-u));
+    height: calc(2.2 * var(--peek-u));
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: var(--darkgray);
+    cursor: pointer;
+
+    svg {
+      width: calc(1.15 * var(--peek-u));
+      height: calc(1.15 * var(--peek-u));
+    }
+
+    &:hover,
+    &.on {
+      color: var(--dark);
+      background: var(--lightgray);
+    }
+  }
+
   // The title, then its star right by the ✕ and level with it, however many lines the
   // title wraps to (Victor, 2026-10-29): the title takes the rest of the line, and the
   // star's -0.35 lifts it from the head's 0.8 top padding to the ✕'s 0.45.
@@ -131,7 +159,8 @@ body {
       min-width: 0;
     }
 
-    .note-peek-star {
+    .note-peek-star,
+    .note-peek-unseen {
       margin-top: calc(-0.35 * var(--peek-u));
     }
   }
@@ -580,6 +609,7 @@ body {
 .graph-reset,
 .graph-downloads,
 .note-peek-close,
+.note-peek-unseen,
 .note-peek-star,
 body.peek-dragging {
   user-select: none;

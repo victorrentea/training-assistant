@@ -108,6 +108,20 @@ function markSeen(slug: SimpleSlug) {
   saveSeen()
 }
 
+// The popover's crossed eye: "I haven't really read it" - the note is unread again
+// (Victor, 2026-10-29).
+function markUnseen(slug: SimpleSlug) {
+  if (seenNotes().delete(slug)) saveSeen()
+}
+
+// Opening a note reads it, but its dot keeps the colour it had until the popover
+// closes (Victor, 2026-10-29): white if it was unread, grey or gold if read.
+let openedUnread: SimpleSlug | null = null
+
+export function dotSeen(slug: string): boolean {
+  return isSeen(slug) && slug !== openedUnread
+}
+
 // ── Edited notes ──
 // The summarizer rewrites notes during the day. A note read here whose version changed
 // since gets a ✏️ pulsing on its dot (graph-badges.ts EditPencil), on every browser
@@ -291,16 +305,25 @@ function ensurePeek(): HTMLElement {
   peek = document.createElement("div")
   peek.className = "note-peek"
   // The ✕ is what a phone has instead of Esc or a second click on a tiny dot. The star
-  // by the ✕ marks the note a key takeaway (the trainer's machine only).
+  // by the ✕ marks the note a key takeaway (the trainer's machine only); the crossed eye
+  // before it, unread again.
   peek.innerHTML = `
     <button class="note-peek-close" type="button" aria-label="Close">✕</button>
     <div class="note-peek-head">
       <h2 class="note-peek-title"></h2>
+      <button class="note-peek-unseen" type="button">${EYE_OFF}</button>
       <button class="note-peek-star" type="button"></button>
     </div>
     <div class="note-peek-body"></div>`
   const body = peek.querySelector(".note-peek-body") as HTMLElement
   peek.querySelector(".note-peek-close")!.addEventListener("click", hidePeek)
+  peek.querySelector(".note-peek-unseen")!.addEventListener("click", () => {
+    if (!peeked) return
+    if (isSeen(peeked)) markUnseen(peeked)
+    else markSeen(peeked)
+    showPeekUnseen()
+    graph?.select(peeked) // its dot and the links to it, read or not
+  })
   // Under the pointer an empty star fills: a preview of the click (Victor, 2026-10-23).
   const starButton = peek.querySelector(".note-peek-star") as HTMLButtonElement
   starButton.addEventListener("mouseenter", () => {
@@ -476,8 +499,8 @@ function leastCovering(at: Point, w: number, h: number, top: number): Point {
 // clipped to the inside, under a thin crisp one (Victor, 2026-10-23). In the colour of the open dot's lit links,
 // the text colour (white on dark); gold, like its burst, when the note shines. Redrawn
 // every frame while the popover is open: the graph moves, zooms and gets dragged under it.
-// It leaves the dot itself out: laid over it, it dimmed the open dot's white, and turned
-// it cream on a shining note (Victor, 2026-10-29).
+// It leaves the dot itself out: laid over it, it tinted the open dot, cream on a shining
+// note (Victor, 2026-10-29).
 let beam: SVGSVGElement | null = null
 let beamFrame = 0
 
@@ -567,10 +590,12 @@ function hull(points: number[][]): string[] {
 // it is, under the mouse; a note the trainer opened goes by its dot.
 async function showPeek(slug: SimpleSlug, place: Place) {
   const el = ensurePeek()
+  if (slug !== peeked) openedUnread = isSeen(slug) ? null : slug
   graph?.select(slug)
   if (slug === peeked) return
   peeked = slug
   showPeekStar()
+  showPeekUnseen()
   reportOpenNote(slug)
   highlight(null)
   const elts = await loadNote(slug).catch(() => null)
@@ -588,7 +613,8 @@ async function showPeek(slug: SimpleSlug, place: Place) {
   }
   followWithBeam()
   markSeen(slug)
-  graph?.select(slug) // repaints its dot, now seen
+  showPeekUnseen()
+  graph?.select(slug) // its links, now from a read note; its dot waits for the close
 }
 
 // A note's slides arrive after its text: placed without them, the popover sat in a
@@ -719,6 +745,7 @@ function linkList(own: Element[]): HTMLElement | null {
 // zooms in around it (Victor, 2026-10-16), and can be dragged off what it covers.
 export function hidePeek() {
   peeked = null
+  openedUnread = null
   reportOpenNote(null)
   highlight(null)
   graph?.select(null)
@@ -847,6 +874,20 @@ function applyTakeaways(slugs: readonly string[]) {
   starred = new Set(slugs.map((s) => simplifySlug(s as never)))
   graph?.shine()
   showPeekStar()
+}
+
+// Lucide's eye-off, in the text's colour: an emoji has no crossed eye.
+const EYE_OFF = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>`
+
+// The crossed eye lights up while the open note is marked unread: closed then, its dot
+// stays white. A second click reads it again.
+function showPeekUnseen() {
+  const button = peek?.querySelector(".note-peek-unseen") as HTMLButtonElement | null
+  if (!button || !peeked) return
+  const unread = !isSeen(peeked)
+  button.classList.toggle("on", unread)
+  button.dataset.tip = unread ? "Marked unread - click to mark it read" : "Mark unread: its dot stays white"
+  button.setAttribute("aria-label", button.dataset.tip)
 }
 
 // The popover's star, right after its title (Victor, 2026-10-23 - it was left of the
