@@ -7,7 +7,6 @@ them, but until Reveal each sees only their own 🔥 (no tallies, a fixed order)
 so nobody is swayed by the crowd; the host may delete an item.
 """
 import logging
-
 from typing import Annotated
 
 from fastapi import APIRouter, Request, Response
