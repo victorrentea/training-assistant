@@ -145,3 +145,113 @@ def daemon_has_participant(session_id: str, name: str) -> bool:
             return any(p.get("name") == name for p in participants)
     except Exception:
         return False
+
+
+class MockAddonBridge:
+    """Stand-in for victor-macos-addons' WS server, which tells the daemon what the
+    trainer is presenting.
+
+    The daemon's addon-bridge client dials ws://127.0.0.1:8765 and re-dials every
+    5s; each `slide_presenting_now` it receives becomes the session's current slide
+    (`current_slide_updated` to every participant). That is the only way the
+    current slide reaches the daemon — the old activity-slides-<date>.md pointer
+    file is no longer read.
+
+    `present()` pushes to the connected daemon and is replayed to a daemon that
+    connects later. Start it after `fresh_session()`: a new session forgets the
+    current slide.
+    """
+
+    def __init__(self, port: int | None = None):
+        import threading
+
+        self.port = port or int(os.environ.get("WS_SERVER_PORT", "8765"))
+        self.connected = threading.Event()
+        self._clients: set = set()
+        self._last: str | None = None
+        self._loop = None
+        self._stop_evt = None
+        self._ready = threading.Event()
+        self._error: BaseException | None = None
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self) -> None:
+        import asyncio
+
+        try:
+            asyncio.run(self._serve())
+        except BaseException as exc:  # noqa: BLE001 — surfaced by __enter__
+            self._error = exc
+            self._ready.set()
+
+    async def _serve(self) -> None:
+        import asyncio
+
+        import websockets
+
+        self._loop = asyncio.get_running_loop()
+        self._stop_evt = asyncio.Event()
+
+        async def handle(ws):
+            self._clients.add(ws)
+            self.connected.set()
+            try:
+                if self._last:
+                    await ws.send(self._last)
+                async for _ in ws:  # drain what the daemon sends (emoji, session events)
+                    pass
+            except Exception:
+                pass
+            finally:
+                self._clients.discard(ws)
+
+        # The previous test's server may still hold the port for a moment.
+        for _ in range(60):
+            try:
+                async with websockets.serve(handle, "127.0.0.1", self.port):
+                    self._ready.set()
+                    await self._stop_evt.wait()
+                    return
+            except OSError:
+                await asyncio.sleep(0.5)
+        raise OSError(f"MockAddonBridge could not bind port {self.port}")
+
+    def present(self, deck: str, slide: int) -> None:
+        import asyncio
+
+        self._last = json.dumps(
+            {"type": "slide_presenting_now", "deck": deck, "slide": slide, "presenting": True}
+        )
+        msg = self._last
+
+        async def _broadcast():
+            for ws in list(self._clients):
+                try:
+                    await ws.send(msg)
+                except Exception:
+                    pass
+
+        if self._loop is not None:
+            asyncio.run_coroutine_threadsafe(_broadcast(), self._loop).result(timeout=5)
+
+    def __enter__(self) -> "MockAddonBridge":
+        self._thread.start()
+        if not self._ready.wait(timeout=35) or self._error is not None:
+            raise RuntimeError(f"MockAddonBridge did not start: {self._error!r}")
+        return self
+
+    def __exit__(self, *exc) -> None:
+        if self._loop is not None and self._stop_evt is not None:
+            self._loop.call_soon_threadsafe(self._stop_evt.set)
+        self._thread.join(timeout=10)
+
+
+def participant_host_slide(page) -> dict | None:
+    """The host's current slide as this participant's page knows it (`_hostSlidesCurrent`).
+
+    The current slide is daemon-resident: Railway's /api/status does not carry it.
+    """
+    try:
+        return page.evaluate("() => window._hostSlidesCurrent || null")
+    except Exception:
+        return None

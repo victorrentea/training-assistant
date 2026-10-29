@@ -26,8 +26,6 @@ import re
 import sys
 import time
 import urllib.request
-from datetime import datetime
-from pathlib import Path
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
@@ -36,7 +34,7 @@ import pytest
 from playwright.sync_api import sync_playwright, expect
 
 from pages.participant_page import ParticipantPage
-from session_utils import fresh_session
+from session_utils import MockAddonBridge, fresh_session, participant_host_slide
 
 
 BASE = "http://localhost:8000"
@@ -44,26 +42,9 @@ DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
 MOCK_DRIVE_BASE = f"http://localhost:{os.environ.get('MOCK_DRIVE_PORT', '9090')}"
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
-TRANSCRIPTION_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/tmp/test-transcriptions"))
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
-
-def _activity_slides_file() -> Path:
-    today = datetime.now().strftime("%Y-%m-%d")
-    return TRANSCRIPTION_FOLDER / f"activity-slides-{today}.md"
-
-
-def _set_slide_pointer(deck: str, slide: int):
-    f = _activity_slides_file()
-    f.parent.mkdir(parents=True, exist_ok=True)
-    with f.open("a", encoding="utf-8") as fh:
-        fh.write(f"{deck}:{slide}\n")
-
-
-def _clear_slide_pointer():
-    _activity_slides_file().unlink(missing_ok=True)
-
 
 def _await_condition(fn, timeout_ms=10_000, poll_ms=300, msg=""):
     deadline = time.monotonic() + timeout_ms / 1000
@@ -98,20 +79,9 @@ def _mock_drive_reset_delays():
         pass
 
 
-def _backend_slides_current_slug() -> str | None:
-    import base64
-    try:
-        auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-        req = urllib.request.Request(
-            f"{BASE}/api/status",
-            headers={"Authorization": f"Basic {auth}"},
-        )
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = json.loads(resp.read())
-            sc = data.get("slides_current")
-            return sc.get("slug") if sc else None
-    except Exception:
-        return None
+def _participant_host_slug(pax_page) -> str | None:
+    sc = participant_host_slide(pax_page)
+    return sc.get("slug") if sc else None
 
 
 def _assert_follow_result(pax_page, slug: str, expected_page: int, timeout_ms: int):
@@ -155,12 +125,11 @@ def test_follow_opens_uncached_slide():
 
     _mock_drive_reset_delays()
     _mock_drive_set_delay(SLUG, DRIVE_DELAY_S)
-    _clear_slide_pointer()
-    _set_slide_pointer(PRESENTATION, HOST_SLIDE)
     session_id = fresh_session("FollowUncached")
 
     try:
-        with sync_playwright() as p:
+        with MockAddonBridge() as bridge, sync_playwright() as p:
+            bridge.present(PRESENTATION, HOST_SLIDE)
             browser = p.chromium.launch(headless=True)
 
             host_ctx = browser.new_context(
@@ -177,13 +146,13 @@ def test_follow_opens_uncached_slide():
             pax = ParticipantPage(pax_page)
             pax.join("Follower-Uncached")
 
-            # Wait for daemon to broadcast slides_current to backend.
+            # The daemon dials the bridge within ~5s and broadcasts current_slide_updated.
             _await_condition(
-                lambda: _backend_slides_current_slug() == SLUG,
+                lambda: _participant_host_slug(pax_page) == SLUG,
                 timeout_ms=15_000,
-                msg=f"Daemon did not push slides_current for '{SLUG}' within 15s",
+                msg=f"Daemon did not broadcast current_slide_updated for '{SLUG}' within 15s",
             )
-            print(f"Backend slides_current slug='{SLUG}' ✓")
+            print(f"Participant knows the host is on slug='{SLUG}' ✓")
 
             # Follow auto-triggers on slides_current. Download takes ~{DRIVE_DELAY_S}s.
             # Old behaviour: proxy timed out at 5s → check returned 503 → nothing loaded.
@@ -198,7 +167,6 @@ def test_follow_opens_uncached_slide():
             browser.close()
 
     finally:
-        _clear_slide_pointer()
         _mock_drive_reset_delays()
 
 
@@ -224,12 +192,11 @@ def test_follow_retries_after_cache_status_event():
 
     _mock_drive_reset_delays()
     _mock_drive_set_delay(SLUG, DRIVE_DELAY_S)
-    _clear_slide_pointer()
-    _set_slide_pointer(PRESENTATION, HOST_SLIDE)
     session_id = fresh_session("FollowRetry")
 
     try:
-        with sync_playwright() as p:
+        with MockAddonBridge() as bridge, sync_playwright() as p:
+            bridge.present(PRESENTATION, HOST_SLIDE)
             browser = p.chromium.launch(headless=True)
 
             host_ctx = browser.new_context(
@@ -246,11 +213,11 @@ def test_follow_retries_after_cache_status_event():
             pax.join("Follower-Retry")
 
             _await_condition(
-                lambda: _backend_slides_current_slug() == SLUG,
+                lambda: _participant_host_slug(pax_page) == SLUG,
                 timeout_ms=15_000,
-                msg=f"Daemon did not push slides_current for '{SLUG}' within 15s",
+                msg=f"Daemon did not broadcast current_slide_updated for '{SLUG}' within 15s",
             )
-            print(f"Backend slides_current slug='{SLUG}' ✓")
+            print(f"Participant knows the host is on slug='{SLUG}' ✓")
 
             # Wait a bit so the /check call has been issued, then remove the delay
             # so Railway can finish the background download it started.
@@ -271,5 +238,4 @@ def test_follow_retries_after_cache_status_event():
             browser.close()
 
     finally:
-        _clear_slide_pointer()
         _mock_drive_reset_delays()

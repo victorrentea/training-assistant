@@ -2,7 +2,8 @@
 Hermetic E2E test: PPTX update triggers Railway hash-check retry and participant auto-refresh.
 
 Flow:
-1. Participant follows host's current slide (page 3 of "Clean Code")
+1. Participant follows host's current slide (page 3 of "Clean Code"), reported
+   by a mock addon bridge
 2. PPTX file is touched (mtime change) → daemon detects and sends download_pdf
    with check_changed=True to Railway
 3. Railway downloads PDF, compares hash — initially unchanged (Google Drive
@@ -13,12 +14,10 @@ Flow:
 6. Participant auto-refreshes and sees the updated PDF (7 pages) at page 3
 """
 
-import json
 import os
 import sys
 import time
 import urllib.request
-from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -28,13 +27,12 @@ sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
 
 from pages.participant_page import ParticipantPage  # noqa: E402
-from session_utils import fresh_session  # noqa: E402
+from session_utils import MockAddonBridge, fresh_session, participant_host_slide  # noqa: E402
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
-TRANSCRIPTION_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/tmp/test-transcriptions"))
 FIXTURE_PDF_DIR = Path(os.environ.get("FIXTURE_PDF_DIR", "/tmp/fixture-pdfs"))
 
 SLUG = "clean-code"
@@ -47,22 +45,6 @@ NEW_PAGE_COUNT = 7  # original fixture has 5 pages
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
-def _activity_slides_file() -> Path:
-    today = datetime.now().strftime("%Y-%m-%d")
-    return TRANSCRIPTION_FOLDER / f"activity-slides-{today}.md"
-
-
-def _set_slide_pointer(deck: str, slide: int):
-    f = _activity_slides_file()
-    f.parent.mkdir(parents=True, exist_ok=True)
-    with f.open("a", encoding="utf-8") as fh:
-        fh.write(f"{deck}:{slide}\n")
-
-
-def _clear_slide_pointer():
-    _activity_slides_file().unlink(missing_ok=True)
-
-
 def _await_condition(fn, timeout_ms=10_000, poll_ms=300, msg=""):
     deadline = time.monotonic() + timeout_ms / 1000
     while time.monotonic() < deadline:
@@ -71,22 +53,6 @@ def _await_condition(fn, timeout_ms=10_000, poll_ms=300, msg=""):
             return result
         time.sleep(poll_ms / 1000)
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
-
-
-def _backend_slides_current_slug() -> str | None:
-    import base64
-    try:
-        auth = base64.b64encode(f"{HOST_USER}:{HOST_PASS}".encode()).decode()
-        req = urllib.request.Request(
-            f"{BASE}/api/status",
-            headers={"Authorization": f"Basic {auth}"},
-        )
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = json.loads(resp.read())
-            sc = data.get("slides_current")
-            return sc.get("slug") if sc else None
-    except Exception:
-        return None
 
 
 def _prime_slide_cache(session_id: str) -> None:
@@ -193,9 +159,6 @@ def test_pptx_update_triggers_participant_refresh():
     """
     SWAP_DELAY_S = 10  # seconds before mock Drive starts serving new PDF
 
-    _clear_slide_pointer()
-    _set_slide_pointer(PRESENTATION, HOST_PAGE)
-
     session_id = fresh_session("PptxUpdateRefresh")
 
     # Prime cache so Railway has the old 5-page PDF
@@ -203,7 +166,8 @@ def test_pptx_update_triggers_participant_refresh():
     print(f"[test] Cache primed with original {SLUG} PDF")
 
     try:
-        with sync_playwright() as p:
+        with MockAddonBridge() as bridge, sync_playwright() as p:
+            bridge.present(PRESENTATION, HOST_PAGE)
             browser = p.chromium.launch(headless=True)
 
             # Host page (needed for slides_current broadcast)
@@ -221,13 +185,13 @@ def test_pptx_update_triggers_participant_refresh():
             pax = ParticipantPage(pax_page)
             pax.join("UpdateWatcher")
 
-            # Wait for daemon to push slides_current
+            # The daemon dials the bridge within ~5s and broadcasts current_slide_updated
             _await_condition(
-                lambda: _backend_slides_current_slug() == SLUG,
+                lambda: (participant_host_slide(pax_page) or {}).get("slug") == SLUG,
                 timeout_ms=15_000,
-                msg=f"Daemon did not push slides_current for '{SLUG}' within 15s",
+                msg=f"Daemon did not broadcast current_slide_updated for '{SLUG}' within 15s",
             )
-            print(f"[test] Backend slides_current slug='{SLUG}' ✓")
+            print(f"[test] Participant knows the host is on slug='{SLUG}' ✓")
 
             # Wait for participant to have the slide loaded (follow auto-triggers)
             expect(pax_page.locator("#slides-view")).to_be_visible(timeout=20_000)
@@ -236,16 +200,6 @@ def test_pptx_update_triggers_participant_refresh():
             )
             print(f"[test] Participant following host at page {HOST_PAGE} ✓")
 
-            # Track download requests to detect auto-refresh
-            download_requests = []
-            pax_page.on(
-                "request",
-                lambda req: download_requests.append(req.url)
-                if f"/api/slides/download/{SLUG}" in req.url
-                else None,
-            )
-            download_requests.clear()
-
             # Schedule fixture PDF swap (simulates Google Drive publishing new version)
             swap_thread = _swap_fixture_pdf_after_delay(SWAP_DELAY_S)
 
@@ -253,36 +207,20 @@ def test_pptx_update_triggers_participant_refresh():
             PPTX_PATH.touch()
             print(f"[test] Touched {PPTX_PATH} to trigger mtime change")
 
-            # Daemon scans every ~10s, detects mtime change, sends download_pdf
-            # with check_changed=True. Railway retries until hash changes (~10s).
-            # After Railway gets new PDF, daemon broadcasts refreshed_slugs.
-            # Participant auto-reloads.
-            # Total wait: ~10s (daemon scan) + ~10s (Drive delay) + ~5s (buffer) = ~25s
+            # The daemon sees the new mtime and starts a redownload poller: after 10s
+            # it has Railway re-fetch the PDF, retrying until the hash changes, then
+            # broadcasts decks_updated and the participant reloads the deck.
 
-            # Wait for participant to re-download the slide
-            _await_condition(
-                lambda: len(download_requests) > 0,
-                timeout_ms=60_000,
-                poll_ms=500,
-                msg=f"Participant did not auto-refresh slide '{SLUG}' after PPTX update within 60s",
-            )
-            print("[test] Participant re-downloaded slide ✓")
-
-            # Verify participant still on the correct page with updated page count
+            # The participant reloads the deck on its own and lands back on the host's
+            # page — of the new 7-page version. Asserted on what the reader sees: the
+            # PDF is fetched in ways (worker, cache revalidation) a page request
+            # listener does not reliably observe.
             expect(pax_page.locator("#pdf-page-info")).to_contain_text(
-                f"{HOST_PAGE} /", timeout=10_000
-            )
-
-            # Verify the new PDF has the expected page count
-            page_text = pax_page.locator("#pdf-page-info").inner_text()
-            assert f"/ {NEW_PAGE_COUNT}" in page_text, (
-                f"Expected {NEW_PAGE_COUNT} total pages in updated PDF, got: {page_text}"
+                f"{HOST_PAGE} / {NEW_PAGE_COUNT}", timeout=60_000
             )
             print(f"[test] Updated PDF has {NEW_PAGE_COUNT} pages, showing page {HOST_PAGE} ✓")
-
             swap_thread.join(timeout=2)
             browser.close()
 
     finally:
-        _clear_slide_pointer()
         _restore_fixture_pdf()

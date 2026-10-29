@@ -32,7 +32,6 @@ import re
 import sys
 import time
 import urllib.request
-from pathlib import Path
 
 sys.path.insert(0, "/app")
 sys.path.insert(0, "/app/tests")
@@ -40,23 +39,16 @@ sys.path.insert(0, "/app/tests")
 import pytest
 from pages.participant_page import ParticipantPage
 from playwright.sync_api import expect, sync_playwright
-from session_utils import fresh_session
+from session_utils import MockAddonBridge, fresh_session, participant_host_slide
 
 BASE = "http://localhost:8000"
 DAEMON_BASE = os.environ.get("DAEMON_BASE", "http://localhost:1234")
 MOCK_DRIVE_BASE = f"http://localhost:{os.environ.get('MOCK_DRIVE_PORT', '9090')}"
 HOST_USER = os.environ.get("HOST_USERNAME", "host")
 HOST_PASS = os.environ.get("HOST_PASSWORD", "testpass")
-TRANSCRIPTION_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/tmp/test-transcriptions"))
 
 # Extra buffer on top of the Drive delay when waiting for assertions.
 _ASSERT_BUFFER_S = 20
-
-
-def _activity_slides_file() -> Path:
-    from datetime import datetime
-    today = datetime.now().strftime("%Y-%m-%d")
-    return TRANSCRIPTION_FOLDER / f"activity-slides-{today}.md"
 
 
 def _await_condition(fn, timeout_ms=10_000, poll_ms=300, msg=""):
@@ -67,18 +59,6 @@ def _await_condition(fn, timeout_ms=10_000, poll_ms=300, msg=""):
             return result
         time.sleep(poll_ms / 1000)
     raise AssertionError(msg or f"Condition not met within {timeout_ms}ms")
-
-
-def _set_slide_pointer(deck: str, slide: int):
-    """Write slide pointer for the daemon to pick up."""
-    f = _activity_slides_file()
-    f.parent.mkdir(parents=True, exist_ok=True)
-    with f.open("a", encoding="utf-8") as fh:
-        fh.write(f"{deck}:{slide}\n")
-
-
-def _clear_slide_pointer():
-    _activity_slides_file().unlink(missing_ok=True)
 
 
 def _mock_drive_set_delay(slug: str, delay_s: float):
@@ -105,16 +85,9 @@ def _mock_drive_reset_delays():
 
 
 def _participant_host_slide_slug(pax_page) -> str | None:
-    """Return the slug in the participant's `_hostSlidesCurrent` JS state.
-
-    slides_current is daemon-resident (not on Railway's /api/status); the
-    daemon broadcasts current_slide_updated to participants via WS.
-    """
-    try:
-        sc = pax_page.evaluate("() => window._hostSlidesCurrent || null")
-        return sc.get("slug") if sc else None
-    except Exception:
-        return None
+    """Return the slug in the participant's `_hostSlidesCurrent` JS state."""
+    sc = participant_host_slide(pax_page)
+    return sc.get("slug") if sc else None
 
 
 # ── Parametrised test ────────────────────────────────────────────────────────
@@ -169,13 +142,12 @@ def test_follow_mode_survives_slow_drive(delay_s, presentation, slug, host_slide
     """
     _mock_drive_reset_delays()
     _mock_drive_set_delay(slug, delay_s)
-    _clear_slide_pointer()
-    _set_slide_pointer(presentation, host_slide)
     session_id = fresh_session(f"SlowDrive-{delay_s}s")
     pdf_ready_timeout_ms = (delay_s + _ASSERT_BUFFER_S) * 1000
 
     try:
-        with sync_playwright() as p:
+        with MockAddonBridge() as bridge, sync_playwright() as p:
+            bridge.present(presentation, host_slide)
             browser = p.chromium.launch(headless=True)
 
             host_ctx = browser.new_context(
@@ -211,5 +183,4 @@ def test_follow_mode_survives_slow_drive(delay_s, presentation, slug, host_slide
             browser.close()
 
     finally:
-        _clear_slide_pointer()
         _mock_drive_reset_delays()

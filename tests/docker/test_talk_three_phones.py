@@ -162,8 +162,8 @@ def test_three_phones_follow_the_talk_and_react():
         _all_in_view(pages, 3)
         for name, page in pages.items():
             assert page.evaluate(_SHOWN_ORDER_JS) == [3, 7, 5], name
-            # Following: the "Current Slide" button stays out of the way.
-            expect(page.locator("#fab-current-slide")).to_be_hidden()
+            # Following: the crosshair toggle stays pressed.
+            expect(page.locator("#follow-toggle")).to_have_attribute("aria-pressed", "true")
 
         # In landscape the slide fits whole between the two side columns.
         # (Waited for: the scroll to the revisited slide is smooth.)
@@ -203,7 +203,7 @@ def test_three_phones_follow_the_talk_and_react():
         reader.locator("#view-slides").dispatch_event("touchmove")
         reader.evaluate("() => document.getElementById('view-slides').scrollTo({ top: 0, behavior: 'instant' })")
         _wait(lambda: reader.evaluate("() => window._following === false"), msg="manual scroll did not pause follow")
-        expect(reader.locator("#fab-current-slide")).to_be_visible()
+        expect(reader.locator("#follow-toggle")).to_have_attribute("aria-pressed", "false")
 
         bridge.present(8)
         _all_in_view({k: v for k, v in pages.items() if k != "small"}, 8)
@@ -211,9 +211,9 @@ def test_three_phones_follow_the_talk_and_react():
         reader.wait_for_function(
             "() => !!document.querySelector('#pdf-pages section[data-page=\"8\"] .slide-img')", timeout=15_000)
         assert not reader.evaluate(_IN_VIEW_JS, 8), "paused reader was moved to the live slide"
-        reader.locator("#fab-current-slide button").click()
+        reader.locator("#follow-toggle").click()  # tap the crosshair: follow again
         reader.wait_for_function(_IN_VIEW_JS, arg=8, timeout=10_000)
-        expect(reader.locator("#fab-current-slide")).to_be_hidden()
+        expect(reader.locator("#follow-toggle")).to_have_attribute("aria-pressed", "true")
 
         # ── Emoji reach the trainer's overlay, and the ❤️ switch stops them ──────
         everyone = {**pages, "late": late}

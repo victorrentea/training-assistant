@@ -286,7 +286,12 @@ class ParticipantPage:
         self._page.wait_for_timeout(500)  # allow render
 
     def click_follow(self) -> None:
-        self._page.locator("label[for='slides-follow-checkbox']").click()
+        """Follow the host's slides: tap the crosshair toggle unless it is already
+        pressed (following is ON by default — a tap then would stop it)."""
+        toggle = self._page.locator("#slides-follow-toggle")
+        if toggle.get_attribute("aria-pressed") != "true":
+            toggle.click()
+        expect(toggle).to_have_attribute("aria-pressed", "true", timeout=3000)
 
     def get_page_indicator(self) -> str:
         """Return current page indicator text, e.g. '3 / 5'."""

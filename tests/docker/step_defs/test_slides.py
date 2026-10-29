@@ -36,6 +36,15 @@ def _reset_participants():
     _participants.clear()
 
 
+@pytest.fixture(autouse=True)
+def _reset_drive_delays():
+    """A Drive delay is scenario-local: left set, it stalls every later download
+    of that deck (the next scenario's slide refresh then times out)."""
+    _reset_mock_drive_delays()
+    yield
+    _reset_mock_drive_delays()
+
+
 def _pax(name: str) -> ParticipantPage:
     assert name in _participants, f"Participant '{name}' not joined yet. Known: {list(_participants)}"
     return _participants[name]
@@ -76,6 +85,12 @@ def _mock_drive_stats():
 def _reset_mock_drive():
     req = urllib.request.Request(f"http://localhost:{MOCK_DRIVE_PORT}/mock-drive/reset-stats", method="POST",
                                  data=b"", headers={"Content-Length": "0"})
+    urllib.request.urlopen(req, timeout=5)
+
+
+def _reset_mock_drive_delays():
+    req = urllib.request.Request(f"http://localhost:{MOCK_DRIVE_PORT}/mock-drive/reset-delays", method="POST",
+                                 data=b"{}", headers={"Content-Type": "application/json"})
     urllib.request.urlopen(req, timeout=5)
 
 
@@ -273,7 +288,7 @@ def click_download_button(request, name, slug):
     # Use Playwright's download event to capture the file
     with pax._page.expect_download(timeout=30000) as download_info:
         pax._page.locator(
-            f'.topic-item[data-slide-id^="{slug}|"] span[title^="Download"]'
+            f'.topic-item[data-slide-id^="{slug}|"] span[data-tip^="Download"]'
         ).click()
     download = download_info.value
     request.config._slides_download = download
@@ -437,12 +452,13 @@ def drive_called_at_most_n_times(n):
 @then("the slides overlay opens")
 def overlay_opens(connected):
     pax = connected["pax"]
-    expect(pax._page.locator("#pdf-pages canvas")).to_be_visible(timeout=15000)
+    expect(pax._page.locator("#pdf-pages canvas").first).to_be_visible(timeout=15000)
 
 
 @then(parsers.parse("the slides overlay opens within {seconds:d} seconds"))
 def overlay_opens_within(follow_pax, seconds):
-    expect(follow_pax._page.locator("#pdf-pages canvas")).to_be_visible(timeout=seconds * 1000)
+    # One canvas per page: the first one rendered means the deck opened.
+    expect(follow_pax._page.locator("#pdf-pages canvas").first).to_be_visible(timeout=seconds * 1000)
 
 
 @then("the follow button is still enabled")
