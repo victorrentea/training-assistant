@@ -1372,6 +1372,16 @@ def run() -> None:
                             "session",
                             f"Session: {name}",
                         )
+                        # Persist the switch now rather than on the next 3s poll: a
+                        # restart inside that window (a push to master) would boot
+                        # back into the previous session, or none.
+                        pending_global_state = _build_global_state()
+                        last_global_state_hash, _ = _flush_global_state_backup(
+                            sessions_root=sessions_root,
+                            global_state=pending_global_state,
+                            last_flushed_hash=last_global_state_hash,
+                            force=True,
+                        )
 
                     elif action == "end" and session_name:
                         runtime_session_snapshot = _build_runtime_session_snapshot(
