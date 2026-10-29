@@ -3749,6 +3749,9 @@ function _buildTopicItem(slide) {
   el.className = 'topic-item pl-4 pr-1 py-1.5 text-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high cursor-pointer rounded-lg flex items-center gap-1 min-w-0';
   el.dataset.tip = slide.name;
   el.dataset.slideId = slide._id;
+  // The catalog is rebuilt whenever a deck's status changes (decks_updated): keep
+  // the open deck highlighted across the rebuild.
+  if (slide._id === _activeSlideId) el.classList.add('topic-active');
   el.addEventListener('click', function(e) { selectTopic(el, e, slide); });
   var nameSpan = document.createElement('span');
   nameSpan.className = 'truncate flex-1 font-semibold';
