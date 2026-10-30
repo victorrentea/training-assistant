@@ -160,3 +160,8 @@ The user frequently uses a dictation tool. Messages may contain misheard words (
 - Simplicity First: Make every change as simple as possible. Impact minimal code.
 - No Laziness: Find root causes. No temporary fixes. Senior developer standards.
 - Minimal Impact: Only touch what’s necessary. No side effects with new bugs.
+
+## Memoria lui Claude
+
+Memoria generală (cine e Victor, cum vrea să lucrezi) e în repo-ul privat `victorrentea/assistant`.
+Într-o sesiune din cloud, atașează-l la sesiune și urmează-i `CLAUDE.md`-ul. Pe Mac se încarcă singură.
