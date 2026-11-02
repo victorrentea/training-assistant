@@ -79,9 +79,10 @@ class PersistedAiShareState(PersistedModel):
         default_factory=dict,
         description="question_id → participant_uuid → slider 0..100 | choice option index",
     )
-    others: dict[str, dict[str, str]] = Field(
+    others: dict[str, dict[str, list[str] | str]] = Field(
         default_factory=dict,
-        description="question_id → participant_uuid → free text typed under the question's 'other' option",
+        description="question_id → participant_uuid → the values ticked under the question's 'other' option "
+                    "(legacy: a single string, read on restore only)",
     )
     hearts: dict[str, dict[str, int]] = Field(
         default_factory=dict,

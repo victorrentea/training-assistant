@@ -55,3 +55,13 @@ def test_nested_engagement_wins_over_flat_legacy_map():
         }
     )
     assert state.participants["u1"].engagement["slides"].seconds == 99
+
+
+def test_aishare_others_persist_as_list_and_legacy_string_still_loads():
+    # Regression: the live state keeps several "Other" values per participant;
+    # a str-typed model rejected the whole snapshot, so session-state.json stopped saving.
+    state = PersistedSessionState.model_validate({"aishare": {"others": {
+        "harness_work": {"p1": ["Microsoft Copilot", "none of the above"], "p2": "legacy text"},
+    }}})
+    others = state.model_dump(mode="json")["aishare"]["others"]["harness_work"]
+    assert others == {"p1": ["Microsoft Copilot", "none of the above"], "p2": "legacy text"}
