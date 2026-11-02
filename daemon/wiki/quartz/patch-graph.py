@@ -63,6 +63,21 @@ PATCHES = [
     nodeRenderData.push(nodeRenderDatum)"""),
     ("n.label.position.set(x + width / 2, y + height / 2)",
      "n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)"),
+    # No Pixi garbage collector. It marks a renderable as used only when its render
+    # group's gcTick equals its instruction set's, and Pixi (8.15 to 8.22 at least)
+    # advances that only on the stage's own group: everything in a nested render group
+    # (dots, labels, badges, glows) counts as unused and has its GPU data unloaded
+    # every 60-90 s while still on screen. Its batch objects go back to a pool while the
+    # group's cached instructions still draw them, so a long-open graph showed a
+    # badge with another's geometry, cut short - a black blob with a grey corner where
+    # the picture was - until a hover rebuilt it (Victor, 2026-11-02). The graph is
+    # small and destroyed on every re-render, which frees everything anyway.
+    ("""    preference: "webgpu",
+""",
+     """    preference: "webgpu",
+    gcActive: false,
+    renderableGCActive: false,
+"""),
     # Badges on the dots (graph-badges.ts): a picture, 🔗 ⚓ 🎬, so the notes worth opening
     # stand out. In a container of their own: the zoom handler fades every label when
     # zoomed out, and the badges must stay. Over the edges and a shining note's glow,
