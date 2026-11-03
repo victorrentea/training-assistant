@@ -1,7 +1,7 @@
 """AI-share feature state — a short anonymous survey about AI in your code.
 
 A fixed list of questions (QUESTIONS): sliders 0..100 (e.g. "how much of your
-code does AI generate?"), Yes / No / I don't know choices (stored as the
+code does AI generate?"), single-choice answers (stored as the
 option index), multi choices (stored as a bitmask of the ticked options,
 plus a bitmask of the ❤️ favourites among them, plus the values typed under
 "Other": shared, anonymous chips anyone may tick) and a ranking (a list of items,
@@ -24,20 +24,21 @@ MAX_ITEM_LEN = 60
 MAX_ITEMS_PER_PARTICIPANT = 5
 MAX_ITEMS = 60
 
-YES_NO_IDK = ["Yes", "No", "I don't know"]
 YES_NO = ["Yes", "No"]
+YES_NO_IDK = ["Yes", "No / I don't know"]
 
 QUESTIONS: list[dict] = [
-    {"id": "harness_work", "kind": "multi", "text": "What agent harness do you use at work?",
-     "hint": "…then click ❤️ on your favourite", "options": ["Claude Code / Codex", "Copilot CLI", "Copilot Chat in VS Code", "Copilot Chat in IntelliJ", "Other"],
-     "other_option": 4},
-    {"id": "personal_sub", "kind": "choice", "text": "Do you have a personal Claude / Codex subscription?",
+    {"id": "harness_work", "kind": "multi", "text": "What agent harness do you use **at work**?",
+     "hint": "…then click ❤️ on your favourite", "options": ["Claude Code or Codex", "GitHub Copilot CLI", "GitHub Copilot Chat in VS Code",
+                 "GitHub Copilot Chat in IntelliJ", "Microsoft M365 Copilot", "Other"],
+     "other_option": 5},
+    {"id": "personal_sub", "kind": "choice", "text": "Do you have a personal Claude or Codex subscription? Up to 50X more value for money",
      "links": [{"text": "Claude", "url": "https://claude.com/pricing"},
                {"text": "Codex", "url": "https://developers.openai.com/codex/pricing"}],
      "options": YES_NO},
     {"id": "agents_md", "kind": "choice", "text": "Do you have an AGENTS.md (or CLAUDE.md) in 🫵your project?",
      "links": [{"text": "AGENTS.md", "url": "https://agents.md"}],
-     "options": ["Yes", "No / I don't know"]},
+     "options": YES_NO_IDK},
     {"id": "mcp", "kind": "choice", "text": "Used an MCP tool?", "options": YES_NO_IDK},
     {"id": "skill", "kind": "choice", "text": "Created a skill?", "options": YES_NO},
     {"id": "plugins", "kind": "choice", "text": "Do you have any plugins from your company or team installed in your agent?",
@@ -45,10 +46,10 @@ QUESTIONS: list[dict] = [
      "options": YES_NO_IDK},
     {"id": "custom_agent", "kind": "choice", "text": "Created a custom agent (e.g. .claude/agents/*.md)?", "options": YES_NO},
     {"id": "code_review", "kind": "choice", "text": "Do you have a code-review skill / agent?", "options": YES_NO_IDK},
-    {"id": "nontech_pr", "kind": "choice", "text": "Ever received a PR from a non-developer (e.g. PO, business)?", "options": YES_NO},
+    {"id": "nontech_pr", "kind": "choice", "text": "Ever received a PR from a non-developer (e.g. PO, business, CEO)?", "options": YES_NO},
     {"id": "ai_generated", "kind": "slider", "text": "How much% of the code you🫵 push is AI-generated?",
      "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 90,
-     "future_link": {"text": "½ of devs by end of 2026 ↗",
+     "future_link": {"text": "½ of devs ↗\nby end of 2026",
                      "url": "https://www.youtube.com/watch?v=wc8FBhQtdsA&t=2405s"}},
     {"id": "review", "kind": "slider", "text": "How much of that code do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
@@ -63,13 +64,19 @@ QUESTIONS: list[dict] = [
     {"id": "knowledge_base", "kind": "choice",
      "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki)?",
      "links": [{"text": "LLM Wiki", "url": "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"}],
-     "options": ["Yes", "No / I don't know"]},
+     "options": YES_NO_IDK},
 ]
 QUESTIONS_BY_ID = {q["id"]: q for q in QUESTIONS}
 
 # Options merged after answers were given: old option index → new one, applied on restore.
-# agents_md: "No" and "I don't know" became one option (2026-10-26).
-MERGED_OPTIONS = {"agents_md": [0, 1, 1]}
+# "No" and "I don't know" became one option: agents_md on 2026-10-26, the others on 2026-11-03.
+MERGED_OPTIONS = {qid: [0, 1, 1] for qid in ("agents_md", "mcp", "plugins", "code_review")}
+
+# A multi's option inserted after answers were given: its index, shifted into older snapshots.
+# Unlike a merge, re-applying this would corrupt the answers, so snapshots carry OPTIONS_VERSION.
+# 2 (2026-11-03): "Microsoft M365 Copilot" went in before "Other", which moved from bit 4 to 5.
+INSERTED_OPTIONS = {"harness_work": 4}
+OPTIONS_VERSION = 2
 
 # Seeded ranking items reworded after votes were cast: old text → new, applied on restore
 # so a running survey keeps its 🔥. Items participants added (by != None) are never renamed.
@@ -94,6 +101,12 @@ def valid_value(qid: str, value: int) -> bool:
     if q["kind"] == "multi":
         return 0 <= value < 1 << len(q["options"])  # 0 = nothing ticked
     return MIN_VALUE <= value <= MAX_VALUE
+
+
+def insert_bit(mask: int, at: int) -> int:
+    """`mask` with a 0 inserted at bit `at`: the options from there on move up by one."""
+    low = mask & ((1 << at) - 1)
+    return (mask ^ low) << 1 | low
 
 
 def clean_other(text: object) -> str:
@@ -297,7 +310,7 @@ class AiShareState:
         return out
 
     def snapshot(self) -> dict:
-        return {"active": self.active, "revealed": self.revealed,
+        return {"active": self.active, "revealed": self.revealed, "options_version": OPTIONS_VERSION,
                 "answers": {qid: dict(per) for qid, per in self.answers.items()},
                 "others": {qid: {pid: list(ts) for pid, ts in per.items()} for qid, per in self.others.items()},
                 "hearts": {qid: dict(per) for qid, per in self.hearts.items()},
@@ -310,6 +323,7 @@ class AiShareState:
             return
         self.active = bool(data.get("active", False))
         self.revealed = bool(data.get("revealed", False))
+        inserted = INSERTED_OPTIONS if data.get("options_version", 1) < OPTIONS_VERSION else {}
         raw = data.get("answers")
         if not raw and isinstance(data.get("values"), dict):
             # Legacy single-question shape: values[uuid] = 0..100 for "ai_generated".
@@ -323,6 +337,8 @@ class AiShareState:
             merged = MERGED_OPTIONS.get(str(qid))
             kept = {str(pid): merged[int(v)] if merged and 0 <= int(v) < len(merged) else int(v)
                     for pid, v in per.items() if isinstance(v, (int, float))}
+            if str(qid) in inserted:
+                kept = {pid: insert_bit(v, inserted[str(qid)]) for pid, v in kept.items()}
             kept = {pid: v for pid, v in kept.items() if valid_value(str(qid), v)}
             if kept:
                 self.answers[str(qid)] = kept
@@ -345,6 +361,8 @@ class AiShareState:
             if not isinstance(per, dict):
                 continue
             ticked = self.answers.get(str(qid), {})
+            if str(qid) in inserted:
+                per = {pid: insert_bit(h, inserted[str(qid)]) for pid, h in per.items() if isinstance(h, int)}
             kept = {str(pid): h & ticked[str(pid)] for pid, h in per.items()
                     if isinstance(h, int) and h & ticked.get(str(pid), 0)}
             if kept:

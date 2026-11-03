@@ -69,7 +69,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
 
         # ── A multi's first tick shows the ♡ hearts first; the next question follows 3 s later, ❤️ or not
         harness = alice.aishare_card("harness_work")
-        alice.choose_aishare("harness_work", 4)  # Other
+        alice.choose_aishare("harness_work", 5)  # Other
         expect(harness).to_have_class(re.compile(r"\bticked\b"))
         alice._page.wait_for_timeout(1500)
         expect(cards).to_have_count(1)
@@ -125,7 +125,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         bob_box.fill("Zed")
         bob_harness.locator(".aishare-other-save").click()
         expect(bob_harness.locator(".aishare-other-chip")).to_have_text(["✓ Cursor", "✓ Zed"])
-        expect(bob_harness.locator('.aishare-opt[data-i="4"]')).to_have_class(re.compile(r"\bselected\b"))  # a chip ticks Other
+        expect(bob_harness.locator('.aishare-opt[data-i="5"]')).to_have_class(re.compile(r"\bselected\b"))  # a chip ticks Other
         expect(harness.locator(".aishare-other-chip")).to_have_text(["✓ Cursor", "Zed"], timeout=5000)
         harness.evaluate("el => el.scrollIntoView({block: 'start'})")
         alice._page.evaluate("document.getElementById('access-duration-toast')?.remove()")
@@ -159,7 +159,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(host_raw.locator('#aishare-host-results [data-q="ai_generated"] .aishare-dot')).to_have_count(2)
         expect(host_raw.locator('#aishare-host-results [data-q="agents_md"] .aishare-bar-count')).to_have_text(["1", "1"])
         expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-other-chip')).to_have_text(["Cursor ×2", "Zed"])
-        expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-bar-hearts')).to_have_text(["❤️ ×1", "", "", "", ""])
+        expect(host_raw.locator('#aishare-host-results [data-q="harness_work"] .aishare-bar-hearts')).to_have_text(["❤️ ×1", "", "", "", "", ""])
         _shot(alice._page, "aishare-pax-hidden")
 
         # ── Host reveals → every question, with results, for everyone

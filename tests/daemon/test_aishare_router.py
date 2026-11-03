@@ -88,7 +88,7 @@ def test_answer_out_of_range_rejected(client):
     client.post("/api/cur/host/aishare/start")
     assert _answer(client, "u1", 101).status_code == 422
     assert _answer(client, "u1", -1).status_code == 422
-    assert _answer(client, "u1", 3, question="mcp").status_code == 422
+    assert _answer(client, "u1", 2, question="mcp").status_code == 422
     assert _answer(client, "u1", 1, question="nope").status_code == 422
 
 
@@ -97,19 +97,19 @@ def test_answers_hidden_from_participants_until_revealed(client, sent):
     _answer(client, "u1", 80)
     _answer(client, "u2", 20)
     _answer(client, "u1", 0, question="mcp")
-    _answer(client, "u2", 2, question="mcp")
+    _answer(client, "u2", 1, question="mcp")
 
     pax = _last(sent["broadcast"], "aishare_updated")
     assert _result(pax, "ai_generated").count == 2 and _result(pax, "ai_generated").values is None
     assert _result(pax, "mcp").count == 2 and _result(pax, "mcp").counts is None
     host = _last(sent["host"], "aishare_host_update")
     assert _result(host, "ai_generated").values == [20, 80]
-    assert _result(host, "mcp").counts == [1, 0, 1]
+    assert _result(host, "mcp").counts == [1, 1]
 
     client.post("/api/cur/host/aishare/reveal", json={"revealed": True})
     pax = _last(sent["broadcast"], "aishare_updated")
     assert _result(pax, "ai_generated").values == [20, 80]
-    assert _result(pax, "mcp").counts == [1, 0, 1]
+    assert _result(pax, "mcp").counts == [1, 1]
 
 
 def test_everything_is_anonymous(client, sent):
@@ -164,8 +164,8 @@ def test_restore_reads_the_legacy_single_slider_shape():
 
 def test_other_values_are_chips_everyone_sees_live_counts_only_once_revealed(client, state, sent):
     client.post("/api/cur/host/aishare/start")
-    _answer(client, "u1", 16, question="harness_work", others=["  Cursor ", "Windsurf"])
-    _answer(client, "u2", 16, question="harness_work", others=["windsurf"])     # the same, case aside
+    _answer(client, "u1", 32, question="harness_work", others=["  Cursor ", "Windsurf"])
+    _answer(client, "u2", 32, question="harness_work", others=["windsurf"])     # the same, case aside
     pax = _last(sent["broadcast"], "aishare_updated")
     assert [(v.text, v.count) for v in _result(pax, "harness_work").other_values] == [("Cursor", None), ("Windsurf", None)]
     assert _result(pax, "harness_work").others is None
@@ -183,17 +183,17 @@ def test_other_values_are_chips_everyone_sees_live_counts_only_once_revealed(cli
 def test_ticking_an_other_value_ticks_other(client, state):
     client.post("/api/cur/host/aishare/start")
     _answer(client, "u1", 0b00001, question="harness_work", others=["Cursor", "cursor", "Zed"])
-    assert state.answers_of("u1") == {"harness_work": 0b10001}
+    assert state.answers_of("u1") == {"harness_work": 0b100001}
     assert state.others_of("u1") == {"harness_work": ["Cursor", "Zed"]}
-    _answer(client, "u1", 0b10001, question="harness_work", others=[])          # unticked every chip
-    assert state.answers_of("u1") == {"harness_work": 0b10001}
+    _answer(client, "u1", 0b100001, question="harness_work", others=[])          # unticked every chip
+    assert state.answers_of("u1") == {"harness_work": 0b100001}
     assert state.others_of("u1") == {}
 
 
 def test_other_text_dropped_when_another_option_is_picked(client, state):
     client.post("/api/cur/host/aishare/start")
-    _answer(client, "u1", 16, question="harness_work", other="Cursor")     # the legacy single value
-    _answer(client, "u1", 16, question="harness_work")          # re-clicking Other keeps the values
+    _answer(client, "u1", 32, question="harness_work", other="Cursor")     # the legacy single value
+    _answer(client, "u1", 32, question="harness_work")          # re-clicking Other keeps the values
     assert state.others_of("u1") == {"harness_work": ["Cursor"]}
     _answer(client, "u1", 1, question="harness_work")       # Other unticked
     assert state.others_of("u1") == {}
@@ -201,8 +201,8 @@ def test_other_text_dropped_when_another_option_is_picked(client, state):
 
 def test_too_long_or_too_many_other_values_are_refused(client):
     client.post("/api/cur/host/aishare/start")
-    assert _answer(client, "u1", 16, question="harness_work", others=["x" * 61]).status_code == 422
-    assert _answer(client, "u1", 16, question="harness_work", others=[str(i) for i in range(11)]).status_code == 422
+    assert _answer(client, "u1", 32, question="harness_work", others=["x" * 61]).status_code == 422
+    assert _answer(client, "u1", 32, question="harness_work", others=[str(i) for i in range(11)]).status_code == 422
 
 
 def test_restore_turns_a_legacy_single_other_string_into_a_list():
@@ -218,12 +218,12 @@ def test_multi_counts_every_ticked_option_and_the_hearts(client, state, sent):
     _answer(client, "u1", 0b00011, question="harness_work", hearts=0b00011)   # two favourites
     _answer(client, "u2", 0b00101, question="harness_work", hearts=0b00001)
     host = _last(sent["host"], "aishare_host_update")
-    assert _result(host, "harness_work").counts == [2, 1, 1, 0, 0]
-    assert _result(host, "harness_work").hearts == [2, 1, 0, 0, 0]
+    assert _result(host, "harness_work").counts == [2, 1, 1, 0, 0, 0]
+    assert _result(host, "harness_work").hearts == [2, 1, 0, 0, 0, 0]
     pax = _last(sent["broadcast"], "aishare_updated")
     assert _result(pax, "harness_work").hearts is None              # hidden until revealed
     client.post("/api/cur/host/aishare/reveal", json={"revealed": True})
-    assert _result(_last(sent["broadcast"], "aishare_updated"), "harness_work").hearts == [2, 1, 0, 0, 0]
+    assert _result(_last(sent["broadcast"], "aishare_updated"), "harness_work").hearts == [2, 1, 0, 0, 0, 0]
 
 
 def test_multi_hearts_only_on_ticked_options_and_untick_all_withdraws(client, state):
@@ -233,7 +233,7 @@ def test_multi_hearts_only_on_ticked_options_and_untick_all_withdraws(client, st
     assert state.hearts_of("u1") == {"harness_work": 0b00001}
     _answer(client, "u1", 0b00001, question="harness_work", hearts=0b00010)   # ❤️ on an unticked one
     assert state.hearts_of("u1") == {}
-    assert _answer(client, "u1", 0b100000, question="harness_work").status_code == 422
+    assert _answer(client, "u1", 0b1000000, question="harness_work").status_code == 422
     _answer(client, "u1", 0, question="harness_work")
     assert state.answers_of("u1") == {}
 
@@ -241,11 +241,11 @@ def test_multi_hearts_only_on_ticked_options_and_untick_all_withdraws(client, st
 def test_multi_snapshot_round_trips_the_hearts():
     s = AiShareState()
     s.start()
-    s.set_value("u1", "harness_work", 0b10001, others=["Cursor", "Zed"], hearts=0b10001)
+    s.set_value("u1", "harness_work", 0b100001, others=["Cursor", "Zed"], hearts=0b100001)
     restored = AiShareState()
     restored.restore(s.snapshot())
     assert restored.snapshot() == s.snapshot()
-    assert restored.hearts_of("u1") == {"harness_work": 0b10001}
+    assert restored.hearts_of("u1") == {"harness_work": 0b100001}
     assert restored.others_of("u1") == {"harness_work": ["Cursor", "Zed"]}
 
 
@@ -253,7 +253,7 @@ def test_restore_turns_a_legacy_single_favourite_into_a_heart():
     s = AiShareState()
     s.restore({"active": True, "answers": {"harness_work": {"u1": 0b10001, "u2": 0b00001}},
                "favorites": {"harness_work": {"u1": 4, "u2": 3}}})   # u2's ❤️ was not ticked
-    assert s.hearts == {"harness_work": {"u1": 0b10000}}
+    assert s.hearts == {"harness_work": {"u1": 0b100000}}
 
 
 # ── Ranking: "What burns your ⏱️ time, 🧠 brain and 😡 emotions?" ──
@@ -397,3 +397,21 @@ def test_restore_of_an_older_active_snapshot_seeds_the_ranking():
     s = AiShareState()
     s.restore({"active": True, "answers": {"ai_generated": {"u1": 40}}})
     assert len(s.ranked("devex_pain")) == 10
+
+
+def test_restore_merges_no_and_i_dont_know_answers():
+    s = AiShareState()
+    s.restore({"active": True, "answers": {"mcp": {"u1": 0, "u2": 1, "u3": 2},
+                                           "plugins": {"u1": 2}, "code_review": {"u1": 2}}})
+    assert s.answers == {"mcp": {"u1": 0, "u2": 1, "u3": 1}, "plugins": {"u1": 1}, "code_review": {"u1": 1}}
+
+
+def test_restore_moves_other_past_the_inserted_option_exactly_once():
+    s = AiShareState()
+    s.restore({"active": True, "answers": {"harness_work": {"u1": 0b10001, "u2": 0b01000}},
+               "hearts": {"harness_work": {"u1": 0b10000}}})
+    assert s.answers["harness_work"] == {"u1": 0b100001, "u2": 0b001000}   # Other stays Other, IntelliJ stays IntelliJ
+    assert s.hearts["harness_work"] == {"u1": 0b100000}
+    again = AiShareState()
+    again.restore(s.snapshot())                                            # the next restart must not shift it again
+    assert again.answers == s.answers and again.hearts == s.hearts

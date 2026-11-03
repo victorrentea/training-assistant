@@ -75,6 +75,7 @@ class PersistedAiShareState(PersistedModel):
 
     active: bool = False
     revealed: bool = Field(default=False, description="participants see everyone's answers")
+    options_version: int = Field(default=1, description="the option numbering these answers were stored under")
     answers: dict[str, dict[str, int]] = Field(
         default_factory=dict,
         description="question_id → participant_uuid → slider 0..100 | choice option index",

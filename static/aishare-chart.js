@@ -12,7 +12,7 @@
  *   opts.id      unique per chart on the page (gradient ids)
  *   opts.label   aria-label of the chart
  *   opts.future  (optional) from this % on the curve is painted green
- *   opts.futureLink  (optional) {text, url} — a link under the green slice's % label
+ *   opts.futureLink  (optional) {text, url} — a link under the green slice's % label; "\n" breaks its text
  *
  * A smoothed density (Gaussian KDE, reflected at 0/100 so the bell does not
  * leak past the axis), one dot per answer sitting on the curve, and the average
@@ -125,15 +125,18 @@
     if (future != null) {
       // Name the green slice at its foot: "90%" and up.
       var link = opts.futureLink;
-      var fl = el('text', { x: (X(future) + X(100)) / 2, y: y0 - (link ? 26 : 8), 'text-anchor': 'middle', fill: FUTURE_COLOR,
+      var linkLines = link ? link.text.split('\n') : [];
+      var fl = el('text', { x: (X(future) + X(100)) / 2, y: y0 - 8 - linkLines.length * 16, 'text-anchor': 'middle', fill: FUTURE_COLOR,
         'font-size': 13, 'font-weight': 800, 'pointer-events': 'none' }, svg);
       fl.textContent = future + '%';
       if (link) {
         // Under the label, right-aligned to 100% so it fits on a phone: where the % comes from.
         var a = el('a', { href: link.url, target: '_blank', rel: 'noopener', class: 'aishare-future-link' }, svg);
-        var lt = el('text', { x: X(100), y: y0 - 8, 'text-anchor': 'end', fill: FUTURE_COLOR,
-          'font-size': 12, 'font-weight': 700, 'text-decoration': 'underline', cursor: 'pointer' }, a);
-        lt.textContent = link.text;
+        linkLines.forEach(function (line, i) {
+          var lt = el('text', { x: X(100), y: y0 - 8 - (linkLines.length - 1 - i) * 16, 'text-anchor': 'end', fill: FUTURE_COLOR,
+            'font-size': 13, 'font-weight': 700, 'text-decoration': 'underline', cursor: 'pointer' }, a);
+          lt.textContent = line;
+        });
       }
     }
     if (opts.axis) el('line', { x1: X(0), x2: X(100), y1: y0 - 0.75, y2: y0 - 0.75, stroke: 'var(--aishare-muted)', 'stroke-width': 1.5 }, svg);
