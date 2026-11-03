@@ -41,7 +41,7 @@ QUESTIONS: list[dict] = [
      "options": YES_NO_IDK},
     {"id": "mcp", "kind": "choice", "text": "Used an MCP tool?", "options": YES_NO_IDK},
     {"id": "skill", "kind": "choice", "text": "Created a skill?", "options": YES_NO},
-    {"id": "plugins", "kind": "choice", "text": "Do you have any plugins from your company or team installed in your agent?",
+    {"id": "plugins", "kind": "choice", "text": "Do you have plugins from your company or team installed in your agent?",
      "links": [{"text": "plugins", "url": "https://agent-plugins.org"}],
      "options": YES_NO_IDK},
     {"id": "custom_agent", "kind": "choice", "text": "Created a custom agent (for example in .claude/agents)?", "options": YES_NO},

@@ -814,6 +814,10 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 @media (hover: hover) { .aishare-heart:hover .aishare-heart-g::before { content: '❤️'; } }
 /* A survey option stays put under the pointer: only its border lights up. */
 .aishare-card .aishare-opt:hover:not(:disabled) { transform: none; }
+/* Counts line up in one column on the right, whatever the bar's length: past the end of a multi's
+   longest bar (82%, see _aiShareUpdateCard), clear of its ❤️. Short bars leave them on the card's own background. */
+.aishare-card .aishare-opt .count { right: 0; color: var(--color-on-surface, #2a3439); }
+.aishare-card .aishare-opt:has(.aishare-heart) .count { right: 18%; }
 /* The ♡ column and its hint (with the ❤️ total) only show once something is ticked: first pick, then pick a favourite. */
 .aishare-card:not(.ticked) .aishare-heart { visibility: hidden; }
 .aishare-head-side.aishare-fav { opacity: 0; transform: translateY(-4px); transition: opacity .35s, transform .35s; pointer-events: none; flex-direction: row; align-items: baseline; gap: .8rem; }
