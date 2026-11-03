@@ -126,7 +126,7 @@
       // Name the green slice at its foot: "90%" and up.
       var link = opts.futureLink;
       var linkLines = link ? link.text.split('\n') : [];
-      var fl = el('text', { x: (X(future) + X(100)) / 2, y: y0 - 8 - linkLines.length * 16, 'text-anchor': 'middle', fill: FUTURE_COLOR,
+      var fl = el('text', { x: (X(future) + X(100)) / 2, y: y0 - 8 - (link ? linkLines.length * 16 + 6 : 0), 'text-anchor': 'middle', fill: FUTURE_COLOR,
         'font-size': 13, 'font-weight': 800, 'pointer-events': 'none' }, svg);
       fl.textContent = future + '%';
       if (link) {

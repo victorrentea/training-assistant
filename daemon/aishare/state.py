@@ -49,7 +49,7 @@ QUESTIONS: list[dict] = [
     {"id": "nontech_pr", "kind": "choice", "text": "Ever received a PR from a non-developer (e.g. PO, business, CEO)?", "options": YES_NO},
     {"id": "ai_generated", "kind": "slider", "text": "How much% of the code you🫵 push is AI-generated?",
      "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 90,
-     "future_link": {"text": "½ of devs ↗\nby end of 2026",
+     "future_link": {"text": "½ of devs worldwide\nby end of 2026",
                      "url": "https://www.youtube.com/watch?v=wc8FBhQtdsA&t=2405s"}},
     {"id": "review", "kind": "slider", "text": "How much of that code do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
