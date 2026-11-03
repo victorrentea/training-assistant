@@ -811,7 +811,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-card:not(.ticked) .aishare-heart { visibility: hidden; }
 .aishare-head-side.aishare-fav { opacity: 0; transform: translateY(-4px); transition: opacity .35s, transform .35s; pointer-events: none; flex-direction: row; align-items: baseline; gap: .8rem; }
 .aishare-card.ticked .aishare-head-side.aishare-fav { opacity: 1; transform: none; }
-.aishare-hearts-total { margin-left: .3rem; font-size: 1.05rem; font-weight: 800; color: #e03131; white-space: nowrap; }
+.aishare-hearts-total { font-size: 1.05rem; font-weight: 800; color: #e03131; white-space: nowrap; }
 .aishare-status-inline { margin-left: .5rem; font-size: .9rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); white-space: nowrap; }
 /* Ranking question: a live leaderboard of pain points, each 🔥 by those it burns too, re-ordered as votes come in; tiles in a grid, read row by row. */
 .aishare-rank { display: grid; grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr)); gap: .4rem; }
@@ -6010,10 +6010,10 @@ function _aiShareBuildCard(q) {
     head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline"></span></h2>' +
       (q.hint ? '<div class="aishare-head-side"><span class="aishare-head-hint">' + _escHtml(q.hint) + '</span></div>' : '') + '</div>';
   } else if (q.kind === 'multi' && q.hint) {
-    // Count right after the question; on the right, once something is ticked: the hint, the ❤️ total right after its ❤️.
+    // Count right after the question; on the right, once something is ticked: the hint and the ❤️ total.
     head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline"></span></h2>' +
-      '<div class="aishare-head-side aishare-fav"><span class="aishare-head-hint">' +
-      _escHtml(q.hint).replace('❤️', '❤️<span class="aishare-hearts-total"></span>') + '</span></div></div>';
+      '<div class="aishare-head-side aishare-fav"><span class="aishare-head-hint">' + _escHtml(q.hint) + '</span>' +
+      '<span class="aishare-hearts-total"></span></div></div>';
   } else {
     var skip = q.kind === 'slider' ? '<button class="aishare-skip">Skip</button>' : '';
     head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + skip + '</h2><span class="aishare-status"></span></div>';
@@ -6153,7 +6153,7 @@ function _aiShareUpdateCard(card, q) {
     var heartsTotal = card.querySelector('.aishare-hearts-total');
     if (heartsTotal) {
       var total = (hearts || []).reduce(function (a, b) { return a + b; }, 0);
-      heartsTotal.textContent = total ? total + '×' : '';
+      heartsTotal.textContent = total ? '×' + total : '';
     }
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
       var idx = +btn.dataset.i;
