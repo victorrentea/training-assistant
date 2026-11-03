@@ -83,6 +83,16 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         other_box.press("Enter")
         expect(harness.locator(".aishare-other-chip.mine")).to_have_text(["✓ Cursor"])
         expect(other_box).to_have_value("")
+        # Hovering ♡ only previews ❤️: nothing grows, the option stays put, it is gone once the pointer leaves
+        glyph = "el => getComputedStyle(el, '::before').content"
+        preview = harness.locator('.aishare-opt[data-i="1"] .aishare-heart')
+        preview.hover()
+        assert "❤️" in preview.locator(".aishare-heart-g").evaluate(glyph)
+        assert preview.evaluate("el => getComputedStyle(el).transform") == "none"
+        assert harness.locator('.aishare-opt[data-i="1"]').evaluate("el => getComputedStyle(el).transform") == "none"
+        alice._page.mouse.move(0, 0)
+        assert "♡" in preview.locator(".aishare-heart-g").evaluate(glyph)
+        expect(harness.locator(".aishare-opt.selected")).to_have_count(1)
         # Multi: ❤️ on Claude Code / Codex ticks it too, next to Other
         harness.locator('.aishare-opt[data-i="0"] .aishare-heart').click()
         expect(harness.locator(".aishare-opt.selected")).to_have_count(2)
