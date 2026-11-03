@@ -257,9 +257,11 @@ def test_feedback_link_appears_live_without_reload():
         expect(cta).to_have_count(1, timeout=3000)
         expect(row).to_be_hidden()
         expect(cta).to_be_hidden()
+        expect(page.locator("#gdrive-zip-btn.zip-remind")).to_have_count(0)
 
         published = _publish_feedback_form("AI@Acme", FORM_URL)
         assert published["url"] == FORM_URL
+        expect(page.locator("#gdrive-zip-btn.zip-remind")).to_have_count(1, timeout=10000)  # time to take the materials
         assert published["created_at"], "Expected an ISO created_at in the response"
 
         # No reload: the broadcast alone must reveal the entry.
@@ -346,6 +348,7 @@ def test_retracting_the_form_hides_it_live_from_participants():
         # No reload: the null broadcast alone must take it back off the screen.
         expect(row).to_be_hidden(timeout=10000)
         expect(cta).to_be_hidden(timeout=10000)
+        expect(page.locator("#gdrive-zip-btn.zip-remind")).to_have_count(0)
         assert page.locator("#feedback-nav").get_attribute("href") == "#"
         assert page.locator("#feedback-cta-link").get_attribute("href") == "#"
 

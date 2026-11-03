@@ -177,6 +177,10 @@ body{visibility:hidden}
 #notes-badge,#summary-badge,#wiki-badge,#files-badge,#prompts-badge{background:#9ca3af}
 .badge-alert{background:#ef4444!important}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* Once the feedback form is out: a slow red pulse reminds people to take the materials home. */
+@keyframes zip-remind{0%,100%{background-color:transparent}50%{background-color:#e03131;color:#fff}}
+#gdrive-zip-btn.zip-remind{opacity:1;border-radius:50%;padding:4px;margin:-4px;animation:zip-remind 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){#gdrive-zip-btn.zip-remind{animation:none;background-color:#e03131;color:#fff}}
 @keyframes follow-pulse{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
 .follow-notify{animation:follow-pulse 1.2s ease-in-out infinite}
 .follow-paused{opacity:0.45;pointer-events:none;cursor:default}
@@ -5000,7 +5004,20 @@ function _applyGdriveToast(url) {
 /* Feedback form link. Mirrors the gdrive row: one URL drives a permanent
    left-nav entry plus a one-time CTA. The CTA's dismissal is remembered
    locally so a reconnect does not re-nag someone who already answered. */
+var _feedbackUrl = null;
+
+// The download button pulses from the moment the feedback form is out until they have the zip.
+function _applyZipReminder() {
+  var btn = document.getElementById('gdrive-zip-btn');
+  if (!btn) return;
+  var done = false;
+  try { done = localStorage.getItem('zipReminderDone') === _feedbackUrl; } catch (e) {}
+  btn.classList.toggle('zip-remind', !!_feedbackUrl && !done);
+}
+
 function _applyFeedbackUrl(url) {
+  _feedbackUrl = url || null;
+  _applyZipReminder();
   var row = document.getElementById('feedback-row');
   var nav = document.getElementById('feedback-nav');
   var cta = document.getElementById('feedback-cta');
@@ -5117,6 +5134,7 @@ var _zipDownloading = false;
 function downloadMaterialsZip() {
   if (_zipDownloading || !_sessionId) return;
   _zipDownloading = true;
+  document.getElementById('gdrive-zip-btn').classList.remove('zip-remind');
   var icon = document.getElementById('gdrive-zip-icon');
   icon.textContent = 'progress_activity';
   icon.style.animation = 'spin 1s linear infinite';
@@ -5149,6 +5167,7 @@ function downloadMaterialsZip() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      try { localStorage.setItem('zipReminderDone', _feedbackUrl); } catch (e) {}
     })
     .catch(function (err) {
       console.error('[participant] materials zip download failed:', err);
@@ -5158,6 +5177,7 @@ function downloadMaterialsZip() {
       _zipDownloading = false;
       icon.style.animation = '';
       icon.textContent = 'download';
+      _applyZipReminder();
     });
 }
 
