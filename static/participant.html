@@ -862,10 +862,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-rank-score:empty { display: none; }
 .aishare-rank-add { display: flex; gap: .5rem; margin-top: .7rem; }
 .aishare-rank-add input { flex: 1; min-width: 0; padding: .65rem .9rem; border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font: inherit; }
-.aishare-rank-add input { border-color: #7048e8; }
-.aishare-rank-add input::placeholder { color: #7048e8; opacity: .75; font-weight: 300; }
-.aishare-rank-add input:focus { outline: none; border-color: #5f3dc4; }
-@media (prefers-color-scheme: dark) { .aishare-rank-add input { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); border-color: #b197fc; } .aishare-rank-add input::placeholder { color: #b197fc; } .aishare-rank-add input:focus { border-color: #d0bfff; } }
+.aishare-rank-add input::placeholder { color: var(--color-on-surface, #2a3439); opacity: .75; font-weight: 300; }
+.aishare-rank-add input:focus { outline: none; border-color: var(--color-on-surface, #2a3439); }
+@media (prefers-color-scheme: dark) { .aishare-rank-add input { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); } .aishare-rank-add input::placeholder { color: #fff; } .aishare-rank-add input:focus { border-color: #fff; } }
 /* A tall activity (the AI-share survey, a long poll) scrolls instead of being
    clipped; `safe` keeps its top reachable when it outgrows the view. */
 #activity-view { overflow-y: auto; justify-content: safe center; }
@@ -911,7 +910,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-other-save:disabled { opacity: .45; cursor: default; }
 @media (prefers-color-scheme: dark) { .aishare-other input { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); } }
 .aishare-done { margin-top: 1rem; text-align: center; font-size: 1.4rem; font-weight: 800; color: var(--color-primary, #4555ba); animation: aishare-q-in .45s cubic-bezier(.2,.8,.2,1); }
-.aishare-anon { margin-bottom: .5rem; text-align: center; font-size: .85rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); }
+.aishare-anon { margin-bottom: .5rem; text-align: center; font-size: 1.15rem; font-weight: 400; color: var(--color-on-surface-variant, #566166); }
 .aishare-skip { margin-left: .6rem; padding: .15rem .75rem; border-radius: 999px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: transparent; color: var(--color-on-surface-variant, #566166); font: inherit; font-size: .85rem; font-weight: 600; vertical-align: middle; cursor: pointer; transition: border-color .15s, color .15s; }
 .aishare-skip:hover { border-color: var(--color-primary, #4555ba); color: var(--color-primary, #4555ba); }
 .aishare-card.settled .aishare-skip { display: none; }
@@ -1426,7 +1425,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   </section>
   <section id="activity-aishare-section" style="display:none;" class="w-full">
     <!-- One card per question, appearing one after another (built by _renderActivityAiShare) -->
-    <div class="aishare-anon">Anonymous form</div>
+    <div class="aishare-anon">Anonymous AI Survey</div>
     <div id="aishare-questions" class="aishare-questions"></div>
     <div id="aishare-done" class="poll-card aishare-card aishare-done" style="display:none;">🎉 Thank you!</div>
   </section>
@@ -6012,11 +6011,7 @@ function _aiShareBuildCard(q) {
   card.className = 'poll-card aishare-card aishare-q';
   card.dataset.q = q.id;
   var head;
-  if (q.kind === 'ranking') {
-    // How many have voted right after the question, like a multi; the hint on the right.
-    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline"></span></h2>' +
-      (q.hint ? '<div class="aishare-head-side"><span class="aishare-head-hint">' + _escHtml(q.hint) + '</span></div>' : '') + '</div>';
-  } else if (q.kind === 'multi' && q.hint) {
+  if (q.kind === 'multi' && q.hint) {
     // Count right after the question; on the right, once something is ticked: the hint and the ❤️ total.
     head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline"></span></h2>' +
       '<div class="aishare-head-side aishare-fav"><span class="aishare-head-hint">' + _escHtml(q.hint) + '</span>' +

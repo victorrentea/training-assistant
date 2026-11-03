@@ -149,8 +149,7 @@ class AiShareQuestion(BaseModel):
     host_options: list[str] | None = None    # choice: the host's results merge some answers into these bars
     host_option_of: list[int] | None = None  # choice: options[i] is counted under host_options[host_option_of[i]]
     other_option: int | None = None          # choice: picking this option opens a free-text box
-    hint: str | None = None            # multi: on the right, over the ❤️ column, once anything is ticked;
-                                       # ranking: on the right of the title
+    hint: str | None = None            # multi: on the right, over the ❤️ column, once anything is ticked
     low: str | None = None             # slider: label at 0%
     high: str | None = None            # slider: label at 100%
     future: int | None = None          # slider: from here on the curve is painted green

@@ -197,7 +197,7 @@ components:
                 hint:
                   nullable: true
                   type: string
-                  description: "multi: on the right, over the ❤️ column, once anything is ticked; ranking: on the right of the title"
+                  description: "multi: on the right, over the ❤️ column, once anything is ticked"
                 low:
                   nullable: true
                   type: string

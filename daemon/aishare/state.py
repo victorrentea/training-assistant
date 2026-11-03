@@ -54,7 +54,6 @@ QUESTIONS: list[dict] = [
     {"id": "review", "kind": "slider", "text": "How much of that code do you review?",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
     {"id": "devex_pain", "kind": "ranking", "text": "DevEx: What burns your ⏱️ time, 🧠 brain or 😡 emotions?",
-     "hint": "… add your own",
      # "Key: detail" — the key is shown in bold; items participants add follow the same rule.
      "options": ["Code Review: waiting / performing", "Meetings: too many / too long", "Bureaucracy",
                  "Tech debt: legacy code, lack of tests", "Requirements: unclear / ever-changing", "Context switching",
@@ -62,7 +61,7 @@ QUESTIONS: list[dict] = [
                  "Documentation: missing or obsolete"]},
     # Rarely a yes in practice: asked last, so it does not slow the warm-up.
     {"id": "knowledge_base", "kind": "choice",
-     "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki)?",
+     "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki, Obsidian)?",
      "links": [{"text": "LLM Wiki", "url": "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"}],
      "options": YES_NO_IDK},
 ]
