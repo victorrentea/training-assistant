@@ -805,8 +805,15 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 /* ❤️ on a multi option: tap the one you love most; once revealed it also counts everyone's. */
 .aishare-opt .row { justify-content: space-between; }
 .aishare-heart { position: relative; z-index: 3; flex-shrink: 0; padding: .1rem .45rem; border-radius: 999px; font-size: 1.05rem; font-weight: 800; line-height: 1.3; color: var(--color-on-surface-variant, #566166); cursor: pointer; transition: transform .15s; }
-.aishare-heart:hover { transform: scale(1.2); }
-.aishare-heart.mine { color: #e03131; }
+/* The count in red, then the heart: red for good once clicked, red only while hovered until then. */
+.aishare-heart-n { margin-right: .3rem; color: #e03131; }
+.aishare-heart-n:empty { display: none; }
+.aishare-heart-g { display: inline-block; width: 1.4em; text-align: center; }
+.aishare-heart-g::before { content: '♡'; }
+.aishare-heart.mine .aishare-heart-g::before { content: '❤️'; }
+@media (hover: hover) { .aishare-heart:hover .aishare-heart-g::before { content: '❤️'; } }
+/* A survey option stays put under the pointer: only its border lights up. */
+.aishare-card .aishare-opt:hover:not(:disabled) { transform: none; }
 /* The ♡ column and its hint (with the ❤️ total) only show once something is ticked: first pick, then pick a favourite. */
 .aishare-card:not(.ticked) .aishare-heart { visibility: hidden; }
 .aishare-head-side.aishare-fav { opacity: 0; transform: translateY(-4px); transition: opacity .35s, transform .35s; pointer-events: none; flex-direction: row; align-items: baseline; gap: .8rem; }
@@ -6057,7 +6064,7 @@ function _aiShareBuildCard(q) {
     card.innerHTML = head + '<div class="aishare-choices">' + q.options.map(function (text, idx) {
       return '<button class="poll-option-btn aishare-opt" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
         '<div class="row"><span><span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true"></span>' + _escHtml(text) + '</span>' +
-        (multi ? '<span class="aishare-heart" role="button" tabindex="0" data-tip="My favourite"></span>' : '') + '</div></button>';
+        (multi ? '<span class="aishare-heart" role="button" tabindex="0" data-tip="My favourite"><span class="aishare-heart-n"></span><span class="aishare-heart-g"></span></span>' : '') + '</div></button>';
     }).join('') + '</div>';
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
       var idx = +btn.dataset.i;
@@ -6074,7 +6081,7 @@ function _aiShareBuildCard(q) {
       // ❤️ = one they love most (several allowed): ticks it as well; a second tap takes the heart back.
       btn.querySelector('.aishare-heart').addEventListener('click', function (e) {
         e.stopPropagation();
-        if (!((_aiShare.myHearts[q.id] || 0) >> idx & 1)) _aiShareHeartBeat(e.currentTarget);
+        if (!((_aiShare.myHearts[q.id] || 0) >> idx & 1)) _aiShareHeartBeat(e.currentTarget.querySelector('.aishare-heart-g'));
         _onAiShareMulti(q.id, (_aiShare.my[q.id] || 0) | (1 << idx), (_aiShare.myHearts[q.id] || 0) ^ (1 << idx));
       });
     });
@@ -6165,7 +6172,7 @@ function _aiShareUpdateCard(card, q) {
         var fav = !!((_aiShare.myHearts[q.id] || 0) >> idx & 1);
         var h = hearts ? (hearts[idx] || 0) : 0;
         heart.classList.toggle('mine', fav);
-        heart.textContent = (h > 1 ? h + '× ' : '') + (fav ? '❤️' : '♡');
+        heart.querySelector('.aishare-heart-n').textContent = h ? h + '×' : '';
       }
       var c = counts ? (counts[idx] || 0) : 0;
       // A multi's longest bar stops short of the ❤️ on the right, so its count stays readable.
