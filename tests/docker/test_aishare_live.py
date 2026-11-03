@@ -31,7 +31,7 @@ def _shot(page, name):
         page.screenshot(path=f"{SHOTS}/{name}.png", full_page=True)
 
 
-CHOICES = ["harness_work", "personal_sub", "agents_md", "knowledge_base", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr"]
+CHOICES = ["harness_work", "personal_sub", "agents_md", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr"]
 
 
 @pytest.mark.nightly
@@ -99,7 +99,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(cards).to_have_count(len(CHOICES) + 2, timeout=5000)
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
         alice.set_aishare(30, "review")
-        # ── Last: what burns their time; a vote finishes the survey. Until the reveal each sees
+        # ── Then: what burns their time. Until the reveal each sees
         #    only their own 🔥 — no tallies, no re-order — so nobody follows the crowd
         expect(cards).to_have_count(len(CHOICES) + 3, timeout=5000)
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
@@ -107,6 +107,11 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         alice.vote_pain("Context switching")
         expect(alice.aishare_card("devex_pain").locator(".aishare-rank-row", has_text="Context switching").locator(".aishare-rank-burn.mine")).to_have_count(1)
         expect(alice.pain_ranking().first).to_have_text("Code Review: waiting / performing")
+        # ── Last, at the very bottom: the knowledge-base question; answering it finishes the survey
+        expect(cards).to_have_count(len(CHOICES) + 4, timeout=5000)
+        expect(cards.last).to_have_attribute("data-q", "knowledge_base")
+        expect(alice._page.locator("#aishare-done")).to_be_hidden()
+        alice.choose_aishare("knowledge_base", 1)
         expect(alice._page.locator("#aishare-done")).to_contain_text("Thank you", timeout=5000)
         alice.add_pain("Too many Jira fields")
 
@@ -134,6 +139,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         bob.set_aishare(40, "review")
         # Bob's 🔥 on Alice's item takes it to the top — for the host; Alice sees no tally, no re-order
         bob.vote_pain("Too many Jira fields")
+        bob.choose_aishare("knowledge_base", 0)
         expect(alice.aishare_card("devex_pain").locator(".aishare-status").last).to_have_text("2 respondents", timeout=5000)
         expect(alice.pain_ranking().first).to_have_text("Code Review: waiting / performing")
         expect(alice._page.locator("#aishare-questions .aishare-rank-row.custom .aishare-rank-text")).to_have_text("Too many Jira fields")
@@ -159,7 +165,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         # ── Host reveals → every question, with results, for everyone
         host.reveal_aishare(True)
         expect(alice.aishare_card("ai_generated").locator(".aishare-dot")).to_have_count(2, timeout=5000)
-        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(len(CHOICES) + 3, timeout=5000)
+        expect(bob._page.locator("#aishare-questions .aishare-q")).to_have_count(len(CHOICES) + 4, timeout=5000)
         expect(bob.aishare_card("agents_md").locator(".count")).to_have_text(["1", "1"])
         expect(harness.locator(".aishare-other-chip")).to_have_text(["✓ Cursor×2", "Zed"])  # counts once revealed
         # The leaderboard slides into place; the top 3 (with any 🔥) catch fire

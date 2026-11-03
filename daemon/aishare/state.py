@@ -38,10 +38,6 @@ QUESTIONS: list[dict] = [
     {"id": "agents_md", "kind": "choice", "text": "Do you have an AGENTS.md (or CLAUDE.md) in 🫵your project?",
      "links": [{"text": "AGENTS.md", "url": "https://agents.md"}],
      "options": ["Yes", "No / I don't know"]},
-    {"id": "knowledge_base", "kind": "choice",
-     "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki)?",
-     "links": [{"text": "LLM Wiki", "url": "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"}],
-     "options": ["Yes", "No / I don't know"]},
     {"id": "mcp", "kind": "choice", "text": "Used an MCP tool?", "options": YES_NO_IDK},
     {"id": "skill", "kind": "choice", "text": "Created a skill?", "options": YES_NO},
     {"id": "plugins", "kind": "choice", "text": "Do you have any plugins from your company or team installed in your agent?",
@@ -63,6 +59,11 @@ QUESTIONS: list[dict] = [
                  "Tech debt: legacy code, lack of tests", "Requirements: unclear / ever-changing", "Context switching",
                  "Permissions: lack of access", "CI: slow pipeline / flaky tests", "Blocked: by other teams",
                  "Documentation: missing or obsolete"]},
+    # Rarely a yes in practice: asked last, so it does not slow the warm-up.
+    {"id": "knowledge_base", "kind": "choice",
+     "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki)?",
+     "links": [{"text": "LLM Wiki", "url": "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"}],
+     "options": ["Yes", "No / I don't know"]},
 ]
 QUESTIONS_BY_ID = {q["id"]: q for q in QUESTIONS}
 

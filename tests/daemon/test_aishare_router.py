@@ -71,13 +71,13 @@ def test_start_routes_everyone_to_the_activity(client, pstate, sent):
 def test_questions_are_shipped_in_order(client, sent):
     client.post("/api/cur/host/aishare/start")
     pax = _last(sent["broadcast"], "aishare_updated")
-    assert [q.id for q in pax.questions] == ["harness_work", "personal_sub", "agents_md", "knowledge_base", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr", "ai_generated", "review", "devex_pain"]
+    assert [q.id for q in pax.questions] == ["harness_work", "personal_sub", "agents_md", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr", "ai_generated", "review", "devex_pain", "knowledge_base"]
     assert pax.questions[0].kind == "multi" and pax.questions[0].options[-1] == "Other"
     assert pax.questions[2].options == ["Yes", "No / I don't know"]
     assert [l.text for l in pax.questions[1].links] == ["Claude", "Codex"]
-    assert pax.questions[3].options == ["Yes", "No / I don't know"]
+    assert pax.questions[-1].options == ["Yes", "No / I don't know"]
     assert next(q for q in pax.questions if q.id == "skill").options == ["Yes", "No"]
-    assert [q.kind for q in pax.questions[-3:]] == ["slider", "slider", "ranking"]
+    assert [q.kind for q in pax.questions[-4:]] == ["slider", "slider", "ranking", "choice"]
 
 
 def test_answer_rejected_before_start(client):
