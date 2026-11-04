@@ -44,18 +44,18 @@ class EmojiDef(BaseModel):
 # within a stack the first entry sits closest to its base button.
 EMOJI_CATALOG: list[EmojiDef] = [
     # Self-explanatory glyphs carry an empty title on purpose: no tooltip at all.
-    # ❤️ — positive emotions
-    EmojiDef(emoji="❤️", title="", section="primary"),
-    EmojiDef(emoji="🔥", title="", section="stacked", stack_of="❤️"),
-    EmojiDef(emoji="👏", title="Applause!", section="stacked", stack_of="❤️"),
-    EmojiDef(emoji="😂", title="I'm dead 💀", section="stacked", stack_of="❤️"),
     # ☕ — breaks (and food)
-    EmojiDef(emoji="☕", title="✨ I need a coffee break ✨", section="primary"),
+    EmojiDef(emoji="☕", title="Request a break\n(counted anonymously)", section="primary"),
     EmojiDef(emoji="🍕", title="Pizza time!", section="stacked", stack_of="☕"),
     EmojiDef(emoji="🍔", title="Burger time!", section="stacked", stack_of="☕"),
     EmojiDef(emoji="🌮", title="Taco break!", section="stacked", stack_of="☕"),
     EmojiDef(emoji="🍣", title="Sushi, anyone?", section="stacked", stack_of="☕"),
     EmojiDef(emoji="🍩", title="Donut break!", section="stacked", stack_of="☕"),
+    # ❤️ — positive emotions
+    EmojiDef(emoji="❤️", title="", section="primary"),
+    EmojiDef(emoji="🔥", title="", section="stacked", stack_of="❤️"),
+    EmojiDef(emoji="👏", title="Applause!", section="stacked", stack_of="❤️"),
+    EmojiDef(emoji="😂", title="I'm dead 💀", section="stacked", stack_of="❤️"),
     # 👍 — opinion: agree / disagree / let's debate, then a quick A/B/C vote.
     # Appended in reverse so the stack reads A, B, C top-down.
     EmojiDef(emoji="👍", title="", section="primary"),

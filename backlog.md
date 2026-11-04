@@ -527,3 +527,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request (2026-11-03): AI survey answer counts line up in a right-hand column instead of following each bar's end; "any" dropped from the plugins question.
 - [x] Direct request (2026-11-04): AI survey custom-agent question answers "No / I don't know" instead of "No" (same option index, so answers already given stay put).
 - [x] Direct request (2026-11-04): AI survey review slider reads "How much of that code do you review at work?", "at work" underlined like on the harness question. The host's question list now renders the same markup (it showed the raw asterisks), and the markers stay out of screen-reader labels.
+- [x] Direct request (2026-11-04): Reaction bar: ☕ moves first, ❤️ second; ☕'s tooltip reads "Request a break" with "(counted anonymously)" on the line below. The shared tooltip now honours line breaks (`white-space: pre-line`, no existing tip contains one).

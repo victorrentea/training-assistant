@@ -40,6 +40,7 @@
     '  padding: 0.6rem 0.9rem;',
     '  border-radius: 0.6rem;',
     '  max-width: 22rem;',
+    '  white-space: pre-line;',
     '  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);',
     '  opacity: 0;',
     '  transform: translateY(4px);',

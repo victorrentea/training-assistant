@@ -49,11 +49,11 @@ def test_sections_are_known():
 def test_bar_groups_as_designed():
     """Four base emoji on the bar, each with its stack (bottom→top), plus the signal."""
     bases = [e.emoji for e in EMOJI_CATALOG if e.section == "primary"]
-    assert bases == ["❤️", "☕", "👍", "🤔"]
+    assert bases == ["☕", "❤️", "👍", "🤔"]
     stacks = {b: [e.emoji for e in EMOJI_CATALOG if e.stack_of == b] for b in bases}
     assert stacks == {
-        "❤️": ["🔥", "👏", "😂"],
         "☕": ["🍕", "🍔", "🌮", "🍣", "🍩"],
+        "❤️": ["🔥", "👏", "😂"],
         "👍": ["✅", "❌", "⚔️", "🇨", "🇧", "🇦"],
         "🤔": ["💡", "🤯", "😢"],
     }
