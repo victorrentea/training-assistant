@@ -2637,6 +2637,12 @@ function _renderEngagementPopover() {
 
   // One block per question in the center panel, kept across updates so the
   // bell curves morph instead of being redrawn from scratch.
+  // Survey question text: what follows a newline indented, **words** underlined, ((words)) light in parentheses.
+  function aiShareTitleHtml(text) {
+    return escHtml(text).replace(/\n([^]*)$/, '<br><span style="display:inline-block;padding-left:1.5em">$1</span>')
+      .replace(/\*\*(.+?)\*\*/g, '<u>$1</u>').replace(/\(\((.+?)\)\)/g, '<span style="font-weight:400">($1)</span>');
+  }
+
   function renderAiShareHost(state) {
     const questions = state.questions || [];
     const results = Object.fromEntries((state.results || []).map(r => [r.id, r]));
@@ -2650,7 +2656,7 @@ function _renderEngagementPopover() {
       : 'Start to put the questions in front of every participant, one after another.';
     document.getElementById('aishare-host-questions').innerHTML = questions.map(q => {
       const c = (results[q.id] || {}).count || 0;
-      return `<li>${escHtml(q.text)}${c ? ` <span class="aishare-host-count">${c}</span>` : ''}</li>`;
+      return `<li>${aiShareTitleHtml(q.text)}${c ? ` <span class="aishare-host-count">${c}</span>` : ''}</li>`;
     }).join('');
 
     const box = document.getElementById('aishare-host-results');
@@ -2667,7 +2673,7 @@ function _renderEngagementPopover() {
         block = document.createElement('div');
         block.className = 'aishare-host-block';
         block.dataset.q = q.id;
-        block.innerHTML = `<div class="aishare-host-block-head"><span>${(q.links || []).reduce((html, l) => html.replace(escHtml(l.text), `<a href="${escHtml(l.url)}" target="_blank" rel="noopener">${escHtml(l.text)}</a>`), escHtml(q.text).replace(/\n([^]*)$/, '<br><span style="display:inline-block;padding-left:1.5em">$1</span>').replace(/\*\*(.+?)\*\*/g, '<u>$1</u>').replace(/\(\((.+?)\)\)/g, '<span style="font-weight:400">($1)</span>'))}</span><span class="aishare-host-block-count"></span></div>` +
+        block.innerHTML = `<div class="aishare-host-block-head"><span>${(q.links || []).reduce((html, l) => html.replace(escHtml(l.text), `<a href="${escHtml(l.url)}" target="_blank" rel="noopener">${escHtml(l.text)}</a>`), aiShareTitleHtml(q.text))}</span><span class="aishare-host-block-count"></span></div>` +
           (q.kind === 'ranking' ? '<div class="aishare-host-rank"></div>' : q.kind === 'slider'
             ? `<div class="aishare-scale"><span class="aishare-end-l">${escHtml(q.low || '0%')}</span><span class="aishare-end-r">${escHtml(q.high || '100%')}</span></div><div class="aishare-plot"></div>`
             : `<div class="aishare-bars${q.kind === 'multi' ? ' multi' : ''}">${(q.host_options || q.options).map((o, i) => `<div class="aishare-bar" data-i="${i}"><span class="aishare-bar-label">${escHtml(o)}</span><span class="aishare-bar-track"><span class="aishare-bar-fill"></span></span><span class="aishare-bar-count"></span>${q.kind === 'multi' ? '<span class="aishare-bar-hearts"></span>' : ''}</div>`).join('')}</div>` +

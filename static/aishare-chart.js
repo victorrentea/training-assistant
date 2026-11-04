@@ -103,7 +103,7 @@
     plot.innerHTML = '';
     plot.style.height = H + 'px';            // CSS transition turns this into "rising open"
     var svg = el('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, class: 'aishare-svg', role: 'img',
-      'aria-label': opts.label || 'Distribution of the answers' }, plot);
+      'aria-label': (opts.label || 'Distribution of the answers').replace(/\*\*/g, '') }, plot);
     var defs = el('defs', {}, svg);
     var grad = el('linearGradient', { id: 'aishare-fill-' + (opts.id || 'x'), x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
     el('stop', { offset: '0%', 'stop-color': 'var(--aishare-accent)', 'stop-opacity': 0.55 }, grad);

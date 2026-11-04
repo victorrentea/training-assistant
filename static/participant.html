@@ -6030,7 +6030,7 @@ function _aiShareBuildCard(q) {
       '<div class="aishare-scale"><span class="aishare-end-l">' + _escHtml(q.low || '0%') + '</span>' +
         '<span class="aishare-end-r">' + _escHtml(q.high || '100%') + '</span></div>' +
       '<div class="aishare-plot"></div>' +
-      '<input id="aishare-slider-' + q.id + '" class="aishare-slider untouched" type="range" min="0" max="100" step="1" value="50" aria-label="' + _escHtml(q.text) + '" />';
+      '<input id="aishare-slider-' + q.id + '" class="aishare-slider untouched" type="range" min="0" max="100" step="1" value="50" aria-label="' + _escHtml(q.text.replace(/\*\*/g, '')) + '" />';
     var slider = card.querySelector('input');
     card.querySelector('.aishare-skip').addEventListener('click', function () { _onAiShareSkip(q.id); });
     slider.addEventListener('input', function () { _onAiShareInput(q.id, slider.value); });
