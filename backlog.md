@@ -524,3 +524,4 @@ Host broadcasts a statement: "Have you ever shipped code that violated what we j
 - [x] Direct request (2026-11-03): AI survey hover. Options no longer slide right, only their border lights up; ♡ does not grow, it previews ❤️ while hovered and keeps it only when clicked; the N× counts are red and 1× is back.
 - [x] Direct request (2026-11-03): AI survey last touches. DevEx ranking: "… add your own" gone, respondents count on the right, the add box white instead of purple. "½ of devs worldwide" instead of the ↗ link arrow, more air under the 90%, Obsidian as a knowledge-base example.
 - [x] Direct request (2026-11-03): AI survey answer counts line up in a right-hand column instead of following each bar's end; "any" dropped from the plugins question.
+- [x] Direct request (2026-11-04): AI survey custom-agent question answers "No / I don't know" instead of "No" (same option index, so answers already given stay put).
