@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 
 import railway.shared.metrics as metrics  # noqa: F401 - import for Prometheus metric registration side effects
+from railway.features.bridge.phone_battery import router as phone_battery_router
 from railway.features.bridge.router import router as bridge_router
 from railway.features.inbox.router import router as inbox_router
 from railway.features.internal.router import router as internal_router
@@ -132,6 +133,7 @@ app.include_router(ws.router)
 # MUST precede the session catch-all below: /ws/bridge/{mac,tablet} would
 # otherwise be swallowed by /ws/{session_id}/{participant_id}.
 app.include_router(bridge_router)
+app.include_router(phone_battery_router)
 # WebSocket: session-scoped participant connections
 app.include_router(ws_session_router)
 
