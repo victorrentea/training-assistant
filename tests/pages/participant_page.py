@@ -93,7 +93,7 @@ class ParticipantPage:
     def vote_pain(self, text: str) -> None:
         row = self._page.locator("#aishare-questions .aishare-rank-row", has_text=text)
         expect(row).to_have_count(1, timeout=5000)
-        row.locator(".aishare-rank-burn").click()
+        row.click()
 
     def add_pain(self, text: str) -> None:
         box = self._page.locator("#aishare-questions .aishare-rank-add input")

@@ -824,46 +824,41 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-card.ticked .aishare-head-side.aishare-fav { opacity: 1; transform: none; }
 .aishare-hearts-total { font-size: 1.05rem; font-weight: 800; color: #e03131; white-space: nowrap; }
 .aishare-status-inline { margin-left: .5rem; font-size: .9rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); white-space: nowrap; }
-/* Ranking question: a live leaderboard of pain points, each 🔥 by those it burns too, re-ordered as votes come in; tiles in a grid, read row by row. */
+/* Ranking question: a live leaderboard of pain points; the whole tile is the button, and it burns for those it burns too. Re-ordered as votes come in; tiles in a grid, read row by row. */
 .aishare-rank { display: grid; grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr)); gap: .4rem; }
-.aishare-rank-row { position: relative; display: flex; align-items: center; gap: .6rem; padding: .45rem .5rem .45rem .8rem; border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font-size: .95rem; overflow: hidden; }
+.aishare-rank-row { position: relative; display: flex; align-items: center; gap: .6rem; width: 100%; min-height: 3rem; padding: .45rem .8rem; border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font-family: inherit; font-size: .95rem; text-align: left; overflow: hidden; cursor: pointer; transition: border-color .15s; }
+.aishare-rank-row:hover { border-color: #e8590c; }
+.aishare-rank-row:active { transform: scale(.98); }
 @media (prefers-color-scheme: dark) { .aishare-rank-row { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); } }
 /* Once revealed: the bar heats up with its share of the top score, yellow → orange → red (--heat 0..1). */
 .aishare-rank-row .fill { position: absolute; top: 0; bottom: 0; left: 0; --heat: 0; background: hsla(calc(52 - 52 * var(--heat)), 95%, 52%, .3); transition: width .4s ease, background-color .4s; }
-/* The top 3 burn: flame tongues licking up from the bottom of the tile, fiercest on #1 (--burn). */
-.aishare-rank-row.burning { border-color: hsl(calc(30 - 30 * var(--burn)), 90%, 50%); }
-.aishare-rank-row.burning::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+/* A tile burns for whoever picked it, and for everyone once it is in the revealed top 3: flame tongues licking up from the bottom, fiercest on #1 (--burn). */
+.aishare-rank-row.burning, .aishare-rank-row.mine { border-color: hsl(calc(30 - 30 * var(--burn)), 90%, 50%); }
+.aishare-rank-row.burning::before, .aishare-rank-row.mine::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
-    radial-gradient(9% 70% at 10% 112%, rgba(255, 150, 0, .9), transparent 75%),
-    radial-gradient(7% 55% at 22% 112%, rgba(255, 70, 0, .85), transparent 75%),
-    radial-gradient(10% 80% at 36% 112%, rgba(255, 190, 0, .85), transparent 75%),
-    radial-gradient(7% 60% at 50% 112%, rgba(255, 80, 0, .85), transparent 75%),
-    radial-gradient(9% 75% at 64% 112%, rgba(255, 140, 0, .85), transparent 75%),
-    radial-gradient(7% 55% at 78% 112%, rgba(255, 60, 0, .85), transparent 75%),
-    radial-gradient(9% 70% at 92% 112%, rgba(255, 170, 0, .85), transparent 75%);
-  background-size: 50% 100%; opacity: calc(.75 * var(--burn));
+    radial-gradient(9% 95% at 10% 112%, rgba(255, 150, 0, .95), transparent 78%),
+    radial-gradient(7% 75% at 22% 112%, rgba(255, 70, 0, .95), transparent 78%),
+    radial-gradient(10% 110% at 36% 112%, rgba(255, 190, 0, .95), transparent 78%),
+    radial-gradient(7% 80% at 50% 112%, rgba(255, 80, 0, .95), transparent 78%),
+    radial-gradient(9% 100% at 64% 112%, rgba(255, 140, 0, .95), transparent 78%),
+    radial-gradient(7% 75% at 78% 112%, rgba(255, 60, 0, .95), transparent 78%),
+    radial-gradient(9% 95% at 92% 112%, rgba(255, 170, 0, .95), transparent 78%);
+  background-size: 50% 100%; background-repeat: repeat-x; opacity: calc(.9 * var(--burn));
   animation: aishare-burn-sway 4s ease-in-out infinite alternate, aishare-burn-flicker 1.7s ease-in-out infinite; }
-.aishare-rank-row.burning .aishare-rank-text, .aishare-rank-row.burning .aishare-rank-burn { z-index: 2; }
 @keyframes aishare-burn-sway { from { background-position: 0 4px; } to { background-position: 60px 0; } }
-@keyframes aishare-burn-flicker { 0%, 100% { opacity: calc(.75 * var(--burn)); } 40% { opacity: calc(.45 * var(--burn)); } 70% { opacity: var(--burn); } }
-@media (prefers-reduced-motion: reduce) { .aishare-rank-row.burning::before { animation: none; } }
-.aishare-rank-text { position: relative; flex: 1; min-width: 0; overflow-wrap: break-word; transition: color .3s; }
+@keyframes aishare-burn-flicker { 0%, 100% { opacity: calc(.9 * var(--burn)); } 40% { opacity: calc(.65 * var(--burn)); } 70% { opacity: var(--burn); } }
+@media (prefers-reduced-motion: reduce) { .aishare-rank-row.burning::before, .aishare-rank-row.mine::before { animation: none; } }
+.aishare-rank-text { position: relative; z-index: 2; flex: 1; min-width: 0; overflow-wrap: break-word; transition: color .3s; }
 .aishare-rank-row.unvoted .aishare-rank-text { color: var(--color-on-surface-variant, #566166); }
 .aishare-rank-text b { font-weight: 800; }
 /* What a participant added, set apart from the presets. */
 .aishare-rank-row.custom .aishare-rank-text { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: .88rem; color: #7048e8; }
 .aishare-rank-row.custom .aishare-rank-text b { font-weight: 700; }
 @media (prefers-color-scheme: dark) { .aishare-rank-row.custom .aishare-rank-text { color: #b197fc; } }
-.aishare-rank-burn { position: relative; flex-shrink: 0; display: flex; align-items: center; gap: .3rem; padding: .3rem .65rem; border-radius: 999px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: transparent; color: var(--color-on-surface, #2a3439); font: inherit; font-weight: 800; cursor: pointer; transition: transform .1s, background .15s, border-color .15s; }
-@media (prefers-color-scheme: dark) { .aishare-rank-burn { color: var(--color-on-surface, #dce4e9); } }
-.aishare-rank-burn .flame { font-size: 1.05rem; line-height: 1; filter: grayscale(1); opacity: .55; transition: filter .15s, opacity .15s, transform .15s; }
-.aishare-rank-burn:hover { border-color: #e8590c; }
-.aishare-rank-burn:hover .flame { filter: none; opacity: 1; transform: scale(1.15); }
-.aishare-rank-burn:active { transform: scale(.9); }
-.aishare-rank-burn.mine { background: #e8590c; border-color: #e8590c; color: #fff; }
-.aishare-rank-burn.mine .flame { filter: none; opacity: 1; }
-.aishare-rank-score { min-width: .8rem; text-align: center; }
+.aishare-rank-score { position: relative; z-index: 2; flex-shrink: 0; padding: .1rem .55rem; border-radius: 999px; font-weight: 800; white-space: nowrap; }
+.aishare-rank-score::before { content: '🔥 '; }
 .aishare-rank-score:empty { display: none; }
+.aishare-rank-row.mine .aishare-rank-score { background: #e8590c; color: #fff; }
 .aishare-rank-add { display: flex; gap: .5rem; margin-top: .7rem; }
 .aishare-rank-add input { flex: 1; min-width: 0; padding: .65rem .9rem; border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: var(--color-surface, #f7f9fb); color: var(--color-on-surface, #2a3439); font: inherit; }
 .aishare-rank-add input::placeholder { color: var(--color-on-surface, #2a3439); opacity: .75; font-weight: 300; }
@@ -6041,9 +6036,9 @@ function _aiShareBuildCard(q) {
       '<button class="aishare-other-save" disabled>Add</button></div>';
     // One listener for every row, present and future: rows come and go with the votes.
     card.querySelector('.aishare-rank').addEventListener('click', function (e) {
-      var btn = e.target.closest('.aishare-rank-burn');
-      if (!btn) return;
-      var id = btn.closest('.aishare-rank-row').dataset.id;
+      var row = e.target.closest('.aishare-rank-row');
+      if (!row) return;
+      var id = row.dataset.id;
       _onAiShareVote(q.id, +id, (_aiShare.myVotes[q.id] || {})[id] ? 0 : 1);  // a second tap takes it back
     });
     var addInput = card.querySelector('.aishare-rank-add input');
@@ -6227,8 +6222,8 @@ function _aiShareSortItems(items) {
 
 // The leaderboard: rows are kept and moved, never rebuilt, so a row that climbs
 // slides to its new place (FLIP) instead of jumping there. Until the host reveals it
-// a participant gets no tallies — only their own 🔥, in the order the items were added,
-// so nobody follows the crowd; on the reveal the rows slide into place and the top 3 catch fire.
+// a participant gets no tallies — only their own picks burning, in the order the items were
+// added, so nobody follows the crowd; on the reveal the rows slide into place and the top 3 catch fire.
 function _aiShareUpdateRanking(card, q, res) {
   var list = card.querySelector('.aishare-rank');
   var shown = _aiShare.revealed;
@@ -6243,25 +6238,28 @@ function _aiShareUpdateRanking(card, q, res) {
     keep[id] = true;
     var row = list.querySelector('.aishare-rank-row[data-id="' + id + '"]');
     if (!row) {
-      row = document.createElement('div');
+      row = document.createElement('button');
+      row.type = 'button';
       row.className = 'aishare-rank-row';
       row.dataset.id = id;
+      row.dataset.tip = 'Burns me too';
       row.innerHTML = '<div class="fill" style="width:0%"></div>' +
-        '<span class="aishare-rank-text"></span>' +
-        '<button class="aishare-rank-burn" aria-label="Burns me too" data-tip="Burns me too"><span class="flame">🔥</span><span class="aishare-rank-score"></span></button>';
+        '<span class="aishare-rank-text"></span><span class="aishare-rank-score"></span>';
     }
     row.querySelector('.aishare-rank-text').innerHTML = _aiShareKeyHtml(it.text);
     row.classList.toggle('custom', !!it.custom);
     row.classList.toggle('unvoted', shown && !it.score);
-    row.querySelector('.aishare-rank-score').textContent = shown ? it.score : '';
-    row.querySelector('.aishare-rank-burn').classList.toggle('mine', mine[id] === 1);
+    row.querySelector('.aishare-rank-score').textContent = shown && it.score ? it.score : '';
+    var picked = mine[id] === 1;
+    row.classList.toggle('mine', picked);
+    row.setAttribute('aria-pressed', picked);
     var heat = shown ? it.score / maxScore : 0;
     var fill = row.querySelector('.fill');
     fill.style.width = (heat * 100) + '%';
     fill.style.setProperty('--heat', heat);
     var burning = shown && it.score > 0 && rank < 3;
     row.classList.toggle('burning', burning);
-    row.style.setProperty('--burn', burning ? [1, .7, .45][rank] : 0);
+    row.style.setProperty('--burn', Math.max(burning ? [1, .7, .45][rank] : 0, picked ? .85 : 0));
     list.appendChild(row);  // moves an existing row into its new place
   });
   list.querySelectorAll('.aishare-rank-row').forEach(function (row) { if (!keep[row.dataset.id]) row.remove(); });

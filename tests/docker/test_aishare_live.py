@@ -115,7 +115,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice._page.locator("#aishare-done")).to_be_hidden()
         expect(alice.pain_ranking().first).to_have_text("Code Review: waiting / performing")
         alice.vote_pain("Context switching")
-        expect(alice.aishare_card("devex_pain").locator(".aishare-rank-row", has_text="Context switching").locator(".aishare-rank-burn.mine")).to_have_count(1)
+        expect(alice.aishare_card("devex_pain").locator(".aishare-rank-row.mine", has_text="Context switching")).to_have_count(1)
         expect(alice.pain_ranking().first).to_have_text("Code Review: waiting / performing")
         # ── Last, at the very bottom: the knowledge-base question; answering it finishes the survey
         expect(cards).to_have_count(len(CHOICES) + 4, timeout=5000)
@@ -182,6 +182,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         expect(alice.pain_ranking().first).to_have_text("Too many Jira fields", timeout=5000)
         expect(alice._page.locator("#aishare-questions .aishare-rank-row .aishare-rank-score").first).to_have_text("2")
         expect(alice._page.locator("#aishare-questions .aishare-rank-row.burning")).to_have_count(2)
+        expect(alice._page.locator("#aishare-questions .aishare-rank-score", has_text=re.compile(r"\d"))).to_have_count(2)  # no "🔥 0"
         alice.aishare_card("devex_pain").evaluate("el => el.scrollIntoView({block: 'start'})")
         alice._page.wait_for_timeout(600)  # the FLIP slide
         _shot(alice._page, "aishare-pax-ranking-revealed")
@@ -204,7 +205,7 @@ def test_aishare_survey_one_question_after_another_reveal_and_clear():
         alice.wait_for_aishare()
         expect(alice._page.locator("#aishare-slider-ai_generated")).to_have_value("80", timeout=5000)
         expect(alice.aishare_card("custom_agent").locator(".aishare-opt.selected")).to_have_attribute("data-i", "1")
-        expect(alice.aishare_card("devex_pain").locator(".aishare-rank-row", has_text="Context switching").locator(".aishare-rank-burn.mine")).to_have_count(1)
+        expect(alice.aishare_card("devex_pain").locator(".aishare-rank-row.mine", has_text="Context switching")).to_have_count(1)
 
         # ── Clear → the activity disappears for everyone
         host.clear_aishare()
