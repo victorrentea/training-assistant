@@ -586,15 +586,16 @@ body {
   pointer-events: none;
 }
 
-// Top-right of the full graph (patch-graph.py): what the wiki was written from, as a
-// bullet list (a line along the bottom until Victor, 2026-10-21). Full contrast (white
-// on dark, the text colour on light): the dim grey it had was unreadable on the
+// Top-right of the full graph (patch-graph.py): a badge hanging from the top edge that
+// unfolds on hover into what the wiki was written from (Victor, 2026-11-05: an always
+// open bullet list until then, a line along the bottom until 2026-10-21). Full contrast
+// (white on dark, the text colour on light): the dim grey it had was unreadable on the
 // projector (Victor, 2026-10-19). Faded as a whole until hovered, so it doesn't
 // compete with the graph (Victor, 2026-10-23).
 .graph-sources {
   position: absolute;
   right: 0.9rem;
-  top: 0.9rem;
+  top: 0;
   z-index: 1;
   white-space: nowrap;
   font-family: var(--bodyFont);
@@ -604,13 +605,19 @@ body {
   opacity: var(--wiki-sources-fade);
   transition: opacity 0.2s;
   // Zoomed in, labels and dots run under it.
-  padding: 0.35rem 0.6rem;
-  border-radius: 0.5rem;
+  padding: 0.2rem 0.6rem 0.25rem;
+  border: 1px solid var(--lightgray);
+  border-top: none;
+  border-radius: 0 0 0.5rem 0.5rem;
   background: color-mix(in srgb, var(--light) 85%, transparent);
 
+  // Folded to nothing, so it takes no clicks off the graph; max-height to animate it.
   ul {
-    margin: 0.15rem 0 0;
+    max-height: 0;
+    margin: 0;
     padding-left: 1rem;
+    overflow: hidden;
+    transition: max-height 0.2s, margin-top 0.2s;
   }
 
   li {
@@ -619,6 +626,11 @@ body {
 
   &:hover {
     opacity: 1;
+
+    ul {
+      max-height: 18rem;
+      margin-top: 0.15rem;
+    }
   }
 }
 
@@ -639,9 +651,10 @@ body.peek-dragging {
   color: #fff;
 }
 
-// Below the Follow pill the participant page floats over the wiki's top-right corner.
+// Left of the Follow pill the participant page floats over the wiki's top-right corner:
+// under it, the unfolded list would run behind the pill.
 .wiki-embedded .graph-sources {
-  top: 5rem;
+  right: 8rem;
 }
 
 // Under 900px the participant page's emoji bar and feedback card float over the bottom

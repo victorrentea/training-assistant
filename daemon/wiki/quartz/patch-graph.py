@@ -619,14 +619,14 @@ PATCHES = [
     // Top-right, as a list: what the wiki was written from (Victor, 2026-10-16; a line
     // along the bottom until 2026-10-21). "Zoom chat": its links and books, since 2026-10-22; "(if any)", as not every day has a Zoom (Victor, 2026-10-23).
     // "played shorts": the soundboard clips the room heard, linked on YouTube where they were fired (same day).
-    // The heading says who wrote the sentences: GPT, since training-summarizer has Sol write them (Victor, 2026-11-05).
+    // The badge says who wrote the sentences: GPT, since training-summarizer has Sol write them; the list unfolds on hover (Victor, 2026-11-05).
     const sources = document.createElement("div")
     sources.className = "graph-sources"
     const sourcesList = document.createElement("ul")
     for (const source of ["browser history", "opened files", "slides viewed", "notes", "transcription", "Zoom chat (if any)", "played shorts", "screenshots", "internet research"]) {
       sourcesList.appendChild(Object.assign(document.createElement("li"), { textContent: source }))
     }
-    sources.append(Object.assign(document.createElement("div"), { textContent: "GPT generated from:" }), sourcesList)
+    sources.append(Object.assign(document.createElement("div"), { textContent: "GPT-generated from sources" }), sourcesList)
     // Top-left: whose workshop this is - the session's title (the site's, as
     // "AI@Client", from the sidebar's page title) and the trainer (Victor, 2026-10-29).
     const sessionTitle = document.querySelector(".page-title a")?.textContent?.trim()
