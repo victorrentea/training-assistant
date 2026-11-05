@@ -611,6 +611,19 @@ body {
   border-radius: 0 0 0.5rem 0.5rem;
   background: color-mix(in srgb, var(--light) 85%, transparent);
 
+  // A collapsible's arrow: > while folded, turning to v as the list unfolds.
+  > div::before {
+    content: "";
+    display: inline-block;
+    width: 0.32rem;
+    height: 0.32rem;
+    margin: 0 0.4rem 0.08rem 0.05rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.2s;
+  }
+
   // Folded to nothing, so it takes no clicks off the graph; max-height to animate it.
   ul {
     max-height: 0;
@@ -626,6 +639,10 @@ body {
 
   &:hover {
     opacity: 1;
+
+    > div::before {
+      transform: rotate(45deg);
+    }
 
     ul {
       max-height: 18rem;
