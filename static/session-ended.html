@@ -24,6 +24,7 @@
     for the trainer, who reaches it constantly via browser autocomplete of
     yesterday's link and would have to hand-edit the URL to get back in.
   -->
+  <script src="/static/theme.js?v=b0491bf6"></script>
   <style>
     :root { color-scheme: light dark; }
     * { box-sizing: border-box; }
@@ -45,11 +46,9 @@
       display: inline-block; margin-top: 26px; padding: 11px 22px; border-radius: 10px;
       background: #2563eb; color: #fff; text-decoration: none; font-weight: 600; font-size: 14px;
     }
-    @media (prefers-color-scheme: dark) {
-      body { background: #0f1720; color: #e6edf3; }
-      .card { background: #182029; box-shadow: none; }
-      .muted, .meta { color: #9aa7b4; }
-    }
+    :where(html.dark) body { background: #0f1720; color: #e6edf3; }
+    :where(html.dark) .card { background: #182029; box-shadow: none; }
+    :where(html.dark) .muted, :where(html.dark) .meta { color: #9aa7b4; }
   </style>
 </head>
 <body>

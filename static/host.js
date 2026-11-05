@@ -40,7 +40,16 @@
     ? window.createVersionReloadGuard({ countdownSeconds: 5 })
     : null;
   window.__versionReloadGuard = versionReloadGuard;
-  const WC_COLORS = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
+  const WC_COLORS_DARK = ['#7ecef4','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa','#fb923c'];
+  // Same hues, darker, so the words stay readable on the light background.
+  const WC_COLORS_LIGHT = ['#0e7fb5','#6d4bd8','#0b8a5f','#a86a00','#c2255c','#2563eb','#c2410c'];
+  const wcColors = () => document.documentElement.classList.contains('light') ? WC_COLORS_LIGHT : WC_COLORS_DARK;
+  document.addEventListener('theme-change', () => {
+    if (_hostWcLastDataKey === null) return;
+    const words = JSON.parse(_hostWcLastDataKey);
+    _hostWcLastDataKey = null;
+    renderHostWordCloud(words);
+  });
 
   // ── Quiz history (persisted in localStorage, keyed by today's date) ──
   const TODAY_KEY = `host_quizzes_${new Date().toISOString().slice(0, 10)}`;
@@ -1523,7 +1532,7 @@ function _renderEngagementPopover() {
     const leftTabsWrapper = document.querySelector('.left-tabs-wrapper');
 
     // Detect light/dark mode for QR color adaptation
-    const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    const isLight = document.documentElement.classList.contains('light');
 
     const pptxDrop = document.getElementById('talk-pptx-drop');
     const clearSlidesBtn = document.getElementById('talk-clear-slides');
@@ -3263,7 +3272,8 @@ function _renderEngagementPopover() {
           ctx.translate(W/2 + w.x, H/2 + w.y);
           ctx.rotate((w.rotate * Math.PI) / 180);
           ctx.font = `bold ${w.size}px sans-serif`;
-          ctx.fillStyle = WC_COLORS[i % WC_COLORS.length];
+          const palette = wcColors();
+          ctx.fillStyle = palette[i % palette.length];
           ctx.fillText(w.text, 0, 0);
           ctx.restore();
         });
@@ -4346,14 +4356,14 @@ function _buildUrlHtml({ stripProtocol = false, plain = false } = {}) {
   const displayYellowFrom = _currentSessionId ? displayBase.length + 1 : display.length; // after the '/'
   return display.split('').map((ch, i) => {
     const yellow = i >= displayYellowFrom;
-    const style = `animation-delay:${(i * 0.12).toFixed(2)}s${yellow ? '; --wave-dim:#f0c040aa; --wave-bright:#f0c040;' : ''}`;
-    return `<span class="wave-char" style="${style}">${ch}</span>`;
+    const style = `animation-delay:${(i * 0.12).toFixed(2)}s`;
+    return `<span class="wave-char${yellow ? ' wave-char-accent' : ''}" style="${style}">${ch}</span>`;
   }).join('');
 }
 
 function _regenerateAllQRCodes() {
   const joinUrl = _getJoinUrl();
-  const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+  const isLight = document.documentElement.classList.contains('light');
 
   // Center QR (muted in workshop, bright in conference)
   const centerPanel = document.getElementById('center-qr');

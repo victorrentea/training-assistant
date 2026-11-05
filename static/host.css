@@ -43,12 +43,12 @@ body {
   --wave-dim: rgba(255,255,255,.55);
   --wave-bright: #fff;
 }
-@media (prefers-color-scheme: light) {
-  .wave-char {
-    --wave-dim: rgba(0,0,0,.15);
-    --wave-bright: #1a1d2e;
-  }
+:where(html.light) .wave-char {
+  --wave-dim: rgba(26,29,46,.55);
+  --wave-bright: #1a1d2e;
 }
+.wave-char-accent { --wave-dim: #f0c040aa; --wave-bright: #f0c040; }
+:where(html.light) .wave-char-accent { --wave-dim: #a6760099; --wave-bright: #a67600; }
 @keyframes wave-shimmer {
   0%, 100% { color: var(--wave-dim); }
   40% { color: var(--wave-bright); }
@@ -714,8 +714,8 @@ body {
   position: relative;
   padding: .55rem .8rem;
   border-radius: 6px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--surface);
+  border: 1px solid var(--border);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -734,7 +734,7 @@ body {
   z-index: 1;
   font-size: 1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text);
   letter-spacing: .02em;
 }
 .vote-anon-msg {
@@ -1106,8 +1106,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 
 /* ── Current quiz display ── */
-.quiz-question { font-size: 2.08rem; font-weight: 600; color: #fff; margin-bottom: .25rem; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; }
-.quiz-multi-subtitle { font-size: 1.3rem; color: #f0a500; margin: 0 0 .75rem; }
+.quiz-question { font-size: 2.08rem; font-weight: 600; color: var(--text); margin-bottom: .25rem; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; }
+.quiz-multi-subtitle { font-size: 1.3rem; color: var(--warn); margin: 0 0 .75rem; }
 .quiz-question code,
 .result-label code,
 .option-text-only code {
@@ -1293,6 +1293,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .pax-list li.offline .pax-name-text,
 .pax-list li.offline .pax-score {
   color: #8f96a3;
+}
+:where(html.light) .pax-list li.offline .pax-name-text,
+:where(html.light) .pax-list li.offline .pax-score {
+  color: var(--muted);
 }
 .pax-score {
   font-size: .78rem;
@@ -1531,6 +1535,41 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
     flex: 1;
     white-space: pre;
 }
+/* highlight.js ships the atom-one-dark palette only; its pastel tokens vanish on the light surface. */
+:where(html.light) .codereview-code .hljs-comment,
+:where(html.light) .codereview-code .hljs-quote { color: #6b6f7a; }
+:where(html.light) .codereview-code .hljs-keyword,
+:where(html.light) .codereview-code .hljs-selector-tag,
+:where(html.light) .codereview-code .hljs-doctag,
+:where(html.light) .codereview-code .hljs-formula { color: #a626a4; }
+:where(html.light) .codereview-code .hljs-string,
+:where(html.light) .codereview-code .hljs-regexp,
+:where(html.light) .codereview-code .hljs-addition,
+:where(html.light) .codereview-code .hljs-meta .hljs-string { color: #3b7f3a; }
+:where(html.light) .codereview-code .hljs-number,
+:where(html.light) .codereview-code .hljs-literal,
+:where(html.light) .codereview-code .hljs-attr,
+:where(html.light) .codereview-code .hljs-attribute,
+:where(html.light) .codereview-code .hljs-selector-attr,
+:where(html.light) .codereview-code .hljs-selector-class,
+:where(html.light) .codereview-code .hljs-selector-pseudo,
+:where(html.light) .codereview-code .hljs-template-variable { color: #8a5a00; }
+:where(html.light) .codereview-code .hljs-title,
+:where(html.light) .codereview-code .hljs-section,
+:where(html.light) .codereview-code .hljs-link,
+:where(html.light) .codereview-code .hljs-meta { color: #2f64d6; }
+:where(html.light) .codereview-code .hljs-type,
+:where(html.light) .codereview-code .hljs-built_in,
+:where(html.light) .codereview-code .hljs-class .hljs-title,
+:where(html.light) .codereview-code .hljs-title.class_,
+:where(html.light) .codereview-code .hljs-params { color: #946200; }
+:where(html.light) .codereview-code .hljs-variable,
+:where(html.light) .codereview-code .hljs-name,
+:where(html.light) .codereview-code .hljs-tag,
+:where(html.light) .codereview-code .hljs-symbol,
+:where(html.light) .codereview-code .hljs-bullet,
+:where(html.light) .codereview-code .hljs-deletion,
+:where(html.light) .codereview-code .hljs-selector-id { color: #c0392b; }
 
 .codereview-count {
     margin-left: 8px;
@@ -1650,10 +1689,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   align-items: center;
   justify-content: center;
 }
-@media (prefers-color-scheme: light) {
-  .conference-center-qr {
-    background: #f4f5f9 !important;
-  }
+:where(html.light) .conference-center-qr {
+  background: #f4f5f9 !important;
 }
 .conference-center-qr .qr-code {
   opacity: 1 !important;
@@ -1735,6 +1772,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   min-width: 2.5rem;
 }
 .first-place .leaderboard-rank { color: gold; }
+:where(html.light) .first-place .leaderboard-rank { color: #b8860b; }
+:where(html.light) .leaderboard-overlay { background: rgba(244, 245, 249, 0.95); }
 .leaderboard-name {
   flex: 1;
   text-align: left;
@@ -2011,30 +2050,28 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 }
 
 /* ── Light mode overrides ── */
-@media (prefers-color-scheme: light) {
-  .session-row {
-    background: rgba(0, 0, 0, 0.03);
-  }
-  .session-row-current {
-    background: rgba(0, 0, 0, 0.06);
-  }
-  .session-end-btn {
-    color: var(--muted);
-  }
-  .session-status-paused {
-    color: rgba(0, 0, 0, 0.35);
-  }
-  .session-main-interval-chip {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-  }
+:where(html.light) .session-row {
+  background: rgba(0, 0, 0, 0.03);
+}
+:where(html.light) .session-row-current {
+  background: rgba(0, 0, 0, 0.06);
+}
+:where(html.light) .session-end-btn {
+  color: var(--muted);
+}
+:where(html.light) .session-status-paused {
+  color: rgba(0, 0, 0, 0.35);
+}
+:where(html.light) .session-main-interval-chip {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .paste-icon {
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--text);
   background: rgba(255, 200, 0, 0.25);
   animation: paste-blink 1.2s ease-in-out infinite;
   transition: transform .15s;
@@ -2072,7 +2109,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--text);
   background: rgba(99, 200, 255, 0.25);
   animation: upload-blink 1.2s ease-in-out infinite;
   transition: transform .15s;
@@ -2107,9 +2144,7 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   background: var(--surface);
   color: #fff;
 }
-@media (prefers-color-scheme: light) {
-  #queue-list li:hover { color: #000; }
-}
+:where(html.light) #queue-list li:hover { color: #000; }
 #queue-list li.selected {
   background: var(--surface2);
 }
@@ -2280,6 +2315,12 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   z-index: 2;
 }
 .poll-option-card.started.has-votes .poll-option-card-count { display: block; }
-@media (prefers-color-scheme: light) {
-  .poll-option-card-count { color: #fff; }
-}
+:where(html.light) .poll-option-card-count { color: var(--text); }
+
+/* Yellow accents are pastel-on-dark; on the light surface they fall below 2:1, so darken them. */
+:where(html.light) .center-url-code,
+:where(html.light) .mode-pill.mode-pill-multi,
+:where(html.light) .talk-pptx-tab,
+:where(html.light) .session-pause-blinking,
+:where(html.light) .session-main-interval-chip-live { color: #946a00; }
+:where(html.light) #session-id-suffix { color: #946a00 !important; }

@@ -291,7 +291,7 @@ body {
       }
 
       .note-link-site {
-        color: var(--gray);
+        color: var(--wiki-quiet);
         font-size: 0.85em;
       }
     }
@@ -381,9 +381,9 @@ body {
   }
 }
 
-// Dark mode follows the OS, exactly like the participant page around the iframe.
-// The component stays in the layout (its script applies the theme); only its
-// toggle is hidden, so the wiki can never disagree with the page it sits in.
+// The theme is the participant page's picker (darkmode.inline.ts). The component stays
+// in the layout (its script applies the theme); only its toggle is hidden, so the wiki
+// can never disagree with the page it sits in.
 .darkmode {
   display: none;
 }
@@ -393,12 +393,32 @@ body {
 // in the popover alike. The dim grey still has to read as link text.
 :root {
   --wiki-unseen: #000000;
-  --wiki-seen: #a3adb5;
+  --wiki-seen: #66727a;
 }
 
 :root[saved-theme="dark"] {
   --wiki-unseen: #ffffff;
   --wiki-seen: #6f7a84;
+}
+
+// The graph's small print. Both themes need their own: Pixi (patch-graph.py) can't use a
+// colour that only works on dark, as black outlines and near-background greys did on white.
+// quiet: greyed text; edge: the hairlines at rest; glyph: the grey of the ⚓ emoji;
+// outline: around labels and badges, so they read over a takeaway's burst.
+:root {
+  --wiki-quiet: #66727a;
+  --wiki-edge: #a9b4ba;
+  --wiki-glyph: #6b7280;
+  --wiki-outline: var(--light);
+  --wiki-sources-fade: 0.7;
+}
+
+:root[saved-theme="dark"] {
+  --wiki-quiet: #78838b;
+  --wiki-edge: var(--lightgray);
+  --wiki-glyph: #9ca3af;
+  --wiki-outline: #000000;
+  --wiki-sources-fade: 0.4;
 }
 
 // Bottom-left of the full graph (patch-graph.py): back to the layout it opened with.
@@ -413,7 +433,7 @@ body {
   border-radius: 999px;
   font-family: var(--bodyFont);
   font-size: 0.8rem;
-  color: var(--gray);
+  color: var(--wiki-quiet);
   background: var(--light);
   border: 1px solid var(--lightgray);
   cursor: pointer;
@@ -481,7 +501,7 @@ body {
   border-radius: 999px;
   font-family: var(--bodyFont);
   font-size: 0.8rem;
-  color: var(--gray);
+  color: var(--wiki-quiet);
   background: var(--light);
   border: 1px solid var(--lightgray);
   cursor: pointer;
@@ -493,7 +513,7 @@ body {
   }
 
   &:has(input:checked) {
-    color: var(--wiki-follow-ring);
+    color: var(--wiki-follow-text);
     border-color: var(--wiki-follow-ring);
   }
 }
@@ -528,7 +548,7 @@ body {
   font-family: var(--bodyFont);
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--wiki-takeaway);
+  color: var(--wiki-takeaway-text);
   background: var(--light);
   border: 1px solid var(--wiki-takeaway);
   pointer-events: none;
@@ -581,7 +601,7 @@ body {
   font-size: 0.72rem;
   line-height: 1.45;
   color: var(--dark);
-  opacity: 0.4;
+  opacity: var(--wiki-sources-fade);
   transition: opacity 0.2s;
   // Zoomed in, labels and dots run under it.
   padding: 0.35rem 0.6rem;
@@ -672,10 +692,12 @@ body.peek-dragging {
 // yellow, apart from the amber picture badge; darker on the light theme to show.
 :root {
   --wiki-follow-ring: #eab308;
+  --wiki-follow-text: #854d0e;
 }
 
 :root[saved-theme="dark"] {
   --wiki-follow-ring: #fde047;
+  --wiki-follow-text: #fde047;
 }
 
 // Key takeaways (graph-takeaway.ts): the trainer's starred notes get a golden starburst
@@ -684,11 +706,15 @@ body.peek-dragging {
 // The hollow star the trainer clicks stays quiet: it is on every dot of his graph.
 :root {
   --wiki-takeaway: #d97706;
-  --wiki-takeaway-off: #9ca3af;
+  --wiki-takeaway-text: #a84b05;
+  --wiki-burst: #f59e0b;
+  --wiki-takeaway-off: #7d8590;
 }
 
 :root[saved-theme="dark"] {
   --wiki-takeaway: #fbbf24;
+  --wiki-takeaway-text: #fbbf24;
+  --wiki-burst: #fbbf24;
   --wiki-takeaway-off: #6b7280;
 }
 

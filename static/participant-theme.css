@@ -24,58 +24,58 @@
   --color-on-surface-variant:         rgb(86 97 102);
   --color-outline-variant:            rgb(169 180 185);
   --color-outline:                    rgb(110 121 126);
+  --color-error:                      #dc2626;
+  --color-surface-rgb:                247, 249, 251;
 }
 
 /* ── Dark palette (MD3 standard dark tone mapping, blue/indigo hue) ── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --warn:   #c89400;
-    --danger: #d94f4f;
-    --color-primary:                    rgb(188 196 255);
-    --color-primary-dim:                rgb(160 168 230);
-    --color-primary-container:          rgb(39 54 154);
-    --color-on-primary:                 rgb(17 35 120);
-    --color-on-primary-container:       rgb(223 224 255);
-    --color-surface:                    rgb(18 21 26);
-    --color-surface-container-low:      rgb(22 27 32);
-    --color-surface-container:          rgb(28 33 38);
-    --color-surface-container-high:     rgb(38 43 49);
-    --color-surface-container-highest:  rgb(48 54 60);
-    --color-on-surface:                 rgb(220 228 233);
-    --color-on-surface-variant:         rgb(169 180 185);
-    --color-outline-variant:            rgb(60 72 77);
-    --color-outline:                    rgb(130 141 146);
-  }
+:root:where(.dark) {
+  --warn:   #c89400;
+  --danger: #d94f4f;
+  --color-primary:                    rgb(188 196 255);
+  --color-primary-dim:                rgb(160 168 230);
+  --color-primary-container:          rgb(39 54 154);
+  --color-on-primary:                 rgb(17 35 120);
+  --color-on-primary-container:       rgb(223 224 255);
+  --color-surface:                    rgb(18 21 26);
+  --color-surface-container-low:      rgb(22 27 32);
+  --color-surface-container:          rgb(28 33 38);
+  --color-surface-container-high:     rgb(38 43 49);
+  --color-surface-container-highest:  rgb(48 54 60);
+  --color-on-surface:                 rgb(220 228 233);
+  --color-on-surface-variant:         rgb(169 180 185);
+  --color-outline-variant:            rgb(60 72 77);
+  --color-outline:                    rgb(130 141 146);
+  --color-error:                      #ff8a80;
+  --color-surface-rgb:                18, 21, 26;
 }
 
 /* ── Dark overrides for Tailwind utility classes ──────────────
    tailwind.css hardcodes light-mode RGB values.
    These rules load after tailwind.css; equal specificity, last wins.
    ─────────────────────────────────────────────────────────── */
-@media (prefers-color-scheme: dark) {
-  .bg-surface                        { background-color: var(--color-surface); }
-  .bg-surface-container              { background-color: var(--color-surface-container); }
-  .bg-surface-container-low          { background-color: var(--color-surface-container-low); }
-  .bg-surface-container-high         { background-color: var(--color-surface-container-high); }
-  .bg-surface-container-highest      { background-color: var(--color-surface-container-highest); }
-  .hover\:bg-surface-container:hover      { background-color: var(--color-surface-container); }
-  .hover\:bg-surface-container-low:hover  { background-color: var(--color-surface-container-low); }
-  .hover\:bg-surface-container-high:hover { background-color: var(--color-surface-container-high); }
-  .hover\:text-on-surface:hover           { color: var(--color-on-surface); }
-  .bg-primary                  { background-color: var(--color-primary); }
-  .bg-primary-dim              { background-color: var(--color-primary-dim); }
-  .bg-primary-container        { background-color: var(--color-primary-container); }
-  .bg-outline-variant          { background-color: var(--color-outline-variant); }
+:where(html.dark) .bg-surface { background-color: var(--color-surface); }
+:where(html.dark) .bg-surface-container { background-color: var(--color-surface-container); }
+:where(html.dark) .bg-surface-container-low { background-color: var(--color-surface-container-low); }
+:where(html.dark) .bg-surface-container-high { background-color: var(--color-surface-container-high); }
+:where(html.dark) .bg-surface-container-highest { background-color: var(--color-surface-container-highest); }
+:where(html.dark) .hover\:bg-surface-container:hover { background-color: var(--color-surface-container); }
+:where(html.dark) .hover\:bg-surface-container-low:hover { background-color: var(--color-surface-container-low); }
+:where(html.dark) .hover\:bg-surface-container-high:hover { background-color: var(--color-surface-container-high); }
+:where(html.dark) .hover\:text-on-surface:hover { color: var(--color-on-surface); }
+:where(html.dark) .bg-primary { background-color: var(--color-primary); }
+:where(html.dark) .bg-primary-dim { background-color: var(--color-primary-dim); }
+:where(html.dark) .bg-primary-container { background-color: var(--color-primary-container); }
+:where(html.dark) .bg-outline-variant { background-color: var(--color-outline-variant); }
 
-  .text-on-surface             { color: var(--color-on-surface); }
-  .text-on-surface-variant     { color: var(--color-on-surface-variant); }
-  .text-primary                { color: var(--color-primary); }
-  .text-on-primary             { color: var(--color-on-primary); }
-  .text-on-primary-container   { color: var(--color-on-primary-container); }
+:where(html.dark) .text-on-surface { color: var(--color-on-surface); }
+:where(html.dark) .text-on-surface-variant { color: var(--color-on-surface-variant); }
+:where(html.dark) .text-primary { color: var(--color-primary); }
+:where(html.dark) .text-on-primary { color: var(--color-on-primary); }
+:where(html.dark) .text-on-primary-container { color: var(--color-on-primary-container); }
 
-  .border-primary              { border-color: var(--color-primary); }
-  .border-outline-variant      { border-color: var(--color-outline-variant); }
-}
+:where(html.dark) .border-primary { border-color: var(--color-primary); }
+:where(html.dark) .border-outline-variant { border-color: var(--color-outline-variant); }
 
 /* ── Emoji bar surface (replaces hardcoded inline rgba styles) ── */
 /* Near-opaque: on phones the bar floats over text, which bled through the old
@@ -90,57 +90,51 @@
    their backdrop root: a blur of their own would sample nothing, and white text
    under them stayed readable. So they are plainly opaque. */
 .emoji-bar-surface.emoji-stack-list { background: rgb(247, 249, 251); }
-@media (prefers-color-scheme: dark) {
-  .emoji-bar-surface {
-    background: rgba(18, 21, 26, 0.96);
-    border: 1.5px solid rgba(60, 72, 77, 0.7);
-  }
-  .emoji-bar-surface.emoji-stack-list { background: rgb(18, 21, 26); }
+:where(html.dark) .emoji-bar-surface {
+  background: rgba(18, 21, 26, 0.96);
+  border: 1.5px solid rgba(60, 72, 77, 0.7);
 }
+:where(html.dark) .emoji-bar-surface.emoji-stack-list { background: rgb(18, 21, 26); }
 
 /* ── Prose (agenda) dark overrides ──────────────────────────────
    Tailwind prose uses --tw-prose-* hardcoded for light backgrounds.
    Override here so headings/body/links are readable in dark mode.
    ─────────────────────────────────────────────────────────── */
-@media (prefers-color-scheme: dark) {
-  .prose {
-    --tw-prose-headings:      rgb(220 228 233);
-    --tw-prose-body:          rgb(196 204 210);
-    --tw-prose-bold:          rgb(220 228 233);
-    --tw-prose-links:         rgb(188 196 255);
-    --tw-prose-counters:      rgb(169 180 185);
-    --tw-prose-bullets:       rgb(130 141 146);
-    --tw-prose-hr:            rgb(60 72 77);
-    --tw-prose-quotes:        rgb(220 228 233);
-    --tw-prose-quote-borders: rgb(60 72 77);
-    --tw-prose-captions:      rgb(130 141 146);
-    --tw-prose-code:          rgb(220 228 233);
-    --tw-prose-pre-code:      rgb(220 228 233);
-    --tw-prose-pre-bg:        rgb(28 33 38);
-    --tw-prose-th-borders:    rgb(60 72 77);
-    --tw-prose-td-borders:    rgb(38 43 49);
-  }
+:where(html.dark) .prose {
+  --tw-prose-headings:      rgb(220 228 233);
+  --tw-prose-body:          rgb(196 204 210);
+  --tw-prose-bold:          rgb(220 228 233);
+  --tw-prose-links:         rgb(188 196 255);
+  --tw-prose-counters:      rgb(169 180 185);
+  --tw-prose-bullets:       rgb(130 141 146);
+  --tw-prose-hr:            rgb(60 72 77);
+  --tw-prose-quotes:        rgb(220 228 233);
+  --tw-prose-quote-borders: rgb(60 72 77);
+  --tw-prose-captions:      rgb(130 141 146);
+  --tw-prose-code:          rgb(220 228 233);
+  --tw-prose-pre-code:      rgb(220 228 233);
+  --tw-prose-pre-bg:        rgb(28 33 38);
+  --tw-prose-th-borders:    rgb(60 72 77);
+  --tw-prose-td-borders:    rgb(38 43 49);
 }
 
 /* ── Component dark overrides ────────────────────────────────── */
-@media (prefers-color-scheme: dark) {
-  /* Frosted glass toolbar (PDF viewer, top-right) */
-  .glass {
-    background: rgba(18, 21, 26, 0.75);
-  }
+/* Frosted glass toolbar (PDF viewer, top-right) */
+:where(html.dark) .glass {
+  background: rgba(18, 21, 26, 0.75);
+}
 
-  /* Subtle drop shadow: lighter in dark mode to avoid harsh contrast */
-  .whisper-shadow {
-    box-shadow: 0px 12px 32px rgba(0, 0, 0, 0.35);
-  }
+/* Subtle drop shadow: lighter in dark mode to avoid harsh contrast */
+:where(html.dark) .whisper-shadow {
+  box-shadow: 0px 12px 32px rgba(0, 0, 0, 0.35);
+}
 
-  /* Scrollbar */
-  ::-webkit-scrollbar-thumb {
-    background: rgb(60 72 77);
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgb(90 102 107);
-  }
+/* Scrollbar */
+:where(html.dark) ::-webkit-scrollbar-thumb, html:where(.dark)::-webkit-scrollbar-thumb {
+  background: rgb(60 72 77);
+}
+:where(html.dark) ::-webkit-scrollbar-thumb:hover, html:where(.dark)::-webkit-scrollbar-thumb:hover {
+  background: rgb(90 102 107);
 }
 
 /* ── Prose inline-code: drop Tailwind Typography's literal backticks ──

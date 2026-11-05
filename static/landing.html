@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Join Session - Interact</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon-participant.svg" />
-  <link rel="stylesheet" href="/static/common.css" />
+  <script src="/static/theme.js?v=b0491bf6"></script>
+  <link rel="stylesheet" href="/static/common.css?v=10" />
   <style>
     body {
       background: var(--bg);
@@ -130,6 +131,7 @@
       margin-top: .8rem;
       min-height: 1.2em;
     }
+    :where(html.light) .landing-error { color: #b93a3a; } /* shared danger is 3.7:1 on the light page */
     .landing-status {
       color: var(--muted);
       font-size: .85rem;

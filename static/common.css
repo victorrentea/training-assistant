@@ -16,22 +16,20 @@
   --radius:    12px;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --bg:        #f4f5f9;
-    --surface:   #ffffff;
-    --surface2:  #e8eaf0;
-    --border:    #d0d4e8;
-    --accent:    #5a52e0;
-    --accent2:   #2daa8a;
-    --action:    #2d7fd4;
-    --text:      #1a1d2e;
-    --muted:     #6b7094;
-    --danger:    #d94f4f;
-    --warn:      #c89400;
-    --radius:    12px;
-  }
+:root:where(.light) {
+  color-scheme: light;
+  --bg:        #f4f5f9;
+  --surface:   #ffffff;
+  --surface2:  #e8eaf0;
+  --border:    #d0d4e8;
+  --accent:    #5a52e0;
+  --accent2:   #2daa8a;
+  --action:    #2d7fd4;
+  --text:      #1a1d2e;
+  --muted:     #6b7094;
+  --danger:    #d94f4f;
+  --warn:      #c89400;
+  --radius:    12px;
 }
 
 /* ── Scrollbars (dark mode default) ── */
@@ -57,18 +55,16 @@
 ::-webkit-scrollbar-corner {
   background: #14161f;
 }
-@media (prefers-color-scheme: light) {
-  * {
-    scrollbar-color: #b4b8c8 transparent;
-  }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb {
-    background: #b4b8c8;
-    border-color: transparent;
-  }
-  ::-webkit-scrollbar-thumb:hover { background: #8c92a8; }
-  ::-webkit-scrollbar-corner { background: transparent; }
+:where(html.light) * {
+  scrollbar-color: #b4b8c8 transparent;
 }
+:where(html.light) ::-webkit-scrollbar-track, html:where(.light)::-webkit-scrollbar-track { background: transparent; }
+:where(html.light) ::-webkit-scrollbar-thumb, html:where(.light)::-webkit-scrollbar-thumb {
+  background: #b4b8c8;
+  border-color: transparent;
+}
+:where(html.light) ::-webkit-scrollbar-thumb:hover, html:where(.light)::-webkit-scrollbar-thumb:hover { background: #8c92a8; }
+:where(html.light) ::-webkit-scrollbar-corner, html:where(.light)::-webkit-scrollbar-corner { background: transparent; }
 
 #notif-btn {
   background: none;
@@ -148,10 +144,8 @@
   50% { opacity: .35; }
 }
 
-@media (prefers-color-scheme: light) {
-  .version-tag {
-    color: #333;
-  }
+:where(html.light) .version-tag {
+  color: #333;
 }
 
 

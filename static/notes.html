@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Session Notes</title>
-  <link rel="stylesheet" href="/static/common.css">
+  <script src="/static/theme.js?v=b0491bf6"></script>
+  <link rel="stylesheet" href="/static/common.css?v=10">
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <style>
     body {
@@ -84,6 +85,10 @@
     }
     .copy-btn:hover { color: #fff; border-color: #aaa; background: rgba(255,255,255,.08); }
     .copy-btn.copied { color: #a6e3a1; border-color: #a6e3a1; }
+    /* Light theme: the shared accent2 green is 2.7:1 on the page background */
+    :where(html.light) .summary-md-content h2 { color: #1f7a62; }
+    /* Dark theme: accent links on the notes card are 3.8:1 */
+    :where(html.dark) #notes a { color: #9a94ff !important; }
   </style>
 </head>
 <body>

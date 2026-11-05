@@ -37,8 +37,8 @@ PATCHES = [
     }"""),
     ("""        fill: computedStyleMap["--dark"],
         fontFamily: computedStyleMap["--bodyFont"],""",
-     """        fill: shineOf(nodeId) > 0 ? computedStyleMap["--wiki-takeaway"] : computedStyleMap["--dark"],
-        stroke: shineOf(nodeId) > 0 ? SHINING_LABEL_STROKE : PLAIN_LABEL_STROKE,
+     """        fill: shineOf(nodeId) > 0 ? computedStyleMap["--wiki-takeaway-text"] : computedStyleMap["--dark"],
+        stroke: shineOf(nodeId) > 0 ? { ...SHINING_LABEL_STROKE, color: computedStyleMap["--wiki-outline"] } : PLAIN_LABEL_STROKE,
         fontFamily: computedStyleMap["--bodyFont"],"""),
     # Labels visible from the start and hanging under the node, not floating above it.
     ("""      alpha: 0,
@@ -94,8 +94,10 @@ PATCHES = [
   const pencilsContainer = new Container<EditPencil>({ zIndex: 2.6, isRenderGroup: true, eventMode: "none" })
   stage.addChild(pencilsContainer)
   const badgeColors: BadgeColors = {
-    glyph: "#9ca3af", // the grey of the ⚓ emoji, so the drawn glyphs match it (Victor, 2026-10-23)
-    count: computedStyleMap["--gray"], // a detail: it mustn't jump out (Victor, 2026-10-23)
+    glyph: computedStyleMap["--wiki-glyph"], // the grey of the ⚓ emoji, so the drawn glyphs match it (Victor, 2026-10-23)
+    count: computedStyleMap["--wiki-quiet"], // a detail: it mustn't jump out (Victor, 2026-10-23)
+    outline: computedStyleMap["--wiki-outline"],
+    outlineEmoji: document.documentElement.getAttribute("saved-theme") === "dark",
     font: computedStyleMap["--bodyFont"],
   }
   // The yellow ring around the note the trainer has open (Follow, note-pane.ts): above
@@ -131,6 +133,7 @@ PATCHES = [
   let shownOnce = false // the first shine() just draws: no comet for stars already there
   const takeawayColors: TakeawayColors = {
     on: computedStyleMap["--wiki-takeaway"],
+    burst: computedStyleMap["--wiki-burst"],
     off: computedStyleMap["--wiki-takeaway-off"],
     halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
@@ -239,6 +242,12 @@ PATCHES = [
     "--wiki-follow-ring",
     "--wiki-takeaway",
     "--wiki-takeaway-off",
+    "--wiki-takeaway-text",
+    "--wiki-burst",
+    "--wiki-edge",
+    "--wiki-glyph",
+    "--wiki-outline",
+    "--wiki-quiet",
   ] as const"""),
     # Hairline edges that stay the same thickness on screen at any zoom, like Obsidian:
     # the stage scales by the zoom factor k, so divide the width by k. A lit edge
@@ -305,7 +314,11 @@ PATCHES = [
     ("alpha = l.active ? 1 : 0.2",
      "alpha = 1"),
     ('l.color = l.active ? computedStyleMap["--gray"] : computedStyleMap["--lightgray"]',
-     'l.color = litEdge(l) ? litColor(l) : computedStyleMap["--lightgray"]'),
+     'l.color = litEdge(l) ? litColor(l) : computedStyleMap["--wiki-edge"]'),
+    # The hairlines at rest: --lightgray is near the page's own colour, fine as a light
+    # line on dark, gone as a pale one on white (--wiki-edge).
+    ('      color: computedStyleMap["--lightgray"],\n',
+     '      color: computedStyleMap["--wiki-edge"],\n'),
     ("""      tweenGroup.add(new Tweened<Graphics>(n.gfx, tweenGroup).to({ alpha }, 200))""",
      """      // Repainted, not tinted (a tint multiplies, and can't brighten a grey dot): a dot
       // turns grey once its note is read (isSeen) and its popover closed.
@@ -372,11 +385,16 @@ PATCHES = [
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
      'import { PaneGraph, connectGraph, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, starMode, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
-     '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
+     '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
+     '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
      '// gaining one when starred jumped down and pushed its star away (Victor, 2026-10-23).\n'
      'const SHINING_LABEL_STROKE = { color: "#000000", width: 2.5, join: "round" as const }\n'
-     'const PLAIN_LABEL_STROKE = { ...SHINING_LABEL_STROKE, alpha: 0 }'),
+     'const PLAIN_LABEL_STROKE = { ...SHINING_LABEL_STROKE, alpha: 0 }\n'
+     '// Pixi has no CSS variables, so a theme switch draws the full graph anew; this keeps\n'
+     '// its dots and view, so all that changes is the colours.\n'
+     'let keepLayout = false\n'
+     'let keptLayout: { spots: Map<string, { x: number; y: number }>; view: { x: number; y: number; k: number } } | null = null'),
     # PixiJS listens for pointermove on the whole document, so a pointer over the note
     # popover still lit the dot under it (Victor, 2026-10-14). Only a move over the canvas
     # reaches the dots; leaving it for the popover is the canvas's own pointerleave, which
@@ -464,8 +482,8 @@ PATCHES = [
         }
         if (!comets.some((c) => c.id === id)) n.takeaway?.set(d) // else on impact
         n.color = color(n.simulationData)
-        n.label.style.fill = d.level > 0 ? takeawayColors.on : computedStyleMap["--dark"]
-        n.label.style.stroke = d.level > 0 ? SHINING_LABEL_STROKE : PLAIN_LABEL_STROKE
+        n.label.style.fill = d.level > 0 ? computedStyleMap["--wiki-takeaway-text"] : computedStyleMap["--dark"]
+        n.label.style.stroke = d.level > 0 ? { ...SHINING_LABEL_STROKE, color: computedStyleMap["--wiki-outline"] } : PLAIN_LABEL_STROKE
       }
       starredIds = takeaways
       shownOnce = true
@@ -524,6 +542,13 @@ PATCHES = [
      """  return () => {
     stopAnimation = true
     if (isGlobal) disconnectGraph(paneGraph)
+    // Not before the first layout ends: frozen halfway, it would never finish, nor fit.
+    if (isGlobal && keepLayout && laidOut) {
+      keptLayout = {
+        spots: new Map(graphData.nodes.map((n) => [n.id, { x: n.x!, y: n.y! }])),
+        view: currentTransform,
+      }
+    }
     app.destroy()
   }"""),
     # The full graph is always open: rendered on every page load, re-rendered to fit a
@@ -540,11 +565,18 @@ PATCHES = [
     clearTimeout(resizeTimer)
     resizeTimer = window.setTimeout(() => {
       cleanupGlobalGraphs()
+      keepLayout = false
       void renderGlobalGraph()
     }, 250)
   }
   window.addEventListener("resize", refit)
   window.addCleanup(() => window.removeEventListener("resize", refit))
+  const recolour = () => {
+    keepLayout = true
+    refit()
+  }
+  document.addEventListener("themechange", recolour)
+  window.addCleanup(() => document.removeEventListener("themechange", recolour))
   // Dragged dots and zoom back to the start: a fresh render lays the graph out the
   // same way every time (d3 seeds the positions deterministically).
   for (const container of containers) {
@@ -650,6 +682,14 @@ PATCHES = [
   if (graph.classList.contains("global-graph-container") && !showHome()) {
     simulation.force("x", forceX<NodeData>().strength(0.12)).force("y", forceY<NodeData>().strength(0.12))
   }
+  const redrawn = graph.classList.contains("global-graph-container") ? keptLayout : null
+  if (redrawn) {
+    keptLayout = null
+    for (const n of graphData.nodes) Object.assign(n, redrawn.spots.get(n.id))
+    simulation.alpha(0)
+  }
+  let laidOut = redrawn !== null
+  simulation.on("end.laidOut", () => (laidOut = true))
 """),
     ("""  forceRadial,
   zoomIdentity,""",
@@ -673,7 +713,7 @@ PATCHES = [
 """),
     ("""  if (isGlobal) connectGraph(paneGraph)
 """,
-     """  const keptView = isGlobal && enableZoom ? savedView() : null
+     """  const keptView = isGlobal && enableZoom ? (redrawn?.view ?? savedView()) : null
   if (isGlobal && enableZoom) {
     // The wheel zooms; a double-click doesn't (Victor, 2026-10-23): it opened a note and
     // zoomed in on it at once. d3 binds it on the canvas, as "dblclick.zoom".

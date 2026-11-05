@@ -424,6 +424,55 @@ assert(
 );
 
 // ═══════════════════════════════════════════════════════════════════════
+// static/theme.js: White / Dark / Follow system
+// ═══════════════════════════════════════════════════════════════════════
+suite('theme.js');
+
+function loadTheme({ osDark, stored }) {
+  const classes = new Set();
+  const store = new Map(stored ? [['interact-theme', stored]] : []);
+  const os = { matches: osDark, listeners: [], addEventListener(_, fn) { this.listeners.push(fn); } };
+  const win = { matchMedia: () => os, addEventListener() {} };
+  const document = {
+    documentElement: {
+      style: {},
+      classList: { toggle: (name, on) => (on ? classes.add(name) : classes.delete(name)) },
+    },
+    dispatchEvent() {},
+  };
+  const localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, v),
+    removeItem: (k) => store.delete(k),
+  };
+  class CustomEvent { constructor(type, init) { this.type = type; this.detail = init.detail; } }
+  new Function('window', 'document', 'localStorage', 'CustomEvent',
+    fs.readFileSync(__dirname + '/../static/theme.js', 'utf8'))(win, document, localStorage, CustomEvent);
+  return { Theme: win.Theme, classes, store, os, root: document.documentElement };
+}
+
+{
+  const t = loadTheme({ osDark: true });
+  assertEq('nothing stored follows the OS, dark', [...t.classes], ['dark']);
+  assertEq('nothing stored reads as system', t.Theme.choice(), 'system');
+  assertEq('native controls follow', t.root.style.colorScheme, 'dark');
+  t.os.matches = false; t.os.listeners.forEach((fn) => fn());
+  assertEq('an OS switch is followed live', [...t.classes], ['light']);
+  assertEq('an OS switch is never stored', t.store.size, 0);
+}
+assertEq('nothing stored follows the OS, light', [...loadTheme({ osDark: false }).classes], ['light']);
+assertEq('a stored White beats a dark OS', [...loadTheme({ osDark: true, stored: 'light' }).classes], ['light']);
+assertEq('a stored Dark beats a light OS', [...loadTheme({ osDark: false, stored: 'dark' }).classes], ['dark']);
+assertEq('junk in storage means system', loadTheme({ osDark: true, stored: 'sepia' }).Theme.choice(), 'system');
+{
+  const t = loadTheme({ osDark: true, stored: 'light' });
+  t.Theme.set('system');
+  assertEq('picking system forgets the choice', [t.store.size, [...t.classes]], [0, ['dark']]);
+  t.Theme.set('light');
+  assertEq('picking White stores it', [t.store.get('interact-theme'), [...t.classes]], ['light', ['light']]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // Summary
 // ═══════════════════════════════════════════════════════════════════════
 

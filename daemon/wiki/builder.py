@@ -89,6 +89,8 @@ def _prepare_quartz(qdir: Path) -> None:
     shutil.copy(ASSETS_DIR / "icon.png", qdir / "quartz" / "static" / "icon.png")
     for script in ("note-pane.ts", "graph-badges.ts", "graph-takeaway.ts"):
         shutil.copy(ASSETS_DIR / script, qdir / "quartz" / "components" / "scripts" / script)
+    # Replaces Quartz's own: the wiki follows the participant page's theme picker.
+    shutil.copy(ASSETS_DIR / "darkmode.inline.ts", qdir / "quartz" / "components" / "scripts" / "darkmode.inline.ts")
     # The app's one tooltip component (data-tip), so the wiki doesn't grow a second one.
     shutil.copy(TOOLTIP_JS, qdir / "quartz" / "components" / "scripts" / "tooltip.js")
     patch = subprocess.run(

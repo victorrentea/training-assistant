@@ -30,7 +30,8 @@ import { namedAfterAWhile } from "./graph-badges"
 import { CanvasTextMetrics, Graphics, Rectangle, Sprite, Text, TextStyle, Texture, fontStringFromTextStyle } from "pixi.js"
 
 export type TakeawayColors = {
-  on: string // the burst
+  on: string // a star lit
+  burst: string // the burst and the glow under it
   off: string // the hollow star the trainer clicks
   halo: string // the page background, behind the star so edges don't run through it
   font: string
@@ -161,7 +162,7 @@ export class TakeawayMark {
     this.size = 2 * r * 6.5
     this.r = r
     const sprite = (texture: Texture) =>
-      new Sprite({ texture, anchor: 0.5, eventMode: "none", tint: colors.on, visible: false })
+      new Sprite({ texture, anchor: 0.5, eventMode: "none", tint: colors.burst, visible: false })
     this.burst = sprite(burstTexture())
     this.burst.width = this.burst.height = this.size
     this.flare = sprite(burstTexture())
