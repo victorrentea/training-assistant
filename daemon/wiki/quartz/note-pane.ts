@@ -53,6 +53,11 @@ type Place = "cursor" | "keep"
 
 const parser = new DOMParser()
 const cache = new Map<string, Promise<HTMLElement[]>>()
+// A note slower than this opens on a placeholder: a click must always show something.
+// The server stalls for seconds at times, mid-workshop (Victor, 2026-11-05).
+const PLACEHOLDER_AFTER_MS = 200
+// After this a stuck fetch gives up, and the popover says so instead of loading forever.
+const NOTE_TIMEOUT_MS = 15_000
 
 let graph: PaneGraph | null = null
 let ringed: SimpleSlug | null = null // the note the trainer has open, for a follower
@@ -213,7 +218,7 @@ function loadNote(slug: SimpleSlug): Promise<HTMLElement[]> {
   const key = url.toString()
   let note = cache.get(key)
   if (!note) {
-    note = fetch(key)
+    note = fetch(key, { signal: AbortSignal.timeout(NOTE_TIMEOUT_MS) })
       .then((res) => {
         if (!res.ok) throw new Error(`${res.status}`)
         return res.text()
@@ -590,6 +595,7 @@ function hull(points: number[][]): string[] {
 // it is, under the mouse; a note the trainer opened goes by its dot.
 async function showPeek(slug: SimpleSlug, place: Place) {
   const el = ensurePeek()
+  const at = { x: mouseX, y: mouseY } // the click's place: the pointer moves on during a slow load
   if (slug !== peeked) openedUnread = isSeen(slug) ? null : slug
   graph?.select(slug)
   if (slug === peeked) return
@@ -598,7 +604,11 @@ async function showPeek(slug: SimpleSlug, place: Place) {
   showPeekUnseen()
   reportOpenNote(slug)
   highlight(null)
+  const placeholder = setTimeout(() => {
+    if (peeked === slug) showLoading(el, slug, place, at)
+  }, PLACEHOLDER_AFTER_MS)
   const elts = await loadNote(slug).catch(() => null)
+  clearTimeout(placeholder)
   if (elts) await preloadImages(elts, 600)
   if (peeked !== slug) return // another note was picked meanwhile
   showNote(
@@ -609,12 +619,24 @@ async function showPeek(slug: SimpleSlug, place: Place) {
   const wasOpen = el.classList.contains("open")
   el.classList.add("open")
   if (place === "cursor" || !wasOpen) {
-    placePeek(el, { x: mouseX, y: mouseY })
+    placePeek(el, at)
   }
   followWithBeam()
   markSeen(slug)
   showPeekUnseen()
   graph?.select(slug) // its links, now from a read note; its dot waits for the close
+}
+
+// The popover while its note is on the way. The name comes from the slug, the note's
+// file name: close enough to its H1 until the real one replaces it.
+function showLoading(el: HTMLElement, slug: SimpleSlug, place: Place, at: Point) {
+  const title = el.querySelector(".note-peek-title") as HTMLElement
+  title.textContent = (slug.split("/").pop() ?? slug).replace(/-/g, " ")
+  ;(el.querySelector(".note-peek-body") as HTMLElement).replaceChildren(paragraph("Loading…"))
+  const wasOpen = el.classList.contains("open")
+  el.classList.add("open")
+  if (place === "cursor" || !wasOpen) placePeek(el, at)
+  followWithBeam()
 }
 
 // A note's slides arrive after its text: placed without them, the popover sat in a
@@ -752,9 +774,12 @@ export function hidePeek() {
   peek?.classList.remove("open")
 }
 
-// A click on a dot opens its note; on the open one, closes it.
+// A click on a dot opens its note; on the open one, closes it. Only a popover on screen
+// closes: while its note was still loading, the click that repeated the first one (the
+// dot had lit up, nothing else had happened) cancelled it, and the next click opened
+// the note - it took two clicks, in front of the room (Victor, 2026-11-05).
 export function toggleNote(slug: SimpleSlug) {
-  if (slug === peeked) hidePeek()
+  if (slug === peeked && peek?.classList.contains("open")) hidePeek()
   else void showPeek(slug, "cursor")
 }
 
