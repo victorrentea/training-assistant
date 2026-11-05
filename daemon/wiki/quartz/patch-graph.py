@@ -184,7 +184,7 @@ PATCHES = [
       } else if (cue.kind === "aim") {
         for (const n of nodeRenderData) {
           const { id, x, y } = n.simulationData
-          if (cue.ids.includes(id)) drawAim(starCue, x! + width / 2, y! + height / 2, n.radius, k, time, computedStyleMap["--dark"])
+          if (cue.ids.includes(id)) drawAim(starCue, x! + width / 2, y! + height / 2, n.radius, k, time, takeawayColors.on)
         }
       }
       // The canvas has no DOM: what the cue shows, readable from a test.

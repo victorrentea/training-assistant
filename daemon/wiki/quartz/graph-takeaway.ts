@@ -359,8 +359,8 @@ const AIM_LENGTH = 24 // a triangle, tip to base
 const AIM_HALF_BASE = 8
 
 // Four triangles pointing at the dot at (x, y) (in graph units, like its radius r),
-// the same size on screen at any zoom (k); they read over the gold burst in the text
-// colour with the labels' black outline.
+// the same size on screen at any zoom (k); gold like the arrow, a thin black outline
+// keeps them apart from the burst behind them.
 export function drawAim(g: Graphics, x: number, y: number, r: number, k: number, time: number, color: string) {
   const tip = r + AIM_GAP / k
   const base = tip + AIM_LENGTH / k
@@ -376,7 +376,7 @@ export function drawAim(g: Graphics, x: number, y: number, r: number, k: number,
       x + cos * base + sin * half, y + sin * base - cos * half,
     ])
       .fill({ color })
-      .stroke({ color: "#000000", width: 1.5 / k, join: "round" })
+      .stroke({ color: "#000000", width: 0.75 / k, join: "round" })
   }
 }
 
