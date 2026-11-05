@@ -27,6 +27,111 @@
         ]
       }
     },
+    "/api/phone-battery": {
+      "put": {
+        "summary": "Put Phone Battery",
+        "operationId": "put_phone_battery_api_phone_battery_put",
+        "parameters": [
+          {
+            "name": "x-bridge-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bridge-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneBatteryReading"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Put Phone Battery Api Phone Battery Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Phone Battery",
+        "description": "`{\"pct\":63,\"charging\":false,\"age_s\":120}`, or `{\"pct\":-1}` until the phone reports.",
+        "operationId": "get_phone_battery_api_phone_battery_get",
+        "parameters": [
+          {
+            "name": "x-bridge-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bridge-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Phone Battery Api Phone Battery Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/webhook/agentmail": {
       "post": {
         "summary": "Agentmail Webhook",
@@ -1130,6 +1235,26 @@
           "ok"
         ],
         "title": "MaterialsZipUploadResponse"
+      },
+      "PhoneBatteryReading": {
+        "properties": {
+          "pct": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Pct"
+          },
+          "charging": {
+            "type": "boolean",
+            "title": "Charging"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct",
+          "charging"
+        ],
+        "title": "PhoneBatteryReading"
       },
       "RefreshSlideRequest": {
         "properties": {
