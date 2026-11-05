@@ -1028,6 +1028,11 @@ export function shineOf(slug: SimpleSlug): number {
   return shineLevel(starred.has(slug), starCounts.get(slug) ?? 0)
 }
 
+// A dot's stars, the trainer's takeaway counting as one, as for its shine.
+export function starsWon(slug: SimpleSlug): number {
+  return (starCounts.get(slug) ?? 0) + (starred.has(slug) ? 1 : 0)
+}
+
 // Everything a dot's star and burst show (graph-takeaway.ts).
 export function dotShine(slug: SimpleSlug): DotShine {
   return { takeaway: starred.has(slug), ...starsOf(slug), level: shineOf(slug) }

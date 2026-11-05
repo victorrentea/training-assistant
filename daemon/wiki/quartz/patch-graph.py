@@ -104,6 +104,11 @@ PATCHES = [
   stage.addChild(ring)
   const ringColor = computedStyleMap["--wiki-follow-ring"]
   let ringedNode: NodeRenderData | null = null
+  // The trainer's next star (graph-takeaway.ts nextStarCue): the triangles like the
+  // ring, under the labels, so they never hide a name; the arrow over everything.
+  const showStarCue = graph.classList.contains("global-graph-container") && onHostMachine()
+  const starCue = new Graphics({ zIndex: 2.5, eventMode: "none" })
+  stage.addChild(starCue)
   // Key takeaways and participants' stars (graph-takeaway.ts): a golden starburst over
   // the edges, under the dots, and a star left of each dot, above everything - the
   // trainer's takeaway on his machine, the participant's own star in the participant
@@ -162,6 +167,28 @@ PATCHES = [
       ring
         .circle(rn.x + width / 2, rn.y + height / 2, ringedNode.radius + (5 + 4 * pulse) / k)
         .stroke({ width: 3 / k, color: ringColor, alpha: 0.6 + 0.4 * pulse })
+    }
+    if (showStarCue) {
+      const { x: tx, y: ty, k } = currentTransform
+      const unread = nodeRenderData.flatMap((n) => {
+        const { id, x, y } = n.simulationData
+        const stars = starsWon(id as SimpleSlug)
+        if (stars === 0 || isSeen(id) || x === undefined || y === undefined) return []
+        return [{ id, stars, x: tx + k * (x + width / 2), y: ty + k * (y + height / 2) }]
+      })
+      const cue = nextStarCue(unread, width, height)
+      starCue.clear()
+      starCue.zIndex = cue.kind === "arrow" ? 4.6 : 2.5
+      if (cue.kind === "arrow") {
+        drawChevrons(starCue, (cue.x - tx) / k, (cue.y - ty) / k, cue.angle, k, time, takeawayColors.on)
+      } else if (cue.kind === "aim") {
+        for (const n of nodeRenderData) {
+          const { id, x, y } = n.simulationData
+          if (cue.ids.includes(id)) drawAim(starCue, x! + width / 2, y! + height / 2, n.radius, k, time, computedStyleMap["--dark"])
+        }
+      }
+      // The canvas has no DOM: what the cue shows, readable from a test.
+      graph.dataset.starCue = cue.kind === "arrow" ? `arrow:${cue.id}` : cue.kind === "aim" ? `aim:${cue.ids.join(",")}` : "none"
     }
     tweens.forEach((t) => t.update(time))
 """),
@@ -343,8 +370,8 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
-     'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawComet, drawFlash, hoverGlow } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, starMode, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
+     'import { PaneGraph, connectGraph, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, starMode, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The black outline of a shining note\'s yellow label, over its burst. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
      '// gaining one when starred jumped down and pushed its star away (Victor, 2026-10-23).\n'

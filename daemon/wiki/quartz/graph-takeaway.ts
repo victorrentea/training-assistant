@@ -315,3 +315,92 @@ export function drawFlash(g: Graphics, x: number, y: number, r: number, q: numbe
   g.circle(x, y, r * (1.5 + 4 * q)).fill({ color: gold, alpha: 0.45 * (1 - q) })
   g.circle(x, y, r * (1 + 2 * q)).fill({ color: 0xffffff, alpha: 0.6 * (1 - q) })
 }
+
+// The trainer's next star (Victor, 2026-11-05): while he walks the room through what
+// it starred, the graph shows him where to go next - the unread notes with the most
+// stars, a takeaway counting as one. Any of them on screen: four triangles turn slowly
+// around each. None: a double chevron at the window's edge points at the nearest. Only
+// on his machine, and never a note he has read, so the cue moves on as he opens them.
+export type StarCue =
+  | { kind: "none" }
+  | { kind: "aim"; ids: string[] }
+  | { kind: "arrow"; id: string; x: number; y: number; angle: number }
+
+type CueDot = { id: string; stars: number; x: number; y: number } // x, y: on screen
+
+const ARROW_INSET = 64 // from the window's edge, clear of the pills along it
+const IN_VIEW_MARGIN = 20 // a dot this close to the edge is half gone: it counts as out
+
+export function nextStarCue(dots: CueDot[], width: number, height: number): StarCue {
+  const most = Math.max(0, ...dots.map((d) => d.stars))
+  if (most === 0) return { kind: "none" }
+  const next = dots.filter((d) => d.stars === most)
+  const inside = (at: number, size: number) => at >= IN_VIEW_MARGIN && at <= size - IN_VIEW_MARGIN
+  const inView = next.filter((d) => inside(d.x, width) && inside(d.y, height))
+  if (inView.length > 0) return { kind: "aim", ids: inView.map((d) => d.id) }
+  const cx = width / 2
+  const cy = height / 2
+  const nearest = next.reduce((a, b) => (Math.hypot(b.x - cx, b.y - cy) < Math.hypot(a.x - cx, a.y - cy) ? b : a))
+  const dx = nearest.x - cx
+  const dy = nearest.y - cy
+  // Where the line from the window's centre to the dot meets the inset edge.
+  const reach = Math.min(
+    dx === 0 ? Infinity : (cx - ARROW_INSET) / Math.abs(dx),
+    dy === 0 ? Infinity : (cy - ARROW_INSET) / Math.abs(dy),
+  )
+  return { kind: "arrow", id: nearest.id, x: cx + dx * reach, y: cy + dy * reach, angle: Math.atan2(dy, dx) }
+}
+
+const AIM_TURN_MS = 10_000 // a full turn
+const AIM_GAP = 20 // from the dot's rim to a triangle's tip, on screen
+const AIM_LENGTH = 19 // a triangle, tip to base
+const AIM_HALF_BASE = 11
+
+// Four triangles pointing at the dot at (x, y) (in graph units, like its radius r),
+// the same size on screen at any zoom (k); they read over the gold burst in the text
+// colour with the labels' black outline.
+export function drawAim(g: Graphics, x: number, y: number, r: number, k: number, time: number, color: string) {
+  const tip = r + AIM_GAP / k
+  const base = tip + AIM_LENGTH / k
+  const half = AIM_HALF_BASE / k
+  const turn = (time / AIM_TURN_MS) * 2 * Math.PI
+  for (let i = 0; i < 4; i++) {
+    const a = turn + (i * Math.PI) / 2
+    const cos = Math.cos(a)
+    const sin = Math.sin(a)
+    g.poly([
+      x + cos * tip, y + sin * tip,
+      x + cos * base - sin * half, y + sin * base + cos * half,
+      x + cos * base + sin * half, y + sin * base - cos * half,
+    ])
+      .fill({ color })
+      .stroke({ color: "#000000", width: 1.5 / k, join: "round" })
+  }
+}
+
+const CHEVRON_ARM = 20 // a chevron, tip to the end of an arm, along the line it points
+const CHEVRON_HALF = 24 // and across it
+const CHEVRON_GAP = 18 // from one chevron's tip to the next
+const CHEVRON_NUDGE = 6 // how far the pair drifts towards the note, and back
+const CHEVRON_WIDTH = 6
+
+// A double chevron at (x, y) in graph units, pointing along angle, drifting that way
+// and back. Black under gold, the way the labels are outlined.
+export function drawChevrons(g: Graphics, x: number, y: number, angle: number, k: number, time: number, gold: string) {
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  const nudge = (CHEVRON_NUDGE * (1 + Math.sin(time / 350))) / 2
+  // (along, across) from the pair's centre, on screen, to graph units.
+  const at = (along: number, across: number): [number, number] => [
+    x + (cos * (along + nudge) - sin * across) / k,
+    y + (sin * (along + nudge) + cos * across) / k,
+  ]
+  for (const [width, color] of [[CHEVRON_WIDTH + 3, "#000000"], [CHEVRON_WIDTH, gold]] as const) {
+    for (const tip of [CHEVRON_GAP / 2, -CHEVRON_GAP / 2]) {
+      g.moveTo(...at(tip - CHEVRON_ARM, -CHEVRON_HALF))
+        .lineTo(...at(tip, 0))
+        .lineTo(...at(tip - CHEVRON_ARM, CHEVRON_HALF))
+        .stroke({ color, width: width / k, cap: "round", join: "round" })
+    }
+  }
+}
