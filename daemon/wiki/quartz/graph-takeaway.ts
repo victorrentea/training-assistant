@@ -351,7 +351,7 @@ export function nextStarCue(dots: CueDot[], width: number, height: number): Star
   return { kind: "arrow", id: nearest.id, x: cx + dx * reach, y: cy + dy * reach, angle: Math.atan2(dy, dx) }
 }
 
-const AIM_TURN_MS = 10_000 // a full turn
+const AIM_TURN_MS = 15_000 // a full turn
 const AIM_GAP = 20 // from the dot's rim to a triangle's tip, on screen
 // Longer than wide: an equilateral one has no direction once it has turned, and the
 // four read as a pinwheel instead of pointing at the dot.
