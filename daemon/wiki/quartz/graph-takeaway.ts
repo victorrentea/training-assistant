@@ -353,8 +353,10 @@ export function nextStarCue(dots: CueDot[], width: number, height: number): Star
 
 const AIM_TURN_MS = 10_000 // a full turn
 const AIM_GAP = 20 // from the dot's rim to a triangle's tip, on screen
-const AIM_LENGTH = 19 // a triangle, tip to base
-const AIM_HALF_BASE = 11
+// Longer than wide: an equilateral one has no direction once it has turned, and the
+// four read as a pinwheel instead of pointing at the dot.
+const AIM_LENGTH = 24 // a triangle, tip to base
+const AIM_HALF_BASE = 8
 
 // Four triangles pointing at the dot at (x, y) (in graph units, like its radius r),
 // the same size on screen at any zoom (k); they read over the gold burst in the text
