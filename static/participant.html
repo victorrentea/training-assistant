@@ -1098,11 +1098,11 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 </style>
 <style>
 /* Theme picker, at the top of the sidebar. */
-#theme-picker{display:flex;gap:2px;padding:2px;border-radius:9999px;background:var(--color-surface-container-high)}
-#theme-picker button{flex:1 1 auto;padding:.15rem .5rem;border:0;border-radius:9999px;background:none;color:var(--color-on-surface-variant);font-size:.75rem;font-weight:600;white-space:nowrap;cursor:pointer}
-#theme-picker button:hover{color:var(--color-on-surface)}
-#theme-picker button[aria-checked="true"]{background:var(--color-primary);color:var(--color-on-primary)}
-@media (max-width: 899px){#theme-picker button{min-height:36px}}
+#theme-picker{display:flex;flex:none;gap:1px}
+#theme-picker button{width:1.45rem;height:1.45rem;padding:0;border:0;border-radius:9999px;background:none;font-size:.8rem;line-height:1;cursor:pointer;opacity:.7;filter:grayscale(.3)}
+#theme-picker button:hover{opacity:1;filter:none}
+#theme-picker button[aria-checked="true"]{opacity:1;filter:none;background:var(--color-surface-container-highest)}
+@media (max-width: 899px){#theme-picker button{width:2rem;height:2rem;font-size:1rem}}
 </style>
 <link rel="stylesheet" href="/static/participant-theme.css?v=19343e41"/>
 <style>
@@ -1218,15 +1218,17 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <!-- SIDEBAR (20%) -->
 <aside class="w-64 shrink-0 h-full bg-surface-container flex flex-col px-4 pb-0 space-y-2 z-10 relative" style="width: calc(16rem * 1.03); padding-top: 1rem;">
 <!-- Header Section -->
-<div class="space-y-2">
-<div id="theme-picker" role="radiogroup" aria-label="Theme">
-<button type="button" role="radio" data-theme-choice="light" aria-checked="false">White</button>
-<button type="button" role="radio" data-theme-choice="dark" aria-checked="false">Dark</button>
-<button type="button" role="radio" data-theme-choice="system" aria-checked="true">Follow system</button>
-</div>
+<div class="space-y-4">
 <div class="flex items-center gap-1 min-w-0">
 <div class="flex-1 min-w-0">
-<h1 id="session-title" class="text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate"></h1>
+<div class="flex items-center gap-1 min-w-0">
+<h1 id="session-title" class="flex-1 min-w-0 text-xl font-extrabold text-on-surface leading-tight tracking-tight truncate"></h1>
+<div id="theme-picker" role="radiogroup" aria-label="Theme">
+<button type="button" role="radio" data-theme-choice="light" data-tip="White" aria-label="White" aria-checked="false">☀️</button>
+<button type="button" role="radio" data-theme-choice="dark" data-tip="Dark" aria-label="Dark" aria-checked="false">🌙</button>
+<button type="button" role="radio" data-theme-choice="system" data-tip="Follow system" aria-label="Follow system" aria-checked="true">🌗</button>
+</div>
+</div>
 <p class="text-base font-medium text-primary flex items-center justify-between">
 <span id="session-org"></span>
 <span id="pax-count-display" class="flex items-center gap-1" style="display:none">👥 <span id="pax-count">0</span></span>
