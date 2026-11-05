@@ -51,7 +51,7 @@ QUESTIONS: list[dict] = [
      "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 90,
      "future_link": {"text": "½ of devs worldwide\nby end of 2026",
                      "url": "https://www.youtube.com/watch?v=wc8FBhQtdsA&t=2405s"}},
-    {"id": "review", "kind": "slider", "text": "How much of that code do you review **at work**?",
+    {"id": "review", "kind": "slider", "text": "How much of that code do you review **at work**? (percentage of lines read)",
      "low": "0% – 🙈 None", "high": "100% – Every line 🔍"},
     {"id": "devex_pain", "kind": "ranking", "text": "DevEx: What burns your ⏱️ time, 🧠 brain or 😡 emotions?",
      # "Key: detail" — the key is shown in bold; items participants add follow the same rule.
