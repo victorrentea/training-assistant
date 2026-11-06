@@ -132,6 +132,159 @@
         }
       }
     },
+    "/api/clip/{to}": {
+      "put": {
+        "summary": "Put Clip",
+        "operationId": "put_clip_api_clip__to__put",
+        "parameters": [
+          {
+            "name": "to",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mac",
+                "phone"
+              ],
+              "type": "string",
+              "title": "To"
+            }
+          },
+          {
+            "name": "x-bridge-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bridge-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Clip"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Put Clip Api Clip  To  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Clip",
+        "description": "`{\"seq\":7,\"ciphertext\":\"\u2026\"}`, or `{\"seq\":<after>,\"ciphertext\":null}` when `wait` runs out.",
+        "operationId": "get_clip_api_clip__to__get",
+        "parameters": [
+          {
+            "name": "to",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mac",
+                "phone"
+              ],
+              "type": "string",
+              "title": "To"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": -1,
+              "title": "After"
+            }
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 50,
+              "minimum": 0,
+              "default": 0,
+              "title": "Wait"
+            }
+          },
+          {
+            "name": "x-bridge-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bridge-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Clip Api Clip  To  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/webhook/agentmail": {
       "post": {
         "summary": "Agentmail Webhook",
@@ -1178,6 +1331,21 @@
           "file"
         ],
         "title": "Body_upload_wiki_api_wiki_upload_post"
+      },
+      "Clip": {
+        "properties": {
+          "ciphertext": {
+            "type": "string",
+            "maxLength": 262144,
+            "minLength": 1,
+            "title": "Ciphertext"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ciphertext"
+        ],
+        "title": "Clip"
       },
       "DeleteStaticRequest": {
         "properties": {
