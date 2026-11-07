@@ -5,6 +5,8 @@ sees. Files stay in memory for fifteen minutes at most and are never logged. A r
 at most a file nobody picked up, and the phone then keeps it.
 
 The phone polls `state` to learn the Mac took the file, which is what the Mac's DELETE says.
+Anyone with the bridge token can therefore make the phone believe a file was delivered: it
+reads nothing, but the phone drops its copy. Accepted for a private bridge.
 
 Auth: the bridge's shared token, as `X-Bridge-Token`.
 """
@@ -47,11 +49,11 @@ def _held() -> int:
 async def put_file(request: Request, file_id: str = FileId, x_bridge_token: str | None = Header(default=None)) -> dict:
     _check(x_bridge_token)
     _forget_old()
-    room = min(MAX_FILE, MAX_TOTAL - _held())
     body = bytearray()
     async for chunk in request.stream():
         body += chunk
-        if len(body) > room:
+        # Re-read per chunk: two uploads at once must not pass the total between them.
+        if len(body) > min(MAX_FILE, MAX_TOTAL - _held()):
             raise HTTPException(status_code=413, detail="too large")
     _files[file_id] = _File(bytes(body), time.time())
     return {"size": len(body)}
