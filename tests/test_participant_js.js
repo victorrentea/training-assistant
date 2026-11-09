@@ -624,7 +624,7 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   const fakeFetch = (url, opts) => { fetched.push({ url, opts }); return fetch ? fetch(url, opts) : Promise.reject(new Error('offline')); };
   const api = new Function('document', 'location', 'LS', '_onHostMachine', 'fetch', '_sessionId', '_myUUID',
     'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0, _wikiTakeaways = [];\n' +
-    'var _wikiStarCounts = {}, _wikiMyStars = [], _wikiStarQueue = Promise.resolve(), _wikiStarsInFlight = 0;\n' +
+    'var _wikiStarCounts = {}, _wikiMyStars = [], _wikiStarrers = 0, _wikiStarQueue = Promise.resolve(), _wikiStarsInFlight = 0;\n' +
     names.map((n) => extractFunction(PARTICIPANT_HTML, n)).join('\n') +
     '\nreturn { ' + names.join(', ') +
     ', hostNote: function () { return _hostWikiNote; }, isReady: function () { return _wikiFrameReady; } };'
