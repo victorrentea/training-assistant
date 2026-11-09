@@ -40,7 +40,7 @@ QUESTIONS: list[dict] = [
      "links": [{"text": "AGENTS.md", "url": "https://agents.md"}],
      "options": YES_NO_IDK},
     {"id": "mcp", "kind": "choice", "text": "Used an MCP tool?", "options": YES_NO_IDK},
-    {"id": "skill", "kind": "choice", "text": "Created a skill?", "options": YES_NO},
+    {"id": "skill", "kind": "choice", "text": "Created/modified a skill?", "options": YES_NO},
     {"id": "plugins", "kind": "choice", "text": "Do you have plugins from your company or team installed in your agent?",
      "links": [{"text": "plugins", "url": "https://agent-plugins.org"}],
      "options": YES_NO_IDK},
