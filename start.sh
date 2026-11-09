@@ -67,7 +67,7 @@ trap cleanup INT TERM
 
 # 1 only for the first launch: the daemon opens the host panel in the browser.
 # Auto-update restarts (every push to master) must not pop a new tab each time.
-OPEN_BROWSER=1
+OPEN_BROWSER="${DAEMON_OPEN_BROWSER:-1}"
 
 start_daemon() {
   mkdir -p "$(dirname "$DAEMON_LOG_FILE")"
