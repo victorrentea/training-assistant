@@ -45,7 +45,7 @@ QUESTIONS: list[dict] = [
      "links": [{"text": "plugins", "url": "https://agent-plugins.org"}],
      "options": YES_NO_IDK},
     {"id": "custom_agent", "kind": "choice", "text": "Created/used a custom agent (for example .claude/agents/*.md)?", "options": YES_NO_IDK},
-    {"id": "code_review", "kind": "choice", "text": "Do you have a code-review skill or agent?", "options": YES_NO_IDK},
+    {"id": "code_review", "kind": "choice", "text": "Do you have a code-review skill or custom agent?", "options": YES_NO_IDK},
     {"id": "nontech_pr", "kind": "choice", "text": "Ever received a PR from a non-developer (e.g. PO, business, CEO)?", "options": YES_NO},
     {"id": "ai_generated", "kind": "slider", "text": "How much% of the code you🫵 push is AI-generated?",
      "low": "0% – ✍️ All by hand", "high": "100% – All by AI 🤖", "future": 90,
