@@ -879,8 +879,6 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 :where(html.dark) .aishare-card { --aishare-me: #ffa94d; }
 /* The "future" slice and its label: #2f9e44 is only ~3:1 on the light card. */
 :where(html.light) .aishare-card { --aishare-future: #1e7a34; }
-.aishare-value { text-align: center; font-size: 2.2rem; font-weight: 800; color: var(--color-primary, #4555ba); min-height: 2.8rem; }
-.aishare-value.untouched { font-size: 1rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); padding-top: .9rem; }
 .aishare-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .aishare-head h2 { margin: 0; }
 .aishare-head-side { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
@@ -921,7 +919,6 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-copy[hidden] { display: none; }
 .aishare-copy .material-symbols-outlined { font-size: 1.2rem; }
 .aishare-copy:hover { color: var(--color-primary, #4555ba); background: var(--color-surface-container, rgba(127,127,127,.15)); }
-.aishare-value { margin-bottom: 1rem; }
 /* The plot opens upward from the slider when the host reveals the answers. */
 .aishare-plot { height: 0; overflow: hidden; transition: height .7s cubic-bezier(.2,.8,.2,1); }
 /* Slider = the chart's x axis: fixed 22px thumb, so x=0/100 sit 11px in from each edge. */
@@ -932,6 +929,11 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--aishare-me); border: 3px solid var(--aishare-bg); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
 .aishare-slider.untouched::-webkit-slider-thumb { background: var(--color-outline, #6e797e); }
 .aishare-slider.untouched::-moz-range-thumb { background: var(--color-outline, #6e797e); }
+/* Right above the slider: a hint over the untouched thumb, then the value riding on top of the thumb
+   (x matches the thumb centre: 11px in from each edge, like the chart). Height reserved so nothing jumps under the finger. */
+.aishare-thumb { position: relative; height: 1.7rem; margin: .5rem 0 .25rem; }
+.aishare-thumb-val { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 1.2rem; font-weight: 800; line-height: 1.4; color: var(--aishare-me); font-variant-numeric: tabular-nums; }
+.aishare-thumb-val.hint { font-size: .95rem; font-weight: 500; color: var(--color-on-surface-variant, #566166); }
 /* Scale bar above the slider; the plot opens between the two and pushes it up. */
 .aishare-scale { position: relative; height: 1.5rem; margin-bottom: .35rem; font-size: .85rem; font-weight: 600; color: var(--color-on-surface-variant, #566166); }
 .aishare-scale > span { position: absolute; bottom: 0; white-space: nowrap; }
@@ -6063,10 +6065,10 @@ function _aiShareBuildCard(q) {
   }
   if (q.kind === 'slider') {
     card.innerHTML = head +
-      '<div class="aishare-value untouched">Drag the slider to answer</div>' +
       '<div class="aishare-scale"><span class="aishare-end-l">' + _escHtml(q.low || '0%') + '</span>' +
         '<span class="aishare-end-r">' + _escHtml(q.high || '100%') + '</span></div>' +
       '<div class="aishare-plot"></div>' +
+      '<div class="aishare-thumb"><span class="aishare-thumb-val"></span></div>' +
       '<input id="aishare-slider-' + q.id + '" class="aishare-slider untouched" type="range" min="0" max="100" step="1" value="50" aria-label="' + _escHtml(q.text.replace(/\*\*/g, '')) + '" />';
     var slider = card.querySelector('input');
     card.querySelector('.aishare-skip').addEventListener('click', function () { _onAiShareSkip(q.id); });
@@ -6163,6 +6165,18 @@ function _aiShareBuildCard(q) {
   return card;
 }
 
+// Above a slider's thumb: its value ("73%") following the thumb while dragged and staying where released;
+// null = not answered yet (a hint over the grey thumb at 50), '' = nothing.
+function _aiShareThumbLabel(card, value) {
+  var el = card.querySelector('.aishare-thumb-val');
+  var hint = value === null;
+  el.classList.toggle('hint', hint);
+  el.textContent = hint ? 'Drag the slider to answer' : value === '' ? '' : value + '%';
+  var v = hint || value === '' ? 50 : value;
+  el.style.left = 'calc(11px + (100% - 22px) * ' + v / 100 + ')';
+  el.style.transform = 'translateX(' + -(25 + v / 2) + '%)';  // centred mid-range, leaning inward near the ends
+}
+
 function _aiShareUpdateCard(card, q) {
   var res = _aiShare.results[q.id] || { count: 0 };
   var status = card.querySelector('.aishare-status');
@@ -6175,7 +6189,6 @@ function _aiShareUpdateCard(card, q) {
     _aiShareUpdateRanking(card, q, res);
   } else if (q.kind === 'slider') {
     var slider = card.querySelector('.aishare-slider');
-    var valueEl = card.querySelector('.aishare-value');
     var plot = card.querySelector('.aishare-plot');
     var live = _aiShare.live[q.id];
     var touched = answered || live != null;
@@ -6183,7 +6196,7 @@ function _aiShareUpdateCard(card, q) {
     if (document.activeElement !== slider) slider.value = touched ? (live != null ? live : mine) : 50;
     slider.classList.toggle('untouched', !touched);
     var shown = _aiShare.revealed && res.values && window.AiShareChart;
-    valueEl.style.display = touched || shown ? 'none' : '';
+    _aiShareThumbLabel(card, touched ? +slider.value : shown ? '' : null);
     if (shown) {
       // The curve sits right over the slider: x=0/100 at the thumb centres.
       var plotH = Math.round(Math.max(140, Math.min(280, window.innerHeight * 0.28)));
@@ -6371,7 +6384,7 @@ function _onAiShareInput(qid, raw, commit, others) {
   var slider = card && card.querySelector('.aishare-slider');
   if (slider) {
     slider.classList.remove('untouched');
-    card.querySelector('.aishare-value').style.display = 'none';
+    _aiShareThumbLabel(card, value);
   }
   // A slider unlocks the next question only once released, a choice on click.
   if (slider && !commit) {
