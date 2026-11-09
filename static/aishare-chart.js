@@ -3,7 +3,7 @@
  * AiShareChart.render(parts, values, opts)
  *   parts.plot   element the bell curve is drawn in
  *   values       [int]  0 … 100 — anonymous answers, no names
- *   opts.me      the viewing participant's own value: one dot at it is highlighted
+ *   opts.me      the viewing participant's own value: the dot holding it is highlighted
  *   opts.inset   px from each edge of the plot to x=0 / x=100 — on the
  *                participant page this is the slider thumb radius, so the
  *                curve sits exactly over the slider that acts as its axis
@@ -15,7 +15,8 @@
  *   opts.futureLink  (optional) {text, url} — a link under the green slice's % label; "\n" breaks its text
  *
  * A smoothed density (Gaussian KDE, reflected at 0/100 so the bell does not
- * leak past the axis), one dot per answer sitting on the curve, and the average
+ * leak past the axis), dots sitting on the curve — answers that would overlap
+ * share one dot with their count inside — and the average
  * as an unlabelled dashed line. Tweened: on first render the plot grows open
  * and the bell rises; later answers morph it.
  *
@@ -31,6 +32,7 @@
   var GRID = 101;                 // density samples, one per percent
   var TOP = 26;                   // headroom above the tallest peak
   var FUTURE_COLOR = 'var(--aishare-future, #2f9e44)';
+  var MERGE_PX = 16;              // answers closer than this on screen share one dot
 
   function el(tag, attrs, parent) {
     var n = document.createElementNS(SVG_NS, tag);
@@ -153,24 +155,55 @@
     }
     var dotsG = el('g', {}, svg);
 
-    // Dots are anonymous: identity is "the k-th answer at this value", so a
-    // dot that keeps its value glides, one that moves drops in fresh.
-    var stackAt = {};
-    var meMarked = false;
-    var dots = values.map(function (v, i) {
-      var stack = stackAt[v] = (stackAt[v] || 0) + 1;
-      var key = v + '#' + stack;
-      var isMe = !meMarked && me != null && v === me;
-      if (isMe) meMarked = true;
+    // Answers that would overlap on screen share one dot with their count
+    // inside, instead of a column of dots climbing over the page. Greedy from
+    // the left: a dot takes every answer within MERGE_PX of its first one.
+    var clusters = [];
+    values.forEach(function (v) {
+      var c = clusters[clusters.length - 1];
+      if (c && X(v) - X(c.values[0]) < MERGE_PX) c.values.push(v);
+      else clusters.push({ values: [v] });
+    });
+    // A merged dot is bigger, so neighbours can still touch: fold those too.
+    function cx(c) { return X(c.values.reduce(function (a, v) { return a + v; }, 0) / c.values.length); }
+    function rad(c) { return c.values.length > 1 ? 10 : 7; }
+    for (var ci = 1; ci < clusters.length; ci++) {
+      var a = clusters[ci - 1], b = clusters[ci];
+      if (cx(b) - cx(a) < rad(a) + rad(b) + 2) {
+        a.values = a.values.concat(b.values);
+        clusters.splice(ci, 1);
+        ci = Math.max(0, ci - 2);
+      }
+    }
+    var dots = clusters.map(function (c, i) {
+      var count = c.values.length;
+      var counts = {};
+      c.values.forEach(function (v) { counts[v] = (counts[v] || 0) + 1; });
+      var distinct = Object.keys(counts).map(Number);
+      // Its identity (for the tween) is its most common value: a dot that keeps
+      // it glides, one that changes drops in fresh.
+      var mode = distinct.reduce(function (m, v) { return counts[v] > counts[m] ? v : m; }, distinct[0]);
+      var mean = c.values.reduce(function (a, v) { return a + v; }, 0) / count;
+      var isMe = me != null && counts[me] > 0;
+      var key = String(mode);
       var fresh = !st.seen[key];
-      var ax = X(v);
+      var ax = X(mean);
+      var tip = distinct.length === 1 ? mode + '%' + (count > 1 ? ' \u00d7' + count : '')
+        : distinct.map(function (v) { return v + '% \u00d7' + counts[v]; }).join(' \u00b7 ');
+      var r = count > 1 ? (count > 9 ? 10 : 8.5) + (isMe ? 1 : 0) : (isMe ? 7 : 5);
       // Hover shows the %; a transparent halo makes the 5px dot easy to hit.
-      var dg = el('g', { class: 'aishare-dot', 'data-tip': v + '%', 'data-tip-instant': '', 'data-value': v }, dotsG);
-      el('circle', { r: 12, fill: 'transparent' }, dg);
-      el('circle', { r: isMe ? 7 : 5, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-accent)',
-        stroke: 'var(--aishare-bg, #fff)', 'stroke-width': 1.5 }, dg);
+      var dg = el('g', { class: 'aishare-dot', 'data-tip': tip, 'data-tip-instant': '', 'data-value': mode, 'data-count': count }, dotsG);
+      el('circle', { r: Math.max(12, r + 4), fill: 'transparent' }, dg);
+      var vis = el('g', { class: 'aishare-dot-v' }, dg);
+      el('circle', { r: r, fill: isMe ? 'var(--aishare-me)' : 'var(--aishare-accent)',
+        stroke: 'var(--aishare-bg, #fff)', 'stroke-width': 1.5 }, vis);
+      if (count > 1) {
+        var num = el('text', { 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: 'var(--aishare-bg, #fff)',
+          'font-size': count > 9 ? 10 : 11, 'font-weight': 800, 'pointer-events': 'none' }, vis);
+        num.textContent = count;
+      }
       var prev = st.dots[key];
-      return { el: dg, key: key, fromX: prev ? prev.x : ax, toX: ax, value: v, stack: stack - 1,
+      return { el: dg, key: key, fromX: prev ? prev.x : ax, toX: ax, value: mean,
         fromY: prev ? prev.y : null, delay: fresh && animate ? 250 + i * 35 : 0 };
     });
     st.seen = {}; dots.forEach(function (o) { st.seen[o.key] = true; });
@@ -192,7 +225,7 @@
       dots.forEach(function (o) {
         var local = Math.max(0, Math.min(1, (elapsed - o.delay) / 500));
         var x = o.fromX + (o.toX - o.fromX) * ease(local);
-        var yOn = curveAt(ys, o.value) - o.stack * 10;
+        var yOn = curveAt(ys, o.value);
         // A new dot drops in from the top; a known one glides to its new spot.
         var y = o.fromY == null ? 6 + (yOn - 6) * ease(local) : o.fromY + (yOn - o.fromY) * ease(t);
         o.el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')');
@@ -235,7 +268,7 @@
     css.id = 'aishare-chart-style';
     css.textContent =
       '.aishare-svg{display:block;overflow:visible;font-family:inherit}' +
-      '.aishare-dot{cursor:pointer}.aishare-dot circle:last-child{transition:r .12s}.aishare-dot:hover circle:last-child{r:8}' +
+      '.aishare-dot{cursor:pointer}.aishare-dot-v{transition:transform .12s}.aishare-dot:hover .aishare-dot-v{transform:scale(1.4)}' +
       '.aishare-avg{animation:aishare-fade .6s ease-out .9s both}' +
       '@keyframes aishare-fade{from{opacity:0}to{opacity:1}}' +
       '@media (prefers-reduced-motion: reduce){.aishare-avg{animation:none;opacity:1}}';

@@ -258,7 +258,12 @@ def test_aishare_fits_a_crowd_of_25():
 
         host.reveal_aishare(True)  # opens every question, the last slider included
         victor.set_aishare(40)
-        expect(victor.aishare_card("ai_generated").locator(".aishare-dot")).to_have_count(25, timeout=5000)
+        # Overlapping answers share a dot with their count inside: no column climbs over the page
+        dots = victor.aishare_card("ai_generated").locator(".aishare-dot")
+        expect(dots.first).to_be_visible(timeout=5000)
+        raw.wait_for_function("""() => [...document.querySelectorAll('[data-q="ai_generated"] .aishare-dot')]
+            .reduce((s, d) => s + +d.dataset.count, 0) === 25""", timeout=5000)
+        assert dots.count() < 25
         _shot(raw, "aishare-crowd-pax")
         _shot(host_raw, "aishare-crowd-host")
         if SHOTS:
