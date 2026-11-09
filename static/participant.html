@@ -916,6 +916,11 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-card.settled .aishare-skip { display: none; }
 /* Same size as the question (.poll-card h2) — it reads as the question's other half. */
 .aishare-status { flex-shrink: 0; font-size: 1.15rem; line-height: 1.4; font-weight: 700; color: var(--color-on-surface-variant, #566166); }
+.aishare-head-end { display: inline-flex; align-items: center; gap: .35rem; flex-shrink: 0; }
+.aishare-copy { display: inline-flex; padding: .2rem; border: 0; border-radius: 6px; background: transparent; color: var(--color-on-surface-variant, #566166); cursor: pointer; transition: color .15s, background .15s; }
+.aishare-copy[hidden] { display: none; }
+.aishare-copy .material-symbols-outlined { font-size: 1.2rem; }
+.aishare-copy:hover { color: var(--color-primary, #4555ba); background: var(--color-surface-container, rgba(127,127,127,.15)); }
 .aishare-value { margin-bottom: 1rem; }
 /* The plot opens upward from the slider when the host reveals the answers. */
 .aishare-plot { height: 0; overflow: hidden; transition: height .7s cubic-bezier(.2,.8,.2,1); }
@@ -6049,7 +6054,12 @@ function _aiShareBuildCard(q) {
       '<span class="aishare-hearts-total"></span></div></div>';
   } else {
     var skip = q.kind === 'slider' ? '<button class="aishare-skip">Skip</button>' : '';
-    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + skip + '</h2><span class="aishare-status"></span></div>';
+    // Trainer's machine only: copy the leaderboard (ranked, with the 🔥 counts) once it is revealed.
+    var copy = q.kind === 'ranking' && _onHostMachine() ?
+      '<button type="button" class="aishare-copy" data-tip="Copy the ranking" aria-label="Copy the ranking" hidden>' +
+      '<span class="material-symbols-outlined">content_copy</span></button>' : '';
+    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + skip + '</h2>' +
+      '<span class="aishare-head-end"><span class="aishare-status"></span>' + copy + '</span></div>';
   }
   if (q.kind === 'slider') {
     card.innerHTML = head +
@@ -6085,6 +6095,12 @@ function _aiShareBuildCard(q) {
     addInput.addEventListener('input', function () { addBtn.disabled = !addInput.value.trim(); });
     addInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') add(); });
     addBtn.addEventListener('click', add);
+    var copyBtn = card.querySelector('.aishare-copy');
+    if (copyBtn) copyBtn.addEventListener('click', function () {
+      var res = _aiShare.results[q.id] || {};
+      var text = _aiShareSortItems(res.items || []).map(function (it) { return it.text + ' — ' + it.score; }).join('\n');
+      _copyToClipboard(text).then(function () { showToast('Ranking copied!'); });
+    });
   } else {
     var multi = q.kind === 'multi';
     card.innerHTML = head + '<div class="aishare-choices">' + q.options.map(function (text, idx) {
@@ -6261,6 +6277,8 @@ function _aiShareUpdateRanking(card, q, res) {
   var shown = _aiShare.revealed;
   var items = shown ? _aiShareSortItems(res.items || []) : (res.items || []);
   var mine = _aiShare.myVotes[q.id] || {};
+  var copyBtn = card.querySelector('.aishare-copy');
+  if (copyBtn) copyBtn.hidden = !shown;
   var maxScore = shown ? Math.max.apply(null, items.map(function (it) { return it.score; }).concat([1])) : 1;
   var before = {};
   list.querySelectorAll('.aishare-rank-row').forEach(function (row) { var r = row.getBoundingClientRect(); before[row.dataset.id] = { x: r.left, y: r.top }; });
