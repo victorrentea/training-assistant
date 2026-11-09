@@ -918,8 +918,10 @@ function showPeekUnseen() {
 // The popover's star, right after its title (Victor, 2026-10-23 - it was left of the
 // ✕): the trainer's takeaway on his machine, the participant's own star in the
 // participant page, just the count anywhere else. The count follows it, small and
-// white, from two up, like the ×5 after a dot's 🔗: "★×3" (Victor, 2026-10-23 - it was
-// "3×★" in gold, "1×★" for one), and takes in the trainer's takeaway, like the burst on
+// white, like the ×5 after a dot's 🔗: "★×3" (Victor, 2026-10-23 - it was "3×★" in
+// gold). It shows whenever someone else starred it - "☆×1" too, or an empty star hides
+// that anyone did - but not "★×1" for your own star alone (Victor, 2026-11-09). It
+// takes in the trainer's takeaway, like the burst on
 // the dot: his click shows at once as one more. The graph shows no count:
 // the bigger burst says it. A shining note's popover glows gold, like its dot.
 function showPeekStar() {
@@ -930,10 +932,11 @@ function showPeekStar() {
   const { count, mine: voted } = peeked !== null ? starsOf(peeked) : { count: 0, mine: false }
   const total = count + (takeaway ? 1 : 0)
   const own = mode === "trainer" ? takeaway : mode === "voter" ? voted : total > 0
+  const yours = mode === "trainer" ? takeaway : mode === "voter" && voted
   peek.classList.toggle("takeaway", peeked !== null && shineOf(peeked) > 0)
   const times = Object.assign(document.createElement("span"), { className: "note-peek-count", textContent: `×${total}` })
   const lit = own || button.classList.contains("hovered")
-  button.replaceChildren(lit ? "★\uFE0E" : "☆\uFE0E", ...(total > 1 ? [times] : []))
+  button.replaceChildren(lit ? "★\uFE0E" : "☆\uFE0E", ...(total > (yours ? 1 : 0) ? [times] : []))
   button.classList.toggle("on", own)
   button.hidden = mode === "viewer" && total === 0
   button.disabled = mode === "viewer"

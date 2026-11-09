@@ -86,7 +86,8 @@ body {
     border: none;
     border-radius: 999px;
     background: none;
-    color: var(--wiki-takeaway-off);
+    // Empty, it is as grey as the crossed eye and the ✕ beside it (Victor, 2026-11-09).
+    color: var(--darkgray);
     font-size: calc(1.25 * var(--peek-u));
     line-height: 1;
     cursor: pointer;
