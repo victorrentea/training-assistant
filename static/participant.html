@@ -5664,7 +5664,7 @@ function _setDuplicateIndicator(isDup) {
     _hostSummaryScroll = state.summary_scroll || null;
     _hostWikiNote = state.wiki_note || null;
     _onIncomingWikiTakeaways(state.wiki_takeaways);
-    _onIncomingWikiStars(state.wiki_stars, state.wiki_my_stars);
+    _onIncomingWikiStars(state.wiki_stars, state.wiki_my_stars, state.wiki_starrers);
     var saved = _computeLandingView({
       urlTab: location.pathname.split('/')[2] || '',
       savedView: LS.getView(),
@@ -5763,7 +5763,7 @@ function _applyState(msg) {
     _onIncomingHostWikiNote(msg.wiki_note);
   }
   if (msg.wiki_takeaways !== undefined) _onIncomingWikiTakeaways(msg.wiki_takeaways);
-  if (msg.wiki_stars !== undefined) _onIncomingWikiStars(msg.wiki_stars, msg.wiki_my_stars);
+  if (msg.wiki_stars !== undefined) _onIncomingWikiStars(msg.wiki_stars, msg.wiki_my_stars, msg.wiki_starrers);
   if (msg.summary_updated_at !== undefined) {
     var summaryNav = document.querySelector('[data-nav="summary"]');
     summaryNav.style.display = msg.summary_updated_at ? '' : 'none';
@@ -6779,7 +6779,7 @@ function _handleWsMessage(msg) {
     case 'wiki_updated': _applyWiki(msg.updated_at); break;
     case 'wiki_note': _onIncomingHostWikiNote(msg.slug); break;
     case 'wiki_takeaways': _onIncomingWikiTakeaways(msg.slugs); break;
-    case 'wiki_stars': _onIncomingWikiStars(msg.counts); break;
+    case 'wiki_stars': _onIncomingWikiStars(msg.counts, undefined, msg.starrers); break;
     case 'agenda_updated': {
       document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
       if (msg.has_agenda) {
@@ -8208,11 +8208,12 @@ function _onIncomingWikiTakeaways(slugs) {
 // and its clicks.
 var _wikiStarCounts = {};
 var _wikiMyStars = [];
+var _wikiStarrers = 0; // participants who starred at least one note
 
 function _postWikiStars() {
   var frame = document.getElementById('wiki-frame');
   if (!_wikiFrameReady || !frame || !frame.contentWindow) return;
-  frame.contentWindow.postMessage({ type: 'wiki-stars', counts: _wikiStarCounts, mine: _wikiMyStars }, location.origin);
+  frame.contentWindow.postMessage({ type: 'wiki-stars', counts: _wikiStarCounts, mine: _wikiMyStars, starrers: _wikiStarrers }, location.origin);
 }
 
 // Clicks go one at a time, in click order: sent together, a quick star-unstar overtakes
@@ -8222,9 +8223,10 @@ function _postWikiStars() {
 var _wikiStarQueue = Promise.resolve();
 var _wikiStarsInFlight = 0;
 
-function _onIncomingWikiStars(counts, mine) {
+function _onIncomingWikiStars(counts, mine, starrers) {
   _wikiStarCounts = counts && typeof counts === 'object' ? counts : {};
   if (Array.isArray(mine)) _wikiMyStars = mine;
+  if (typeof starrers === 'number') _wikiStarrers = starrers;
   if (_wikiStarsInFlight === 0) _postWikiStars();
 }
 
@@ -8244,6 +8246,7 @@ async function _sendWikiStar(slug, starred) {
       var json = await r.json();
       _wikiStarCounts = json.counts && typeof json.counts === 'object' ? json.counts : {};
       if (Array.isArray(json.mine)) _wikiMyStars = json.mine;
+      if (typeof json.starrers === 'number') _wikiStarrers = json.starrers;
     }
   } catch (err) { /* offline: the star goes back below */ }
   // Not saved: the wiki shows what is really stored, as last known.

@@ -860,7 +860,7 @@ window.addEventListener("message", (e) => {
   }
   // The participants' stars (see "Participants' stars" below).
   if (msg?.type === "wiki-stars") {
-    applyStars(msg.counts, msg.mine)
+    applyStars(msg.counts, msg.mine, msg.starrers)
     return
   }
   if (msg?.type !== "wiki-follow") return
@@ -1005,6 +1005,7 @@ function fetchTakeaways() {
 const PARTICIPANT_UUID_KEY = "workshop_participant_uuid" // participant.html's _myUUID
 let starCounts = new Map<SimpleSlug, number>()
 let mine = new Set<SimpleSlug>()
+let starrers = 0 // participants who starred at least one note
 
 function participantId(): string | null {
   try {
@@ -1038,7 +1039,7 @@ export function dotShine(slug: SimpleSlug): DotShine {
   return { takeaway: starred.has(slug), ...starsOf(slug), level: shineOf(slug) }
 }
 
-function applyStars(counts: unknown, own: unknown) {
+function applyStars(counts: unknown, own: unknown, starrersNow?: unknown) {
   const next = new Map<SimpleSlug, number>()
   if (counts && typeof counts === "object") {
     for (const [slug, n] of Object.entries(counts as Record<string, unknown>)) {
@@ -1049,6 +1050,10 @@ function applyStars(counts: unknown, own: unknown) {
   if (Array.isArray(own)) {
     mine = new Set(own.filter((s): s is string => typeof s === "string").map((s) => simplifySlug(s as never)))
     showStarHint()
+  }
+  if (typeof starrersNow === "number" && Number.isInteger(starrersNow) && starrersNow >= 0) {
+    starrers = starrersNow
+    showStarrers()
   }
   graph?.shine()
   showPeekStar()
@@ -1062,7 +1067,10 @@ export function toggleStar(slug: SimpleSlug, on: boolean) {
   const counts = Object.fromEntries(starCounts)
   if (on !== mine.has(slug)) counts[slug] = Math.max(0, (counts[slug] ?? 0) + (on ? 1 : -1))
   if (on && starHint) celebrate(starHint)
-  applyStars(counts, on ? [...mine, slug] : [...mine].filter((s) => s !== slug))
+  const own = on ? [...mine, slug] : [...mine].filter((s) => s !== slug)
+  // A first star makes one more starrer, a last one withdrawn one fewer.
+  const delta = (own.length > 0 ? 1 : 0) - (mine.size > 0 ? 1 : 0)
+  applyStars(counts, own, Math.max(0, starrers + delta))
   if (embedded) tellParent({ type: "wiki-star", slug, starred: on })
   else sendStar(slug, on)
 }
@@ -1076,7 +1084,7 @@ let starQueue: Promise<void> = Promise.resolve()
 let starsInFlight = 0
 let starClickedAt = 0
 
-type StarsAnswer = { counts?: unknown; mine?: unknown } | null
+type StarsAnswer = { counts?: unknown; mine?: unknown; starrers?: unknown } | null
 
 function sendStar(slug: SimpleSlug, on: boolean) {
   const id = participantId()
@@ -1093,7 +1101,7 @@ function sendStar(slug: SimpleSlug, on: boolean) {
       .catch(() => null)
       .then((json) => {
         if (--starsInFlight > 0) return
-        if (json) applyStars(json.counts, json.mine)
+        if (json) applyStars(json.counts, json.mine, json.starrers)
         else fetchStars() // not saved: the wiki shows what is really stored
       }),
   )
@@ -1106,7 +1114,7 @@ function fetchStars() {
     .then((res) => (res.ok ? (res.json() as Promise<StarsAnswer>) : null))
     .then((json) => {
       if (!json || starsInFlight > 0 || asked < starClickedAt) return
-      applyStars(json.counts, starMode() === "voter" ? json.mine : [])
+      applyStars(json.counts, starMode() === "voter" ? json.mine : [], json.starrers)
     })
     .catch(() => {})
 }
@@ -1146,10 +1154,42 @@ function showStarHint() {
   document.body.append(starHint)
 }
 
+// Under the graph, last in its bottom row (patch-graph.py places it): "★ 7 users
+// starring", how many participants starred at least one note. Each time one more does,
+// confetti flies from it and it pops, on every graph - the projector's included - to
+// draw in the rest of the room (Victor, 2026-11-09). Hidden while nobody has starred.
+const starrersPill = Object.assign(document.createElement("div"), { className: "graph-starrers" })
+starrersPill.dataset.tip = "Participants who starred at least one note"
+let starrersShown: number | null = null // null until the first count: no confetti for those already there
+
+export function starrersBadge(): HTMLElement {
+  showStarrers()
+  return starrersPill
+}
+
+function showStarrers() {
+  starrersPill.textContent = `★\uFE0E ${starrers} ${starrers === 1 ? "user" : "users"} starring`
+  starrersPill.hidden = starrers === 0
+  const before = starrersShown
+  starrersShown = starrers
+  if (before === null || starrers <= before || !starrersPill.isConnected) return
+  throwConfetti(starrersPill)
+  starrersPill.animate(
+    [{ transform: "scale(1)" }, { transform: "scale(1.35)", offset: 0.3 }, { transform: "scale(1)" }],
+    { duration: 700, easing: "cubic-bezier(0.3, 1.6, 0.5, 1)" },
+  )
+}
+
 function celebrate(hint: HTMLElement) {
   starHintDone = true
   starHint = null
-  const from = hint.getBoundingClientRect()
+  throwConfetti(hint)
+  hint.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(1.15)" }], { duration: 500, fill: "forwards" })
+    .finished.then(() => hint.remove())
+}
+
+function throwConfetti(from_: HTMLElement) {
+  const from = from_.getBoundingClientRect()
   const x0 = from.left + from.width / 2
   const y0 = from.top + from.height / 2
   const colors = ["#fbbf24", "#f59e0b", "#fde68a", "#22c55e", "#ffffff"]
@@ -1175,6 +1215,4 @@ function celebrate(hint: HTMLElement) {
       )
       .finished.then(() => bit.remove())
   }
-  hint.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(1.15)" }], { duration: 500, fill: "forwards" })
-    .finished.then(() => hint.remove())
 }

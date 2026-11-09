@@ -96,6 +96,16 @@ def star_counts() -> dict[str, int]:
         return _counts(_cached(folder))
 
 
+def starrer_count() -> int:
+    """How many participants starred at least one note: the graph shows it to draw in
+    the rest of the room (Victor, 2026-11-09)."""
+    folder = get_active_session_folder()
+    if folder is None:
+        return 0
+    with _lock:
+        return len(set().union(*_cached(folder).values()))
+
+
 def stars_of(pid: str) -> list[str]:
     """The notes this participant starred, sorted."""
     folder = get_active_session_folder()

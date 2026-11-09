@@ -4069,6 +4069,10 @@ components:
           type: array
           title: Wiki My Stars
           default: []
+        wiki_starrers:
+          type: integer
+          title: Wiki Starrers
+          default: 0
         talk_notes:
           anyOf:
           - $ref: '#/components/schemas/TalkNotesMsg'
@@ -5065,6 +5069,10 @@ components:
             type: integer
           type: object
           title: Counts
+        starrers:
+          type: integer
+          title: Starrers
+          default: 0
         mine:
           items:
             type: string

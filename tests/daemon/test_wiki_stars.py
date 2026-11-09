@@ -48,10 +48,10 @@ def test_a_star_is_counted_for_everyone_and_broadcast_without_who(session):
     resp = _star(BOB, "Self-review")
 
     assert resp.status_code == 200
-    assert resp.json() == {"counts": {"Self-review": 2}, "mine": ["Self-review"]}
+    assert resp.json() == {"counts": {"Self-review": 2}, "starrers": 2, "mine": ["Self-review"]}
     msg = broadcast.call_args_list[0].args[0]
     assert isinstance(msg, WikiStarsMsg)
-    assert msg.model_dump() == {"type": "wiki_stars", "counts": {"Self-review": 1}}
+    assert msg.model_dump() == {"type": "wiki_stars", "counts": {"Self-review": 1}, "starrers": 1}
     assert ALICE not in json.dumps(msg.model_dump())
 
 
@@ -65,7 +65,7 @@ def test_unstarring_withdraws_only_your_own_star(session):
     _star(ALICE, "Self-review")
     _star(BOB, "Self-review")
     resp = _star(BOB, "Self-review", starred=False)
-    assert resp.json() == {"counts": {"Self-review": 1}, "mine": []}
+    assert resp.json() == {"counts": {"Self-review": 1}, "starrers": 1, "mine": []}
 
 
 def test_an_unknown_participant_cannot_star(session):
@@ -110,13 +110,13 @@ def test_stars_are_saved_in_the_session_folder_and_survive_a_restart(session):
     assert saved == {"stars": {"Self-review": [ALICE]}}
     stars.forget_cache()  # a daemon restart: nothing in memory
     resp = _client().get("/api/participant/wiki/stars", headers={"X-Participant-ID": ALICE})
-    assert resp.json() == {"counts": {"Self-review": 1}, "mine": ["Self-review"]}
+    assert resp.json() == {"counts": {"Self-review": 1}, "starrers": 1, "mine": ["Self-review"]}
 
 
 def test_the_counts_without_an_identity_carry_no_mine(session):
     _star(ALICE, "Self-review")
     resp = _client().get("/api/participant/wiki/stars")
-    assert resp.json() == {"counts": {"Self-review": 1}, "mine": []}
+    assert resp.json() == {"counts": {"Self-review": 1}, "starrers": 1, "mine": []}
 
 
 def test_an_unreadable_file_means_no_stars(session):
@@ -132,6 +132,16 @@ def test_the_participant_state_carries_the_counts_and_own_stars(session):
     body = resp.json()
     assert body["wiki_stars"] == {"Concepts/Clean-Code": 1, "Self-review": 1}
     assert body["wiki_my_stars"] == ["Self-review"]
+    assert body["wiki_starrers"] == 2
+
+
+def test_the_starrers_are_the_participants_with_at_least_one_star(session):
+    _star(ALICE, "Self-review")
+    _star(ALICE, "Concepts/Clean-Code")
+    _star(BOB, "Self-review")
+    assert stars.starrer_count() == 2
+    resp = _star(BOB, "Self-review", starred=False)
+    assert resp.json()["starrers"] == 1
 
 
 def test_deleting_a_participant_withdraws_their_stars(session):

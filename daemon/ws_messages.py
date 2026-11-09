@@ -557,6 +557,8 @@ class WikiStarCounts(BaseModel):
 
     Counts only, never who: the same for every participant."""
     counts: dict[str, int] = Field(default_factory=dict)
+    # How many participants starred at least one note (a badge under the graph).
+    starrers: int = 0
 
 
 class WikiStars(WikiStarCounts):

@@ -575,6 +575,28 @@ body {
   }
 }
 
+// Last in the bottom row of the full graph (note-pane.ts, placed by patch-graph.py): how
+// many participants starred a note, in the takeaway gold like the pill above.
+.graph-starrers {
+  position: absolute;
+  bottom: 0.7rem;
+  z-index: 1;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-family: var(--bodyFont);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--wiki-takeaway-text);
+  background: var(--light);
+  border: 1px solid var(--wiki-takeaway);
+  user-select: none;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
 // What a participant's first star throws from that pill.
 .graph-confetti {
   position: fixed;
@@ -706,7 +728,8 @@ body.peek-dragging {
   // No room on a phone: the emoji bar takes the bottom, the pills the top.
   .graph-session-title,
   .graph-sources,
-  .graph-downloads {
+  .graph-downloads,
+  .graph-starrers {
     display: none;
   }
 

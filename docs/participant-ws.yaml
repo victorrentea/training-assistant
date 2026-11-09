@@ -893,6 +893,9 @@ components:
             additionalProperties:
               type: integer
             description: How many participants starred each note, by Quartz simple slug; notes nobody starred are left out. Counts only, never who (the whole map, not a delta)
+          starrers:
+            type: integer
+            description: How many participants starred at least one note (a badge under the graph, confetti when it grows)
 
     feedback_form_updated:
       summary: End-of-session participant feedback form link published or retracted

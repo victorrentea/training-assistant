@@ -384,7 +384,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, starMode, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -661,12 +661,16 @@ PATCHES = [
     }
     // Not in a downloaded copy opened from disk: it has no downloads/ of its own.
     if (location.protocol !== "file:") container.append(downloads)
+    // Last in the row: how many participants starred at least one note, confetti each
+    // time one more does, to draw in the rest of the room (note-pane.ts; Victor, 2026-11-09).
+    const starrers = starrersBadge()
+    container.append(starrers)
     // On a desktop the bottom-left pills sit one after the other, 10px apart, whichever
     // of them there are; a phone's stylesheet lays them out along the top instead.
     requestAnimationFrame(() => {
       if (innerWidth < 900) return
       let left = 13 // 0.8rem
-      for (const pill of [reset, home, resetSeenPill, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads]) {
+      for (const pill of [reset, home, resetSeenPill, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads, starrers]) {
         if (!pill.isConnected) continue
         pill.style.left = `${left}px`
         left += pill.offsetWidth + 10

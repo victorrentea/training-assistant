@@ -337,6 +337,8 @@ class ParticipantStateResponse(BaseModel):
     # How many participants starred each wiki note, and the ones this one starred
     wiki_stars: dict[str, int] = {}
     wiki_my_stars: list[str] = []
+    # How many participants starred at least one note
+    wiki_starrers: int = 0
     # Talk mode: the trainer's notes as VS Code has them open (None until he
     # opens them) and whether he presents from the slides or the notes.
     talk_notes: TalkNotesMsg | None = None
@@ -854,7 +856,7 @@ async def get_wiki_takeaways():
 # (daemon/wiki/stars.py says why a star can't be forged or stuffed). Every graph gets
 # the counts only; who starred what stays on this machine.
 async def _broadcast_wiki_stars() -> None:
-    broadcast(WikiStarsMsg(counts=wiki_stars.star_counts()))
+    broadcast(WikiStarsMsg(counts=wiki_stars.star_counts(), starrers=wiki_stars.starrer_count()))
 
 
 _wiki_stars_fanout = LoopThrottle("wiki-stars", 1.0, _broadcast_wiki_stars)
@@ -864,7 +866,7 @@ _wiki_stars_fanout = LoopThrottle("wiki-stars", 1.0, _broadcast_wiki_stars)
 async def get_wiki_stars(request: Request):
     pid = request.headers.get("x-participant-id")
     mine = wiki_stars.stars_of(pid) if pid and pid in participant_state.participant_names else []
-    return WikiStars(counts=wiki_stars.star_counts(), mine=mine)
+    return WikiStars(counts=wiki_stars.star_counts(), starrers=wiki_stars.starrer_count(), mine=mine)
 
 
 def _refused_star(pid: str | None, body: WikiStarToggle, status: int, error: str) -> JSONResponse:
@@ -898,7 +900,7 @@ async def star_wiki_note(request: Request, body: WikiStarToggle):
     log.info("wiki", f"{name} {'★ starred' if body.starred else '☆ un-starred'} {body.slug} "
                      f"({counts.get(body.slug, 0)})")
     await _wiki_stars_fanout.request()
-    return WikiStars(counts=counts, mine=wiki_stars.stars_of(pid))
+    return WikiStars(counts=counts, starrers=wiki_stars.starrer_count(), mine=wiki_stars.stars_of(pid))
 
 
 @router.get("/state", response_model=ParticipantStateResponse)
@@ -969,6 +971,7 @@ async def get_participant_state(request: Request):
         # The notes participants starred (counts only) and this participant's own stars
         "wiki_stars": wiki_stars.star_counts(),
         "wiki_my_stars": wiki_stars.stars_of(pid),
+        "wiki_starrers": wiki_stars.starrer_count(),
         # Talk mode: the notes on screen in VS Code, and slides vs notes
         "talk_notes": misc_state.talk_notes if ps.mode == "talk" else None,
         "presenter_view": misc_state.presenter_view,
