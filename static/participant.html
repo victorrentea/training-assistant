@@ -863,6 +863,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 /* A tall activity (the AI-share survey, a long poll) scrolls instead of being
    clipped; `safe` keeps its top reachable when it outgrows the view. */
 #activity-view { overflow-y: auto; justify-content: safe center; }
+/* Room below the last survey question so it scrolls clear of the floating
+   emoji bar (and the tooltips above it) instead of ending underneath it. */
+#activity-aishare-section { padding-bottom: 6rem; }
 /* AI-share slider activity */
 .aishare-card {
   --aishare-accent: var(--color-primary, #4555ba);
