@@ -5651,7 +5651,6 @@ function _setDuplicateIndicator(isDup) {
       summaryBadge.style.display = 'none';
     }
     summaryBadge.classList.toggle('badge-alert', LS.isSummaryUnread());
-    _applyWiki(state.wiki_updated_at);
     var gdriveNav = document.getElementById('gdrive-nav');
     var gdriveRow = document.getElementById('gdrive-row');
     if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveRow.style.display = ''; }
@@ -5765,6 +5764,9 @@ function _applyState(msg) {
   if (msg.wiki_note !== undefined && (msg.wiki_note || null) !== _hostWikiNote) {
     _onIncomingHostWikiNote(msg.wiki_note);
   }
+  // Here, not only on first load: a reconnect re-reads /state through this function, and
+  // a wiki published while the socket was down (session switch, daemon restart) must show up.
+  if (msg.wiki_updated_at !== undefined) _applyWiki(msg.wiki_updated_at);
   if (msg.wiki_takeaways !== undefined) _onIncomingWikiTakeaways(msg.wiki_takeaways);
   if (msg.wiki_day !== undefined) _onIncomingWikiDay(msg.wiki_day);
   if (msg.wiki_stars !== undefined) _onIncomingWikiStars(msg.wiki_stars, msg.wiki_my_stars, msg.wiki_starrers);
