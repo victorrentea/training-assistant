@@ -6107,10 +6107,13 @@ function _aiShareBuildCard(q) {
     });
   } else {
     var multi = q.kind === 'multi';
+    // A multi with a hint ("…then ❤️ your favourite") gets the ♡ column; one without reads "**Key**: detail".
+    var hearts = multi && !!q.hint;
     card.innerHTML = head + '<div class="aishare-choices">' + q.options.map(function (text, idx) {
       return '<button class="poll-option-btn aishare-opt" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
-        '<div class="row"><span><span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true"></span>' + _escHtml(text) + '</span>' +
-        (multi ? '<span class="aishare-heart" role="button" tabindex="0" data-tip="My favourite"><span class="aishare-heart-n"></span><span class="aishare-heart-g"></span></span>' : '') + '</div></button>';
+        '<div class="row"><span><span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true"></span>' +
+        (multi && !hearts ? _aiShareKeyHtml(text, true) : _escHtml(text)) + '</span>' +
+        (hearts ? '<span class="aishare-heart" role="button" tabindex="0" data-tip="My favourite"><span class="aishare-heart-n"></span><span class="aishare-heart-g"></span></span>' : '') + '</div></button>';
     }).join('') + '</div>';
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
       var idx = +btn.dataset.i;
@@ -6125,7 +6128,7 @@ function _aiShareBuildCard(q) {
         _onAiShareMulti(q.id, mask, (_aiShare.myHearts[q.id] || 0) & mask);
       });
       // ❤️ = one they love most (several allowed): ticks it as well; a second tap takes the heart back.
-      btn.querySelector('.aishare-heart').addEventListener('click', function (e) {
+      if (hearts) btn.querySelector('.aishare-heart').addEventListener('click', function (e) {
         e.stopPropagation();
         if (!((_aiShare.myHearts[q.id] || 0) >> idx & 1)) _aiShareHeartBeat(e.currentTarget.querySelector('.aishare-heart-g'));
         _onAiShareMulti(q.id, (_aiShare.my[q.id] || 0) | (1 << idx), (_aiShare.myHearts[q.id] || 0) ^ (1 << idx));
@@ -6232,8 +6235,8 @@ function _aiShareUpdateCard(card, q) {
         heart.querySelector('.aishare-heart-n').textContent = h ? h + '×' : '';
       }
       var c = counts ? (counts[idx] || 0) : 0;
-      // A multi's longest bar stops short of the ❤️ on the right, so its count stays readable.
-      var pct = c > 0 && maxCount > 0 ? (c / maxCount) * (multi ? 82 : 100) : 0;
+      // With a ❤️ column, the longest bar stops short of it, so its count stays readable.
+      var pct = c > 0 && maxCount > 0 ? (c / maxCount) * (heart ? 82 : 100) : 0;
       btn.querySelector('.fill').style.width = pct + '%';
       var countEl = btn.querySelector('.count');
       if (c > 0) {
@@ -6273,9 +6276,11 @@ function _aiShareHeartBeat(target) {
 }
 
 // "Code review: waiting" → the key before the first colon in bold.
-function _aiShareKeyHtml(text) {
+// A multi's option keeps only its key bold: "Issue tracker: Jira, Linear" → <b>Issue tracker</b>: Jira, Linear.
+function _aiShareKeyHtml(text, colonPlain) {
   var m = /^([^:]{1,30}):\s*(.+)$/.exec(text);
-  return m ? '<b>' + _escHtml(m[1]) + ':</b> ' + _escHtml(m[2]) : '<b>' + _escHtml(text) + '</b>';
+  if (!m) return '<b>' + _escHtml(text) + '</b>';
+  return colonPlain ? '<b>' + _escHtml(m[1]) + '</b>: ' + _escHtml(m[2]) : '<b>' + _escHtml(m[1]) + ':</b> ' + _escHtml(m[2]);
 }
 
 // Same order as the daemon: most 🔥, then the oldest.

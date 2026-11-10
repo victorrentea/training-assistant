@@ -40,9 +40,10 @@ QUESTIONS: list[dict] = [
      "links": [{"text": "AGENTS.md", "url": "https://agents.md"}],
      "options": YES_NO_IDK},
     {"id": "mcp", "kind": "choice", "text": "Used an MCP tool?", "options": YES_NO_IDK},
+    # No hint, so no ❤️: options read "Key: detail", the key in bold (like the ranking's items).
     {"id": "tools", "kind": "multi", "text": "Tools available to your agent",
-     "options": ["Issue tracker", "Build", "Confluence / Wiki", "Browser", "Metrics", "Logs", "Email",
-                 "Meeting transcripts", "Chat / Slack"]},
+     "options": ["Issue tracker: Jira, Linear, GitHub Issues", "Build: GitHub, GitLab, Bitbucket", "Confluence / Wiki",
+                 "Browser", "Metrics", "Meeting transcripts", "Logs", "Email", "Chat / Slack"]},
     {"id": "skill", "kind": "choice", "text": "Created/updated a skill?", "options": YES_NO},
     {"id": "plugins", "kind": "choice", "text": "Do you have plugins from your company or team installed in your agent?",
      "links": [{"text": "plugins", "url": "https://agent-plugins.org"}],
@@ -79,7 +80,10 @@ MERGED_OPTIONS = {qid: [0, 1, 1] for qid in ("agents_md", "mcp", "plugins", "cod
 # Unlike a merge, re-applying this would corrupt the answers, so snapshots carry OPTIONS_VERSION.
 # 2 (2026-11-03): "Microsoft M365 Copilot" went in before "Other", which moved from bit 4 to 5.
 INSERTED_OPTIONS = {"harness_work": 4}
-OPTIONS_VERSION = 2
+# A multi's options re-ordered after answers were given: old bit → new bit, for snapshots before version 3.
+# 3 (2026-11-10): "Meeting transcripts" moved up from after "Email" to right after "Metrics".
+MOVED_OPTIONS = {"tools": [0, 1, 2, 3, 4, 6, 7, 5, 8]}
+OPTIONS_VERSION = 3
 
 # Seeded ranking items reworded after votes were cast: old text → new, applied on restore
 # so a running survey keeps its 🔥. Items participants added (by != None) are never renamed.
@@ -110,6 +114,11 @@ def insert_bit(mask: int, at: int) -> int:
     """`mask` with a 0 inserted at bit `at`: the options from there on move up by one."""
     low = mask & ((1 << at) - 1)
     return (mask ^ low) << 1 | low
+
+
+def move_bits(mask: int, to: list[int]) -> int:
+    """`mask` with bit i moved to bit to[i]."""
+    return sum(1 << to[i] for i in range(len(to)) if mask >> i & 1)
 
 
 def clean_other(text: object) -> str:
@@ -326,7 +335,9 @@ class AiShareState:
             return
         self.active = bool(data.get("active", False))
         self.revealed = bool(data.get("revealed", False))
-        inserted = INSERTED_OPTIONS if data.get("options_version", 1) < OPTIONS_VERSION else {}
+        version = data.get("options_version", 1)
+        inserted = INSERTED_OPTIONS if version < 2 else {}
+        moved = MOVED_OPTIONS if version < 3 else {}
         raw = data.get("answers")
         if not raw and isinstance(data.get("values"), dict):
             # Legacy single-question shape: values[uuid] = 0..100 for "ai_generated".
@@ -342,6 +353,8 @@ class AiShareState:
                     for pid, v in per.items() if isinstance(v, (int, float))}
             if str(qid) in inserted:
                 kept = {pid: insert_bit(v, inserted[str(qid)]) for pid, v in kept.items()}
+            if str(qid) in moved:
+                kept = {pid: move_bits(v, moved[str(qid)]) for pid, v in kept.items()}
             kept = {pid: v for pid, v in kept.items() if valid_value(str(qid), v)}
             if kept:
                 self.answers[str(qid)] = kept
@@ -366,6 +379,8 @@ class AiShareState:
             ticked = self.answers.get(str(qid), {})
             if str(qid) in inserted:
                 per = {pid: insert_bit(h, inserted[str(qid)]) for pid, h in per.items() if isinstance(h, int)}
+            if str(qid) in moved:
+                per = {pid: move_bits(h, moved[str(qid)]) for pid, h in per.items() if isinstance(h, int)}
             kept = {str(pid): h & ticked[str(pid)] for pid, h in per.items()
                     if isinstance(h, int) and h & ticked.get(str(pid), 0)}
             if kept:

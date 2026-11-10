@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 from daemon.aishare.router import host_router, participant_router
-from daemon.aishare.state import AiShareState
+from daemon.aishare.state import QUESTIONS_BY_ID, AiShareState
 from daemon.participant.state import ParticipantState
 
 
@@ -416,3 +416,17 @@ def test_restore_moves_other_past_the_inserted_option_exactly_once():
     again = AiShareState()
     again.restore(s.snapshot())                                            # the next restart must not shift it again
     assert again.answers == s.answers and again.hearts == s.hearts
+
+
+def test_restore_follows_meeting_transcripts_up_the_tools_list_exactly_once():
+    s = AiShareState()
+    # Version-2 bits: 5 Logs, 6 Email, 7 Meeting transcripts, 8 Chat / Slack.
+    s.restore({"active": True, "options_version": 2,
+               "answers": {"tools": {"u1": 1 << 7 | 1 << 5, "u2": 1 << 6 | 1}}})
+    opts = QUESTIONS_BY_ID["tools"]["options"]
+    names = lambda m: {o for i, o in enumerate(opts) if m >> i & 1}
+    assert names(s.answers["tools"]["u1"]) == {"Meeting transcripts", "Logs"}
+    assert names(s.answers["tools"]["u2"]) == {"Email", opts[0]}
+    again = AiShareState()
+    again.restore(s.snapshot())                                            # the next restart must not move it again
+    assert again.answers == s.answers
