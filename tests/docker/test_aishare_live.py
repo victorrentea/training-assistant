@@ -31,7 +31,7 @@ def _shot(page, name):
         page.screenshot(path=f"{SHOTS}/{name}.png", full_page=True)
 
 
-CHOICES = ["harness_work", "personal_sub", "agents_md", "mcp", "skill", "plugins", "custom_agent", "code_review", "nontech_pr"]
+CHOICES = ["harness_work", "personal_sub", "agents_md", "mcp", "tools", "skill", "plugins", "custom_agent", "code_review", "nontech_pr"]
 
 
 @pytest.mark.nightly
