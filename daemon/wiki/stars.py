@@ -44,6 +44,7 @@ RATE_WINDOW_S = 60.0
 _lock = threading.Lock()
 _cache: tuple[Path, dict[str, set[str]]] | None = None  # (session folder, slug -> starring pids)
 _recent: dict[str, deque[float]] = {}
+_version = 0  # bumped on every saved change: the vault's star lines follow it (star_lines.py)
 
 
 def load_stars(folder: Path) -> dict[str, set[str]]:
@@ -69,6 +70,8 @@ def load_stars(folder: Path) -> dict[str, set[str]]:
 
 
 def _save(folder: Path, stars: dict[str, set[str]]) -> None:
+    global _version
+    _version += 1
     path = folder / STARS_FILE
     tmp = path.with_name(path.name + ".tmp")
     payload = {"stars": {slug: sorted(pids) for slug, pids in sorted(stars.items()) if pids}}
@@ -94,6 +97,13 @@ def star_counts() -> dict[str, int]:
         return {}
     with _lock:
         return _counts(_cached(folder))
+
+
+def counts_in(folder: Path) -> tuple[int, dict[str, int]]:
+    """(version, counts) of a session folder's stars: the version tells a reader that
+    mirrors them whether anything changed since it last looked."""
+    with _lock:
+        return _version, _counts(_cached(folder))
 
 
 def starrer_count() -> int:

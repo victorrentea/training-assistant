@@ -18,7 +18,9 @@ from typing import Callable
 
 from daemon import log
 from daemon.materials.upload import build_multipart, post_multipart
-from daemon.wiki.builder import build_site, find_wiki_dir, fingerprint, zip_site
+from daemon.wiki import stars
+from daemon.wiki.builder import Fingerprint, build_site, find_wiki_dir, fingerprint, zip_site
+from daemon.wiki.star_lines import sync_star_lines
 
 POLL_INTERVAL_S = 5.0
 # The summarizer writes a vault in a burst of files; build once the burst is over.
@@ -29,7 +31,7 @@ RETRY_AFTER_FAILURE_S = 300.0
 _UPLOAD_PATH = "/api/wiki/upload"
 
 # (session_id, wiki folder, content fingerprint) — what a published site was built from.
-_Key = tuple[str, str, tuple[int, int, int]]
+_Key = tuple[str, str, Fingerprint]
 
 
 def session_title(session_folder: Path) -> str:
@@ -78,6 +80,7 @@ class WikiPublisher:
         self._failed: _Key | None = None
         self._failed_at = 0.0
         self._busy = False
+        self._lines_synced: tuple[str, int, str] | None = None  # (wiki folder, stars version, digest)
         self.updated_at: str | None = None
 
     def invalidate(self) -> None:
@@ -99,6 +102,8 @@ class WikiPublisher:
 
         wiki_dir = find_wiki_dir(session_folder) if session_id else None
         fp = fingerprint(wiki_dir) if wiki_dir else None
+        if fp and wiki_dir and session_folder:
+            self._sync_star_lines(wiki_dir, session_folder, fp, now)
 
         with self._lock:
             if session_id != self._session_id:
@@ -123,12 +128,27 @@ class WikiPublisher:
             else:
                 if key == self._failed and now - self._failed_at < RETRY_AFTER_FAILURE_S:
                     return
-                if now - fp[1] / 1e9 < SETTLE_S:
+                if now - fp.newest / 1e9 < SETTLE_S:
                     return  # still being written
                 self._busy = True
                 job, args = self._build_and_publish, (key, wiki_dir, session_title(session_folder))
 
         threading.Thread(target=job, args=args, name="wiki-publish", daemon=True).start()
+
+    def _sync_star_lines(self, wiki_dir: Path, session_folder: Path, fp: Fingerprint, now: float) -> None:
+        """Each note's `- ⭐ N` line in step with the stars (star_lines.py): after a star,
+        and after the summarizer rewrote a note, but not mid-burst, when it may be
+        rewriting that very note."""
+        if now - fp.newest / 1e9 < SETTLE_S:
+            return
+        version, counts = stars.counts_in(session_folder)
+        state = (str(wiki_dir), version, fp.digest)
+        if state == self._lines_synced:
+            return
+        self._lines_synced = state
+        written = sync_star_lines(wiki_dir, counts)
+        if written:
+            log.info("wiki", f"⭐ star counts written into {written} notes")
 
     def _build_and_publish(self, key: _Key, wiki_dir: Path, title: str) -> None:
         session_id = key[0]

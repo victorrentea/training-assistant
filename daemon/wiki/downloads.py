@@ -8,7 +8,8 @@ other file of it (no endpoint of their own, nothing large through the trainer's 
   bundle inline. The stars and takeaways are a snapshot of the build.
 - "Download for Obsidian": the vault's markdown and assets, each note's stars and
   takeaway written into its frontmatter (Victor, 2026-10-23: they live in the session
-  folder's wiki-stars.json / wiki-takeaways.json, not in the notes).
+  folder's wiki-stars.json / wiki-takeaways.json), and its `- ⭐ N` line (star_lines.py)
+  set to the same count.
 """
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ import re
 import zipfile
 from pathlib import Path
 
+from daemon.wiki.star_lines import note_slug, with_star_line
 from daemon.wiki.stars import load_stars
 from daemon.wiki.takeaways import load_takeaways
 
@@ -41,11 +43,6 @@ def write_downloads(wiki_dir: Path, title: str, site_dir: Path) -> None:
     (out / SITE_ZIP).write_bytes(site)
 
 
-def note_slug(rel: str) -> str:
-    """Quartz's slug for a vault note: its path without .md, spaces as dashes."""
-    return rel.removesuffix(".md").replace(" ", "-")
-
-
 def vault_zip(wiki_dir: Path, title: str, counts: dict[str, int], takeaways: set[str]) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -57,7 +54,8 @@ def vault_zip(wiki_dir: Path, title: str, counts: dict[str, int], takeaways: set
             if path.suffix == ".md":
                 slug = note_slug(rel)
                 text = path.read_text(encoding="utf-8")
-                archive.writestr(name, with_frontmatter(text, counts.get(slug, 0), slug in takeaways))
+                stars = counts.get(slug, 0)
+                archive.writestr(name, with_frontmatter(with_star_line(text, stars), stars, slug in takeaways))
             else:
                 archive.write(path, name)
     return buffer.getvalue()

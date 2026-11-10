@@ -18,8 +18,10 @@ import tempfile
 import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import NamedTuple
 
 from daemon.wiki.downloads import write_downloads
+from daemon.wiki.star_lines import strip_star_line
 
 ASSETS_DIR = Path(__file__).parent / "quartz"
 TOOLTIP_JS = Path(__file__).parents[2] / "static" / "tooltip.js"
@@ -57,23 +59,51 @@ def _content_files(wiki_dir: Path):
             yield path
 
 
-def fingerprint(wiki_dir: Path) -> tuple[int, int, int] | None:
-    """(file count, newest mtime_ns, total bytes) of the vault's pages and images; None if it has no page.
+class Fingerprint(NamedTuple):
+    count: int  # pages and images
+    newest: int  # mtime_ns of the latest write that changed what the site shows
+    digest: str  # what the site is built from: equal digests, same site
 
-    A stat per file — cheap enough to poll every few seconds.
+
+# path -> (mtime_ns, size, digest of the page without its star line, mtime_ns that digest dates from)
+_page_digests: dict[Path, tuple[int, int, bytes, int]] = {}
+
+
+def fingerprint(wiki_dir: Path) -> Fingerprint | None:
+    """The vault's pages and images, as the site sees them; None if it has no page.
+
+    A stat per file — cheap enough to poll every few seconds. A page is read only when
+    its stat changed, and its star line is left out of the digest: the daemon rewrites
+    that line on every star, which must not cost a build (star_lines.py).
     """
-    count = newest = total = 0
+    count = newest = 0
     pages = False
-    for path in _content_files(wiki_dir):
+    combined = hashlib.sha1()
+    for path in sorted(_content_files(wiki_dir)):
         try:
             st = path.stat()
-        except OSError:
+            if path.suffix == ".md":
+                part, changed = _page_digest(path, st)
+            else:
+                part, changed = f"{st.st_mtime_ns}:{st.st_size}".encode(), st.st_mtime_ns
+        except (OSError, UnicodeDecodeError):
             continue
         pages = pages or path.suffix == ".md"
         count += 1
-        newest = max(newest, st.st_mtime_ns)
-        total += st.st_size
-    return (count, newest, total) if pages else None
+        newest = max(newest, changed)
+        combined.update(path.relative_to(wiki_dir).as_posix().encode() + b"\0" + part + b"\0")
+    return Fingerprint(count, newest, combined.hexdigest()) if pages else None
+
+
+def _page_digest(path: Path, st: os.stat_result) -> tuple[bytes, int]:
+    """The page's digest without its star line, and when that digest last changed."""
+    cached = _page_digests.get(path)
+    if cached and cached[:2] == (st.st_mtime_ns, st.st_size):
+        return cached[2], cached[3]
+    digest = hashlib.sha1(strip_star_line(path.read_text(encoding="utf-8")).encode()).digest()
+    changed = cached[3] if cached and cached[2] == digest else st.st_mtime_ns
+    _page_digests[path] = (st.st_mtime_ns, st.st_size, digest, changed)
+    return digest, changed
 
 
 def _prepare_quartz(qdir: Path) -> None:
@@ -109,6 +139,11 @@ def build_site(wiki_dir: Path, title: str, out_dir: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="wiki-content-") as tmp:
         content = Path(tmp) / "content"
         shutil.copytree(wiki_dir, content, ignore=_IGNORED)
+        # The graph shows live counts; a line frozen at build time would contradict it.
+        for page in content.rglob("*.md"):
+            text = page.read_text(encoding="utf-8")
+            if (bare := strip_star_line(text)) != text:
+                page.write_text(bare, encoding="utf-8")
         _write_fallback_index(content, title)
         try:
             result = subprocess.run(

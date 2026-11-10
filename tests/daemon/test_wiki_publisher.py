@@ -299,3 +299,20 @@ def test_note_versions_change_with_the_note_text_or_its_pictures_only(tmp_path):
     assert versions('<p>Lead</p><img src="slide-1.png">', chrome="<nav>other notes</nav>") == first
     assert versions('<p>Lead, reworded</p><img src="slide-1.png">') != first
     assert versions('<p>Lead</p><img src="slide-2.png">') != first
+
+
+def test_a_star_is_written_into_its_note_without_a_rebuild(h):
+    from daemon.wiki import stars
+
+    stars.forget_cache()
+    h.page("Drift.md", "# Drift\n")
+    h.tick()
+    assert len(h.builds) == 1
+    (h.folder / stars.STARS_FILE).write_text('{"stars": {"Drift": ["a", "b"]}}')
+    stars.forget_cache()
+    stars._version += 1  # what a saved star does
+    h.tick()
+    h.tick()
+    assert (h.folder / "wiki" / "Drift.md").read_text() == "# Drift\n- ⭐ 2\n"
+    assert len(h.builds) == 1
+    stars.forget_cache()
