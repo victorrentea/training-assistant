@@ -675,8 +675,9 @@ body {
 }
 
 // Last in the bottom row of the full graph (note-pane.ts dayFilter, placed by
-// patch-graph.py): the workshop day the graph shows. The trainer's is a row of pills
-// like the downloads, the day shown lit; a participant's only says which day it is.
+// patch-graph.py): the workshop days the graph shows. The trainer's is one pill,
+// "Days: 1 2", each number a round toggle, filled while its notes show (Victor,
+// 2026-11-10); a participant's only says which days show.
 .graph-day {
   position: absolute;
   bottom: 0.7rem;
@@ -693,10 +694,11 @@ body {
 
   &.graph-day-host {
     display: flex;
-    gap: 0.5rem;
-    padding: 0;
-    background: none;
-    border: none;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.25rem 0.15rem 0.7rem;
+    color: var(--wiki-quiet);
+    border-color: var(--lightgray);
   }
 
   // After the trainer's flex, which would otherwise outrank it.
@@ -704,15 +706,29 @@ body {
   &.graph-day-host[hidden] {
     display: none;
   }
+}
 
-  .graph-reset {
-    position: static;
-  }
+.graph-day-toggle {
+  width: 1.45rem;
+  height: 1.45rem;
+  padding: 0;
+  border-radius: 50%;
+  font: inherit;
+  font-weight: 600;
+  color: var(--wiki-quiet);
+  background: none;
+  border: 1px solid var(--lightgray);
+  cursor: pointer;
 
-  .graph-reset.on {
+  &:hover {
     color: var(--dark);
     border-color: var(--dark);
-    font-weight: 600;
+  }
+
+  &.on {
+    color: var(--light);
+    background: var(--dark);
+    border-color: var(--dark);
   }
 }
 

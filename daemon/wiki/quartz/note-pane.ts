@@ -858,9 +858,9 @@ window.addEventListener("message", (e) => {
     if (Array.isArray(msg.slugs)) applyTakeaways(msg.slugs.filter((s: unknown) => typeof s === "string"))
     return
   }
-  // The day the trainer shows on the graph (see "The day on the graph" below).
+  // The days the trainer shows on the graph (see "The days on the graph" below).
   if (msg?.type === "wiki-day") {
-    applyDay(typeof msg.day === "number" ? msg.day : null)
+    applyDays(parseDays(msg.days))
     return
   }
   // The participants' stars (see "Participants' stars" below).
@@ -991,25 +991,25 @@ function fetchTakeaways() {
       if (json && Array.isArray(json.slugs) && asked > changedAt) applyTakeaways(json.slugs)
     })
     .catch(() => {})
-  fetchDay()
+  fetchDays()
   fetchStars()
 }
 
-// ── The day on the graph ──
-// A two-day wiki crowds the graph past reading: the trainer picks the day he talks
-// about, and every graph keeps only that day's notes, his and his participants' alike
+// ── The days on the graph ──
+// A two-day wiki crowds the graph past reading: the trainer ticks the days he talks
+// about, and every graph keeps only those days' notes, his and his participants' alike
 // (Victor, 2026-11-10):
-//   trainer's wiki (the Day pills, dayFilter) → POST 127.0.0.1:1234/wiki/day → daemon
-//   (kept in the session snapshot) → `wiki_day` broadcast → each participant page →
-//   postMessage("wiki-day") → here → "wikidaychange" → patch-graph.py re-renders.
-// A wiki in a tab of its own asks for it with the takeaways, as often.
-let day: number | null = null // null: every day
-let dayChangedAt = 0 // the trainer's last pick: an older answer must not undo it
+//   trainer's wiki (the "Days: 1 2" pill, dayFilter) → POST 127.0.0.1:1234/wiki/day →
+//   daemon (kept in the session snapshot) → `wiki_day` broadcast → each participant
+//   page → postMessage("wiki-day") → here → "wikidaychange" → patch-graph.py re-renders.
+// A wiki in a tab of its own asks for them with the takeaways, as often.
+let shown: number[] = [] // the days ticked, sorted; none: every day
+let daysChangedAt = 0 // the trainer's last click: an older answer must not undo it
 const dayPill = Object.assign(document.createElement("div"), { className: "graph-day", hidden: true })
-let days: number[] = []
+let days: number[] = [] // every day the wiki has notes of
 
-export function shownDay(): number | null {
-  return day
+export function shownDays(): number[] {
+  return shown
 }
 
 // The days a note was taught on: the summarizer ends each note with one line per day,
@@ -1021,41 +1021,53 @@ export function noteDays(content: string | undefined): number[] {
   return [...found].sort((a, b) => a - b)
 }
 
-function applyDay(next: number | null) {
-  if (next === day) return
-  day = next
+function applyDays(next: number[]) {
+  const sorted = [...new Set(next)].sort((a, b) => a - b)
+  if (sorted.join() === shown.join()) return
+  shown = sorted
   showDayFilter()
   document.dispatchEvent(new CustomEvent<{}>("wikidaychange", { detail: {} }))
 }
 
-function pickDay(next: number | null) {
-  if (!onHostMachine() || next === day) return
-  const before = day
-  dayChangedAt = Date.now()
-  applyDay(next)
+function parseDays(value: unknown): number[] {
+  return Array.isArray(value) ? value.filter((d): d is number => Number.isInteger(d) && d >= 1) : []
+}
+
+// Each day toggles on its own (Victor, 2026-11-10 - it was "Day 1 · Day 2 · Both").
+// The last day lit stays lit: a graph of no day at all shows nothing. Every day lit is
+// sent as none, so a day added later to the wiki shows too.
+function toggleDay(d: number) {
+  if (!onHostMachine()) return
+  const lit = shown.length ? shown : days
+  const next = lit.includes(d) ? lit.filter((x) => x !== d) : [...lit, d]
+  if (next.length === 0) return
+  const before = shown
+  daysChangedAt = Date.now()
+  const sent = next.length >= days.length ? [] : next
+  applyDays(sent)
   fetch(`${HOST_DAEMON}/wiki/day`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ day: next }),
+    body: JSON.stringify({ days: sent }),
   })
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`${res.status}`))))
-    .then((json: { day: number | null }) => applyDay(json.day ?? null))
-    .catch(() => applyDay(before)) // not saved: the graph goes back
+    .then((json: { days?: unknown }) => applyDays(parseDays(json.days)))
+    .catch(() => applyDays(before)) // not saved: the graph goes back
 }
 
-function fetchDay() {
+function fetchDays() {
   const asked = Date.now()
   fetch(new URL("wiki/day", participantApi()))
     .then((res) => (res.ok ? res.json() : null))
-    .then((json: { day?: number | null } | null) => {
-      if (json && asked > dayChangedAt) applyDay(typeof json.day === "number" ? json.day : null)
+    .then((json: { days?: unknown } | null) => {
+      if (json && asked > daysChangedAt) applyDays(parseDays(json.days))
     })
     .catch(() => {})
 }
 
 // In the bottom row of the full graph, only for a wiki of two days or more. The trainer
-// gets one pill per day and "Both" (or "All days"), the one shown lit; a participant
-// only reads which day it is, and nothing while the graph shows them all.
+// gets one pill, "Days: 1 2", each number lit while its notes show; a participant only
+// reads which days show, and nothing while the graph shows them all.
 export function dayFilter(wikiDays: number[]): HTMLElement {
   days = wikiDays
   showDayFilter()
@@ -1064,21 +1076,28 @@ export function dayFilter(wikiDays: number[]): HTMLElement {
 
 function showDayFilter() {
   const host = onHostMachine()
-  dayPill.hidden = days.length < 2 || (!host && day === null)
+  dayPill.hidden = days.length < 2 || (!host && shown.length === 0)
   dayPill.classList.toggle("graph-day-host", host)
   if (!host) {
-    dayPill.textContent = `Day ${day} only`
-    dayPill.dataset.tip = `Victor shows only the notes of day ${day}`
+    const which = shown.join(", ")
+    dayPill.textContent = shown.length === 1 ? `Day ${which} only` : `Days ${which} only`
+    dayPill.dataset.tip = `Victor shows only the notes of day ${which}`
     return
   }
-  const choices: [number | null, string][] = [...days.map((d): [number, string] => [d, `Day ${d}`]), [null, days.length === 2 ? "Both" : "All days"]]
+  const lit = shown.length ? shown : days
   dayPill.replaceChildren(
-    ...choices.map(([d, label]) => {
-      const button = Object.assign(document.createElement("button"), { className: "graph-reset", textContent: label })
-      button.classList.toggle("on", d === day)
+    "Days:",
+    ...days.map((d) => {
+      const on = lit.includes(d)
+      const button = Object.assign(document.createElement("button"), { className: "graph-day-toggle", textContent: `${d}` })
+      button.classList.toggle("on", on)
       button.dataset.tip =
-        d === null ? "Show every day's notes, to everyone" : `Show only the notes of day ${d}, to everyone`
-      button.addEventListener("click", () => pickDay(d))
+        on && lit.length === 1
+          ? `Day ${d}'s notes show to everyone - tick another day to show it too`
+          : on
+            ? `Day ${d}'s notes show to everyone - click to hide them`
+            : `Day ${d}'s notes are hidden from everyone - click to show them`
+      button.addEventListener("click", () => toggleDay(d))
       return button
     }),
   )

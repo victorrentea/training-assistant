@@ -503,17 +503,17 @@ async def wiki_takeaway_local(body: WikiTakeawayToggle):
     return WikiTakeaways(slugs=slugs)
 
 
-# The trainer picks which workshop day the wiki graph shows (None: every day): every
-# participant's graph keeps only that day's notes, so a two-day wiki stays readable
+# The trainer ticks which workshop days the wiki graph shows ([]: every day): every
+# participant's graph keeps only those days' notes, so a two-day wiki stays readable
 # while he talks about one of them. Host-machine only, like the takeaways; kept in the
 # session snapshot, so it outlives the daemon restart a push to master brings.
 @local_router.post("/wiki/day", response_model=WikiDay)
 async def wiki_day_local(body: WikiDay):
     from daemon import log
 
-    misc_state.wiki_day = body.day
-    log.info("wiki", f"📅 graph shows {'day ' + str(body.day) if body.day else 'every day'}")
-    broadcast(WikiDayMsg(day=body.day))
+    misc_state.wiki_days = body.days
+    log.info("wiki", f"📅 graph shows {'days ' + ', '.join(map(str, body.days)) if body.days else 'every day'}")
+    broadcast(WikiDayMsg(days=body.days))
     return body
 
 

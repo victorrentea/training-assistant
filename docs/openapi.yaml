@@ -4091,11 +4091,12 @@ components:
           type: array
           title: Wiki Takeaways
           default: []
-        wiki_day:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Wiki Day
+        wiki_days:
+          items:
+            type: integer
+          type: array
+          title: Wiki Days
+          default: []
         wiki_stars:
           additionalProperties:
             type: integer
@@ -5071,17 +5072,18 @@ components:
       title: VoteRequest
     WikiDay:
       properties:
-        day:
-          anyOf:
-          - type: integer
+        days:
+          items:
+            type: integer
             maximum: 31.0
             minimum: 1.0
-          - type: 'null'
-          title: Day
+          type: array
+          maxItems: 31
+          title: Days
       type: object
       title: WikiDay
-      description: 'The workshop day whose notes the wiki graph shows to everyone;
-        None: every day.'
+      description: 'The workshop days whose notes the wiki graph shows to everyone;
+        empty: every day.'
     WikiNotePosition:
       properties:
         slug:

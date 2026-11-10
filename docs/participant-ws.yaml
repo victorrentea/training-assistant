@@ -880,7 +880,7 @@ components:
             description: Quartz simple slugs of every starred note, sorted (the whole set, not a delta)
 
     wiki_day:
-      summary: Host picked the workshop day the wiki graph shows — every graph keeps only that day's notes (and those without a day, like Home)
+      summary: Host ticked the workshop days the wiki graph shows — every graph keeps only those days' notes (and those without a day, like Home)
       x-feature: notes_summary
       payload:
         type: object
@@ -889,11 +889,14 @@ components:
           type:
             type: string
             enum: [wiki_day]
-          day:
-            type: integer
-            minimum: 1
-            maximum: 31
-            description: The day number, from each note's closing "Ziua N —" / "Day N —" line; null shows every day
+          days:
+            type: array
+            maxItems: 31
+            items:
+              type: integer
+              minimum: 1
+              maximum: 31
+            description: The day numbers ticked, sorted, from each note's closing "Ziua N —" / "Day N —" line; empty shows every day
 
     wiki_stars:
       summary: A participant starred or un-starred a wiki note as interesting — every graph shows how many starred each note, and the starred ones shine (throttled to one per second)

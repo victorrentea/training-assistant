@@ -34,9 +34,9 @@ class MiscState:
         # participant who joins or ticks Follow later opens it too. In memory only,
         # like the summary position.
         self.wiki_note: str | None = None
-        # The workshop day the wiki graph shows to everyone (None: every day), as the
-        # trainer picked it. Saved with the session: a push restarts the daemon mid-day.
-        self.wiki_day: int | None = None
+        # The workshop days the wiki graph shows to everyone ([]: every day), as the
+        # trainer ticked them. Saved with the session: a push restarts the daemon mid-day.
+        self.wiki_days: list[int] = []
         # The session notes as the trainer's VS Code has them open (talk mode):
         # {revision, text, line, selection, collapsed}. None until VS Code first
         # reports the file — the notes are shared only once he opens them. In
@@ -100,9 +100,9 @@ class MiscState:
                 self.talk_presentation_url = data["talk_presentation_url"]
             if "talk_presentation_slug" in data:
                 self.talk_presentation_slug = data["talk_presentation_slug"]
-            if "wiki_day" in data:
-                day = data["wiki_day"]
-                self.wiki_day = day if isinstance(day, int) and day >= 1 else None
+            if "wiki_days" in data:
+                days = data["wiki_days"] or []
+                self.wiki_days = sorted({d for d in days if isinstance(d, int) and d >= 1})
 
     def add_paste(self, pid: str, text: str) -> dict | None:
         entries = self.paste_texts.setdefault(pid, [])
@@ -198,7 +198,7 @@ class MiscState:
             self.slide_timeline = []
             self.summary_scroll = None
             self.wiki_note = None
-            self.wiki_day = None
+            self.wiki_days = []
             self.talk_notes = None
             self.presenter_view = "slides"
             self.talk_presentation_name = None

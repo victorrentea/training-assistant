@@ -9,7 +9,7 @@ Usage:
 """
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, NonNegativeInt, field_validator
 
@@ -541,8 +541,13 @@ class WikiTakeawaysMsg(WikiTakeaways):
 
 
 class WikiDay(BaseModel):
-    """The workshop day whose notes the wiki graph shows to everyone; None: every day."""
-    day: int | None = Field(default=None, ge=1, le=31)
+    """The workshop days whose notes the wiki graph shows to everyone; empty: every day."""
+    days: list[Annotated[int, Field(ge=1, le=31)]] = Field(default_factory=list, max_length=31)
+
+    @field_validator("days")
+    @classmethod
+    def _sorted_once(cls, days: list[int]) -> list[int]:
+        return sorted(set(days))
 
 
 class WikiDayMsg(WikiDay):

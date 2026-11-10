@@ -384,7 +384,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDay, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -577,7 +577,7 @@ PATCHES = [
   }
   document.addEventListener("themechange", recolour)
   window.addCleanup(() => document.removeEventListener("themechange", recolour))
-  // The trainer picked another day (note-pane.ts): other dots, so a layout of their own.
+  // The trainer ticked other days (note-pane.ts): other dots, so a layout of their own.
   const redraw = () => {
     saveView(null)
     cleanupGlobalGraphs()
@@ -674,7 +674,7 @@ PATCHES = [
     // time one more does, to draw in the rest of the room (note-pane.ts; Victor, 2026-11-09).
     const starrers = starrersBadge()
     container.append(starrers)
-    // After it, where the trainer looks while picking: the day the graph shows, for a
+    // After it, where the trainer looks while picking: the days the graph shows, for a
     // wiki of two days or more, known once the notes' index has loaded (note-pane.ts).
     const day = dayFilter([])
     container.append(day)
@@ -791,7 +791,7 @@ PATCHES = [
   if (isGlobal) connectGraph(paneGraph)
 """),
     # Home off (the default): the full graph leaves out its dot and every edge to it.
-    # The day the trainer picked (note-pane.ts shownDay): only that day's notes stay,
+    # The days the trainer ticked (note-pane.ts shownDays): only those days' notes stay,
     # and those without a day, like Home (Victor, 2026-11-10).
     ("""  const links: SimpleLinkData[] = []
   const tags: SimpleSlug[] = []
@@ -799,11 +799,11 @@ PATCHES = [
      """  if (graph.classList.contains("global-graph-container") && !showHome()) {
     data.delete("Home" as SimpleSlug)
   }
-  const onlyDay = shownDay()
-  if (graph.classList.contains("global-graph-container") && onlyDay !== null) {
+  const onlyDays = shownDays()
+  if (graph.classList.contains("global-graph-container") && onlyDays.length > 0) {
     for (const [id, details] of [...data]) {
       const taught = noteDays(details.content)
-      if (taught.length > 0 && !taught.includes(onlyDay)) data.delete(id)
+      if (taught.length > 0 && !taught.some((d) => onlyDays.includes(d))) data.delete(id)
     }
   }
   const links: SimpleLinkData[] = []
