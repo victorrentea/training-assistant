@@ -674,6 +674,48 @@ body {
   }
 }
 
+// Last in the bottom row of the full graph (note-pane.ts dayFilter, placed by
+// patch-graph.py): the workshop day the graph shows. The trainer's is a row of pills
+// like the downloads, the day shown lit; a participant's only says which day it is.
+.graph-day {
+  position: absolute;
+  bottom: 0.7rem;
+  z-index: 1;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-family: var(--bodyFont);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  color: var(--dark);
+  background: var(--light);
+  border: 1px solid var(--dark);
+  user-select: none;
+
+  &.graph-day-host {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0;
+    background: none;
+    border: none;
+  }
+
+  // After the trainer's flex, which would otherwise outrank it.
+  &[hidden],
+  &.graph-day-host[hidden] {
+    display: none;
+  }
+
+  .graph-reset {
+    position: static;
+  }
+
+  .graph-reset.on {
+    color: var(--dark);
+    border-color: var(--dark);
+    font-weight: 600;
+  }
+}
+
 // The graph's chrome is never text to pick: quick clicks on dots and drags of the
 // popover selected the Sources list and the popover's ✕ (Victor, 2026-10-26). Nothing
 // at all selects while the popover is dragged (note-pane.ts dragByHead).
@@ -730,7 +772,9 @@ body.peek-dragging {
   .graph-session-title,
   .graph-sources,
   .graph-downloads,
-  .graph-starrers {
+  .graph-starrers,
+  .graph-day,
+  .graph-day.graph-day-host {
     display: none;
   }
 

@@ -384,7 +384,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDay, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -577,6 +577,15 @@ PATCHES = [
   }
   document.addEventListener("themechange", recolour)
   window.addCleanup(() => document.removeEventListener("themechange", recolour))
+  // The trainer picked another day (note-pane.ts): other dots, so a layout of their own.
+  const redraw = () => {
+    saveView(null)
+    cleanupGlobalGraphs()
+    keepLayout = false
+    void renderGlobalGraph()
+  }
+  document.addEventListener("wikidaychange", redraw)
+  window.addCleanup(() => document.removeEventListener("wikidaychange", redraw))
   // Dragged dots and zoom back to the start: a fresh render lays the graph out the
   // same way every time (d3 seeds the positions deterministically).
   for (const container of containers) {
@@ -665,16 +674,30 @@ PATCHES = [
     // time one more does, to draw in the rest of the room (note-pane.ts; Victor, 2026-11-09).
     const starrers = starrersBadge()
     container.append(starrers)
+    // After it, where the trainer looks while picking: the day the graph shows, for a
+    // wiki of two days or more, known once the notes' index has loaded (note-pane.ts).
+    const day = dayFilter([])
+    container.append(day)
     // On a desktop the bottom-left pills sit one after the other, 10px apart, whichever
     // of them there are; a phone's stylesheet lays them out along the top instead.
-    requestAnimationFrame(() => {
+    const placePills = () => {
       if (innerWidth < 900) return
       let left = 13 // 0.8rem
       for (const pill of [reset, home, resetSeenPill, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads, starrers]) {
-        if (!pill.isConnected) continue
+        if (!pill.isConnected || pill.hidden) continue
         pill.style.left = `${left}px`
         left += pill.offsetWidth + 10
       }
+      day.style.left = `${left}px`
+    }
+    // Again whenever the last two change size: the starrers show up with the first star,
+    // the day pill once the index has loaded, and a participant's only while one day shows.
+    const pillsResized = new ResizeObserver(placePills)
+    pillsResized.observe(starrers)
+    pillsResized.observe(day)
+    void fetchData.then((index) => {
+      const wikiDays = new Set(Object.values(index).flatMap((details) => noteDays(details.content)))
+      dayFilter([...wikiDays].sort((a, b) => a - b))
     })
   }
 """),
@@ -768,11 +791,20 @@ PATCHES = [
   if (isGlobal) connectGraph(paneGraph)
 """),
     # Home off (the default): the full graph leaves out its dot and every edge to it.
+    # The day the trainer picked (note-pane.ts shownDay): only that day's notes stay,
+    # and those without a day, like Home (Victor, 2026-11-10).
     ("""  const links: SimpleLinkData[] = []
   const tags: SimpleSlug[] = []
 """,
      """  if (graph.classList.contains("global-graph-container") && !showHome()) {
     data.delete("Home" as SimpleSlug)
+  }
+  const onlyDay = shownDay()
+  if (graph.classList.contains("global-graph-container") && onlyDay !== null) {
+    for (const [id, details] of [...data]) {
+      const taught = noteDays(details.content)
+      if (taught.length > 0 && !taught.includes(onlyDay)) data.delete(id)
+    }
   }
   const links: SimpleLinkData[] = []
   const tags: SimpleSlug[] = []

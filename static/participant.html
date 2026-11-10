@@ -198,7 +198,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 </style>
 <script>document.fonts.ready.then(function(){var s=function(){document.body.style.visibility='visible'};if(document.body)s();else document.addEventListener('DOMContentLoaded',s)})</script>
 <script src="/static/emoji-float.js"></script>
-<script src="/static/aishare-chart.js?v=49ab8a61"></script>
+<script src="/static/aishare-chart.js?v=b6444f5b"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
@@ -5666,6 +5666,7 @@ function _setDuplicateIndicator(isDup) {
     _hostSummaryScroll = state.summary_scroll || null;
     _hostWikiNote = state.wiki_note || null;
     _onIncomingWikiTakeaways(state.wiki_takeaways);
+    _onIncomingWikiDay(state.wiki_day);
     _onIncomingWikiStars(state.wiki_stars, state.wiki_my_stars, state.wiki_starrers);
     var saved = _computeLandingView({
       urlTab: location.pathname.split('/')[2] || '',
@@ -5765,6 +5766,7 @@ function _applyState(msg) {
     _onIncomingHostWikiNote(msg.wiki_note);
   }
   if (msg.wiki_takeaways !== undefined) _onIncomingWikiTakeaways(msg.wiki_takeaways);
+  if (msg.wiki_day !== undefined) _onIncomingWikiDay(msg.wiki_day);
   if (msg.wiki_stars !== undefined) _onIncomingWikiStars(msg.wiki_stars, msg.wiki_my_stars, msg.wiki_starrers);
   if (msg.summary_updated_at !== undefined) {
     var summaryNav = document.querySelector('[data-nav="summary"]');
@@ -6792,6 +6794,7 @@ function _handleWsMessage(msg) {
     case 'wiki_updated': _applyWiki(msg.updated_at); break;
     case 'wiki_note': _onIncomingHostWikiNote(msg.slug); break;
     case 'wiki_takeaways': _onIncomingWikiTakeaways(msg.slugs); break;
+    case 'wiki_day': _onIncomingWikiDay(msg.day); break;
     case 'wiki_stars': _onIncomingWikiStars(msg.counts, undefined, msg.starrers); break;
     case 'agenda_updated': {
       document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
@@ -8188,7 +8191,7 @@ function _onWikiFrameMessage(e) {
   var frame = document.getElementById('wiki-frame');
   if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;
   var msg = e.data || {};
-  if (msg.type === 'wiki-ready') { _wikiFrameReady = true; _applyHostWikiFollow(); _postWikiTakeaways(); _postWikiStars(); }
+  if (msg.type === 'wiki-ready') { _wikiFrameReady = true; _applyHostWikiFollow(); _postWikiTakeaways(); _postWikiDay(); _postWikiStars(); }
   else if (msg.type === 'wiki-star' && typeof msg.slug === 'string' && typeof msg.starred === 'boolean') {
     _starWikiNote(msg.slug, msg.starred);
   }
@@ -8210,6 +8213,23 @@ function _postWikiTakeaways() {
 function _onIncomingWikiTakeaways(slugs) {
   _wikiTakeaways = Array.isArray(slugs) ? slugs : [];
   _postWikiTakeaways();
+}
+
+// ── Wiki day ──
+// The workshop day the trainer shows on the graph (null: every day): the wiki keeps only
+// that day's notes, for everyone (Victor, 2026-11-10). With the state and each `wiki_day`
+// broadcast, into the wiki once its graph is up, like the takeaways.
+var _wikiDay = null;
+
+function _postWikiDay() {
+  var frame = document.getElementById('wiki-frame');
+  if (!_wikiFrameReady || !frame || !frame.contentWindow) return;
+  frame.contentWindow.postMessage({ type: 'wiki-day', day: _wikiDay }, location.origin);
+}
+
+function _onIncomingWikiDay(day) {
+  _wikiDay = typeof day === 'number' ? day : null;
+  _postWikiDay();
 }
 
 // ── Wiki stars ──

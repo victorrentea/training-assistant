@@ -539,6 +539,15 @@ class WikiTakeawaysMsg(WikiTakeaways):
     type: Literal["wiki_takeaways"] = "wiki_takeaways"
 
 
+class WikiDay(BaseModel):
+    """The workshop day whose notes the wiki graph shows to everyone; None: every day."""
+    day: int | None = Field(default=None, ge=1, le=31)
+
+
+class WikiDayMsg(WikiDay):
+    type: Literal["wiki_day"] = "wiki_day"
+
+
 class WikiStarToggle(BaseModel):
     """A participant stars (or un-stars) a wiki note as interesting, for the whole group."""
     slug: str = Field(min_length=1, max_length=300, pattern=WIKI_SLUG_PATTERN)
@@ -735,6 +744,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     "wiki_updated": WikiUpdatedMsg,
     "wiki_note": WikiNoteMsg,
     "wiki_takeaways": WikiTakeawaysMsg,
+    "wiki_day": WikiDayMsg,
     "wiki_stars": WikiStarsMsg,
     "talk_notes": TalkNotesMsg,
     "presenter_view": PresenterViewMsg,
@@ -842,6 +852,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     "wiki_updated": "notes_summary",
     "wiki_note": "notes_summary",
     "wiki_takeaways": "notes_summary",
+    "wiki_day": "notes_summary",
     "wiki_stars": "notes_summary",
     "talk_notes": "notes_summary",
     "presenter_view": "notes_summary",

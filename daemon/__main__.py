@@ -252,6 +252,7 @@ def _build_runtime_session_snapshot(
         "talk_presentation_name": misc_state.talk_presentation_name,
         "talk_presentation_url": misc_state.talk_presentation_url,
         "talk_presentation_slug": misc_state.talk_presentation_slug,
+        "wiki_day": misc_state.wiki_day,
     }
 
 

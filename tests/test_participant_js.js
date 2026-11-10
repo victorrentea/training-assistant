@@ -617,13 +617,13 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   };
   const names = ['_isWikiViewSelected', '_isWikiFollowEnabled', '_postWikiFollow', '_applyHostWikiFollow',
     '_onIncomingHostWikiNote', '_onWikiFrameMessage', '_onWikiFollowChange',
-    '_postWikiTakeaways', '_onIncomingWikiTakeaways', '_postWikiStars', '_onIncomingWikiStars', '_starWikiNote',
+    '_postWikiTakeaways', '_onIncomingWikiTakeaways', '_postWikiDay', '_onIncomingWikiDay', '_postWikiStars', '_onIncomingWikiStars', '_starWikiNote',
     '_sendWikiStar'];
   const LS = makeLS({});
   const fetched = [];
   const fakeFetch = (url, opts) => { fetched.push({ url, opts }); return fetch ? fetch(url, opts) : Promise.reject(new Error('offline')); };
   const api = new Function('document', 'location', 'LS', '_onHostMachine', 'fetch', '_sessionId', '_myUUID',
-    'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0, _wikiTakeaways = [];\n' +
+    'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0, _wikiTakeaways = [], _wikiDay = null;\n' +
     'var _wikiStarCounts = {}, _wikiMyStars = [], _wikiStarrers = 0, _wikiStarQueue = Promise.resolve(), _wikiStarsInFlight = 0;\n' +
     names.map((n) => extractFunction(PARTICIPANT_HTML, n)).join('\n') +
     '\nreturn { ' + names.join(', ') +
@@ -690,6 +690,22 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-ready' } });
   const stars = w.posted.filter((p) => p.msg.type === 'wiki-takeaways');
   assert("the wiki's 'ready' sends the stars it missed", stars.length === 1 && stars[0].msg.slugs.join() === 'Self-review,Autonomy');
+}
+{
+  const w = makeWikiFollow({ onHost: true, followed: false, onWiki: false });
+  w.api._onIncomingWikiDay(2);
+  assert('the day the trainer shows is posted into the wiki iframe',
+    w.posted.length === 1 && w.posted[0].msg.type === 'wiki-day' && w.posted[0].msg.day === 2);
+  w.api._onIncomingWikiDay(undefined);
+  assert('no day shows every day', w.posted.length === 2 && w.posted[1].msg.day === null);
+}
+{
+  const w = makeWikiFollow({ ready: false });
+  w.api._onIncomingWikiDay(1);
+  assert('before the wiki graph is up no day is posted', w.posted.length === 0);
+  w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-ready' } });
+  const sent = w.posted.filter((p) => p.msg.type === 'wiki-day');
+  assert("the wiki's 'ready' sends the day it missed", sent.length === 1 && sent[0].msg.day === 1);
 }
 {
   const w = makeWikiFollow({ ready: false });

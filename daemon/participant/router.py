@@ -48,6 +48,7 @@ from daemon.ws_messages import (
     ScoresUpdatedMsg,
     SummaryScrollPosition,
     TalkNotesMsg,
+    WikiDay,
     WikiStars,
     WikiStarsMsg,
     WikiStarToggle,
@@ -334,6 +335,8 @@ class ParticipantStateResponse(BaseModel):
     wiki_note: str | None = None
     # The wiki notes the trainer starred as key takeaways (glow on every graph)
     wiki_takeaways: list[str] = []
+    # The workshop day the trainer shows on the wiki graph (None: every day)
+    wiki_day: int | None = None
     # How many participants starred each wiki note, and the ones this one starred
     wiki_stars: dict[str, int] = {}
     wiki_my_stars: list[str] = []
@@ -852,6 +855,15 @@ async def get_wiki_takeaways():
     return WikiTakeaways(slugs=current_takeaways())
 
 
+# The day the trainer shows on the graph, for a wiki opened in a tab of its own (polled
+# with the takeaways); inside the participant page it comes with the state and broadcast.
+@router.get("/wiki/day", response_model=WikiDay)
+async def get_wiki_day():
+    from daemon.misc.state import misc_state
+
+    return WikiDay(day=misc_state.wiki_day)
+
+
 # Participants star the notes they found interesting, so they shine for the whole group
 # (daemon/wiki/stars.py says why a star can't be forged or stuffed). Every graph gets
 # the counts only; who starred what stays on this machine.
@@ -968,6 +980,8 @@ async def get_participant_state(request: Request):
         "wiki_note": misc_state.wiki_note,
         # The notes the trainer starred as key takeaways: they glow on every graph
         "wiki_takeaways": current_takeaways(),
+        # The workshop day whose notes the graph shows (None: every day)
+        "wiki_day": misc_state.wiki_day,
         # The notes participants starred (counts only) and this participant's own stars
         "wiki_stars": wiki_stars.star_counts(),
         "wiki_my_stars": wiki_stars.stars_of(pid),

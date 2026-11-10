@@ -42,6 +42,8 @@ from daemon.ws_messages import (
     SummaryScrollPosition,
     SummaryUpdatedMsg,
     TalkNotesReport,
+    WikiDay,
+    WikiDayMsg,
     WikiNoteMsg,
     WikiNotePosition,
     WikiTakeaways,
@@ -499,6 +501,20 @@ async def wiki_takeaway_local(body: WikiTakeawayToggle):
     log.info("wiki", f"{'★ starred' if body.starred else '☆ un-starred'} takeaway: {body.slug}")
     broadcast(WikiTakeawaysMsg(slugs=slugs))
     return WikiTakeaways(slugs=slugs)
+
+
+# The trainer picks which workshop day the wiki graph shows (None: every day): every
+# participant's graph keeps only that day's notes, so a two-day wiki stays readable
+# while he talks about one of them. Host-machine only, like the takeaways; kept in the
+# session snapshot, so it outlives the daemon restart a push to master brings.
+@local_router.post("/wiki/day", response_model=WikiDay)
+async def wiki_day_local(body: WikiDay):
+    from daemon import log
+
+    misc_state.wiki_day = body.day
+    log.info("wiki", f"📅 graph shows {'day ' + str(body.day) if body.day else 'every day'}")
+    broadcast(WikiDayMsg(day=body.day))
+    return body
 
 
 class TalkNotesReportResponse(BaseModel):
