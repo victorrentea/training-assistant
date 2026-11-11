@@ -108,9 +108,38 @@ PATCHES = [
   let ringedNode: NodeRenderData | null = null
   // The trainer's next star (graph-takeaway.ts nextStarCue): the triangles like the
   // ring, under the labels, so they never hide a name; the arrow over everything.
+  // A click on the arrow pans the graph until that dot is in the middle, keeping the
+  // zoom, then opens its note (Victor, 2026-11-11).
   const showStarCue = graph.classList.contains("global-graph-container") && onHostMachine()
-  const starCue = new Graphics({ zIndex: 2.5, eventMode: "none" })
+  const starCue = new Graphics({ zIndex: 2.5, eventMode: "none", cursor: "pointer" })
   stage.addChild(starCue)
+  const starCueColor = computedStyleMap["--wiki-star-cue"]
+  let arrowTo: string | null = null // the note the arrow points at, while it shows
+  const panToStar = (id: string) => {
+    const d = nodeRenderData.find((m) => m.simulationData.id === id)?.simulationData
+    if (d?.x === undefined || d.y === undefined) return
+    const { x, y } = d
+    const from = currentTransform
+    const k = from.k
+    const to = { x: width / 2 - k * (x + width / 2), y: height / 2 - k * (y + height / 2) }
+    const start = performance.now()
+    const step = (now: number) => {
+      if (stopAnimation) return
+      const t = Math.min((now - start) / 450, 1)
+      const e = t * (2 - t)
+      const view = zoomIdentity.translate(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e).scale(k)
+      select<HTMLCanvasElement, NodeData>(app.canvas).call(zoomBehavior.transform, view)
+      if (t < 1) return void requestAnimationFrame(step)
+      saveView(view) // a view the trainer chose, as if he had dragged there
+      const at = paneGraph.dotAt(id as SimpleSlug)
+      if (at) openNote(id as SimpleSlug, at)
+    }
+    requestAnimationFrame(step)
+  }
+  starCue.on("pointertap", (e) => {
+    e.stopPropagation()
+    if (arrowTo) panToStar(arrowTo)
+  })
   // Key takeaways and participants' stars (graph-takeaway.ts): a golden starburst over
   // the edges, under the dots, and a star left of each dot, above everything - the
   // trainer's takeaway on his machine, the participant's own star in the participant
@@ -182,16 +211,26 @@ PATCHES = [
       const cue = nextStarCue(unread, width, height)
       starCue.clear()
       starCue.zIndex = cue.kind === "arrow" ? 4.6 : 2.5
+      arrowTo = cue.kind === "arrow" ? cue.id : null
+      starCue.eventMode = arrowTo ? "static" : "none"
       if (cue.kind === "arrow") {
-        drawChevrons(starCue, (cue.x - tx) / k, (cue.y - ty) / k, cue.angle, k, time, takeawayColors.on)
-      } else if (cue.kind === "aim") {
-        for (const n of nodeRenderData) {
-          const { id, x, y } = n.simulationData
-          if (cue.ids.includes(id)) drawAim(starCue, x! + width / 2, y! + height / 2, n.radius, k, time, takeawayColors.on)
+        const ax = (cue.x - tx) / k
+        const ay = (cue.y - ty) / k
+        drawChevrons(starCue, ax, ay, cue.angle, k, time, starCueColor)
+        starCue.hitArea = new Circle(ax, ay, CHEVRON_HIT_RADIUS / k)
+      } else {
+        starCue.hitArea = null
+        if (cue.kind === "aim") {
+          for (const n of nodeRenderData) {
+            const { id, x, y } = n.simulationData
+            if (cue.ids.includes(id)) drawAim(starCue, x! + width / 2, y! + height / 2, n.radius, k, time, starCueColor)
+          }
         }
       }
       // The canvas has no DOM: what the cue shows, readable from a test.
       graph.dataset.starCue = cue.kind === "arrow" ? `arrow:${cue.id}` : cue.kind === "aim" ? `aim:${cue.ids.join(",")}` : "none"
+      // And where the arrow is, in the canvas's pixels, for a test to click it.
+      graph.dataset.starCueAt = cue.kind === "arrow" ? `${Math.round(cue.x)},${Math.round(cue.y)}` : ""
     }
     tweens.forEach((t) => t.update(time))
 """),
@@ -228,6 +267,7 @@ PATCHES = [
       const textEnd = n.label.width / 2 - (SHINING_LABEL_STROKE.width / 2) * n.label.scale.x
       const baseline = n.radius + 2 + baselineOf(n.label.style, SHINING_LABEL_STROKE.width) * n.label.scale.y
       n.takeaway?.place(x + width / 2, y + height / 2, textEnd + 0.06 * em, baseline, 0.68 * em, time)
+      n.takeaway?.fade(dotSeen(n.simulationData.id))
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
     ("forceCollide<NodeData>((n) => nodeRadius(n))",
@@ -241,6 +281,7 @@ PATCHES = [
     "--wiki-unseen",
     "--wiki-follow-ring",
     "--wiki-takeaway",
+    "--wiki-star-cue",
     "--wiki-takeaway-off",
     "--wiki-takeaway-text",
     "--wiki-burst",
@@ -383,8 +424,8 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
-     'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, CHEVRON_HIT_RADIUS, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, openNote, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'

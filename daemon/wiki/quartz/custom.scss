@@ -832,6 +832,17 @@ body.peek-dragging {
   --wiki-takeaway-off: #6b7280;
 }
 
+// The trainer's next-star cue (graph-takeaway.ts nextStarCue): the triangles around the
+// most-starred unread dots and the arrow to the nearest one off screen. Orange, so they
+// never blend into the stars' gold bursts (Victor, 2026-11-11).
+:root {
+  --wiki-star-cue: #c2410c; // redder than the light theme's amber burst
+}
+
+:root[saved-theme="dark"] {
+  --wiki-star-cue: #fb6a1c;
+}
+
 // The beam from the open dot to its popover (note-pane.ts), just under the popover.
 .note-beam {
   position: fixed;

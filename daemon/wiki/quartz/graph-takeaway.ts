@@ -76,6 +76,10 @@ const LEVELS = [
   { burst: 1.5, burstAlpha: 1, flare: true, glow: 17, glowAlpha: 0.5 },
 ]
 
+// A note already read shines the same size but paler (Victor, 2026-11-11): the gold
+// stays where the room's stars are, and the eye goes to what is left to read.
+const SEEN_DIM = 0.4
+
 // Drawn once, white, tinted per theme: a soft round core and eight rays, four long and
 // four short - a star's sparkle.
 let texture: Texture | null = null
@@ -149,6 +153,7 @@ export class TakeawayMark {
   readonly glow: Sprite // under the bursts, from level 3, wider each level
   private shine: DotShine = { takeaway: false, count: 0, mine: false, level: 0 }
   private hovered = false // the pointer on the star
+  private seen = false // its note read here: a paler shine
   private readonly mode: StarMode
   private readonly colors: TakeawayColors
   private readonly size: number
@@ -208,11 +213,12 @@ export class TakeawayMark {
     this.glow.visible = (look?.glow ?? 0) > 0
     if (look) {
       this.burst.width = this.burst.height = this.size * look.burst
-      this.burst.alpha = look.burstAlpha
+      const dim = this.seen ? SEEN_DIM : 1
+      this.burst.alpha = look.burstAlpha * dim
       this.flare.width = this.flare.height = this.size * look.burst * 0.85
-      this.flare.alpha = 0.85
+      this.flare.alpha = 0.85 * dim
       this.glow.width = this.glow.height = 2 * this.r * look.glow
-      this.glow.alpha = look.glowAlpha
+      this.glow.alpha = look.glowAlpha * dim
     }
     // Everyone's stars, his takeaway counting as one, as for the level of shine.
     const total = count + (takeaway ? 1 : 0)
@@ -233,6 +239,14 @@ export class TakeawayMark {
     this.star.eventMode = clickable ? "static" : "none"
     this.star.cursor = clickable ? "pointer" : "default"
     this.star.style.fill = lit || total > 0 ? this.colors.on : this.colors.off
+  }
+
+  // Called every frame with whether its note is read (note-pane.ts dotSeen, like the
+  // dot's colour): redrawn only when that changes.
+  fade(seen: boolean) {
+    if (seen === this.seen) return
+    this.seen = seen
+    this.set(this.shine)
   }
 
   // Whether its star is drawn, and what it reads: for a test, the canvas has no DOM.
@@ -320,8 +334,10 @@ export function drawFlash(g: Graphics, x: number, y: number, r: number, q: numbe
 // The trainer's next star (Victor, 2026-11-05): while he walks the room through what
 // it starred, the graph shows him where to go next - the unread notes with the most
 // stars, a takeaway counting as one. Any of them on screen: four triangles turn slowly
-// around each. None: a double chevron at the window's edge points at the nearest. Only
-// on his machine, and never a note he has read, so the cue moves on as he opens them.
+// around each. None: a double chevron at the window's edge points at the nearest; a
+// click on it pans there and opens the note (Victor, 2026-11-11). Only on his machine,
+// and never a note he has read, so the cue moves on as he opens them. Orange, not the
+// stars' gold, so it never reads as part of a burst (--wiki-star-cue).
 export type StarCue =
   | { kind: "none" }
   | { kind: "aim"; ids: string[] }
@@ -360,7 +376,7 @@ const AIM_LENGTH = 24 // a triangle, tip to base
 const AIM_HALF_BASE = 8
 
 // Four triangles pointing at the dot at (x, y) (in graph units, like its radius r),
-// the same size on screen at any zoom (k); gold like the arrow, a thin black outline
+// the same size on screen at any zoom (k); orange like the arrow, a thin black outline
 // keeps them apart from the burst behind them.
 export function drawAim(g: Graphics, x: number, y: number, r: number, k: number, time: number, color: string) {
   const tip = r + AIM_GAP / k
@@ -388,8 +404,10 @@ const CHEVRON_NUDGE = 6 // how far the pair drifts towards the note, and back
 const CHEVRON_WIDTH = 6
 
 // A double chevron at (x, y) in graph units, pointing along angle, drifting that way
-// and back. Black under gold, the way the labels are outlined.
-export function drawChevrons(g: Graphics, x: number, y: number, angle: number, k: number, time: number, gold: string) {
+// and back. Black under the colour, the way the labels are outlined.
+// How far from the pair's centre, on screen, a click still lands on it.
+export const CHEVRON_HIT_RADIUS = 44
+export function drawChevrons(g: Graphics, x: number, y: number, angle: number, k: number, time: number, color: string) {
   const cos = Math.cos(angle)
   const sin = Math.sin(angle)
   const nudge = (CHEVRON_NUDGE * (1 + Math.sin(time / 350))) / 2
@@ -398,12 +416,12 @@ export function drawChevrons(g: Graphics, x: number, y: number, angle: number, k
     x + (cos * (along + nudge) - sin * across) / k,
     y + (sin * (along + nudge) + cos * across) / k,
   ]
-  for (const [width, color] of [[CHEVRON_WIDTH + 3, "#000000"], [CHEVRON_WIDTH, gold]] as const) {
+  for (const [width, stroke] of [[CHEVRON_WIDTH + 3, "#000000"], [CHEVRON_WIDTH, color]] as const) {
     for (const tip of [CHEVRON_GAP / 2, -CHEVRON_GAP / 2]) {
       g.moveTo(...at(tip - CHEVRON_ARM, -CHEVRON_HALF))
         .lineTo(...at(tip, 0))
         .lineTo(...at(tip - CHEVRON_ARM, CHEVRON_HALF))
-        .stroke({ color, width: width / k, cap: "round", join: "round" })
+        .stroke({ color: stroke, width: width / k, cap: "round", join: "round" })
     }
   }
 }
