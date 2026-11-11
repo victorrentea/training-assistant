@@ -16,8 +16,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = REPO_ROOT / "static"
 
 # `title="` as an attribute. Requires a preceding word boundary so it does not
-# fire on data-title, aria-title, or similar.
-_TITLE_ATTR = re.compile(r'(?<![\w-])title\s*=\s*["\']')
+# fire on data-title, aria-title, or similar; `document.title = '…'` names the page, not a tooltip.
+_TITLE_ATTR = re.compile(r'(?<!document\.)(?<![\w-])title\s*=\s*["\']')
 
 # Vendored third-party assets are not ours to restyle.
 _SKIP_DIRS = {"vendor"}

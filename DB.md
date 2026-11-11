@@ -54,8 +54,9 @@ qa_questions?: dict[str, dict[str, any]]  # question_id → {text, author, upvot
 aishare?: PersistedAiShareState{
   active?:bool
   revealed?:bool  # participants see everyone's answers
+  options_version?:int  # the option numbering these answers were stored under
   answers?:dict[str, dict[str, int]]  # question_id → participant_uuid → slider 0..100 | choice option index
-  others?:dict[str, dict[str, string]]  # question_id → participant_uuid → free text typed under the question's 'other' option
+  others?:dict[str, dict[str, list[string] | string]]  # question_id → participant_uuid → the values ticked under the question's 'other' option (legacy: a single string, read on restore only)
   hearts?:dict[str, dict[str, int]]  # question_id → participant_uuid → bitmask of a multi's ❤️ options
   items?:dict[str, list[dict[str, any]]]  # ranking question_id → its items [{id, text, by: adder's uuid | null for a preset}]
   votes?:dict[str, dict[str, dict[str, int]]]  # ranking question_id → participant_uuid → item id → 1 (🔥)

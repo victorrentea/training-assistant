@@ -30,8 +30,11 @@ YES_NO_IDK = ["Yes", "No / I don't know"]
 QUESTIONS: list[dict] = [
     {"id": "harness_work", "kind": "multi", "text": "What agent harness do you use **at work**?",
      "hint": "…then ❤️ your favourite", "options": ["Claude Code or Codex", "GitHub Copilot CLI", "GitHub Copilot Chat in VS Code",
-                 "GitHub Copilot Chat in IntelliJ", "Microsoft M365 Copilot", "Other"],
-     "other_option": 5, "group": {"label": "GitHub Copilot", "options": [1, 2, 3]}},
+                 "GitHub Copilot Chat in IntelliJ", "Microsoft M365 Copilot", "Other", "GitHub Copilot"],
+     # "GitHub Copilot" (appended last, so older answers keep their bits) is ticked as the heading itself:
+     # its CLI / VS Code / IntelliJ options show once it is ticked (Victor, 2026-11-11).
+     "other_option": 5, "other_presets": ["OpenCode", "Pi", "Cursor"],
+     "group": {"label": "GitHub Copilot", "options": [1, 2, 3], "parent": 6}},
     {"id": "personal_sub", "kind": "choice", "text": "Do you have a personal Claude or Codex subscription ((up to 50X more value for money))?",
      "links": [{"text": "Claude", "url": "https://claude.com/pricing"},
                {"text": "Codex", "url": "https://developers.openai.com/codex/pricing"}],
@@ -110,6 +113,16 @@ def valid_value(qid: str, value: int) -> bool:
     return MIN_VALUE <= value <= MAX_VALUE
 
 
+def with_group_parent(q: dict, value: int) -> int:
+    """A multi's answer with its group heading ticked whenever one of the options under it is."""
+    group = q.get("group") or {}
+    if q["kind"] != "multi" or group.get("parent") is None:
+        return value
+    if any(value >> i & 1 for i in group["options"]):
+        value |= 1 << group["parent"]
+    return value
+
+
 def insert_bit(mask: int, at: int) -> int:
     """`mask` with a 0 inserted at bit `at`: the options from there on move up by one."""
     low = mask & ((1 << at) - 1)
@@ -186,6 +199,7 @@ class AiShareState:
         texts = None if others is None else self._canonical_others(qid, others)
         if q["kind"] == "multi" and texts and q.get("other_option") is not None:
             value |= 1 << q["other_option"]
+        value = with_group_parent(q, value)
         if q["kind"] == "multi" and value == 0:
             for per in (self.answers, self.others, self.hearts):
                 per.get(qid, {}).pop(pid, None)
@@ -356,6 +370,8 @@ class AiShareState:
             if str(qid) in moved:
                 kept = {pid: move_bits(v, moved[str(qid)]) for pid, v in kept.items()}
             kept = {pid: v for pid, v in kept.items() if valid_value(str(qid), v)}
+            if str(qid) in QUESTIONS_BY_ID:  # answers given before the group heading became an option
+                kept = {pid: with_group_parent(QUESTIONS_BY_ID[str(qid)], v) for pid, v in kept.items()}
             if kept:
                 self.answers[str(qid)] = kept
         raw_others = data.get("others")

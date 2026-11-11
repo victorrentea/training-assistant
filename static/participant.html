@@ -869,20 +869,27 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 /* Room below the last survey question so it scrolls clear of the floating
    emoji bar (and the tooltips above it) instead of ending underneath it. */
 #activity-aishare-section { padding-bottom: 6rem; }
-.aishare-progress { position: sticky; bottom: 1.5rem; z-index: 20; width: max-content; margin: 1rem 0 0 -3.5rem; padding: .45rem 1rem; border-radius: 999px;
-  --p: 0%; background: linear-gradient(90deg, rgba(64,192,87,.35) var(--p), transparent var(--p)), var(--color-surface-container, #e8eff3);
-  border: 1.5px solid #40c057; color: var(--color-on-surface, #2a3439); font-size: 1.05rem; font-weight: 800; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
-:where(html.dark) .aishare-progress { background: linear-gradient(90deg, rgba(64,192,87,.35) var(--p), transparent var(--p)), var(--color-surface-container, #1c2127); color: var(--color-on-surface, #dce4e9); }
+/* "% done" (bottom-left) and "Download results" (top-right) float in the corners of the view, as far from
+   its edges as the emoji bar (bottom-right) and with its look: same surface, border, shadow and height. */
+.aishare-progress, .aishare-pdf-btn { position: absolute; z-index: 30; box-sizing: border-box; border-radius: 999px;
+  background: rgba(247, 249, 251, .96); border: 1.5px solid rgba(150, 160, 165, .6); box-shadow: 0px 12px 32px rgba(42, 52, 57, .06);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+:where(html.dark) .aishare-progress, :where(html.dark) .aishare-pdf-btn { background: rgba(18, 21, 26, .96); border-color: rgba(60, 72, 77, .7); box-shadow: 0px 12px 32px rgba(0, 0, 0, .35); }
+.aishare-progress { left: 1.5rem; bottom: 1.5rem; display: flex; align-items: center; height: calc(4.25rem + 3px); padding: 0 1.4rem;
+  --p: 0%; background-image: linear-gradient(90deg, rgba(64,192,87,.35) var(--p), transparent var(--p));
+  color: var(--color-on-surface, #2a3439); font-size: 1.05rem; font-weight: 800; }
+:where(html.dark) .aishare-progress { color: var(--color-on-surface, #dce4e9); }
 .aishare-progress:empty { display: none; }
-.aishare-pdf-btn { position: sticky; top: .5rem; z-index: 20; display: none; align-items: center; gap: .35rem; margin: 0 -3.5rem -2.6rem auto; padding: .5rem 1.1rem; border: 0; border-radius: 999px;
-  background: #2ea043; color: #fff; font: inherit; font-size: 1.05rem; font-weight: 800; cursor: pointer; }
+.aishare-pdf-btn { top: 1.5rem; right: 1.5rem; display: none; padding: .5rem; color: #fff; cursor: pointer; }
+.aishare-pdf-btn .material-symbols-outlined { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 999px; background: #4caf50; }
 .aishare-pdf-btn.shown { display: flex; animation: aishare-pdf-in .5s cubic-bezier(.2,.8,.2,1), aishare-pdf-glow 1.2s ease-in-out .5s 4; }
-.aishare-pdf-btn:hover { filter: brightness(1.15); }
+.aishare-pdf-btn:hover .material-symbols-outlined { filter: brightness(1.12); }
 @keyframes aishare-pdf-in { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
 @keyframes aishare-pdf-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(46,160,67,.7); } 50% { box-shadow: 0 0 0 12px rgba(46,160,67,0); transform: scale(1.06); } }
 @media (prefers-reduced-motion: reduce) { .aishare-pdf-btn.shown { animation: none; } }
-/* Pushed into the view's side gutters, off the cards; a phone has no gutters */
-@media (max-width: 640px) { .aishare-progress { margin-left: 0; } .aishare-pdf-btn { margin-right: 0; } }
+/* A phone: the corners the toolbars use there, and "% done" just above the full-width emoji bar */
+@media (max-width: 640px) { .aishare-progress { left: .5rem; bottom: calc(.75rem + 3.6rem + 3px + .5rem); height: 3rem; padding: 0 1rem; }
+  .aishare-pdf-btn { top: .5rem; right: .5rem; } }
 /* Results PDF: print only the survey, on white, in full height */
 @media print {
   body.aishare-printing * { visibility: hidden; }
@@ -923,6 +930,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-group-label { margin-top: .3rem; font-size: 1rem; font-weight: 800; color: var(--color-on-surface, #2a3439); }
 :where(html.dark) .aishare-group-label { color: var(--color-on-surface, #dce4e9); }
 .aishare-opt.in-group { margin-left: 1.5rem; width: calc(100% - 1.5rem); }
+.aishare-opt.in-group.folded { display: none; }
 .aishare-other { display: none; flex-direction: column; gap: .5rem; padding-left: 1.5rem; }
 .aishare-other.open { display: flex; }
 .aishare-other-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
@@ -1479,8 +1487,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   <section id="activity-aishare-section" style="display:none;" class="w-full">
     <!-- One card per question, appearing one after another (built by _renderActivityAiShare) -->
     <!-- Shown 2 s after the host reveals the results; prints the survey (Save as PDF) -->
-    <button type="button" id="aishare-pdf-btn" class="aishare-pdf-btn" onclick="_aiSharePrintPdf()" data-tip="Save these results as a PDF">
-      <span class="material-symbols-outlined">download</span>Results PDF</button>
+    <button type="button" id="aishare-pdf-btn" class="aishare-pdf-btn" onclick="_aiSharePrintPdf()" data-tip="Download results" aria-label="Download results">
+      <span class="material-symbols-outlined">download</span></button>
     <div class="aishare-anon">Anonymous AI Survey</div>
     <div id="aishare-questions" class="aishare-questions"></div>
     <div id="aishare-done" class="poll-card aishare-card aishare-done" style="display:none;">🎉 Thank you!</div>
@@ -6051,7 +6059,8 @@ function _aiShareMyOthers(qid) {
 function _aiShareOtherValues(qid) {
   var res = _aiShare.results[qid] || {};
   var all = (res.other_values || []).slice();
-  _aiShareMyOthers(qid).forEach(function (t) {
+  var q = _aiShare.questions.find(function (x) { return x.id === qid; }) || {};
+  (q.other_presets || []).concat(_aiShareMyOthers(qid)).forEach(function (t) {
     if (!all.some(function (v) { return v.text.toLowerCase() === t.toLowerCase(); })) all.push({ text: t, count: null });
   });
   return all.sort(function (a, b) { return a.text.toLowerCase().localeCompare(b.text.toLowerCase()); });
@@ -6079,9 +6088,21 @@ function _aiShareTitleHtml(q) {
   return html;
 }
 
-function _aiShareCountText(n) { return n === 1 ? 'One answer' : n + ' answers'; }
-function _aiShareMultiCountText(n) { return '×' + n + (n === 1 ? ' answer' : ' answers'); }
-function _aiShareRespondentsText(n) { return n === 1 ? 'One respondent' : n + ' respondents'; }
+// How many answered: a person and the number ("👤 3"), no words (Victor, 2026-11-11).
+function _aiShareCountText(n) { return '👤 ' + n; }
+function _aiShareMultiCountText(n) { return '👤 ' + n; }
+function _aiShareRespondentsText(n) { return '👤 ' + n; }
+
+// A multi's mask after option `idx` was toggled, kept consistent with its group heading:
+// unticking the heading unticks the options under it; ticking one of them ticks the heading.
+function _aiShareGroupMask(q, mask, idx) {
+  var g = q.group;
+  if (!g || g.parent == null) return mask;
+  var kids = g.options.reduce(function (m, i) { return m | (1 << i); }, 0);
+  if (idx === g.parent && !(mask >> idx & 1)) mask &= ~kids;
+  if (mask & kids) mask |= 1 << g.parent;
+  return mask;
+}
 
 function _aiShareBuildCard(q) {
   var card = document.createElement('div');
@@ -6148,10 +6169,19 @@ function _aiShareBuildCard(q) {
     var hearts = multi && !!q.hint;
     // A group ("GitHub Copilot") gets a sub-heading; its options lose that prefix and sit indented under it.
     var group = q.group || { options: [] };
-    card.innerHTML = head + '<div class="aishare-choices">' + q.options.map(function (text, idx) {
+    var parent = group.parent != null ? group.parent : -1;
+    // A heading that is itself an option ("GitHub Copilot") is drawn where the group starts, not at its index.
+    var order = [];
+    q.options.forEach(function (_, idx) {
+      if (idx === parent) return;
+      if (idx === group.options[0] && parent >= 0) order.push(parent);
+      order.push(idx);
+    });
+    card.innerHTML = head + '<div class="aishare-choices">' + order.map(function (idx) {
+      var text = q.options[idx];
       var inGroup = group.options.indexOf(idx) >= 0;
       if (inGroup && text.indexOf(group.label + ' ') === 0) text = text.slice(group.label.length + 1);
-      return (idx === group.options[0] ? '<div class="aishare-group-label">' + _escHtml(group.label) + '</div>' : '') +
+      return (idx === group.options[0] && parent < 0 ? '<div class="aishare-group-label">' + _escHtml(group.label) + '</div>' : '') +
         '<button class="poll-option-btn aishare-opt' + (inGroup ? ' in-group' : '') + '" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
         '<div class="row"><span><span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true"></span>' +
         (multi && !hearts ? _aiShareKeyHtml(text, true) : _escHtml(text)) + '</span>' +
@@ -6165,7 +6195,7 @@ function _aiShareBuildCard(q) {
       }
       // Tick / untick; unticking a ❤️ option drops its heart too.
       btn.addEventListener('click', function () {
-        var mask = (_aiShare.my[q.id] || 0) ^ (1 << idx);
+        var mask = _aiShareGroupMask(q, (_aiShare.my[q.id] || 0) ^ (1 << idx), idx);
         if (idx === q.other_option && !(mask >> idx & 1)) delete _aiShare.myOther[q.id];  // the daemon drops them too
         _onAiShareMulti(q.id, mask, (_aiShare.myHearts[q.id] || 0) & mask);
       });
@@ -6173,7 +6203,8 @@ function _aiShareBuildCard(q) {
       if (hearts) btn.querySelector('.aishare-heart').addEventListener('click', function (e) {
         e.stopPropagation();
         if (!((_aiShare.myHearts[q.id] || 0) >> idx & 1)) _aiShareHeartBeat(e.currentTarget.querySelector('.aishare-heart-g'));
-        _onAiShareMulti(q.id, (_aiShare.my[q.id] || 0) | (1 << idx), (_aiShare.myHearts[q.id] || 0) ^ (1 << idx));
+        var ticked = _aiShareGroupMask(q, (_aiShare.my[q.id] || 0) | (1 << idx), idx);
+        _onAiShareMulti(q.id, ticked, ((_aiShare.myHearts[q.id] || 0) ^ (1 << idx)) & ticked);
       });
     });
     if (q.other_option != null) {
@@ -6264,9 +6295,12 @@ function _aiShareUpdateCard(card, q) {
       var total = (hearts || []).reduce(function (a, b) { return a + b; }, 0);
       heartsTotal.textContent = total ? '×' + total : '';
     }
+    var grp = q.group || { options: [] };
+    var unfolded = grp.parent == null || picked(grp.parent) || _aiShare.revealed;
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
       var idx = +btn.dataset.i;
       var sel = picked(idx);
+      btn.classList.toggle('folded', grp.options.indexOf(idx) >= 0 && !unfolded);
       btn.classList.toggle('selected', sel);
       btn.querySelector('.poll-option-mark').textContent = sel ? '✓' : '';
       var heart = btn.querySelector('.aishare-heart');
@@ -6296,7 +6330,7 @@ function _aiShareUpdateCard(card, q) {
       var values = _aiShareOtherValues(q.id), myOthers = _aiShareMyOthers(q.id);
       var otherTicked = picked(q.other_option);
       // Open once "Other" is ticked, or as soon as anyone typed something there.
-      var open = otherTicked || values.length > 0;
+      var open = otherTicked || ((_aiShare.results[q.id] || {}).other_values || []).length > 0;
       var wasOpen = other.classList.contains('open');
       other.classList.toggle('open', open);
       other.querySelector('.aishare-other-chips').innerHTML = values.map(function (v) {

@@ -72,7 +72,9 @@ def test_questions_are_shipped_in_order(client, sent):
     client.post("/api/cur/host/aishare/start")
     pax = _last(sent["broadcast"], "aishare_updated")
     assert [q.id for q in pax.questions] == ["harness_work", "personal_sub", "agents_md", "mcp", "tools", "skill", "plugins", "custom_agent", "code_review", "nontech_pr", "ai_generated", "review", "devex_pain", "knowledge_base"]
-    assert pax.questions[0].kind == "multi" and pax.questions[0].options[-1] == "Other"
+    assert pax.questions[0].kind == "multi" and pax.questions[0].options[pax.questions[0].other_option] == "Other"
+    assert pax.questions[0].options[pax.questions[0].group.parent] == "GitHub Copilot"
+    assert pax.questions[0].other_presets == ["OpenCode", "Pi", "Cursor"]
     assert pax.questions[2].options == ["Yes", "No / I don't know"]
     assert [l.text for l in pax.questions[1].links] == ["Claude", "Codex"]
     assert pax.questions[-1].options == ["Yes", "No / I don't know"]
@@ -219,12 +221,12 @@ def test_multi_counts_every_ticked_option_and_the_hearts(client, state, sent):
     _answer(client, "u1", 0b00011, question="harness_work", hearts=0b00011)   # two favourites
     _answer(client, "u2", 0b00101, question="harness_work", hearts=0b00001)
     host = _last(sent["host"], "aishare_host_update")
-    assert _result(host, "harness_work").counts == [2, 1, 1, 0, 0, 0]
-    assert _result(host, "harness_work").hearts == [2, 1, 0, 0, 0, 0]
+    assert _result(host, "harness_work").counts == [2, 1, 1, 0, 0, 0, 2]   # GitHub Copilot: ticked with CLI or VS Code
+    assert _result(host, "harness_work").hearts == [2, 1, 0, 0, 0, 0, 0]
     pax = _last(sent["broadcast"], "aishare_updated")
     assert _result(pax, "harness_work").hearts is None              # hidden until revealed
     client.post("/api/cur/host/aishare/reveal", json={"revealed": True})
-    assert _result(_last(sent["broadcast"], "aishare_updated"), "harness_work").hearts == [2, 1, 0, 0, 0, 0]
+    assert _result(_last(sent["broadcast"], "aishare_updated"), "harness_work").hearts == [2, 1, 0, 0, 0, 0, 0]
 
 
 def test_multi_hearts_only_on_ticked_options_and_untick_all_withdraws(client, state):
@@ -234,7 +236,7 @@ def test_multi_hearts_only_on_ticked_options_and_untick_all_withdraws(client, st
     assert state.hearts_of("u1") == {"harness_work": 0b00001}
     _answer(client, "u1", 0b00001, question="harness_work", hearts=0b00010)   # ❤️ on an unticked one
     assert state.hearts_of("u1") == {}
-    assert _answer(client, "u1", 0b1000000, question="harness_work").status_code == 422
+    assert _answer(client, "u1", 0b10000000, question="harness_work").status_code == 422
     _answer(client, "u1", 0, question="harness_work")
     assert state.answers_of("u1") == {}
 
@@ -411,7 +413,8 @@ def test_restore_moves_other_past_the_inserted_option_exactly_once():
     s = AiShareState()
     s.restore({"active": True, "answers": {"harness_work": {"u1": 0b10001, "u2": 0b01000}},
                "hearts": {"harness_work": {"u1": 0b10000}}})
-    assert s.answers["harness_work"] == {"u1": 0b100001, "u2": 0b001000}   # Other stays Other, IntelliJ stays IntelliJ
+    # Other stays Other, IntelliJ stays IntelliJ (and ticks the GitHub Copilot heading, bit 6)
+    assert s.answers["harness_work"] == {"u1": 0b100001, "u2": 0b1001000}
     assert s.hearts["harness_work"] == {"u1": 0b100000}
     again = AiShareState()
     again.restore(s.snapshot())                                            # the next restart must not shift it again
@@ -430,3 +433,20 @@ def test_restore_follows_meeting_transcripts_up_the_tools_list_exactly_once():
     again = AiShareState()
     again.restore(s.snapshot())                                            # the next restart must not move it again
     assert again.answers == s.answers
+
+
+def test_ticking_a_copilot_option_ticks_the_github_copilot_heading():
+    s = AiShareState()
+    s.start()
+    s.set_value("u1", "harness_work", 0b0000100)                 # VS Code only
+    assert s.answers["harness_work"]["u1"] == 0b1000100
+    s.set_value("u2", "harness_work", 0b1000000)                 # the heading alone: no Copilot detail
+    assert s.answers["harness_work"]["u2"] == 0b1000000
+    s.set_value("u3", "harness_work", 0b0000001)                 # Claude Code only: no heading
+    assert s.answers["harness_work"]["u3"] == 0b0000001
+
+
+def test_restore_ticks_the_heading_for_answers_given_before_it_existed():
+    s = AiShareState()
+    s.restore({"active": True, "options_version": 3, "answers": {"harness_work": {"u1": 0b000110, "u2": 0b100000}}})
+    assert s.answers["harness_work"] == {"u1": 0b1000110, "u2": 0b100000}

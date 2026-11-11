@@ -2322,6 +2322,26 @@ components:
       - text
       - url
       title: AiShareLink
+    AiShareOptionGroup:
+      properties:
+        label:
+          type: string
+          title: Label
+        options:
+          items:
+            type: integer
+          type: array
+          title: Options
+        parent:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Parent
+      type: object
+      required:
+      - label
+      - options
+      title: AiShareOptionGroup
     AiShareOtherValue:
       properties:
         text:
@@ -2433,6 +2453,17 @@ components:
           - type: integer
           - type: 'null'
           title: Other Option
+        other_presets:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Other Presets
+        group:
+          anyOf:
+          - $ref: '#/components/schemas/AiShareOptionGroup'
+          - type: 'null'
         hint:
           anyOf:
           - type: string
