@@ -866,6 +866,30 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 /* Room below the last survey question so it scrolls clear of the floating
    emoji bar (and the tooltips above it) instead of ending underneath it. */
 #activity-aishare-section { padding-bottom: 6rem; }
+.aishare-progress { position: sticky; bottom: 1.5rem; z-index: 20; width: max-content; margin: 1rem 0 0 -3.5rem; padding: .45rem 1rem; border-radius: 999px;
+  --p: 0%; background: linear-gradient(90deg, rgba(64,192,87,.35) var(--p), transparent var(--p)), var(--color-surface-container, #e8eff3);
+  border: 1.5px solid #40c057; color: var(--color-on-surface, #2a3439); font-size: 1.05rem; font-weight: 800; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+:where(html.dark) .aishare-progress { background: linear-gradient(90deg, rgba(64,192,87,.35) var(--p), transparent var(--p)), var(--color-surface-container, #1c2127); color: var(--color-on-surface, #dce4e9); }
+.aishare-progress:empty { display: none; }
+.aishare-pdf-btn { position: sticky; top: .5rem; z-index: 20; display: none; align-items: center; gap: .35rem; margin: 0 -3.5rem -2.6rem auto; padding: .5rem 1.1rem; border: 0; border-radius: 999px;
+  background: #2ea043; color: #fff; font: inherit; font-size: 1.05rem; font-weight: 800; cursor: pointer; }
+.aishare-pdf-btn.shown { display: flex; animation: aishare-pdf-in .5s cubic-bezier(.2,.8,.2,1), aishare-pdf-glow 1.2s ease-in-out .5s 4; }
+.aishare-pdf-btn:hover { filter: brightness(1.15); }
+@keyframes aishare-pdf-in { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes aishare-pdf-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(46,160,67,.7); } 50% { box-shadow: 0 0 0 12px rgba(46,160,67,0); transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .aishare-pdf-btn.shown { animation: none; } }
+/* Pushed into the view's side gutters, off the cards; a phone has no gutters */
+@media (max-width: 640px) { .aishare-progress { margin-left: 0; } .aishare-pdf-btn { margin-right: 0; } }
+/* Results PDF: print only the survey, on white, in full height */
+@media print {
+  body.aishare-printing * { visibility: hidden; }
+  body.aishare-printing #activity-aishare-section, body.aishare-printing #activity-aishare-section * { visibility: visible; }
+  body.aishare-printing #activity-aishare-section { position: absolute; left: 0; top: 0; padding: 0; }
+  body.aishare-printing, body.aishare-printing main, body.aishare-printing #activity-view { height: auto !important; overflow: visible !important; }
+  body.aishare-printing .aishare-pdf-btn, body.aishare-printing .aishare-progress, body.aishare-printing .aishare-skip, body.aishare-printing .aishare-copy { display: none !important; }
+  body.aishare-printing .aishare-card { break-inside: avoid; }
+  body.aishare-printing aside, body.aishare-printing #floating-reactions { display: none !important; }
+}
 /* AI-share slider activity */
 .aishare-card {
   --aishare-accent: var(--color-primary, #4555ba);
@@ -893,6 +917,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 @keyframes aishare-q-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .aishare-q { animation: none; } }
 .aishare-choices { display: flex; flex-direction: column; gap: .5rem; }
+.aishare-group-label { margin-top: .3rem; font-size: 1rem; font-weight: 800; color: var(--color-on-surface, #2a3439); }
+:where(html.dark) .aishare-group-label { color: var(--color-on-surface, #dce4e9); }
+.aishare-opt.in-group { margin-left: 1.5rem; width: calc(100% - 1.5rem); }
 .aishare-other { display: none; flex-direction: column; gap: .5rem; padding-left: 1.5rem; }
 .aishare-other.open { display: flex; }
 .aishare-other-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
@@ -1448,9 +1475,14 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
   </section>
   <section id="activity-aishare-section" style="display:none;" class="w-full">
     <!-- One card per question, appearing one after another (built by _renderActivityAiShare) -->
+    <!-- Shown 2 s after the host reveals the results; prints the survey (Save as PDF) -->
+    <button type="button" id="aishare-pdf-btn" class="aishare-pdf-btn" onclick="_aiSharePrintPdf()" data-tip="Save these results as a PDF">
+      <span class="material-symbols-outlined">download</span>Results PDF</button>
     <div class="aishare-anon">Anonymous AI Survey</div>
     <div id="aishare-questions" class="aishare-questions"></div>
     <div id="aishare-done" class="poll-card aishare-card aishare-done" style="display:none;">🎉 Thank you!</div>
+    <!-- Survey progress, pinned bottom-left of the view (level with the reactions bar) -->
+    <div id="aishare-progress" class="aishare-progress" aria-live="polite"></div>
   </section>
 </div>
 <!-- AI Summary View -->
@@ -6111,8 +6143,13 @@ function _aiShareBuildCard(q) {
     var multi = q.kind === 'multi';
     // A multi with a hint ("…then ❤️ your favourite") gets the ♡ column; one without reads "**Key**: detail".
     var hearts = multi && !!q.hint;
+    // A group ("GitHub Copilot") gets a sub-heading; its options lose that prefix and sit indented under it.
+    var group = q.group || { options: [] };
     card.innerHTML = head + '<div class="aishare-choices">' + q.options.map(function (text, idx) {
-      return '<button class="poll-option-btn aishare-opt" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
+      var inGroup = group.options.indexOf(idx) >= 0;
+      if (inGroup && text.indexOf(group.label + ' ') === 0) text = text.slice(group.label.length + 1);
+      return (idx === group.options[0] ? '<div class="aishare-group-label">' + _escHtml(group.label) + '</div>' : '') +
+        '<button class="poll-option-btn aishare-opt' + (inGroup ? ' in-group' : '') + '" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
         '<div class="row"><span><span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true"></span>' +
         (multi && !hearts ? _aiShareKeyHtml(text, true) : _escHtml(text)) + '</span>' +
         (hearts ? '<span class="aishare-heart" role="button" tabindex="0" data-tip="My favourite"><span class="aishare-heart-n"></span><span class="aishare-heart-g"></span></span>' : '') + '</div></button>';
@@ -6350,6 +6387,34 @@ function _aiShareUpdateRanking(card, q, res) {
   });
 }
 
+// The "Results PDF" button pops up 2 s after the host reveals the results, and goes on a hide.
+var _aiSharePdfTimer = null;
+function _aiShareSchedulePdfBtn() {
+  var btn = document.getElementById('aishare-pdf-btn');
+  if (!(_aiShare.active && _aiShare.revealed)) {
+    clearTimeout(_aiSharePdfTimer); _aiSharePdfTimer = null;
+    btn.classList.remove('shown');
+    return;
+  }
+  if (btn.classList.contains('shown') || _aiSharePdfTimer) return;
+  _aiSharePdfTimer = setTimeout(function () { _aiSharePdfTimer = null; btn.classList.add('shown'); }, 2000);
+}
+
+// Prints the survey in the light theme (dark text on white paper); the browser's dialog saves it as PDF.
+function _aiSharePrintPdf() {
+  var root = document.documentElement, wasDark = root.classList.contains('dark'), title = document.title;
+  root.classList.remove('dark');
+  document.body.classList.add('aishare-printing');
+  document.title = 'AI survey results';
+  window.addEventListener('afterprint', function restore() {
+    window.removeEventListener('afterprint', restore);
+    if (wasDark) root.classList.add('dark');
+    document.body.classList.remove('aishare-printing');
+    document.title = title;
+  });
+  setTimeout(function () { window.print(); }, 50);  // let the light theme repaint first
+}
+
 function _renderActivityAiShare(scrollToNew) {
   _updateActivityNavLabel();
   var section = document.getElementById('activity-aishare-section');
@@ -6361,6 +6426,8 @@ function _renderActivityAiShare(scrollToNew) {
     if (window.AiShareChart) list.querySelectorAll('.aishare-plot').forEach(function (p) { AiShareChart.reset({ plot: p }); });
     list.innerHTML = '';
     done.style.display = 'none';
+    document.getElementById('aishare-progress').textContent = '';
+    _aiShareSchedulePdfBtn();
     _updateActivityIdleSections();
     return;
   }
@@ -6379,6 +6446,12 @@ function _renderActivityAiShare(scrollToNew) {
   var finished = qs.length > 0 && qs.every(function (q) { return _aiShareSettled(q.id) && !_aiShareHeld(q.id); });
   var wasHidden = done.style.display === 'none';
   done.style.display = finished ? '' : 'none';
+  var settled = qs.filter(function (q) { return _aiShareSettled(q.id); }).length;
+  var pct = qs.length ? Math.round(100 * settled / qs.length) : 0;
+  var progress = document.getElementById('aishare-progress');
+  progress.textContent = qs.length ? (pct === 100 ? '✅ ' : '') + pct + '% done' : '';
+  progress.style.setProperty('--p', pct + '%');
+  _aiShareSchedulePdfBtn();
   if (scrollToNew) {
     var target = added || (finished && wasHidden ? done : null);
     if (target) setTimeout(function () { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);

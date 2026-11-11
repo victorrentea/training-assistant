@@ -2214,6 +2214,10 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   cursor: pointer;
 }
 #poll-clear-btn { margin-left: auto; }
+/* AI % "Show to everyone": a green button with its checkbox inside */
+.aishare-reveal-btn { gap: .45rem; background: #2ea043; color: #fff; margin: 0; }
+.aishare-reveal-btn input { margin: 0; width: 1rem; height: 1rem; accent-color: #fff; cursor: pointer; }
+.aishare-reveal-btn:has(input:disabled) { opacity: .35; cursor: default; pointer-events: none; }
 
 .poll-quick-section {
   display: flex;
