@@ -810,8 +810,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 @media (hover: hover) { .aishare-heart:hover .aishare-heart-g::before { content: '❤️'; } }
 /* A survey option stays put under the pointer: only its border lights up. */
 .aishare-card .aishare-opt:hover:not(:disabled) { transform: none; }
-/* Counts line up in one column on the right, whatever the bar's length: past the end of a multi's
-   longest bar (82%, see _aiShareUpdateCard), clear of its ❤️. Short bars leave them on the card's own background. */
+/* Counts line up in one column on the right, whatever the bar's length: on a multi with ❤️ the bars run to the
+   card's edge (under the ♡ column) while the counts stay left of it, at 82% (see _aiShareUpdateCard). */
 .aishare-card .aishare-opt .count { right: 0; color: var(--color-on-surface, #2a3439); }
 .aishare-card .aishare-opt:has(.aishare-heart) .count { right: 18%; }
 /* The count over its % of respondents, both centred on the bar's end. */
@@ -6310,13 +6310,14 @@ function _aiShareUpdateCard(card, q) {
         heart.querySelector('.aishare-heart-n').textContent = h ? h + '×' : '';
       }
       var c = counts ? (counts[idx] || 0) : 0;
-      // With a ❤️ column, the longest bar stops short of it, so its count stays readable.
-      var pct = c > 0 && maxCount > 0 ? (c / maxCount) * (heart ? 82 : 100) : 0;
+      // The longest bar fills the whole row, under the ❤️ column too; its count stays left of that column.
+      var pct = c > 0 && maxCount > 0 ? (c / maxCount) * 100 : 0;
       btn.querySelector('.fill').style.width = pct + '%';
       var countEl = btn.querySelector('.count');
-      if (c > 0) {
+      // The options under the GitHub Copilot heading get a bar but no number (Victor, 2026-11-11).
+      if (c > 0 && grp.options.indexOf(idx) < 0) {
         if (!countEl) { countEl = document.createElement('span'); countEl.className = 'count'; btn.insertBefore(countEl, btn.querySelector('.row')); }
-        countEl.style.setProperty('--fill-pct', pct + '%');
+        countEl.style.setProperty('--fill-pct', (heart ? pct * .82 : pct) + '%');
         countEl.textContent = c;  // just the count: no % of respondents under it (Victor, 2026-11-11)
       } else if (countEl) {
         countEl.remove();
@@ -6326,8 +6327,9 @@ function _aiShareUpdateCard(card, q) {
     if (other) {
       var values = _aiShareOtherValues(q.id), myOthers = _aiShareMyOthers(q.id);
       var otherTicked = picked(q.other_option);
-      // Open once "Other" is ticked, or as soon as anyone typed something there.
-      var open = otherTicked || ((_aiShare.results[q.id] || {}).other_values || []).length > 0;
+      // Open once "Other" is ticked, as soon as anyone typed something there, or from the start
+      // when the question offers chips of its own (OpenCode, Pi, Cursor).
+      var open = otherTicked || values.length > 0;
       var wasOpen = other.classList.contains('open');
       other.classList.toggle('open', open);
       other.querySelector('.aishare-other-chips').innerHTML = values.map(function (v) {
