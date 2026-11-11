@@ -816,7 +816,6 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-card .aishare-opt:has(.aishare-heart) .count { right: 18%; }
 /* The count over its % of respondents, both centred on the bar's end. */
 .aishare-card .aishare-opt .count { display: flex; flex-direction: column; align-items: center; }
-.aishare-pct { margin-top: .15rem; font-size: .72rem; font-weight: 600; opacity: .75; }
 /* The ♡ column and its hint (with the ❤️ total) only show once something is ticked: first pick, then pick a favourite. */
 .aishare-card:not(.ticked) .aishare-heart { visibility: hidden; }
 .aishare-head-side.aishare-fav { opacity: 0; transform: translateY(-4px); transition: opacity .35s, transform .35s; pointer-events: none; flex-direction: row; align-items: baseline; gap: .8rem; }
@@ -6088,10 +6087,10 @@ function _aiShareTitleHtml(q) {
   return html;
 }
 
-// How many answered: a person and the number ("👤 3"), no words (Victor, 2026-11-11).
-function _aiShareCountText(n) { return '👤 ' + n; }
-function _aiShareMultiCountText(n) { return '👤 ' + n; }
-function _aiShareRespondentsText(n) { return '👤 ' + n; }
+// How many answered: a person and the number ("👤 3"), no words; nothing until someone answers (Victor, 2026-11-11).
+function _aiShareCountText(n) { return n > 0 ? '👤 ' + n : ''; }
+function _aiShareMultiCountText(n) { return _aiShareCountText(n); }
+function _aiShareRespondentsText(n) { return _aiShareCountText(n); }
 
 // A multi's mask after option `idx` was toggled, kept consistent with its group heading:
 // unticking the heading unticks the options under it; ticking one of them ticks the heading.
@@ -6318,9 +6317,7 @@ function _aiShareUpdateCard(card, q) {
       if (c > 0) {
         if (!countEl) { countEl = document.createElement('span'); countEl.className = 'count'; btn.insertBefore(countEl, btn.querySelector('.row')); }
         countEl.style.setProperty('--fill-pct', pct + '%');
-        // Under the count: its share of everyone who answered this question (multi: of respondents, so it can sum past 100%).
-        var share = res.count > 0 ? Math.round(c * 100 / res.count) : 0;
-        countEl.innerHTML = c + '<span class="aishare-pct">' + share + '%</span>';
+        countEl.textContent = c;  // just the count: no % of respondents under it (Victor, 2026-11-11)
       } else if (countEl) {
         countEl.remove();
       }
