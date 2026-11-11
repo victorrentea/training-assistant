@@ -108,31 +108,27 @@ PATCHES = [
   let ringedNode: NodeRenderData | null = null
   // The trainer's next star (graph-takeaway.ts nextStarCue): the triangles like the
   // ring, under the labels, so they never hide a name; the arrow over everything.
-  // A click on the arrow pans the graph until that dot is in the middle, keeping the
-  // zoom, then opens its note (Victor, 2026-11-11).
+  // A click on the arrow pans the graph, the zoom kept, until that dot is on screen
+  // with as many of the other most-starred unread ones as fit (graph-takeaway.ts
+  // framingPan), and opens nothing (Victor, 2026-11-11).
   const showStarCue = graph.classList.contains("global-graph-container") && onHostMachine()
   const starCue = new Graphics({ zIndex: 2.5, eventMode: "none", cursor: "pointer" })
   stage.addChild(starCue)
   const starCueColor = computedStyleMap["--wiki-star-cue"]
   let arrowTo: string | null = null // the note the arrow points at, while it shows
+  let cueDots: Parameters<typeof framingPan>[0] = [] // the unread starred dots, on screen, last frame
   const panToStar = (id: string) => {
-    const d = nodeRenderData.find((m) => m.simulationData.id === id)?.simulationData
-    if (d?.x === undefined || d.y === undefined) return
-    const { x, y } = d
+    const { dx, dy } = framingPan(cueDots, id, width, height)
     const from = currentTransform
-    const k = from.k
-    const to = { x: width / 2 - k * (x + width / 2), y: height / 2 - k * (y + height / 2) }
     const start = performance.now()
     const step = (now: number) => {
       if (stopAnimation) return
       const t = Math.min((now - start) / 450, 1)
       const e = t * (2 - t)
-      const view = zoomIdentity.translate(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e).scale(k)
+      const view = zoomIdentity.translate(from.x + dx * e, from.y + dy * e).scale(from.k)
       select<HTMLCanvasElement, NodeData>(app.canvas).call(zoomBehavior.transform, view)
-      if (t < 1) return void requestAnimationFrame(step)
-      saveView(view) // a view the trainer chose, as if he had dragged there
-      const at = paneGraph.dotAt(id as SimpleSlug)
-      if (at) openNote(id as SimpleSlug, at)
+      if (t < 1) requestAnimationFrame(step)
+      else saveView(view) // a view the trainer chose, as if he had dragged there
     }
     requestAnimationFrame(step)
   }
@@ -208,6 +204,7 @@ PATCHES = [
         if (stars === 0 || isSeen(id) || x === undefined || y === undefined) return []
         return [{ id, stars, x: tx + k * (x + width / 2), y: ty + k * (y + height / 2) }]
       })
+      cueDots = unread
       const cue = nextStarCue(unread, width, height)
       starCue.clear()
       starCue.zIndex = cue.kind === "arrow" ? 4.6 : 2.5
@@ -424,8 +421,8 @@ PATCHES = [
      'import { D3Config } from "../Graph"\n'
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
-     'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, CHEVRON_HIT_RADIUS, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, openNote, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, CHEVRON_HIT_RADIUS, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, framingPan, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'

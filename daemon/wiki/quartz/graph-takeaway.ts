@@ -335,7 +335,8 @@ export function drawFlash(g: Graphics, x: number, y: number, r: number, q: numbe
 // it starred, the graph shows him where to go next - the unread notes with the most
 // stars, a takeaway counting as one. Any of them on screen: four triangles turn slowly
 // around each. None: a double chevron at the window's edge points at the nearest; a
-// click on it pans there and opens the note (Victor, 2026-11-11). Only on his machine,
+// click on it pans there, the zoom kept, framing as many of those notes as fit, and
+// opens nothing: he picks what to open next (Victor, 2026-11-11). Only on his machine,
 // and never a note he has read, so the cue moves on as he opens them. Orange, not the
 // stars' gold, so it never reads as part of a burst (--wiki-star-cue).
 export type StarCue =
@@ -348,10 +349,15 @@ type CueDot = { id: string; stars: number; x: number; y: number } // x, y: on sc
 const ARROW_INSET = 64 // from the window's edge, clear of the pills along it
 const IN_VIEW_MARGIN = 20 // a dot this close to the edge is half gone: it counts as out
 
-export function nextStarCue(dots: CueDot[], width: number, height: number): StarCue {
+// The unread notes with the most stars: those the cue points at.
+function mostStarred(dots: CueDot[]): CueDot[] {
   const most = Math.max(0, ...dots.map((d) => d.stars))
-  if (most === 0) return { kind: "none" }
-  const next = dots.filter((d) => d.stars === most)
+  return most === 0 ? [] : dots.filter((d) => d.stars === most)
+}
+
+export function nextStarCue(dots: CueDot[], width: number, height: number): StarCue {
+  const next = mostStarred(dots)
+  if (next.length === 0) return { kind: "none" }
   const inside = (at: number, size: number) => at >= IN_VIEW_MARGIN && at <= size - IN_VIEW_MARGIN
   const inView = next.filter((d) => inside(d.x, width) && inside(d.y, height))
   if (inView.length > 0) return { kind: "aim", ids: inView.map((d) => d.id) }
@@ -366,6 +372,37 @@ export function nextStarCue(dots: CueDot[], width: number, height: number): Star
     dy === 0 ? Infinity : (cy - ARROW_INSET) / Math.abs(dy),
   )
   return { kind: "arrow", id: nearest.id, x: cx + dx * reach, y: cy + dy * reach, angle: Math.atan2(dy, dx) }
+}
+
+const FRAME_MARGIN = 90 // from the window's edge to a framed dot: room for its triangles and label
+
+// The shift (on screen) that brings the note `id` into the window and with it as many of
+// the other most-starred unread notes as fit, the zoom unchanged; those it frames end up
+// centred. A window edge on some dot's x and another on some dot's y covers every best
+// placement, and there are only a handful of such notes.
+export function framingPan(dots: CueDot[], id: string, width: number, height: number): { dx: number; dy: number } {
+  const next = mostStarred(dots)
+  const target = next.find((d) => d.id === id)
+  if (!target) return { dx: 0, dy: 0 }
+  const m = Math.min(FRAME_MARGIN, width / 4, height / 4)
+  const inside = (d: CueDot, dx: number, dy: number) =>
+    d.x + dx >= m - 0.5 && d.x + dx <= width - m + 0.5 && d.y + dy >= m - 0.5 && d.y + dy <= height - m + 0.5
+  let best: CueDot[] = [target]
+  for (const a of next) {
+    for (const b of next) {
+      const dx = m - a.x
+      const dy = m - b.y
+      if (!inside(target, dx, dy)) continue
+      const framed = next.filter((d) => inside(d, dx, dy))
+      if (framed.length > best.length) best = framed
+    }
+  }
+  const xs = best.map((d) => d.x)
+  const ys = best.map((d) => d.y)
+  return {
+    dx: width / 2 - (Math.min(...xs) + Math.max(...xs)) / 2,
+    dy: height / 2 - (Math.min(...ys) + Math.max(...ys)) / 2,
+  }
 }
 
 const AIM_TURN_MS = 15_000 // a full turn

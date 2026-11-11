@@ -593,9 +593,9 @@ function hull(points: number[][]): string[] {
 
 // By the cursor for a clicked dot; a link followed inside the popover keeps it where
 // it is, under the mouse; a note the trainer opened goes by its dot.
-// at: the click's place, taken now: the pointer moves on during a slow load.
-async function showPeek(slug: SimpleSlug, place: Place, at: Point = { x: mouseX, y: mouseY }) {
+async function showPeek(slug: SimpleSlug, place: Place) {
   const el = ensurePeek()
+  const at = { x: mouseX, y: mouseY } // the click's place: the pointer moves on during a slow load
   if (slug !== peeked) openedUnread = isSeen(slug) ? null : slug
   graph?.select(slug)
   if (slug === peeked) return
@@ -781,13 +781,6 @@ export function hidePeek() {
 export function toggleNote(slug: SimpleSlug) {
   if (slug === peeked && peek?.classList.contains("open")) hidePeek()
   else void showPeek(slug, "cursor")
-}
-
-// Opens a note as a click on its dot at `at` would, but never closes it: the trainer's
-// star cue (patch-graph.py) pans to the dot, then opens it from where the dot now is.
-export function openNote(slug: SimpleSlug, at: Point) {
-  if (slug === peeked && peek?.classList.contains("open")) return
-  void showPeek(slug, "cursor", at)
 }
 
 // pointerdown too: a tap on a phone moves no pointer before it lands.
