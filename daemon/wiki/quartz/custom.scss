@@ -508,14 +508,16 @@ body {
   cursor: pointer;
   user-select: none;
 
+  // The pills' one yellow, the starrers' gold (Victor, 2026-11-12 - it was the Follow
+  // ring's lighter yellow, a second yellow in the same row); the ring keeps its own.
   input:checked {
-    border-color: var(--wiki-follow-ring);
-    background-color: var(--wiki-follow-ring);
+    border-color: var(--wiki-takeaway);
+    background-color: var(--wiki-takeaway);
   }
 
   &:has(input:checked) {
-    color: var(--wiki-follow-text);
-    border-color: var(--wiki-follow-ring);
+    color: var(--wiki-takeaway-text);
+    border-color: var(--wiki-takeaway);
   }
 }
 
@@ -607,15 +609,26 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.15rem 0.7rem 0.15rem 0.2rem;
+  padding: 0.3rem 0.7rem;
   border-radius: 999px;
   font-family: var(--bodyFont);
   font-size: 0.8rem;
   white-space: nowrap;
-  color: var(--dark);
+  color: var(--wiki-quiet);
   background: var(--light);
   border: 1px solid var(--lightgray);
   user-select: none;
+
+  // One border, the pill's (Victor, 2026-11-12 - the toggle had its own inside it);
+  // gold while everyone's stars show, like the starrers next to it.
+  &:has(.graph-round-toggle.on) {
+    color: var(--wiki-takeaway-text);
+    border-color: var(--wiki-takeaway);
+  }
+
+  &:hover {
+    border-color: var(--dark);
+  }
 
   &[hidden] {
     display: none;
@@ -623,24 +636,13 @@ body {
 }
 
 .graph-round-toggle {
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
+  padding: 0;
   font: inherit;
   font-weight: 600;
-  color: var(--wiki-quiet);
+  color: inherit;
   background: none;
-  border: 1px solid var(--lightgray);
+  border: none;
   cursor: pointer;
-
-  &:hover {
-    color: var(--dark);
-    border-color: var(--dark);
-  }
-
-  &.on {
-    color: var(--wiki-takeaway-text);
-    border-color: var(--wiki-takeaway);
-  }
 }
 
 .graph-round-done {
