@@ -39,7 +39,7 @@ QUESTIONS: list[dict] = [
      "links": [{"text": "Claude", "url": "https://claude.com/pricing"},
                {"text": "Codex", "url": "https://developers.openai.com/codex/pricing"}],
      "options": YES_NO},
-    {"id": "agents_md", "kind": "choice", "text": "Is there an AGENTS.md (or CLAUDE.md) in 🫵your work project?",
+    {"id": "agents_md", "kind": "choice", "text": "Is there an AGENTS.md (or CLAUDE.md) in the root of 🫵your project?",
      "links": [{"text": "AGENTS.md", "url": "https://agents.md"}],
      "options": YES_NO_IDK},
     {"id": "mcp", "kind": "choice", "text": "Used an MCP tool?", "options": YES_NO_IDK},
