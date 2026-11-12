@@ -905,6 +905,20 @@ body.peek-dragging {
   }
 }
 
+// In the participant page's Wiki tab its emoji bar floats over the wiki's bottom-right
+// corner at every width, not only on a phone: Done and the star hint go above it
+// (live test on prod, 2026-11-12 - the bar covered Done, and the hint since 2026-10-23).
+.wiki-embedded {
+  .graph-done-button,
+  .graph-star-hint {
+    bottom: calc(88px + 0.6rem);
+  }
+
+  &.wiki-done-shown .graph-star-hint {
+    bottom: calc(88px + 3.6rem);
+  }
+}
+
 // The ring a follower sees around the note the trainer has open (patch-graph.py):
 // yellow, apart from the amber picture badge; darker on the light theme to show.
 :root {
