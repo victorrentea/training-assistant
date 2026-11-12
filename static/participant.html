@@ -179,8 +179,9 @@ body{visibility:hidden}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Once the feedback form is out: a slow red pulse reminds people to take the materials home. */
 @keyframes zip-remind{0%,100%{background-color:transparent}50%{background-color:#e03131;color:#fff}}
-#gdrive-zip-btn.zip-remind{opacity:1;border-radius:50%;padding:4px;margin:-4px;animation:zip-remind 2.4s ease-in-out infinite}
-@media (prefers-reduced-motion: reduce){#gdrive-zip-btn.zip-remind{animation:none;background-color:#e03131;color:#fff}}
+/* The whole "Download all" row pulses, not only its icon (Victor, 2026-11-12). */
+#gdrive-row:has(#gdrive-zip-btn.zip-remind){animation:zip-remind 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){#gdrive-row:has(#gdrive-zip-btn.zip-remind){animation:none;background-color:#e03131;color:#fff}}
 @keyframes follow-pulse{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
 .follow-notify{animation:follow-pulse 1.2s ease-in-out infinite}
 .follow-paused{opacity:0.45;pointer-events:none;cursor:default}
@@ -1378,15 +1379,15 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <span id="wiki-nav-open" role="link" tabindex="0" data-tip="Open the wiki in a new tab" aria-label="Open the wiki in a new tab" onclick="event.stopPropagation(); window.open(_wikiUrl(), '_blank', 'noopener')" onkeydown="if(event.key==='Enter'){event.stopPropagation();this.click();}" class="side-icon material-symbols-outlined flex-shrink-0" style="display:none">open_in_new</span>
 <span id="wiki-badge" class="badge-new" style="display:none"></span>
 </a>
-<div id="gdrive-row" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all" style="display:none">
-<a id="gdrive-nav" href="#" target="_blank" rel="noopener" class="flex items-center gap-3 flex-1 cursor-pointer">
-<span class="material-symbols-outlined flex-shrink-0">cloud</span>
-<span class="text-base flex-1">Google Drive</span>
-<span class="side-icon material-symbols-outlined flex-shrink-0">open_in_new</span>
-</a>
-<button id="gdrive-zip-btn" onclick="downloadMaterialsZip()" data-tip="Download everything as .zip" aria-label="Download everything as .zip" class="side-icon flex-shrink-0">
-<span id="gdrive-zip-icon" class="material-symbols-outlined">download</span>
+<!-- The materials to take home: the whole row downloads them as one .zip, the Google
+     Drive logo on its right opens the Drive folder (Victor, 2026-11-12 - it was a
+     "Google Drive" row with a small ⬇ at its end; the download is what matters). -->
+<div id="gdrive-row" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all">
+<button id="gdrive-zip-btn" type="button" onclick="downloadMaterialsZip()" data-tip="Download all the training's materials as one .zip" aria-label="Download all the training's materials as one .zip" class="flex items-center gap-3 flex-1 cursor-pointer text-left" style="background:none;border:none;padding:0;color:inherit;font:inherit">
+<span id="gdrive-zip-icon" class="material-symbols-outlined flex-shrink-0">download</span>
+<span class="text-base flex-1">Download all</span>
 </button>
+<a id="gdrive-nav" href="#" target="_blank" rel="noopener" data-tip="Open the materials in Google Drive" aria-label="Open the materials in Google Drive" class="side-icon flex-shrink-0" style="display:none;opacity:.85"><svg viewBox="0 0 87.3 78" width="18" height="16" aria-hidden="true"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg></a>
 </div>
 <a data-nav="files" onclick="showView('files')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-size:22px;line-height:1;flex-shrink-0">commit</span>
@@ -5253,6 +5254,14 @@ function loadWiki() {
 
 var _zipDownloading = false;
 
+// "Download all" is always there; the Google Drive logo next to it only with a Drive link.
+function _applyGdriveLink(url) {
+  var nav = document.getElementById('gdrive-nav');
+  if (!nav) return;
+  nav.href = url || '#';
+  nav.style.display = url ? '' : 'none';
+}
+
 // Downloads the whole session folder as a zip, relayed through Railway.
 // This is the only route to the materials for participants whose corporate
 // firewall blocks drive.google.com.
@@ -5733,10 +5742,7 @@ function _setDuplicateIndicator(isDup) {
       summaryBadge.style.display = 'none';
     }
     summaryBadge.classList.toggle('badge-alert', LS.isSummaryUnread());
-    var gdriveNav = document.getElementById('gdrive-nav');
-    var gdriveRow = document.getElementById('gdrive-row');
-    if (state.gdrive_url) { gdriveNav.href = state.gdrive_url; gdriveRow.style.display = ''; }
-    else { gdriveRow.style.display = 'none'; }
+    _applyGdriveLink(state.gdrive_url);
     _applyGdriveToast(state.gdrive_url);
     _applyFeedbackUrl(state.feedback_url);
     _setPastSlidesBadge(state.slides_history_count || 0);
@@ -5868,10 +5874,7 @@ function _applyState(msg) {
     badge.classList.toggle('badge-alert', LS.isSummaryUnread());
   }
   if (msg.gdrive_url !== undefined) {
-    var gdriveNav = document.getElementById('gdrive-nav');
-    var gdriveRow = document.getElementById('gdrive-row');
-    if (msg.gdrive_url) { gdriveNav.href = msg.gdrive_url; gdriveRow.style.display = ''; }
-    else { gdriveRow.style.display = 'none'; }
+    _applyGdriveLink(msg.gdrive_url);
     _applyGdriveToast(msg.gdrive_url);
   }
   if (msg.feedback_url !== undefined) {
