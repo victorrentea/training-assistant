@@ -295,6 +295,8 @@ assert('a lower count does not flag', shouldFlagFilesUnread(2, 3) === false);
 const VIEWS_SRC =
   'var VIEWS = ' +
   fs.readFileSync(PARTICIPANT_HTML, 'utf8').match(/var VIEWS = (\[[^\]]*\]);/)[1] +
+  '; var TAB_URL_SLUGS = ' +
+  fs.readFileSync(PARTICIPANT_HTML, 'utf8').match(/var TAB_URL_SLUGS = (\{[^}]*\});/)[1] +
   ';';
 const computeLandingView = new Function(
   VIEWS_SRC + extractFunction(PARTICIPANT_HTML, '_computeLandingView') +
@@ -317,6 +319,8 @@ assert('a deep link beats both the remembered tab and the default',
   computeLandingView({ urlTab: 'files', savedView: 'activity', hasSlides: true }) === 'files');
 assert('an unknown URL segment is ignored, default still applies',
   computeLandingView({ urlTab: 'nope', savedView: null, hasSlides: true }) === 'slides');
+assert('the /wiki-tab deep link opens the Wiki tab (/wiki is the full-screen wiki)',
+  computeLandingView({ urlTab: 'wiki-tab', savedView: null, hasSlides: true }) === 'wiki');
 assert('past-slides deep link is preserved',
   computeLandingView({ urlTab: 'past-slides', savedView: null, hasSlides: true }) === 'past-slides');
 assert('a remembered Agenda tab with no agenda still falls back to Slides',
@@ -618,13 +622,13 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   const names = ['_isWikiViewSelected', '_isWikiFollowEnabled', '_postWikiFollow', '_applyHostWikiFollow',
     '_onIncomingHostWikiNote', '_onWikiFrameMessage', '_onWikiFollowChange',
     '_postWikiTakeaways', '_onIncomingWikiTakeaways', '_postWikiDay', '_onIncomingWikiDay', '_postWikiStars', '_onIncomingWikiStars', '_starWikiNote',
-    '_sendWikiStar'];
+    '_sendWikiStar', '_sendWikiDone'];
   const LS = makeLS({});
   const fetched = [];
   const fakeFetch = (url, opts) => { fetched.push({ url, opts }); return fetch ? fetch(url, opts) : Promise.reject(new Error('offline')); };
   const api = new Function('document', 'location', 'LS', '_onHostMachine', 'fetch', '_sessionId', '_myUUID',
     'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0, _wikiTakeaways = [], _wikiDays = [];\n' +
-    'var _wikiStarCounts = {}, _wikiMyStars = [], _wikiStarrers = 0, _wikiStarQueue = Promise.resolve(), _wikiStarsInFlight = 0;\n' +
+    'var _wikiStarCounts = {}, _wikiMyStars = [], _wikiStarrers = 0, _wikiStarQueue = Promise.resolve(), _wikiStarsInFlight = 0, _wikiStarsRevealed = false, _wikiDone = false;\n' +
     names.map((n) => extractFunction(PARTICIPANT_HTML, n)).join('\n') +
     '\nreturn { ' + names.join(', ') +
     ', hostNote: function () { return _hostWikiNote; }, isReady: function () { return _wikiFrameReady; } };'
@@ -778,6 +782,24 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   w.api._onWikiFollowChange(false);
   assert('unticking Follow takes the ring away and is remembered',
     w.posted.length === 2 && w.posted[1].msg.slug === null && w.LS.getWikiFollow() === false);
+}
+
+{
+  // The wiki's Done button: relayed to the daemon with this participant's UUID, and the
+  // private/revealed state carried into the wiki with the stars (Victor, 2026-11-12).
+  const w = makeWikiFollow({ ready: true, fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve({ done: true, revealed: false }) }) });
+  w.api._onIncomingWikiStars({}, ['Autonomy'], 3, false, false);
+  const first = w.posted.filter((p) => p.msg.type === 'wiki-stars').pop();
+  assert('wiki stars: the private state goes into the wiki', first && first.msg.revealed === false && first.msg.done === false);
+  w.api._onWikiFrameMessage({ source: w.frameWindow, origin: 'https://interact.example', data: { type: 'wiki-done', done: true } });
+  pendingAsync.push(new Promise((r) => setTimeout(r, 0)).then(() => new Promise((r) => setTimeout(r, 0))).then(() => {
+    const call = w.fetched.pop();
+    assert('wiki Done: posted to the daemon as this participant',
+      call && call.url === '/sess1/api/participant/wiki/done' && call.opts.headers['X-Participant-ID'] === 'my-uuid' &&
+      JSON.parse(call.opts.body).done === true);
+    const back = w.posted.filter((p) => p.msg.type === 'wiki-stars').pop();
+    assert('wiki Done: the wiki is told it was saved', back && back.msg.done === true);
+  }));
 }
 
 const hostMachineResults = [];

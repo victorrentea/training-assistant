@@ -899,7 +899,7 @@ components:
             description: The day numbers ticked, sorted, from each note's closing "Ziua N —" / "Day N —" line; empty shows every day
 
     wiki_stars:
-      summary: A participant starred or un-starred a wiki note as interesting — every graph shows how many starred each note, and the starred ones shine (throttled to one per second)
+      summary: A participant starred or un-starred a wiki note as interesting, or the trainer revealed or hid everyone's stars — once revealed every graph shows how many starred each note, and the starred ones shine; while hidden each participant sees only their own stars, so the counts are left out (throttled to one per second)
       x-feature: notes_summary
       payload:
         type: object
@@ -912,10 +912,13 @@ components:
             type: object
             additionalProperties:
               type: integer
-            description: How many participants starred each note, by Quartz simple slug; notes nobody starred are left out. Counts only, never who (the whole map, not a delta)
+            description: How many participants starred each note, by Quartz simple slug; notes nobody starred are left out. Counts only, never who (the whole map, not a delta). Empty while the stars are hidden
           starrers:
             type: integer
             description: How many participants starred at least one note (a badge under the graph, confetti when it grows)
+          revealed:
+            type: boolean
+            description: Whether everyone sees everyone's stars; false while the trainer keeps them private (each participant sees only their own)
 
     feedback_form_updated:
       summary: End-of-session participant feedback form link published or retracted

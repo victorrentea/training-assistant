@@ -167,6 +167,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/WikiStars'
       x-feature: notes_summary
+  /api/participant/wiki/done:
+    post:
+      tags:
+      - participant
+      summary: Wiki Done
+      operationId: wiki_done_api_participant_wiki_done_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WikiDoneToggle'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiStars'
+      x-feature: notes_summary
   /api/participant/state:
     get:
       tags:
@@ -1524,6 +1544,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WikiDay'
+      x-feature: notes_summary
+  /wiki/stars:
+    get:
+      tags:
+      - misc
+      summary: Wiki Trainer Stars Local
+      operationId: wiki_trainer_stars_local_wiki_stars_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiTrainerStars'
+      x-feature: notes_summary
+  /wiki/reveal:
+    post:
+      tags:
+      - misc
+      summary: Wiki Reveal Local
+      operationId: wiki_reveal_local_wiki_reveal_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WikiReveal'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WikiTrainerStars'
       x-feature: notes_summary
   /notes/live:
     post:
@@ -4144,6 +4198,14 @@ components:
           type: integer
           title: Wiki Starrers
           default: 0
+        wiki_stars_revealed:
+          type: boolean
+          title: Wiki Stars Revealed
+          default: false
+        wiki_done:
+          type: boolean
+          title: Wiki Done
+          default: false
         talk_notes:
           anyOf:
           - $ref: '#/components/schemas/TalkNotesMsg'
@@ -5115,6 +5177,17 @@ components:
       title: WikiDay
       description: 'The workshop days whose notes the wiki graph shows to everyone;
         empty: every day.'
+    WikiDoneToggle:
+      properties:
+        done:
+          type: boolean
+          title: Done
+      type: object
+      required:
+      - done
+      title: WikiDoneToggle
+      description: A participant is done looking through the wiki (True), or takes
+        it back.
     WikiNotePosition:
       properties:
         slug:
@@ -5129,6 +5202,17 @@ components:
       title: WikiNotePosition
       description: Which wiki note the host has open in the graph's popover; None
         when none is.
+    WikiReveal:
+      properties:
+        revealed:
+          type: boolean
+          title: Revealed
+      type: object
+      required:
+      - revealed
+      title: WikiReveal
+      description: The trainer shows everyone's stars to everyone (True), or hides
+        them again.
     WikiStarToggle:
       properties:
         slug:
@@ -5158,11 +5242,19 @@ components:
           type: integer
           title: Starrers
           default: 0
+        revealed:
+          type: boolean
+          title: Revealed
+          default: false
         mine:
           items:
             type: string
           type: array
           title: Mine
+        done:
+          type: boolean
+          title: Done
+          default: false
       type: object
       title: WikiStars
       description: The counts, plus the notes the asking participant starred themselves.
@@ -5195,6 +5287,29 @@ components:
       type: object
       title: WikiTakeaways
       description: Every wiki note the trainer starred as a key takeaway, sorted.
+    WikiTrainerStars:
+      properties:
+        counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Counts
+        starrers:
+          type: integer
+          title: Starrers
+          default: 0
+        revealed:
+          type: boolean
+          title: Revealed
+          default: false
+        done_count:
+          type: integer
+          title: Done Count
+          default: 0
+      type: object
+      title: WikiTrainerStars
+      description: 'What the trainer''s graph shows: every star even while hidden,
+        and the 🏁 count.'
     WordcloudData:
       properties:
         words:

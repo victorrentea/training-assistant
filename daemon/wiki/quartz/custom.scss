@@ -598,6 +598,92 @@ body {
   }
 }
 
+// After it, on the trainer's graph only (note-pane.ts roundBadge): whether the room sees
+// everyone's stars, a toggle, and how many participants clicked Done (🏁).
+.graph-round {
+  position: absolute;
+  bottom: 0.7rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0.7rem 0.15rem 0.2rem;
+  border-radius: 999px;
+  font-family: var(--bodyFont);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  color: var(--dark);
+  background: var(--light);
+  border: 1px solid var(--lightgray);
+  user-select: none;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.graph-round-toggle {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--wiki-quiet);
+  background: none;
+  border: 1px solid var(--lightgray);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--dark);
+    border-color: var(--dark);
+  }
+
+  &.on {
+    color: var(--wiki-takeaway-text);
+    border-color: var(--wiki-takeaway);
+  }
+}
+
+.graph-round-done {
+  font-weight: 600;
+}
+
+// A participant's Done, bottom-right while the stars are private (note-pane.ts); the
+// "Please star your favorites" pill moves up over it.
+.graph-done-button {
+  position: fixed;
+  right: 0.8rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  font-family: var(--bodyFont);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  background: #16a34a;
+  border: 1px solid #15803d;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+
+  &:hover {
+    background: #15803d;
+  }
+
+  &.on {
+    color: #16a34a;
+    background: var(--light);
+    border-color: #16a34a;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.wiki-done-shown .graph-star-hint {
+  bottom: 3rem;
+}
+
 // What a participant's first star throws from that pill.
 .graph-confetti {
   position: fixed;
@@ -799,6 +885,21 @@ body.peek-dragging {
     bottom: calc(88px + 0.6rem);
     padding: 0.45rem 0.9rem;
     font-size: 0.9rem;
+  }
+
+  .graph-done-button {
+    bottom: calc(88px + 0.6rem);
+    min-height: 2.5rem;
+    padding: 0.45rem 1.2rem;
+    font-size: 0.95rem;
+  }
+
+  .wiki-done-shown .graph-star-hint {
+    bottom: calc(88px + 3.6rem);
+  }
+
+  .graph-round {
+    display: none;
   }
 }
 

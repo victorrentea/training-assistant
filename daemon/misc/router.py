@@ -46,9 +46,11 @@ from daemon.ws_messages import (
     WikiDayMsg,
     WikiNoteMsg,
     WikiNotePosition,
+    WikiReveal,
     WikiTakeaways,
     WikiTakeawaysMsg,
     WikiTakeawayToggle,
+    WikiTrainerStars,
 )
 from daemon.ws_publish import broadcast, notify_host
 
@@ -515,6 +517,40 @@ async def wiki_day_local(body: WikiDay):
     log.info("wiki", f"📅 graph shows {'days ' + ', '.join(map(str, body.days)) if body.days else 'every day'}")
     broadcast(WikiDayMsg(days=body.days))
     return body
+
+
+# The trainer's graph: every participant's stars, even while they are hidden from the
+# room, and how many clicked Done (🏁). Host-machine only, like the days: polled every
+# second or two by the trainer's wiki, embedded or in a tab of its own.
+def _trainer_stars() -> WikiTrainerStars:
+    from daemon.wiki import stars as wiki_stars
+
+    return WikiTrainerStars(
+        counts=wiki_stars.star_counts(),
+        starrers=wiki_stars.starrer_count(),
+        revealed=wiki_stars.revealed(),
+        done_count=wiki_stars.done_count(),
+    )
+
+
+@local_router.get("/wiki/stars", response_model=WikiTrainerStars)
+async def wiki_trainer_stars_local():
+    return _trainer_stars()
+
+
+# The trainer shows everyone's stars to everyone, or hides them again (each participant
+# then sees only their own, and the 🏁 count starts over): daemon/wiki/stars.py.
+@local_router.post("/wiki/reveal", response_model=WikiTrainerStars)
+async def wiki_reveal_local(body: WikiReveal):
+    from daemon import log
+    from daemon.participant.router import wiki_stars_broadcast
+    from daemon.wiki import stars as wiki_stars
+
+    if await asyncio.to_thread(wiki_stars.set_revealed, body.revealed) is None:
+        return JSONResponse(status_code=404, content={"detail": "no active session"})
+    log.info("wiki", "👀 stars shown to everyone" if body.revealed else "🙈 stars hidden: each sees only their own")
+    broadcast(wiki_stars_broadcast())
+    return _trainer_stars()
 
 
 class TalkNotesReportResponse(BaseModel):

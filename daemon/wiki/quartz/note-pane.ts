@@ -864,8 +864,10 @@ window.addEventListener("message", (e) => {
     return
   }
   // The participants' stars (see "Participants' stars" below).
+  // The trainer's graph polls his own daemon instead: while the stars are hidden, the
+  // room's counts never come through the participant page.
   if (msg?.type === "wiki-stars") {
-    applyStars(msg.counts, msg.mine, msg.starrers)
+    if (starMode() !== "trainer") applyStars(msg.counts, msg.mine, msg.starrers, msg.revealed, msg.done)
     return
   }
   if (msg?.type !== "wiki-follow") return
@@ -946,14 +948,20 @@ function showPeekStar() {
   button.hidden = mode === "viewer" && total === 0
   button.disabled = mode === "viewer"
   const people = count === 1 ? "1 participant starred it" : `${count} participants starred it`
+  // While hidden, a participant's own star is the only one they see: no head count.
+  const othersHidden = mode === "voter" && !revealed
   const tip =
     mode === "trainer"
       ? (takeaway ? "Key takeaway - click to un-star" : "Star as a key takeaway: it glows for everyone") +
         (count > 0 ? ` · ${people}` : "")
       : mode === "voter"
-        ? voted
-          ? `You starred it - click to un-star · ${people}`
-          : "Star it if you found it interesting: it shines for everyone" + (count > 0 ? ` · ${people}` : "")
+        ? othersHidden
+          ? voted
+            ? "You starred it - click to un-star · everyone's stars show once Victor reveals them"
+            : "Star it if you found it interesting · everyone's stars show once Victor reveals them"
+          : voted
+            ? `You starred it - click to un-star · ${people}`
+            : "Star it if you found it interesting: it shines for everyone" + (count > 0 ? ` · ${people}` : "")
         : takeaway
           ? "Key takeaway" + (count > 0 ? ` · ${people}` : "")
           : people
@@ -1123,6 +1131,11 @@ const PARTICIPANT_UUID_KEY = "workshop_participant_uuid" // participant.html's _
 let starCounts = new Map<SimpleSlug, number>()
 let mine = new Set<SimpleSlug>()
 let starrers = 0 // participants who starred at least one note
+// Whether everyone sees everyone's stars (daemon/wiki/stars.py): until the trainer
+// reveals them, a participant's graph shows only their own, each as one star.
+let revealed = false
+let doneMine = false // this participant clicked Done, this round
+let doneCount = 0 // the trainer's 🏁: participants who clicked Done
 
 function participantId(): string | null {
   try {
@@ -1156,7 +1169,9 @@ export function dotShine(slug: SimpleSlug): DotShine {
   return { takeaway: starred.has(slug), ...starsOf(slug), level: shineOf(slug) }
 }
 
-function applyStars(counts: unknown, own: unknown, starrersNow?: unknown) {
+function applyStars(counts: unknown, own: unknown, starrersNow?: unknown, revealedNow?: unknown, doneNow?: unknown) {
+  if (typeof revealedNow === "boolean") revealed = revealedNow
+  if (typeof doneNow === "boolean") doneMine = doneNow
   const next = new Map<SimpleSlug, number>()
   if (counts && typeof counts === "object") {
     for (const [slug, n] of Object.entries(counts as Record<string, unknown>)) {
@@ -1168,10 +1183,13 @@ function applyStars(counts: unknown, own: unknown, starrersNow?: unknown) {
     mine = new Set(own.filter((s): s is string => typeof s === "string").map((s) => simplifySlug(s as never)))
     showStarHint()
   }
+  // Hidden: only their own stars, whatever came (the broadcast carries none then).
+  if (!revealed && starMode() !== "trainer") starCounts = new Map([...mine].map((s) => [s, 1]))
   if (typeof starrersNow === "number" && Number.isInteger(starrersNow) && starrersNow >= 0) {
     starrers = starrersNow
     showStarrers()
   }
+  showRound()
   graph?.shine()
   showPeekStar()
 }
@@ -1201,7 +1219,14 @@ let starQueue: Promise<void> = Promise.resolve()
 let starsInFlight = 0
 let starClickedAt = 0
 
-type StarsAnswer = { counts?: unknown; mine?: unknown; starrers?: unknown } | null
+type StarsAnswer = {
+  counts?: unknown
+  mine?: unknown
+  starrers?: unknown
+  revealed?: unknown
+  done?: unknown
+  done_count?: unknown
+} | null
 
 function sendStar(slug: SimpleSlug, on: boolean) {
   const id = participantId()
@@ -1218,25 +1243,32 @@ function sendStar(slug: SimpleSlug, on: boolean) {
       .catch(() => null)
       .then((json) => {
         if (--starsInFlight > 0) return
-        if (json) applyStars(json.counts, json.mine, json.starrers)
+        if (json) applyStars(json.counts, json.mine, json.starrers, json.revealed, json.done)
         else fetchStars() // not saved: the wiki shows what is really stored
       }),
   )
 }
 
+// The trainer asks his own daemon, which gives him every star even while they are
+// hidden from the room, and the 🏁 count.
 function fetchStars() {
   const asked = Date.now()
-  const id = onHostMachine() ? null : participantId()
-  fetch(new URL("wiki/stars", participantApi()), { headers: id ? { "X-Participant-ID": id } : {} })
+  const trainer = onHostMachine()
+  const id = trainer ? null : participantId()
+  const url = trainer ? new URL(`${HOST_DAEMON}/wiki/stars`) : new URL("wiki/stars", participantApi())
+  fetch(url, { headers: id ? { "X-Participant-ID": id } : {} })
     .then((res) => (res.ok ? (res.json() as Promise<StarsAnswer>) : null))
     .then((json) => {
-      if (!json || starsInFlight > 0 || asked < starClickedAt) return
-      applyStars(json.counts, starMode() === "voter" ? json.mine : [], json.starrers)
+      if (!json || starsInFlight > 0 || asked < starClickedAt || asked < roundChangedAt) return
+      if (typeof json.done_count === "number" && Number.isInteger(json.done_count)) doneCount = json.done_count
+      applyStars(json.counts, starMode() === "voter" ? json.mine : [], json.starrers, json.revealed, json.done)
     })
     .catch(() => {})
 }
 
-// After the stars' state above: the first poll reads it.
+// After the stars' state above: the first poll reads it. Embedded on the trainer's
+// machine, the page around the wiki brings the takeaways and the days, but not the
+// stars he must see: those he polls from his daemon here too.
 if (!embedded) {
   fetchTakeaways()
   window.setInterval(
@@ -1245,6 +1277,107 @@ if (!embedded) {
     },
     onHostMachine() ? TRAINER_POLL_MS : TAKEAWAYS_POLL_MS,
   )
+} else if (onHostMachine()) {
+  fetchStars()
+  window.setInterval(() => {
+    if (document.visibilityState === "visible") fetchStars()
+  }, TRAINER_POLL_MS)
+}
+
+// ── Private stars, then revealed ──
+// While the trainer has the room look through the wiki, each participant sees only their
+// own stars and clicks Done once through; his graph shows every star and "🏁 N done".
+// His toggle then shows everyone's stars to everyone; hiding them again starts a new
+// round, the 🏁 count from zero (Victor, 2026-11-12):
+//   trainer: the "🙈 Stars private" pill → POST 127.0.0.1:1234/wiki/reveal → daemon →
+//   `wiki_stars` broadcast (counts only once revealed) → each participant page → here.
+//   participant: Done → postMessage("wiki-done") → the page around the wiki → POST
+//   /api/participant/wiki/done; from a tab of its own, straight to the daemon.
+let roundChangedAt = 0 // the trainer's or the participant's last click: older polls must not undo it
+const roundPill = Object.assign(document.createElement("div"), { className: "graph-round", hidden: true })
+const doneButton = Object.assign(document.createElement("button"), { className: "graph-done-button", hidden: true })
+doneButton.addEventListener("click", () => toggleDone(!doneMine))
+
+// In the bottom row of the trainer's full graph (patch-graph.py places it).
+export function roundBadge(): HTMLElement {
+  showRound()
+  return roundPill
+}
+
+function showRound() {
+  const mode = starMode()
+  roundPill.hidden = mode !== "trainer"
+  if (mode === "trainer") {
+    const toggle = Object.assign(document.createElement("button"), {
+      className: "graph-round-toggle",
+      textContent: revealed ? "👀 Stars shared" : "🙈 Stars private",
+    })
+    toggle.classList.toggle("on", revealed)
+    toggle.dataset.tip = revealed
+      ? "Everyone sees everyone's stars - click to hide them again: each sees only their own, and 🏁 starts over"
+      : "Each participant sees only their own stars - click to show everyone's stars to everyone"
+    toggle.addEventListener("click", () => toggleRevealed(!revealed))
+    const done = Object.assign(document.createElement("span"), { className: "graph-round-done", textContent: `🏁 ${doneCount} done` })
+    done.dataset.tip = "Participants who clicked Done looking through the wiki"
+    roundPill.replaceChildren(toggle, ...(doneCount > 0 ? [done] : []))
+  }
+  // A participant's Done, bottom-right, while the stars are still private.
+  if (mode === "voter" && !revealed && !doneButton.isConnected) document.body.append(doneButton)
+  doneButton.hidden = mode !== "voter" || revealed
+  doneButton.textContent = doneMine ? "🏁 Done ✓" : "Done"
+  doneButton.classList.toggle("on", doneMine)
+  doneButton.dataset.tip = doneMine
+    ? "Victor knows you're done - click if you're not, after all"
+    : "Click when you're done looking through the wiki. Your stars stay yours until Victor shows everyone's"
+  document.documentElement.classList.toggle("wiki-done-shown", !doneButton.hidden)
+}
+
+function toggleRevealed(on: boolean) {
+  if (!onHostMachine()) return
+  const before = revealed
+  roundChangedAt = Date.now()
+  revealed = on
+  if (!on) doneCount = 0
+  showRound()
+  fetch(`${HOST_DAEMON}/wiki/reveal`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ revealed: on }),
+  })
+    .then((res) => (res.ok ? (res.json() as Promise<StarsAnswer>) : Promise.reject(new Error(`${res.status}`))))
+    .then((json) => {
+      if (typeof json?.done_count === "number") doneCount = json.done_count
+      applyStars(json?.counts, [], json?.starrers, json?.revealed)
+    })
+    .catch(() => {
+      revealed = before // not saved: the pill goes back
+      showRound()
+    })
+}
+
+function toggleDone(on: boolean) {
+  if (starMode() !== "voter") return
+  roundChangedAt = Date.now()
+  doneMine = on
+  showRound()
+  if (on) throwConfetti(doneButton)
+  if (embedded) {
+    tellParent({ type: "wiki-done", done: on })
+    return
+  }
+  const id = participantId()
+  if (!id) return
+  fetch(new URL("wiki/done", participantApi()), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Participant-ID": id },
+    body: JSON.stringify({ done: on }),
+  })
+    .then((res) => (res.ok ? (res.json() as Promise<StarsAnswer>) : null))
+    .catch(() => null)
+    .then((json) => {
+      if (json) applyStars(json.counts, json.mine, json.starrers, json.revealed, json.done)
+      else fetchStars() // not saved: show what is stored
+    })
 }
 
 // A participant who hasn't starred anything yet sees a gold pill at the graph's

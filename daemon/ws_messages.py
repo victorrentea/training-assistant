@@ -579,19 +579,39 @@ class WikiStarToggle(BaseModel):
 class WikiStarCounts(BaseModel):
     """How many participants starred each wiki note (notes nobody starred are left out).
 
-    Counts only, never who: the same for every participant."""
+    Counts only, never who. Until the trainer reveals them, a participant gets only
+    their own stars here (each as 1), and the broadcast none (daemon/wiki/stars.py)."""
     counts: dict[str, int] = Field(default_factory=dict)
     # How many participants starred at least one note (a badge under the graph).
     starrers: int = 0
+    # Whether everyone sees everyone's stars; False: each sees only their own.
+    revealed: bool = False
 
 
 class WikiStars(WikiStarCounts):
     """The counts, plus the notes the asking participant starred themselves."""
     mine: list[str] = Field(default_factory=list)
+    # Whether the asking participant clicked Done this round.
+    done: bool = False
 
 
 class WikiStarsMsg(WikiStarCounts):
     type: Literal["wiki_stars"] = "wiki_stars"
+
+
+class WikiTrainerStars(WikiStarCounts):
+    """What the trainer's graph shows: every star even while hidden, and the 🏁 count."""
+    done_count: int = 0
+
+
+class WikiReveal(BaseModel):
+    """The trainer shows everyone's stars to everyone (True), or hides them again."""
+    revealed: bool
+
+
+class WikiDoneToggle(BaseModel):
+    """A participant is done looking through the wiki (True), or takes it back."""
+    done: bool
 
 
 # ── Talk notes (the trainer's notes file, shown live on the talk phones) ─────────

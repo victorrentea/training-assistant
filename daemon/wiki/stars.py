@@ -19,6 +19,13 @@ Why a star can't be forged or stuffed:
   - only notes of the published wiki: no arbitrary keys growing the file.
   - a per-participant rate limit, and the broadcast is throttled.
 
+Private until the trainer reveals them (Victor, 2026-11-12): while he scans the wiki
+with the room, each participant sees only their own stars, so nobody just copies the
+crowd, and clicks Done when finished; the trainer's graph shows every star and how many
+are done (🏁). His toggle then shows everyone's stars to everyone; hiding them again
+starts a new round, so the Done count starts over. The participants never get the
+others' counts while hidden: the daemon leaves them out of every answer and broadcast.
+
 Kept in the session folder next to wiki-takeaways.json, for the same reason: the daemon
 restarts on every push to master and the wiki is rebuilt whenever its vault changes, and
 the stars must survive both. Read once per session folder and cached.
@@ -29,6 +36,7 @@ import json
 import threading
 import time
 from collections import deque
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from daemon import log
@@ -41,48 +49,72 @@ STARS_FILE = "wiki-stars.json"
 RATE_LIMIT = 30
 RATE_WINDOW_S = 60.0
 
+
+
+@dataclass
+class _Board:
+    stars: dict[str, set[str]] = field(default_factory=dict)  # slug -> starring pids
+    revealed: bool = False  # everyone sees everyone's stars; else each sees only their own
+    done: set[str] = field(default_factory=set)  # pids who clicked Done this round
+
+
 _lock = threading.Lock()
-_cache: tuple[Path, dict[str, set[str]]] | None = None  # (session folder, slug -> starring pids)
+_cache: tuple[Path, _Board] | None = None  # (session folder, its board)
 _recent: dict[str, deque[float]] = {}
 _version = 0  # bumped on every saved change: the vault's star lines follow it (star_lines.py)
 
 
-def load_stars(folder: Path) -> dict[str, set[str]]:
-    """The stars saved in the session folder; {} if none or unreadable."""
+def _load_board(folder: Path) -> _Board:
+    """The board saved in the session folder; an empty one if none or unreadable."""
     path = folder / STARS_FILE
     if not path.exists():
-        return {}
+        return _Board()
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except Exception as e:  # noqa: BLE001 - a broken file must not break the session state
         log.error("wiki", f"Unreadable {STARS_FILE}: {e}")
-        return {}
-    stars = data.get("stars") if isinstance(data, dict) else None
+        return _Board()
+    if not isinstance(data, dict):
+        return _Board()
+    board = _Board(revealed=data.get("revealed") is True)
+    done = data.get("done")
+    if isinstance(done, list):
+        board.done = {p for p in done if isinstance(p, str) and p}
+    stars = data.get("stars")
     if not isinstance(stars, dict):
-        return {}
-    result: dict[str, set[str]] = {}
+        return board
     for slug, pids in stars.items():
         if isinstance(slug, str) and slug and isinstance(pids, list):
             valid = {p for p in pids if isinstance(p, str) and p}
             if valid:
-                result[slug] = valid
-    return result
+                board.stars[slug] = valid
+    return board
 
 
-def _save(folder: Path, stars: dict[str, set[str]]) -> None:
+def load_stars(folder: Path) -> dict[str, set[str]]:
+    """The stars saved in the session folder; {} if none or unreadable."""
+    return _load_board(folder).stars
+
+
+def _save(folder: Path, board: _Board, stars_changed: bool = True) -> None:
     global _version
-    _version += 1
+    if stars_changed:
+        _version += 1
     path = folder / STARS_FILE
     tmp = path.with_name(path.name + ".tmp")
-    payload = {"stars": {slug: sorted(pids) for slug, pids in sorted(stars.items()) if pids}}
+    payload = {
+        "stars": {slug: sorted(pids) for slug, pids in sorted(board.stars.items()) if pids},
+        "revealed": board.revealed,
+        "done": sorted(board.done),
+    }
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     tmp.replace(path)
 
 
-def _cached(folder: Path) -> dict[str, set[str]]:
+def _cached(folder: Path) -> _Board:
     global _cache
     if _cache is None or _cache[0] != folder:
-        _cache = (folder, load_stars(folder))
+        _cache = (folder, _load_board(folder))
     return _cache[1]
 
 
@@ -96,14 +128,14 @@ def star_counts() -> dict[str, int]:
     if folder is None:
         return {}
     with _lock:
-        return _counts(_cached(folder))
+        return _counts(_cached(folder).stars)
 
 
 def counts_in(folder: Path) -> tuple[int, dict[str, int]]:
     """(version, counts) of a session folder's stars: the version tells a reader that
     mirrors them whether anything changed since it last looked."""
     with _lock:
-        return _version, _counts(_cached(folder))
+        return _version, _counts(_cached(folder).stars)
 
 
 def starrer_count() -> int:
@@ -113,7 +145,7 @@ def starrer_count() -> int:
     if folder is None:
         return 0
     with _lock:
-        return len(set().union(*_cached(folder).values()))
+        return len(set().union(*_cached(folder).stars.values()))
 
 
 def stars_of(pid: str) -> list[str]:
@@ -122,7 +154,7 @@ def stars_of(pid: str) -> list[str]:
     if folder is None:
         return []
     with _lock:
-        return sorted(slug for slug, pids in _cached(folder).items() if pid in pids)
+        return sorted(slug for slug, pids in _cached(folder).stars.items() if pid in pids)
 
 
 def allow(pid: str, now: float | None = None) -> bool:
@@ -144,7 +176,8 @@ def set_star(pid: str, slug: str, starred: bool) -> dict[str, int] | None:
     if folder is None:
         return None
     with _lock:
-        stars = _cached(folder)
+        board = _cached(folder)
+        stars = board.stars
         pids = stars.setdefault(slug, set())
         changed = (pid not in pids) if starred else (pid in pids)
         if starred:
@@ -154,7 +187,7 @@ def set_star(pid: str, slug: str, starred: bool) -> dict[str, int] | None:
         if not pids:
             del stars[slug]
         if changed:
-            _save(folder, stars)
+            _save(folder, board)
         return _counts(stars)
 
 
@@ -165,15 +198,90 @@ def forget_participant(pid: str) -> int:
     if folder is None:
         return 0
     with _lock:
-        stars = _cached(folder)
+        board = _cached(folder)
+        stars = board.stars
         hit = [slug for slug, pids in stars.items() if pid in pids]
         for slug in hit:
             stars[slug].discard(pid)
             if not stars[slug]:
                 del stars[slug]
-        if hit:
-            _save(folder, stars)
+        was_done = pid in board.done
+        board.done.discard(pid)
+        if hit or was_done:
+            _save(folder, board, stars_changed=bool(hit))
         return len(hit)
+
+
+def visible_counts(pid: str | None) -> dict[str, int]:
+    """The counts a participant may see: everyone's once revealed, else only their own
+    stars, each as 1 (pid None: a reader who starred nothing, so none)."""
+    folder = get_active_session_folder()
+    if folder is None:
+        return {}
+    with _lock:
+        board = _cached(folder)
+        if board.revealed:
+            return _counts(board.stars)
+        return {slug: 1 for slug, pids in sorted(board.stars.items()) if pid and pid in pids}
+
+
+def revealed() -> bool:
+    """Whether everyone sees everyone's stars (False without a session: nothing to see)."""
+    folder = get_active_session_folder()
+    if folder is None:
+        return False
+    with _lock:
+        return _cached(folder).revealed
+
+
+def set_revealed(on: bool) -> bool | None:
+    """The trainer shows everyone's stars to everyone, or hides them again: hiding them
+    starts a new round, so nobody is Done in it yet. The new state, None without a session."""
+    folder = get_active_session_folder()
+    if folder is None:
+        return None
+    with _lock:
+        board = _cached(folder)
+        if board.revealed == on:
+            return on
+        board.revealed = on
+        if not on:
+            board.done.clear()
+        _save(folder, board, stars_changed=False)
+        return on
+
+
+def is_done(pid: str | None) -> bool:
+    folder = get_active_session_folder()
+    if folder is None or not pid:
+        return False
+    with _lock:
+        return pid in _cached(folder).done
+
+
+def set_done(pid: str, done: bool) -> bool | None:
+    """A participant is done looking through the wiki (or takes it back); None without a session."""
+    folder = get_active_session_folder()
+    if folder is None:
+        return None
+    with _lock:
+        board = _cached(folder)
+        if (pid in board.done) != done:
+            if done:
+                board.done.add(pid)
+            else:
+                board.done.discard(pid)
+            _save(folder, board, stars_changed=False)
+        return done
+
+
+def done_count() -> int:
+    """How many participants clicked Done this round (the trainer's 🏁)."""
+    folder = get_active_session_folder()
+    if folder is None:
+        return 0
+    with _lock:
+        return len(_cached(folder).done)
 
 
 def forget_cache() -> None:

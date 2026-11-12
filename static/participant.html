@@ -4260,6 +4260,9 @@ function _wireEmojiGroup(group) {
   group.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 }
 var VIEWS = ['activity', 'slides', 'summary', 'wiki', 'notes', 'agenda', 'report-bug', 'upload-paste', 'files', 'prompts', 'about'];
+// A tab whose address-bar slug isn't its name: /<session>/wiki is the full-screen wiki,
+// the link the trainer shares (Victor, 2026-11-12), so the Wiki tab sits at /wiki-tab.
+var TAB_URL_SLUGS = { wiki: 'wiki-tab' };
 var _suppressScrollSave = new Set();
 function saveScroll(name, el) {
   if (_suppressScrollSave.has(name)) return;
@@ -4415,7 +4418,7 @@ function _setTabUrl(slug) {
   // Every tab, Activity included, carries its slug: the bare /<session> link lands on
   // the participant's last-used tab (or Slides), so only /<session>/activity reliably
   // opens Activity for whoever receives the link.
-  var path = '/' + _sessionId + '/' + slug;
+  var path = '/' + _sessionId + '/' + (TAB_URL_SLUGS[slug] || slug);
   if (location.pathname !== path) {
     try { history.replaceState(null, '', path); } catch (e) {}
   }
@@ -4431,6 +4434,7 @@ function _setTabUrl(slug) {
 // Tabs whose content does not exist yet still fall back to Slides, as before.
 function _computeLandingView(opts) {
   var urlTab = String(opts.urlTab || '').toLowerCase();
+  for (var tab in TAB_URL_SLUGS) if (TAB_URL_SLUGS[tab] === urlTab) urlTab = tab;
   var fallback = (opts.hasSlides && !opts.hasLiveActivity) ? 'slides' : 'activity';
   var view = (VIEWS.indexOf(urlTab) !== -1 || urlTab === 'past-slides')
     ? urlTab
@@ -5193,12 +5197,12 @@ function dismissFeedbackCta() {
 
 // ── Session wiki ──
 // The daemon publishes the session's wiki/ vault as a static Quartz site under
-// /<session>/wiki-site/. The iframe is (re)loaded only when the tab is opened and
+// /<session>/wiki/. The iframe is (re)loaded only when the tab is opened and
 // the published version changed, so a republish never yanks a reader's page.
 var _wikiUpdatedAt = null;
 var _wikiLoadedAt = null;
 
-function _wikiUrl() { return '/' + _sessionId + '/wiki-site/'; }
+function _wikiUrl() { return '/' + _sessionId + '/wiki/'; }
 
 function _applyWiki(updatedAt) {
   _wikiUpdatedAt = updatedAt || null;
@@ -5744,7 +5748,7 @@ function _setDuplicateIndicator(isDup) {
     _hostWikiNote = state.wiki_note || null;
     _onIncomingWikiTakeaways(state.wiki_takeaways);
     _onIncomingWikiDay(state.wiki_days);
-    _onIncomingWikiStars(state.wiki_stars, state.wiki_my_stars, state.wiki_starrers);
+    _onIncomingWikiStars(state.wiki_stars, state.wiki_my_stars, state.wiki_starrers, state.wiki_stars_revealed, state.wiki_done);
     var saved = _computeLandingView({
       urlTab: location.pathname.split('/')[2] || '',
       savedView: LS.getView(),
@@ -5847,7 +5851,7 @@ function _applyState(msg) {
   if (msg.wiki_updated_at !== undefined) _applyWiki(msg.wiki_updated_at);
   if (msg.wiki_takeaways !== undefined) _onIncomingWikiTakeaways(msg.wiki_takeaways);
   if (msg.wiki_days !== undefined) _onIncomingWikiDay(msg.wiki_days);
-  if (msg.wiki_stars !== undefined) _onIncomingWikiStars(msg.wiki_stars, msg.wiki_my_stars, msg.wiki_starrers);
+  if (msg.wiki_stars !== undefined) _onIncomingWikiStars(msg.wiki_stars, msg.wiki_my_stars, msg.wiki_starrers, msg.wiki_stars_revealed, msg.wiki_done);
   if (msg.summary_updated_at !== undefined) {
     var summaryNav = document.querySelector('[data-nav="summary"]');
     summaryNav.style.display = msg.summary_updated_at ? '' : 'none';
@@ -6949,7 +6953,7 @@ function _handleWsMessage(msg) {
     case 'wiki_note': _onIncomingHostWikiNote(msg.slug); break;
     case 'wiki_takeaways': _onIncomingWikiTakeaways(msg.slugs); break;
     case 'wiki_day': _onIncomingWikiDay(msg.days); break;
-    case 'wiki_stars': _onIncomingWikiStars(msg.counts, undefined, msg.starrers); break;
+    case 'wiki_stars': _onIncomingWikiStars(msg.counts, undefined, msg.starrers, msg.revealed); break;
     case 'agenda_updated': {
       document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
       if (msg.has_agenda) {
@@ -8475,6 +8479,7 @@ function _onWikiFrameMessage(e) {
   else if (msg.type === 'wiki-star' && typeof msg.slug === 'string' && typeof msg.starred === 'boolean') {
     _starWikiNote(msg.slug, msg.starred);
   }
+  else if (msg.type === 'wiki-done' && typeof msg.done === 'boolean') _sendWikiDone(msg.done);
 }
 
 // ── Wiki key takeaways ──
@@ -8518,15 +8523,19 @@ function _onIncomingWikiDay(days) {
 // this participant's UUID: it asks this page ('wiki-star'), which sends the click with
 // the X-Participant-ID like every other vote. Everyone gets the counts (state, the
 // `wiki_stars` broadcast); only this participant's own stars come back with its state
-// and its clicks.
+// and its clicks. Until the trainer reveals them, the counts are this participant's own
+// stars only, and the wiki's Done button tells him they're through (Victor, 2026-11-12).
 var _wikiStarCounts = {};
 var _wikiMyStars = [];
 var _wikiStarrers = 0; // participants who starred at least one note
+var _wikiStarsRevealed = false; // everyone sees everyone's stars
+var _wikiDone = false; // this participant clicked Done looking through the wiki
 
 function _postWikiStars() {
   var frame = document.getElementById('wiki-frame');
   if (!_wikiFrameReady || !frame || !frame.contentWindow) return;
-  frame.contentWindow.postMessage({ type: 'wiki-stars', counts: _wikiStarCounts, mine: _wikiMyStars, starrers: _wikiStarrers }, location.origin);
+  frame.contentWindow.postMessage({ type: 'wiki-stars', counts: _wikiStarCounts, mine: _wikiMyStars, starrers: _wikiStarrers,
+                                    revealed: _wikiStarsRevealed, done: _wikiDone }, location.origin);
 }
 
 // Clicks go one at a time, in click order: sent together, a quick star-unstar overtakes
@@ -8536,11 +8545,29 @@ function _postWikiStars() {
 var _wikiStarQueue = Promise.resolve();
 var _wikiStarsInFlight = 0;
 
-function _onIncomingWikiStars(counts, mine, starrers) {
+function _onIncomingWikiStars(counts, mine, starrers, revealed, done) {
   _wikiStarCounts = counts && typeof counts === 'object' ? counts : {};
   if (Array.isArray(mine)) _wikiMyStars = mine;
   if (typeof starrers === 'number') _wikiStarrers = starrers;
+  if (typeof revealed === 'boolean') _wikiStarsRevealed = revealed;
+  if (typeof done === 'boolean') _wikiDone = done;
   if (_wikiStarsInFlight === 0) _postWikiStars();
+}
+
+async function _sendWikiDone(done) {
+  try {
+    var r = await fetch('/' + _sessionId + '/api/participant/wiki/done', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
+      body: JSON.stringify({ done: done })
+    });
+    if (r.ok) {
+      var json = await r.json();
+      if (typeof json.done === 'boolean') _wikiDone = json.done;
+      if (typeof json.revealed === 'boolean') _wikiStarsRevealed = json.revealed;
+    }
+  } catch (err) { /* offline: the button goes back below */ }
+  _postWikiStars();
 }
 
 function _starWikiNote(slug, starred) {
@@ -8560,6 +8587,8 @@ async function _sendWikiStar(slug, starred) {
       _wikiStarCounts = json.counts && typeof json.counts === 'object' ? json.counts : {};
       if (Array.isArray(json.mine)) _wikiMyStars = json.mine;
       if (typeof json.starrers === 'number') _wikiStarrers = json.starrers;
+      if (typeof json.revealed === 'boolean') _wikiStarsRevealed = json.revealed;
+      if (typeof json.done === 'boolean') _wikiDone = json.done;
     }
   } catch (err) { /* offline: the star goes back below */ }
   // Not saved: the wiki shows what is really stored, as last known.

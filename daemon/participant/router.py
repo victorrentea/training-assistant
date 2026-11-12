@@ -49,6 +49,7 @@ from daemon.ws_messages import (
     SummaryScrollPosition,
     TalkNotesMsg,
     WikiDay,
+    WikiDoneToggle,
     WikiStars,
     WikiStarsMsg,
     WikiStarToggle,
@@ -342,6 +343,10 @@ class ParticipantStateResponse(BaseModel):
     wiki_my_stars: list[str] = []
     # How many participants starred at least one note
     wiki_starrers: int = 0
+    # Whether everyone sees everyone's stars (else wiki_stars holds only this one's)
+    wiki_stars_revealed: bool = False
+    # Whether this participant clicked Done looking through the wiki, this round
+    wiki_done: bool = False
     # Talk mode: the trainer's notes as VS Code has them open (None until he
     # opens them) and whether he presents from the slides or the notes.
     talk_notes: TalkNotesMsg | None = None
@@ -866,9 +871,28 @@ async def get_wiki_day():
 
 # Participants star the notes they found interesting, so they shine for the whole group
 # (daemon/wiki/stars.py says why a star can't be forged or stuffed). Every graph gets
-# the counts only; who starred what stays on this machine.
+# the counts only; who starred what stays on this machine. Until the trainer reveals
+# them, nobody gets the others' counts: the broadcast carries none, and each answer only
+# the asker's own stars.
+def wiki_stars_broadcast() -> WikiStarsMsg:
+    revealed = wiki_stars.revealed()
+    counts = wiki_stars.star_counts() if revealed else {}
+    return WikiStarsMsg(counts=counts, starrers=wiki_stars.starrer_count(), revealed=revealed)
+
+
+def _wiki_stars_for(pid: str | None) -> WikiStars:
+    known = pid if pid and pid in participant_state.participant_names else None
+    return WikiStars(
+        counts=wiki_stars.visible_counts(known),
+        starrers=wiki_stars.starrer_count(),
+        revealed=wiki_stars.revealed(),
+        mine=wiki_stars.stars_of(known) if known else [],
+        done=wiki_stars.is_done(known),
+    )
+
+
 async def _broadcast_wiki_stars() -> None:
-    broadcast(WikiStarsMsg(counts=wiki_stars.star_counts(), starrers=wiki_stars.starrer_count()))
+    broadcast(wiki_stars_broadcast())
 
 
 _wiki_stars_fanout = LoopThrottle("wiki-stars", 1.0, _broadcast_wiki_stars)
@@ -876,9 +900,7 @@ _wiki_stars_fanout = LoopThrottle("wiki-stars", 1.0, _broadcast_wiki_stars)
 
 @router.get("/wiki/stars", response_model=WikiStars)
 async def get_wiki_stars(request: Request):
-    pid = request.headers.get("x-participant-id")
-    mine = wiki_stars.stars_of(pid) if pid and pid in participant_state.participant_names else []
-    return WikiStars(counts=wiki_stars.star_counts(), starrers=wiki_stars.starrer_count(), mine=mine)
+    return _wiki_stars_for(request.headers.get("x-participant-id"))
 
 
 def _refused_star(pid: str | None, body: WikiStarToggle, status: int, error: str) -> JSONResponse:
@@ -912,7 +934,29 @@ async def star_wiki_note(request: Request, body: WikiStarToggle):
     log.info("wiki", f"{name} {'★ starred' if body.starred else '☆ un-starred'} {body.slug} "
                      f"({counts.get(body.slug, 0)})")
     await _wiki_stars_fanout.request()
-    return WikiStars(counts=counts, starrers=wiki_stars.starrer_count(), mine=wiki_stars.stars_of(pid))
+    return _wiki_stars_for(pid)
+
+
+# A participant clicks Done once through looking at the wiki (or takes it back): the
+# trainer's graph counts them (🏁) while he waits to reveal the stars (Victor, 2026-11-12).
+# He polls his own daemon, so nothing is broadcast.
+@router.post("/wiki/done", response_model=WikiStars)
+async def wiki_done(request: Request, body: WikiDoneToggle):
+    from daemon import log
+
+    pid = request.headers.get("x-participant-id")
+    if not pid:
+        return JSONResponse({"error": "Missing X-Participant-ID"}, status_code=400)
+    if pid not in participant_state.participant_names:
+        return JSONResponse({"error": "Join the session first"}, status_code=403)
+    if not wiki_stars.allow(pid):
+        return JSONResponse({"error": "Too many clicks, slow down"}, status_code=429)
+    if await asyncio.to_thread(wiki_stars.set_done, pid, body.done) is None:
+        return JSONResponse({"error": "No active session"}, status_code=404)
+    name = participant_state.participant_names.get(pid, "?")
+    log.info("wiki", f"{name} {'🏁 done with' if body.done else '↩ not done with'} the wiki "
+                     f"({wiki_stars.done_count()} done)")
+    return _wiki_stars_for(pid)
 
 
 @router.get("/state", response_model=ParticipantStateResponse)
@@ -983,9 +1027,11 @@ async def get_participant_state(request: Request):
         # The workshop days whose notes the graph shows ([]: every day)
         "wiki_days": misc_state.wiki_days,
         # The notes participants starred (counts only) and this participant's own stars
-        "wiki_stars": wiki_stars.star_counts(),
+        "wiki_stars": wiki_stars.visible_counts(pid),
         "wiki_my_stars": wiki_stars.stars_of(pid),
         "wiki_starrers": wiki_stars.starrer_count(),
+        "wiki_stars_revealed": wiki_stars.revealed(),
+        "wiki_done": wiki_stars.is_done(pid),
         # Talk mode: the notes on screen in VS Code, and slides vs notes
         "talk_notes": misc_state.talk_notes if ps.mode == "talk" else None,
         "presenter_view": misc_state.presenter_view,

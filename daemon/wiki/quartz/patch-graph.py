@@ -422,7 +422,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, CHEVRON_HIT_RADIUS, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, framingPan, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, roundBadge, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -712,6 +712,10 @@ PATCHES = [
     // time one more does, to draw in the rest of the room (note-pane.ts; Victor, 2026-11-09).
     const starrers = starrersBadge()
     container.append(starrers)
+    // The trainer's only, after it: whether the room sees everyone's stars or only their
+    // own, and how many clicked Done (🏁) looking through the wiki (note-pane.ts).
+    const round = roundBadge()
+    container.append(round)
     // After it, where the trainer looks while picking: the days the graph shows, for a
     // wiki of two days or more, known once the notes' index has loaded (note-pane.ts).
     const day = dayFilter([])
@@ -721,7 +725,7 @@ PATCHES = [
     const placePills = () => {
       if (innerWidth < 900) return
       let left = 13 // 0.8rem
-      for (const pill of [reset, home, resetSeenPill, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads, starrers]) {
+      for (const pill of [reset, home, resetSeenPill, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads, starrers, round]) {
         if (!pill.isConnected || pill.hidden) continue
         pill.style.left = `${left}px`
         left += pill.offsetWidth + 10
@@ -732,6 +736,7 @@ PATCHES = [
     // the day pill once the index has loaded, and a participant's only while one day shows.
     const pillsResized = new ResizeObserver(placePills)
     pillsResized.observe(starrers)
+    pillsResized.observe(round)
     pillsResized.observe(day)
     void fetchData.then((index) => {
       const wikiDays = new Set(Object.values(index).flatMap((details) => noteDays(details.content)))
