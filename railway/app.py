@@ -216,7 +216,7 @@ session_participant_live = APIRouter(
 session_participant_live.include_router(slides.public_router)     # /api/slides, /api/slides/check/{slug}, /api/slides/download/{slug}
 session_participant_live.include_router(upload_public_router)     # /api/upload (participant file upload)
 session_participant_live.include_router(materials.public_router)  # /api/materials/zip (session content archive)
-session_participant_live.include_router(wiki.public_router)       # /wiki-site/* (session wiki, static Quartz site)
+session_participant_live.include_router(wiki.public_router)       # /wiki/* (session wiki, static Quartz site; /wiki-site/* redirects)
 session_participant_live.include_router(participant_proxy_router)  # /api/participant/* → daemon proxy
 
 if os.environ.get("OTEL_TRACES_FILE"):
@@ -286,8 +286,9 @@ async def get_session_status(session_id: str):
 # /{session_id}/{tab} matches any two-segment path, so it must come after every
 # explicit root route and the /static mount above; otherwise it shadows them
 # (e.g. /api/status → session "api", /static/common.css → session "static").
-# Live (active-only) data routes are all /{session_id}/api/* or /{session_id}/wiki-site/*
-# (3+ segments) so they never shadow the root routes; register them just before the
+# Live (active-only) data routes are all /{session_id}/api/* or /{session_id}/wiki/*
+# (3+ segments, but for the /{session_id}/wiki redirect, whose literal segment no root
+# route has) so they never shadow the root routes; register them just before the
 # page catch-all.
 app.include_router(session_participant_live)
 app.include_router(session_participant_pages)

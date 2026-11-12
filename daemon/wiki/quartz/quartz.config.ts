@@ -16,7 +16,7 @@ const config: QuartzConfig = {
     enablePopovers: true,
     analytics: null,
     locale: "en-US",
-    // Served under /{session_id}/wiki-site/ — Quartz links are relative, so this only feeds sitemap/RSS.
+    // Served under /{session_id}/wiki/ — Quartz links are relative, so this only feeds sitemap/RSS.
     baseUrl: "interact.victorrentea.ro",
     ignorePatterns: ["private", "templates", ".obsidian"],
     defaultDateType: "modified",

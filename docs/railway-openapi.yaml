@@ -54,7 +54,7 @@ paths:
         Sent by the daemon whenever the session folder's wiki/ vault has changed and
         settled (and again, with the cached build, after a Railway reconnect). Replaces
         the session's site, deletes every other session's, and serves it to participants
-        of the ACTIVE session only at GET /{session_id}/wiki-site/{path}. Zip-slip paths
+        of the ACTIVE session only at GET /{session_id}/wiki/{path} (the old /wiki-site/ links redirect there). Zip-slip paths
         are refused; 40 MB zip / 150 MB unpacked ceiling.
       operationId: upload_wiki
       security:

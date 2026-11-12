@@ -60,7 +60,10 @@ def test_frontend_views_are_all_routable():
     assert m, "could not find VIEWS array in static/participant.html"
     views = re.findall(r"'([^']+)'", m.group(1))
     assert views, "VIEWS array parsed empty"
-    missing = [v for v in views if v not in _PARTICIPANT_TAB_SLUGS]
+    # The Wiki tab's URL is /<session>/wiki-tab (TAB_URL_SLUGS in participant.html):
+    # /<session>/wiki is the full-screen wiki.
+    url_slugs = {"wiki": "wiki-tab"}
+    missing = [v for v in views if url_slugs.get(v, v) not in _PARTICIPANT_TAB_SLUGS]
     assert not missing, f"frontend tabs missing backend route slugs: {missing}"
 
 

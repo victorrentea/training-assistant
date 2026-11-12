@@ -13,7 +13,8 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import Request
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 
 from railway.shared.auth import require_host_auth
@@ -107,7 +108,22 @@ def _resolve(site: Path, path: str) -> Path | None:
     return None
 
 
+# The full-screen wiki lives at /<session>/wiki/, the link the trainer shares in the chat
+# (Victor, 2026-11-12); the participant page's Wiki tab moved to /<session>/wiki-tab.
+# Without its trailing slash Quartz's relative links would resolve one level too high.
+@public_router.get("/wiki", include_in_schema=False)
+async def wiki_root(session_id: str):
+    return RedirectResponse(f"/{_safe_session_id(session_id)}/wiki/", status_code=307)
+
+
+# Where the site lived until 2026-11-12: links already pasted in a chat keep working.
 @public_router.get("/wiki-site/{path:path}", include_in_schema=False)
+async def old_wiki_link(request: Request, session_id: str, path: str = ""):
+    query = f"?{request.url.query}" if request.url.query else ""
+    return RedirectResponse(f"/{_safe_session_id(session_id)}/wiki/{path}{query}", status_code=307)
+
+
+@public_router.get("/wiki/{path:path}", include_in_schema=False)
 async def get_wiki_file(session_id: str, path: str = ""):
     site = _site_dir(_safe_session_id(session_id))
     if not site.is_dir():

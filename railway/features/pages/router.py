@@ -132,7 +132,8 @@ _PARTICIPANT_TAB_SLUGS = frozenset(
         "slides",
         "activity",
         "summary",
-        "wiki",
+        # The Wiki tab: /<session>/wiki itself is the full-screen wiki (wiki/router.py).
+        "wiki-tab",
         "notes",
         "agenda",
         "report-bug",

@@ -59,23 +59,23 @@ def test_upload_requires_host_auth():
 def test_serves_quartz_clean_urls():
     with TestClient(app) as client:
         assert _upload(client).json() == {"ok": True, "files": 5}
-        assert client.get("/e2etst/wiki-site/").text == "<h1>Home</h1>"
-        assert client.get("/e2etst/wiki-site/Chat-Memory").text == "<h1>Chat Memory</h1>"
-        assert client.get("/e2etst/wiki-site/tags/").text == "<h1>Tags</h1>"
-        assert client.get("/e2etst/wiki-site/static/contentIndex.json").json() == {}
+        assert client.get("/e2etst/wiki/").text == "<h1>Home</h1>"
+        assert client.get("/e2etst/wiki/Chat-Memory").text == "<h1>Chat Memory</h1>"
+        assert client.get("/e2etst/wiki/tags/").text == "<h1>Tags</h1>"
+        assert client.get("/e2etst/wiki/static/contentIndex.json").json() == {}
 
 
 def test_unknown_page_gets_the_sites_own_404():
     with TestClient(app) as client:
         _upload(client)
-        response = client.get("/e2etst/wiki-site/Nope")
+        response = client.get("/e2etst/wiki/Nope")
     assert response.status_code == 404
     assert response.text == "<h1>Lost</h1>"
 
 
 def test_nothing_published_is_404():
     with TestClient(app) as client:
-        assert client.get("/e2etst/wiki-site/").status_code == 404
+        assert client.get("/e2etst/wiki/").status_code == 404
 
 
 def test_only_the_active_session_is_served():
@@ -83,7 +83,7 @@ def test_only_the_active_session_is_served():
     with TestClient(app) as client:
         _upload(client)
         state.session_id = "newses"
-        assert client.get("/e2etst/wiki-site/").status_code == 404
+        assert client.get("/e2etst/wiki/").status_code == 404
 
 
 def test_publishing_a_session_deletes_every_other_sessions_site(tmp_path):
@@ -97,8 +97,8 @@ def test_republish_replaces_the_site():
     with TestClient(app) as client:
         _upload(client)
         _upload(client, payload=_zip({"index.html": "v2"}))
-        assert client.get("/e2etst/wiki-site/").text == "v2"
-        assert client.get("/e2etst/wiki-site/Chat-Memory").status_code == 404
+        assert client.get("/e2etst/wiki/").text == "v2"
+        assert client.get("/e2etst/wiki/Chat-Memory").status_code == 404
 
 
 @pytest.mark.parametrize("name", ["../escape.html", "/abs.html", "a/../../escape.html"])
@@ -112,9 +112,29 @@ def test_zip_slip_is_rejected(name, tmp_path):
 def test_path_traversal_in_url_is_404():
     with TestClient(app) as client:
         _upload(client)
-        assert client.get("/e2etst/wiki-site/..%2F..%2Fsecrets.env").status_code == 404
+        assert client.get("/e2etst/wiki/..%2F..%2Fsecrets.env").status_code == 404
 
 
 def test_non_alphanumeric_session_id_is_rejected():
     with TestClient(app) as client:
         assert _upload(client, session_id="../x").status_code == 422
+
+
+def test_bare_wiki_link_lands_on_the_full_screen_wiki():
+    """/<session>/wiki is the link to share: it opens the site, with the slash its
+    relative links need."""
+    with TestClient(app, follow_redirects=False) as client:
+        _upload(client)
+        response = client.get("/e2etst/wiki")
+        assert response.status_code == 307
+        assert response.headers["location"] == "/e2etst/wiki/"
+        assert client.get("/e2etst/wiki", follow_redirects=True).text == "<h1>Home</h1>"
+
+
+def test_old_wiki_site_links_redirect_to_wiki():
+    """Links pasted in a chat before the move to /wiki/ keep working."""
+    with TestClient(app, follow_redirects=False) as client:
+        _upload(client)
+        response = client.get("/e2etst/wiki-site/Chat-Memory?x=1")
+        assert response.status_code == 307
+        assert response.headers["location"] == "/e2etst/wiki/Chat-Memory?x=1"
