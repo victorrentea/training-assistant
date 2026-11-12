@@ -45,7 +45,7 @@ QUESTIONS: list[dict] = [
     {"id": "mcp", "kind": "choice", "text": "Used an MCP tool?", "options": YES_NO_IDK},
     # No hint, so no ❤️: options read "Key: detail", the key in bold (like the ranking's items).
     {"id": "tools", "kind": "multi", "text": "Tools available to your agent in your **work** project",
-     "options": ["Issue tracker: Jira, Linear, GitHub Issues", "Build: GitHub, GitLab, Bitbucket", "Confluence / Wiki",
+     "options": ["Issue tracker: Jira, Linear, GitHub Issues, Azure DevOps", "Build: GitHub, GitLab, Bitbucket", "Confluence / Wiki",
                  "Browser", "Metrics", "Meeting transcripts", "Logs", "Email", "Chat / Slack"]},
     {"id": "skill", "kind": "choice", "text": "Created/updated a skill?", "options": YES_NO},
     {"id": "plugins", "kind": "choice", "text": "Do you have plugins from your company or team installed in your agent?",
