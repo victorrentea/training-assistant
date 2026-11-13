@@ -460,25 +460,36 @@ function runHostMachinePoll({ cookie, activeSessionId, currentSessionId }) {
 // ---- updateLinkCount() --------------------------------------------------
 // The slides viewer's top-left badge counts the deck's clickable material.
 // Two things it must not do: count a footer link stamped on every slide once
-// per slide, and count internal jump-to-page annotations (href="#") at all.
-function runLinkCount(hrefs, scrollTop = 0) {
-  const anchors = hrefs.map((h) => ({ getAttribute: () => h, href: h }));
+// per slide, and count internal jump-to-page annotations at all.
+// Slides are drawn lazily, so the count cannot come from the <a> overlays (only
+// the pages around the viewport have them): collectLinks() feeds every page's
+// link annotations through addExternalLinks() into pager.linkUrls.
+const linkTo = (url) => ({ subtype: 'Link', rect: [10, 10, 90, 30], url });
+const jumpTo = (dest) => ({ subtype: 'Link', rect: [10, 10, 90, 30], dest });
+function runLinkCount(annotationsPerPage, scrollTop = 0) {
   const badge = { style: {}, dataset: {} };
   const value = { textContent: null };
   const sandbox = {
     document: {
+      baseURI: 'https://interact.example/abc123/slides',
       getElementById: (id) =>
         id === 'slides-link-count' ? badge : id === 'slides-link-count-value' ? value : null,
     },
-    Slides: { front: { el: { querySelectorAll: () => anchors, scrollTop } } },
+    Slides: { front: { el: { scrollTop }, pager: { linkUrls: null } } },
   };
   // syncLinkCountScroll() comes along because updateLinkCount() calls it: the
   // badge rides the deck's scroll offset, and a sandbox without it would throw.
-  const fn = new Function('document', 'Slides',
+  const fns = new Function('document', 'Slides',
+    extractFunction(PARTICIPANT_HTML, 'addExternalLinks') + '\n' +
     extractFunction(PARTICIPANT_HTML, 'updateLinkCount') + '\n' +
-    extractFunction(PARTICIPANT_HTML, 'syncLinkCountScroll') + '; return updateLinkCount;'
+    extractFunction(PARTICIPANT_HTML, 'syncLinkCountScroll') + '; return { addExternalLinks, updateLinkCount };'
   )(sandbox.document, sandbox.Slides);
-  fn();
+  if (annotationsPerPage) {   // null: the deck's links are not collected yet
+    const urls = new Set();
+    annotationsPerPage.forEach((annotations) => fns.addExternalLinks(urls, annotations));
+    sandbox.Slides.front.pager.linkUrls = urls;
+  }
+  fns.updateLinkCount();
   return {
     display: badge.style.display,
     tip: badge.dataset.tip,
@@ -489,33 +500,43 @@ function runLinkCount(hrefs, scrollTop = 0) {
 
 console.log('updateLinkCount()');
 {
-  const repeated = runLinkCount(['https://a.example', 'https://a.example', 'https://b.example']);
+  const repeated = runLinkCount([
+    [linkTo('https://a.example')], [linkTo('https://a.example'), linkTo('https://b.example')]]);
   assert('a link repeated across slides counts once',
     repeated.value === '2' && repeated.display === 'flex');
 
-  const internal = runLinkCount(['#', '#']);
+  const internal = runLinkCount([[jumpTo('slide3')], [jumpTo('slide7')]]);
   assert('internal jump-to-page annotations are not links',
     internal.value === '0' && internal.display === 'none');
 
-  const none = runLinkCount([]);
+  const none = runLinkCount([[], []]);
   assert('a deck without links shows no badge at all',
     none.display === 'none' && none.value === '0');
 
-  const one = runLinkCount(['https://a.example']);
+  const pending = runLinkCount(null);
+  assert('no badge while the deck\'s links are still being collected',
+    pending.display === 'none' && pending.value === '0');
+
+  const notLinks = runLinkCount([[{ subtype: 'Widget', rect: [0, 0, 9, 9], url: 'https://a.example' },
+    { subtype: 'Link', rect: [5, 5, 5, 5], url: 'https://b.example' }, null]]);
+  assert('only link annotations with an area count',
+    notLinks.value === '0');
+
+  const one = runLinkCount([[linkTo('https://a.example')]]);
   assert('the tooltip is singular for exactly one link',
     /^1 link in these slides/.test(one.tip));
 
-  const many = runLinkCount(['https://a.example', 'https://b.example']);
+  const many = runLinkCount([[linkTo('https://a.example')], [linkTo('https://b.example')]]);
   assert('the tooltip repeats the number the badge shows',
     /^2 links in these slides/.test(many.tip));
 
   // The badge rides the deck's scroll: it has said its piece by the time the
   // participant is reading, so it leaves with the first slide.
-  const top = runLinkCount(['https://a.example'], 0);
+  const top = runLinkCount([[linkTo('https://a.example')]], 0);
   assert('an unscrolled deck leaves the badge where the CSS puts it',
     top.transform === '');
 
-  const scrolled = runLinkCount(['https://a.example'], 240);
+  const scrolled = runLinkCount([[linkTo('https://a.example')]], 240);
   assert('scrolling the deck carries the badge up by the same amount',
     scrolled.transform === 'translateY(-240px)');
 }

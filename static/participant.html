@@ -169,6 +169,12 @@ body{visibility:hidden}
 .textLayer.selecting .endOfContent{top:0}
 /* The canvas underneath must not steal the drag that starts a selection. */
 #pdf-stack canvas{user-select:none}
+/* A page that is not drawn (yet, or any more — only the ones around the viewport
+   are): a blank card of the page's shape carrying its number. The canvas has no
+   bitmap then, so its background shows; a drawn page covers it. */
+#pdf-stack canvas{background:var(--color-surface-container)}
+#pdf-stack section.pdf-blank::before{content:attr(data-page);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(2rem,9vw,6rem);font-weight:700;color:var(--color-on-surface-variant);opacity:.22;pointer-events:none}
+#pdf-stack section.pdf-blank.pb-32::before{bottom:8rem}
 /* Link overlays sit above the text layer and after it in the DOM, so a drag
    crossing one would put the selection focus on the <a> — past every span
    on the page. While a drag that started on the text is in progress they
@@ -1939,8 +1945,8 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
   const Slides = {
-    front: { el: null, pdfDoc: null, slug: null, downloadedAt: null },
-    back:  { el: null, pdfDoc: null, slug: null, downloadedAt: null },
+    front: { el: null, pager: null, pdfDoc: null, slug: null, downloadedAt: null },
+    back:  { el: null, pager: null, pdfDoc: null, slug: null, downloadedAt: null },
     scale: 1.5,
     state: 'IDLE',       // 'IDLE' | 'PREFETCHING' | 'SWAPPING'
     abort: null,
@@ -1948,28 +1954,264 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
   };
   window.Slides = Slides; // exposed so non-module script (triggers) can read state
 
-  // onPageRendered(i), if given, runs as soon as page i is in the DOM — before the
-  // rest of the deck, which on a big deck takes many seconds.
-  async function renderAllPagesInto(container, localPdfDoc, scale, onPageRendered) {
-    container.replaceChildren();
-    const numPages = localPdfDoc.numPages;
-    for (let i = 1; i <= numPages; i++) {
-      const page = await localPdfDoc.getPage(i);
-      const viewport = page.getViewport({ scale });
+  // ---- Lazy page drawing --------------------------------------------------
+  // A deck is laid out at once as one placeholder <section> per page, sized from
+  // that page's own viewport — so the scroll height, the page number, a jump to
+  // the trainer's slide and the restored scroll position are all right before a
+  // single page is drawn. Only the pages around the viewport hold a drawn canvas,
+  // a text layer and link overlays; the rest are released again. Drawing every
+  // page up front cost ~4.7 MB of canvas per slide (960×540 pt at scale 1.5):
+  // ~500 MB per tab for a 100-slide deck, and twice that while a re-downloaded
+  // deck was drawn in the back buffer.
+  const NEAR_MARGIN = '100% 0px';  // pages within one viewport height above/below the viewport are drawn
+  const KEPT_BEYOND_MARGIN = 4;    // drawn pages kept once outside it, so scrolling back a little is free
+
+  const pageEntries = new WeakMap(); // <section> -> its entry in pager.pages
+
+  // One pager per buffer element, for the buffer's whole life.
+  function createPager(container) {
+    const pager = {
+      container,
+      pdfDoc: null,
+      gen: 0,            // bumped whenever a deck is mounted or unmounted; older async work checks it and stops
+      scale: 1,
+      pages: [],         // one entry per page, index = page number - 1
+      near: new Set(),   // entries within NEAR_MARGIN of the viewport
+      pinned: new Set(), // entries somebody is waiting for (see whenPageDrawn)
+      drawn: new Set(),  // entries holding a drawn canvas
+      drawing: null,     // the entry being drawn — one at a time, closest to the viewport first
+      tops: null,        // offsetTop of every section, cached (see pageTops)
+      topsKey: -1,
+      linkUrls: null,    // distinct external URLs of the whole deck, once collected
+      observer: null,
+    };
+    if (typeof IntersectionObserver !== 'undefined') {
+      pager.observer = new IntersectionObserver(function(records) { onPagesIntersect(pager, records); },
+        { root: container, rootMargin: NEAR_MARGIN });
+    }
+    return pager;
+  }
+
+  // Empties the buffer: stops what is being drawn and frees every canvas now,
+  // rather than whenever the garbage collector gets to the detached elements.
+  function unmountDeck(buf) {
+    const pager = buf.pager;
+    pager.gen++;
+    if (pager.observer) pager.observer.disconnect();
+    pager.pages.forEach(function(entry) {
+      blankPage(pager, entry);
+      settlePage(pager, entry, false);
+    });
+    pager.pages = [];
+    pager.pdfDoc = null;
+    pager.near.clear();
+    pager.drawing = null;
+    pager.tops = null;
+    pager.linkUrls = null;
+    pager.container.replaceChildren();
+  }
+
+  // Lays the deck out as placeholders. Resolves false if another deck was mounted
+  // in this buffer meanwhile.
+  async function mountDeck(buf, pdfDoc, scale) {
+    const pager = buf.pager;
+    unmountDeck(buf);
+    const gen = pager.gen;
+    // Page sizes for the whole deck: ~2 ms for 100 pages, nothing is drawn.
+    const proxies = await Promise.all(Array.from({ length: pdfDoc.numPages }, function(_, i) { return pdfDoc.getPage(i + 1); }));
+    if (pager.gen !== gen) return false;
+    pager.pdfDoc = pdfDoc;
+    pager.scale = scale;
+    const fragment = document.createDocumentFragment();
+    pager.pages = proxies.map(function(proxy, i) {
+      const viewport = proxy.getViewport({ scale });
       const section = document.createElement('section');
-      section.className = 'relative group';
-      section.dataset.page = i;
+      section.className = 'relative group pdf-blank';
+      section.dataset.page = i + 1;
+      section.dataset.vw = viewport.width;
       const canvas = document.createElement('canvas');
+      canvas.width = 0;
+      canvas.height = 0;
+      canvas.className = 'w-full whisper-shadow rounded-2xl';
+      // Holds the page's shape while the canvas is not drawn. Same integers the
+      // drawn canvas gets, so drawing a page never moves the ones below it.
+      canvas.style.aspectRatio = Math.floor(viewport.width) + ' / ' + Math.floor(viewport.height);
+      section.appendChild(canvas);
+      if (i === proxies.length - 1) section.classList.add('pb-32');
+      fragment.appendChild(section);
+      const entry = { n: i + 1, proxy, section, canvas, state: 'blank', token: null, task: null, textLayer: null, waiters: [] };
+      pageEntries.set(section, entry);
+      return entry;
+    });
+    pager.container.appendChild(fragment);
+    pager.pages.forEach(function(entry) {
+      if (pager.observer) pager.observer.observe(entry.section);
+      else pager.near.add(entry); // no IntersectionObserver: draw everything, as before
+    });
+    collectLinks(pager);
+    updatePageInfo();
+    updateLinkCount();
+    pump(pager);
+    return true;
+  }
+
+  function onPagesIntersect(pager, records) {
+    for (const record of records) {
+      const entry = pageEntries.get(record.target);
+      if (!entry || pager.pages[entry.n - 1] !== entry) continue; // a deck unmounted since
+      if (record.isIntersecting) {
+        pager.near.add(entry);
+      } else {
+        pager.near.delete(entry);
+        if (entry.state === 'failed') entry.state = 'blank'; // gets another try when it comes back
+        else if (entry.state === 'drawing' && !pager.pinned.has(entry)) blankPage(pager, entry);
+      }
+    }
+    trimDrawnPages(pager);
+    pump(pager);
+  }
+
+  function pump(pager) {
+    if (pager.drawing) return;
+    const focus = pageAt(pager, pager.container.scrollTop + pager.container.clientHeight / 2);
+    let next = null, nextDistance = Infinity;
+    const consider = function(entry) {
+      if (entry.state !== 'blank') return;
+      const distance = Math.abs(entry.n - focus) - (pager.pinned.has(entry) ? pager.pages.length : 0);
+      if (distance < nextDistance) { next = entry; nextDistance = distance; }
+    };
+    pager.pinned.forEach(consider);
+    pager.near.forEach(consider);
+    if (!next) return;
+    pager.drawing = next;
+    drawPage(pager, next).finally(function() {
+      if (pager.drawing !== next) return; // unmounted meanwhile
+      pager.drawing = null;
+      trimDrawnPages(pager);
+      pump(pager);
+    });
+  }
+
+  // Releases the drawn pages farthest from the viewport, beyond the few kept spare.
+  function trimDrawnPages(pager) {
+    const spare = [];
+    pager.drawn.forEach(function(entry) {
+      if (!pager.near.has(entry) && !pager.pinned.has(entry)) spare.push(entry);
+    });
+    if (spare.length <= KEPT_BEYOND_MARGIN) return;
+    const focus = pageAt(pager, pager.container.scrollTop + pager.container.clientHeight / 2);
+    spare.sort(function(a, b) { return Math.abs(b.n - focus) - Math.abs(a.n - focus); });
+    const selection = document.getSelection();
+    const selected = selection && !selection.isCollapsed && selection.rangeCount ? selection.getRangeAt(0) : null;
+    let excess = spare.length - KEPT_BEYOND_MARGIN;
+    for (const entry of spare) {
+      if (excess <= 0) break;
+      excess--;
+      // Text the participant has selected is still theirs to copy.
+      if (selected && selected.intersectsNode(entry.section)) continue;
+      blankPage(pager, entry);
+    }
+  }
+
+  // Back to a placeholder: cancels a draw in flight, drops the overlays and frees
+  // the canvas bitmap (a zero-sized canvas holds none).
+  function blankPage(pager, entry) {
+    entry.token = null;
+    if (entry.task) { try { entry.task.cancel(); } catch (_) {} entry.task = null; }
+    if (entry.textLayer) { try { entry.textLayer.cancel(); } catch (_) {} entry.textLayer = null; }
+    entry.section.querySelectorAll('.pdf-overlay').forEach(function(layer) { layer.remove(); });
+    entry.canvas.width = 0;
+    entry.canvas.height = 0;
+    entry.section.classList.add('pdf-blank');
+    pager.drawn.delete(entry);
+    entry.state = 'blank';
+    // pdf.js otherwise keeps the page's operator list and decoded images.
+    try { entry.proxy.cleanup(); } catch (_) {}
+  }
+
+  function settlePage(pager, entry, drawn) {
+    pager.pinned.delete(entry);
+    const waiters = entry.waiters;
+    entry.waiters = [];
+    waiters.forEach(function(resolve) { resolve(drawn); });
+  }
+
+  // Resolves true once the page is drawn, wherever the viewport is — the way to
+  // have a page ready before it is shown. False if it failed or the deck went away.
+  function whenPageDrawn(pager, n) {
+    const entry = pager.pages[n - 1];
+    if (!entry) return Promise.resolve(false);
+    if (entry.state === 'drawn') return Promise.resolve(true);
+    if (entry.state === 'failed') entry.state = 'blank';
+    pager.pinned.add(entry);
+    return new Promise(function(resolve) {
+      entry.waiters.push(resolve);
+      pump(pager);
+    });
+  }
+
+  // Resolves once every page showing in the buffer's viewport is drawn. A buffer
+  // that is not laid out (Slides view hidden) has no such pages: they are drawn
+  // when it comes into view.
+  function whenViewportDrawn(buf) {
+    const el = buf.el, pager = buf.pager;
+    if (!el.clientHeight || !pager.pages.length) return Promise.resolve();
+    const first = pageAt(pager, el.scrollTop), last = pageAt(pager, el.scrollTop + el.clientHeight);
+    const waits = [];
+    for (let n = first; n <= last; n++) waits.push(whenPageDrawn(pager, n));
+    return Promise.all(waits);
+  }
+
+  // Section tops change only when the buffer is laid out anew, which its scroll
+  // height tells — so a scroll reads one layout value instead of one per page.
+  function pageTops(pager) {
+    const key = pager.container.scrollHeight;
+    if (!pager.tops || pager.topsKey !== key) {
+      pager.tops = pager.pages.map(function(entry) { return entry.section.offsetTop; });
+      pager.topsKey = key;
+    }
+    return pager.tops;
+  }
+
+  // The last page that starts at or above y (page 1 if none does).
+  function pageAt(pager, y) {
+    const tops = pageTops(pager);
+    let lo = 0, hi = tops.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (tops[mid] <= y) lo = mid; else hi = mid - 1;
+    }
+    return lo + 1;
+  }
+
+  // Instant, even though the buffers have scroll-smooth (CSS scroll-behavior:smooth)
+  // for user-triggered navigation, which would animate this assignment too.
+  function scrollBufferTo(buf, top) {
+    const el = buf.el;
+    const prevBehavior = el.style.scrollBehavior;
+    el.style.scrollBehavior = 'auto';
+    el.scrollTop = top;
+    el.style.scrollBehavior = prevBehavior;
+    if (buf === Slides.front) updatePageInfo(); // the scroll event only comes with the next frame
+  }
+
+  async function drawPage(pager, entry) {
+    const token = entry.token = {};
+    const stale = function() { return entry.token !== token; }; // blanked (or the deck unmounted) meanwhile
+    const page = entry.proxy, section = entry.section, canvas = entry.canvas, scale = pager.scale;
+    const container = pager.container, localPdfDoc = pager.pdfDoc;
+    const viewport = page.getViewport({ scale });
+    entry.state = 'drawing';
+    try {
       canvas.width = viewport.width;
       canvas.height = viewport.height;
-      canvas.className = 'w-full whisper-shadow rounded-2xl';
-      section.appendChild(canvas);
-      if (i === numPages) section.classList.add('pb-32');
-      container.appendChild(section);
-      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      section.classList.remove('pdf-blank');
+      entry.task = page.render({ canvasContext: canvas.getContext('2d'), viewport });
+      await entry.task.promise;
+      if (stale()) return;
+      entry.task = null;
       // The canvas is rendered at `viewport` pixel size but displayed at `w-full`,
       // so every overlay is built at viewport size and CSS-scaled down to match.
-      section.dataset.vw = viewport.width;
       const cssScale = canvas.offsetWidth / viewport.width;
       // Invisible, selectable copy of the page's text, over the canvas but under
       // the annotation layer so link clicks still win over text selection.
@@ -1982,12 +2224,16 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
       textLayerDiv.className = 'textLayer pdf-overlay';
       textLayerDiv.style.cssText = `position:absolute;left:0;top:0;width:${viewport.width}px;height:${viewport.height}px;transform:scale(${cssScale});transform-origin:top left;--scale-factor:${scale};--total-scale-factor:${scale};--scale-round-x:1px;--scale-round-y:1px;`;
       section.appendChild(textLayerDiv);
-      await new pdfjsLib.TextLayer({
+      entry.textLayer = new pdfjsLib.TextLayer({
         textContentSource: page.streamTextContent(),
         container: textLayerDiv,
         viewport,
-      }).render();
+      });
+      await entry.textLayer.render();
+      if (stale()) return;
+      entry.textLayer = null;
       const annotations = await page.getAnnotations({ intent: 'display' });
+      if (stale()) return;
       if (annotations && annotations.length) {
         const annLayer = document.createElement('div');
         annLayer.className = 'pdf-overlay pdf-links';
@@ -2038,10 +2284,45 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
           annLayer.appendChild(link);
         }
       }
-      if (onPageRendered) onPageRendered(i);
+      entry.state = 'drawn';
+      pager.drawn.add(entry);
+      settlePage(pager, entry, true);
+    } catch (e) {
+      if (stale()) return; // cancelled by blankPage, which has cleaned up already
+      console.warn('[Slides] page ' + entry.n + ' could not be drawn', e);
+      blankPage(pager, entry);
+      entry.state = 'failed'; // no retry loop: it gets another try when it next comes near the viewport
+      settlePage(pager, entry, false);
     }
-    updatePageInfo();
+  }
+
+  // The link badge counts the whole deck, drawn or not, so the links are read
+  // from the annotations themselves (~1 ms a page, off the main thread) — the
+  // <a> overlays exist only on the pages currently drawn.
+  async function collectLinks(pager) {
+    const gen = pager.gen;
+    const urls = new Set();
+    for (const entry of pager.pages) {
+      let annotations;
+      try { annotations = await entry.proxy.getAnnotations({ intent: 'display' }); } catch (_) { return; }
+      if (pager.gen !== gen) return;
+      addExternalLinks(urls, annotations);
+    }
+    pager.linkUrls = urls;
     updateLinkCount();
+  }
+
+  // Adds the external URLs among one page's annotations — the ones drawPage()
+  // turns into an <a target="_blank">. A jump-to-page link (ann.dest) is not
+  // clickable material, and a footer link on every slide lands in the Set once.
+  function addExternalLinks(urls, annotations) {
+    for (const ann of annotations || []) {
+      if (!ann || ann.subtype !== 'Link' || !Array.isArray(ann.rect)) continue;
+      if (!(Math.abs(ann.rect[0] - ann.rect[2]) > 0 && Math.abs(ann.rect[1] - ann.rect[3]) > 0)) continue;
+      const url = ann.url || ann.unsafeUrl;
+      if (!url) continue;
+      try { urls.add(new URL(url, document.baseURI).href); } catch (_) { urls.add(url); }
+    }
   }
 
   function swap() {
@@ -2054,14 +2335,14 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
     const oldFront = Slides.front;
     Slides.front = Slides.back;
     Slides.back  = oldFront;
-    // Dispose the now-hidden previous doc and empty its DOM
+    // Empty the now-hidden previous deck's DOM and dispose its doc
+    unmountDeck(Slides.back);
     if (Slides.back.pdfDoc) {
       try { Slides.back.pdfDoc.destroy(); } catch (_) {}
       Slides.back.pdfDoc = null;
     }
     Slides.back.slug = null;
     Slides.back.downloadedAt  = null;
-    Slides.back.el.replaceChildren();
     Slides.state = 'IDLE';
     updatePageInfo();
     updateLinkCount();
@@ -2079,7 +2360,7 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
       if (Slides.loadTask) { try { Slides.loadTask.destroy(); } catch (_) {} }
       Slides.abort = null;       // disown: aborted invocation's finally now sees Slides.abort !== myAbort
       Slides.loadTask = null;
-      Slides.back.el.replaceChildren();
+      unmountDeck(Slides.back);
       if (Slides.back.pdfDoc) {
         try { Slides.back.pdfDoc.destroy(); } catch (_) {}
         Slides.back.pdfDoc = null;
@@ -2123,28 +2404,25 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
       const localPdfDoc = await loadingTask.promise;
       if (Slides.abort !== myAbort) return;
 
-      // 3. Render into back buffer
+      // 3. Lay the deck out in the back buffer — placeholders only, nothing drawn yet
       Slides.back.pdfDoc = localPdfDoc;
       Slides.back.slug   = target.slug || null;
       Slides.back.downloadedAt    = target.downloadedAt || null;
-      await renderAllPagesInto(Slides.back.el, localPdfDoc, Slides.scale);
+      await mountDeck(Slides.back, localPdfDoc, Slides.scale);
       if (Slides.abort !== myAbort) return;
 
-      // 4. Resolve target page just before swap
-      const targetPage = Math.max(1, Number((target.getPage && target.getPage()) || 1));
-      const section = Slides.back.el.querySelector('section[data-page="' + targetPage + '"]');
-      // Force instant scroll: the buffers have scroll-smooth (CSS scroll-behavior:smooth)
-      // for user-triggered navigation, which would also animate this programmatic
-      // scrollTop assignment — the animation would continue after swap, making the
-      // participant see pdf.js scrolling to the page. Temporarily switch to auto.
-      const prevBehavior = Slides.back.el.style.scrollBehavior;
-      Slides.back.el.style.scrollBehavior = 'auto';
-      if (section) {
-        Slides.back.el.scrollTop = section.offsetTop;
-      } else {
-        Slides.back.el.scrollTop = 0;
+      // 4. Scroll the back buffer to the target page and draw just the pages that
+      // will be on screen, so the swap shows finished slides. The target is resolved
+      // again once they are drawn: if the participant scrolled (or the host moved)
+      // meanwhile, go there instead. The scroll must be instant — a smooth one would
+      // still be running after the swap, on screen.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const targetPage = Math.max(1, Number((target.getPage && target.getPage()) || 1));
+        scrollBufferTo(Slides.back, pageTops(Slides.back.pager)[targetPage - 1] || 0);
+        await whenViewportDrawn(Slides.back);
+        if (Slides.abort !== myAbort) return;
+        if (targetPage === Math.max(1, Number((target.getPage && target.getPage()) || 1))) break;
       }
-      Slides.back.el.style.scrollBehavior = prevBehavior;
 
       // 5. Atomic swap
       swap();
@@ -2154,9 +2432,9 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
       if (e && e.name === 'AbortError') return;
       console.error('Slides prefetch error', e);
       // Front buffer untouched; clean up back.
+      unmountDeck(Slides.back);
       try { if (Slides.back.pdfDoc) Slides.back.pdfDoc.destroy(); } catch (_) {}
       Slides.back.pdfDoc = null;
-      Slides.back.el.replaceChildren();
       if (typeof window.showToast === 'function') {
         window.showToast('Slides nu s-au putut încărca. Reia când vrei.');
       }
@@ -2177,14 +2455,10 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
     const container = Slides.front.el;
     const doc = Slides.front.pdfDoc;
     if (!container || !doc) { infoEl.textContent = '— / —'; return; }
-    const sections = container.querySelectorAll('section[data-page]');
-    const scrollTop = container.scrollTop;
-    const midY = scrollTop + container.clientHeight / 2;
-    let current = 1;
-    sections.forEach(function(s) {
-      if (s.offsetTop <= midY) current = parseInt(s.dataset.page);
-    });
-    infoEl.textContent = current + ' / ' + doc.numPages;
+    // The page under the middle of the viewport.
+    const current = pageAt(Slides.front.pager, container.scrollTop + container.clientHeight / 2);
+    const text = current + ' / ' + doc.numPages;
+    if (infoEl.textContent !== text) infoEl.textContent = text;
   }
 
   // The link annotations are invisible overlays on the canvas — nothing on a
@@ -2194,14 +2468,9 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
   function updateLinkCount() {
     const badge = document.getElementById('slides-link-count');
     if (!badge) return;
-    const container = Slides.front.el;
-    const urls = new Set();
-    if (container) {
-      container.querySelectorAll('.pdf-links a[href]').forEach(function(a) {
-        if (a.getAttribute('href') !== '#') urls.add(a.href);
-      });
-    }
-    const n = urls.size;
+    // Collected from the whole deck's annotations (collectLinks) — 0 until that is done.
+    const urls = Slides.front.pager && Slides.front.pager.linkUrls;
+    const n = urls ? urls.size : 0;
     badge.style.display = n ? 'flex' : 'none';
     const valueEl = document.getElementById('slides-link-count-value');
     if (valueEl) valueEl.textContent = String(n);
@@ -2228,7 +2497,7 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
   function rescaleOverlays() {
     for (const buf of [Slides.front.el, Slides.back.el]) {
       if (!buf) continue;
-      buf.querySelectorAll('section[data-page]').forEach(function(section) {
+      buf.querySelectorAll('section[data-page]:not(.pdf-blank)').forEach(function(section) {
         const vw = Number(section.dataset.vw);
         const canvas = section.querySelector('canvas');
         if (!vw || !canvas || !canvas.offsetWidth) return;
@@ -2382,21 +2651,60 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
   (function init() {
     Slides.front.el = document.getElementById('pdf-pages');
     Slides.back.el  = document.getElementById('pdf-pages-buf');
+    Slides.front.pager = createPager(Slides.front.el);
+    Slides.back.pager  = createPager(Slides.back.el);
+    // A buffer changes width without the window doing so (side nav, the Slides view
+    // coming back from display:none), and a page drawn while it was hidden got its
+    // overlays scaled against a zero-width canvas.
+    if (typeof ResizeObserver !== 'undefined') {
+      const resized = new ResizeObserver(rescaleOverlays);
+      resized.observe(Slides.front.el);
+      resized.observe(Slides.back.el);
+    }
+
+    // At most one update per frame, however many scroll events arrive in it.
+    var scrollFrame = 0;
     function onScroll() {
-      if (this !== Slides.front.el) return;
+      if (this !== Slides.front.el || scrollFrame) return;
+      // A hidden tab gets no animation frames, yet the host can still move its deck.
+      if (document.hidden) onScrollFrame();
+      else scrollFrame = requestAnimationFrame(onScrollFrame);
+    }
+    function onScrollFrame() {
+      scrollFrame = 0;
       updatePageInfo();
       syncLinkCountScroll();
+      rememberPageSoon();
+    }
+    // The page to come back to is written once the scroll has settled, not on every
+    // scroll event (localStorage writes are synchronous).
+    var pageToRemember = null, rememberTimer = 0;
+    function rememberPageSoon() {
       var page = _getCurrentSlidesPage();
       // Persist using Slides.front.slug (currently visible deck), NOT _activeSlideSlug
       // (which is updated immediately on click, before swap — would mis-attribute scroll
-      // position to the new deck while the old one is still visible).
+      // position to the new deck while the old one is still visible). Captured now:
+      // by the time the write happens another deck may have been swapped in.
       var visibleSlug = Slides.front.slug;
-      if (page && visibleSlug) {
-        localStorage.setItem('workshop_slide_page:' + visibleSlug, page);
-      }
+      if (!page || !visibleSlug) return;
+      pageToRemember = { slug: visibleSlug, page: page };
+      clearTimeout(rememberTimer);
+      rememberTimer = setTimeout(rememberPageNow, 300);
     }
-    Slides.front.el.addEventListener('scroll', onScroll);
-    Slides.back.el .addEventListener('scroll', onScroll);
+    function rememberPageNow() {
+      clearTimeout(rememberTimer);
+      if (!pageToRemember) return;
+      try { localStorage.setItem('workshop_slide_page:' + pageToRemember.slug, pageToRemember.page); } catch (_) {}
+      pageToRemember = null;
+    }
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) return;
+      if (scrollFrame) { cancelAnimationFrame(scrollFrame); onScrollFrame(); }
+      rememberPageNow();
+    });
+    window.addEventListener('pagehide', rememberPageNow);
+    Slides.front.el.addEventListener('scroll', onScroll, { passive: true });
+    Slides.back.el .addEventListener('scroll', onScroll, { passive: true });
     const infoEl = document.getElementById('pdf-page-info');
     if (infoEl) infoEl.textContent = '— / —';
   })();
@@ -2404,7 +2712,11 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
   window.pdfZoom = async function(delta) {
     if (!Slides.front.pdfDoc) return;
     Slides.scale = Math.max(0.5, Math.min(3, Slides.scale + delta));
-    await renderAllPagesInto(Slides.front.el, Slides.front.pdfDoc, Slides.scale);
+    const front = Slides.front;
+    const page = pageAt(front.pager, front.el.scrollTop + front.el.clientHeight / 2);
+    if (await mountDeck(front, front.pdfDoc, Slides.scale)) {
+      scrollBufferTo(front, page > 1 ? pageTops(front.pager)[page - 1] || 0 : 0);
+    }
   };
 
   window.loadPdf = async function(url, slug, downloadedAt, targetPage) {
@@ -2420,33 +2732,28 @@ window.pdfViewerReady = new Promise(function(resolve) { window._markPdfViewerRea
       }
       const newDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
       // Dispose previous front doc if any (first-time path replaces).
+      unmountDeck(Slides.front);
       if (Slides.front.pdfDoc) Slides.front.pdfDoc.destroy();
       Slides.front.pdfDoc = newDoc;
       Slides.front.slug = slug || null;
       Slides.front.downloadedAt  = downloadedAt || null;
-      // Land on the target page as soon as it is rendered, not after the whole deck:
-      // on a big deck the participant would otherwise sit on slide 1 for seconds.
       // targetPage may be a getter (following the host) — re-read, so a slide the
-      // host shows during the render is not undone by a jump back at the end.
+      // host shows while the page is being drawn is not undone by a jump back.
       var wantedPage = function() {
         var p = typeof targetPage === 'function' ? targetPage() : targetPage;
         return Math.max(1, Number(p) || 1);
       };
-      var landedPage = null;
-      var landOn = function(page) {
-        var section = Slides.front.el.querySelector('section[data-page="' + page + '"]');
-        if (!section) return;
-        var prevBehavior = Slides.front.el.style.scrollBehavior;
-        Slides.front.el.style.scrollBehavior = 'auto';
-        Slides.front.el.scrollTop = page > 1 ? section.offsetTop : 0;
-        Slides.front.el.style.scrollBehavior = prevBehavior;
-        landedPage = page;
-        if (overlay) overlay.style.display = 'none';
-      };
-      await renderAllPagesInto(Slides.front.el, newDoc, Slides.scale, function(renderedPage) {
-        if (landedPage === null && renderedPage >= wantedPage()) landOn(wantedPage());
-      });
-      if (wantedPage() !== landedPage) landOn(wantedPage());
+      // Every page has its place as soon as the deck is mounted, so land on the
+      // target page at once — whatever the deck's size — and lift the loading
+      // overlay (finally, below) when the pages on screen are drawn.
+      if (!(await mountDeck(Slides.front, newDoc, Slides.scale))) return;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        var page = wantedPage();
+        scrollBufferTo(Slides.front, page > 1 ? pageTops(Slides.front.pager)[page - 1] || 0 : 0);
+        await whenViewportDrawn(Slides.front);
+        if (Slides.front.pdfDoc !== newDoc) return; // another deck was loaded over this one
+        if (wantedPage() === page) break;
+      }
     } catch(e) {
       console.error('PDF load error', e);
     } finally {
