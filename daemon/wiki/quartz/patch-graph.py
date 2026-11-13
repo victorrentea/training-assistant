@@ -422,7 +422,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, CHEVRON_HIT_RADIUS, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, framingPan, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, roundBadge, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, roundBadge, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, showNoGraphNotice, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -589,6 +589,24 @@ PATCHES = [
     }
     app.destroy()
   }"""),
+    # No WebGL nor WebGPU (graphics acceleration off, a remote desktop, a blocklisted GPU):
+    # Pixi 8 has no canvas fallback, so app.init throws "CanvasRenderer is not yet
+    # implemented". The hidden small graph is drawn first, and its throw ended this
+    # handler before the full graph opened: the participant was left on the bare Quartz
+    # page, unscrollable (Victor, 2026-11-13). The small graph's failure is now ignored,
+    # and the full one's says what to turn on instead.
+    ("""  await renderLocalGraph()
+""",
+     """  await renderLocalGraph().catch(() => {}) // no WebGL: the full graph says so below
+"""),
+    ("""        globalGraphCleanups.push(await renderGraph(graphContainer, slug))
+""",
+     """        try {
+          globalGraphCleanups.push(await renderGraph(graphContainer, slug))
+        } catch (err) {
+          showNoGraphNotice(err)
+        }
+"""),
     # The full graph is always open: rendered on every page load, re-rendered to fit a
     # resized window, and neither Esc, a click outside it nor Ctrl+G closes it.
     ("      registerEscapeHandler(container, hideGlobalGraph)\n", ""),

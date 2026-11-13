@@ -763,6 +763,25 @@ function linkList(own: Element[]): HTMLElement | null {
   return list
 }
 
+// The graph could not be drawn (graph.inline.ts): almost always no WebGL. The Quartz
+// page under it is never meant to be read, so a notice covers it, saying what to turn on.
+export function showNoGraphNotice(err: unknown) {
+  console.error("wiki graph failed to render", err)
+  if (document.querySelector(".no-graph")) return
+  const box = document.createElement("div")
+  box.className = "no-graph"
+  const card = document.createElement("div")
+  const title = Object.assign(document.createElement("h2"), { textContent: "The wiki can't be drawn in this browser" })
+  card.append(
+    title,
+    paragraph("The wiki is a graph that needs graphics acceleration (WebGL), which is turned off here."),
+    paragraph("In Chrome or Edge: Settings → System → turn on \u201cUse graphics acceleration when available\u201d, then relaunch the browser."),
+    paragraph("Or open the wiki on another device, such as your phone."),
+  )
+  box.append(card)
+  document.body.append(box)
+}
+
 // Not on a pan or zoom of the graph: the note being read stays open while the reader
 // zooms in around it (Victor, 2026-10-16), and can be dragged off what it covers.
 export function hidePeek() {

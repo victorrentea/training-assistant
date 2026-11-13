@@ -1010,3 +1010,27 @@ html #app-tooltip {
     transform: translate(-50%, -100%);
   }
 }
+
+// No WebGL, so no graph (note-pane.ts showNoGraphNotice): a notice over the whole
+// window, as the Quartz page under it is never meant to be read.
+.no-graph {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--light);
+  font-family: var(--bodyFont);
+  color: var(--darkgray);
+
+  & > div {
+    max-width: 34rem;
+  }
+
+  h2 {
+    margin-top: 0;
+    color: var(--dark);
+  }
+}
