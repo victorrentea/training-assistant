@@ -463,6 +463,7 @@ body {
 
 // The pills with a checkbox (patch-graph.py): the box before the label, sized to it.
 .graph-home,
+.graph-freeze,
 .graph-followed {
   display: flex;
   align-items: center;
@@ -488,6 +489,23 @@ body {
   &:has(input:checked) {
     color: var(--dark);
     border-color: var(--dark);
+  }
+}
+
+// After Reset seen (patch-graph.py places it): the dots stand still and can't be dragged
+// (note-pane.ts graphFrozen). Ticked from the start, so it stays as quiet as the pills
+// around it: only its box says it is on.
+.graph-freeze {
+  left: 20.5rem;
+
+  input:checked {
+    border-color: var(--wiki-quiet);
+    background-color: var(--wiki-quiet);
+  }
+
+  &:hover input:checked {
+    border-color: var(--dark);
+    background-color: var(--dark);
   }
 }
 
@@ -539,7 +557,9 @@ body {
 
 // Bottom-right, for a participant who hasn't starred a note yet (note-pane.ts): the
 // size of the pills on the left, in the takeaway gold, a sweep of light crossing it
-// every few seconds.
+// every few seconds. Each sweep is an animation of its own, started by note-pane.ts
+// (sweepStarHint): one endless CSS animation, still for three quarters of its 5 s, had
+// the browser present 60 frames a second through the stillness too (Victor, 2026-11-13).
 .graph-star-hint {
   position: fixed;
   right: 0.8rem;
@@ -563,18 +583,6 @@ body {
     inset: 0;
     background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
     transform: translateX(-120%);
-    animation: graph-star-hint-sweep 5s ease-in-out 1.5s infinite;
-  }
-}
-
-@keyframes graph-star-hint-sweep {
-  0% {
-    transform: translateX(-120%);
-  }
-
-  25%,
-  100% {
-    transform: translateX(120%);
   }
 }
 
@@ -859,8 +867,9 @@ body.peek-dragging {
     left: 9.9rem;
   }
 
-  // No room on a phone's top band for it.
-  .graph-reset-seen {
+  // No room on a phone's top band for them (a phone's graph stays frozen).
+  .graph-reset-seen,
+  .graph-freeze {
     display: none;
   }
 

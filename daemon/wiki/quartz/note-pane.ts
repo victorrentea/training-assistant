@@ -40,6 +40,9 @@ export type PaneGraph = {
   dots(): Dot[]
   // Where a dot is on screen, its centre and radius (null: not in the graph).
   dotAt(slug: SimpleSlug): Circle | null
+  // Something the graph draws without being told changed (a note's ✏️): a frozen graph
+  // draws a frame for it; a live one draws every frame anyway.
+  redraw(): void
 }
 
 type Point = { x: number; y: number }
@@ -156,6 +159,7 @@ function loadVersions() {
         }
       }
       if (backfilled) saveSeen()
+      graph?.redraw() // the pencils, now that the versions are known
     })
 }
 
@@ -180,6 +184,30 @@ export function showHome(): boolean {
 export function setShowHome(show: boolean) {
   try {
     localStorage.setItem(homeKey, show ? "1" : "0")
+  } catch {}
+}
+
+// Whether the graph's dots stand still (patch-graph.py's "Freeze graph" pill), remembered
+// on this browser. On by default (Victor, 2026-11-13): a live graph draws 60 frames a
+// second for as long as the wiki is open, even with nothing moving, and every frame
+// costs the laptop's GPU and its window compositor - on the trainer's Mac, sharing his
+// screen, the mouse lagged. Frozen, the graph is laid out in one go and its dots can't
+// be dragged; everything else looks and moves as before (the stars' twinkle, the
+// falling stars, the lit edges' marching dashes, the Follow ring), but a frame is drawn
+// only when there is something to show. Unticked, it is the live graph again.
+const frozenKey = "wiki-graph-frozen"
+
+export function graphFrozen(): boolean {
+  try {
+    return localStorage.getItem(frozenKey) !== "0"
+  } catch {
+    return true
+  }
+}
+
+export function setGraphFrozen(on: boolean) {
+  try {
+    localStorage.setItem(frozenKey, on ? "1" : "0")
   } catch {}
 }
 
@@ -344,6 +372,10 @@ function ensurePeek(): HTMLElement {
     if (starMode() === "voter") toggleStar(peeked, !mine.has(peeked))
     else toggleTakeaway(peeked, !starred.has(peeked))
   })
+  // The beam follows the popover: moved (its style), grown, opened or closed (its class).
+  const moved = () => beam && followWithBeam()
+  new MutationObserver(moved).observe(peek, { attributes: true, attributeFilter: ["style", "class"] })
+  new ResizeObserver(moved).observe(peek)
   dragByHead(peek, peek.querySelector(".note-peek-title") as HTMLElement)
   peek.addEventListener("mouseleave", () => highlight(null))
   // A link to another note swaps the popover to it instead of navigating away from
@@ -502,12 +534,16 @@ function leastCovering(at: Point, w: number, h: number, top: number): Point {
 // popover's corners together, its sides tangent to the dot, strongest at the dot. Its
 // edges stand out and fade inward to nothing in its middle: a wide blurred outline,
 // clipped to the inside, under a thin crisp one (Victor, 2026-10-23). In the colour of the open dot's lit links,
-// the text colour (white on dark); gold, like its burst, when the note shines. Redrawn
-// every frame while the popover is open: the graph moves, zooms and gets dragged under it.
+// the text colour (white on dark); gold, like its burst, when the note shines. Looked at
+// again whenever the graph draws a frame (graphDrew: it zooms, pans, gets dragged under
+// the popover) or the popover moves, grows, opens or closes (ensurePeek), and redrawn
+// only if its dot or the popover is somewhere else: a loop of its own rewrote the SVG
+// on every frame the popover was open, a blurred polygon repainted 60 times a second
+// under a note being read (Victor, 2026-11-13).
 // It leaves the dot itself out: laid over it, it tinted the open dot, cream on a shining
 // note (Victor, 2026-10-29).
 let beam: SVGSVGElement | null = null
-let beamFrame = 0
+let beamDrawn = "" // what the beam was last drawn from
 
 function ensureBeam(): SVGSVGElement {
   if (beam) return beam
@@ -535,45 +571,50 @@ function ensureBeam(): SVGSVGElement {
 }
 
 function followWithBeam() {
-  cancelAnimationFrame(beamFrame)
   const svg = ensureBeam()
-  const draw = () => {
-    const dot = peek?.classList.contains("open") && peeked ? graph?.dotAt(peeked) : null
-    const box = peek?.getBoundingClientRect()
-    const inside = dot && box && dot.x > box.left && dot.x < box.right && dot.y > box.top && dot.y < box.bottom
-    svg.style.display = dot && box && !inside ? "" : "none"
-    if (dot && box && !inside) {
-      const corners = [
-        [box.left, box.top],
-        [box.right, box.top],
-        [box.right, box.bottom],
-        [box.left, box.bottom],
-      ]
-      // The dot's whole disc, not its centre: the beam's sides run tangent to it.
-      const rim = Array.from({ length: 24 }, (_, i) => {
-        const a = (i * Math.PI) / 12
-        return [dot.x + dot.r * Math.cos(a), dot.y + dot.r * Math.sin(a)]
-      })
-      const points = hull([...rim, ...corners]).join(" ")
-      svg.querySelectorAll("polygon").forEach((polygon) => polygon.setAttribute("points", points))
-      const hole = svg.querySelector("mask circle")!
-      hole.setAttribute("cx", `${dot.x}`)
-      hole.setAttribute("cy", `${dot.y}`)
-      hole.setAttribute("r", `${dot.r + 0.5}`)
-      const color = peek!.classList.contains("takeaway") ? "var(--wiki-takeaway)" : "var(--dark)"
-      svg.querySelectorAll("linearGradient").forEach((gradient) => {
-        // A style, not the stop-color attribute: an attribute doesn't read CSS variables.
-        gradient.querySelectorAll("stop").forEach((stop) => (stop.style.stopColor = color))
-        gradient.setAttribute("x1", `${dot.x}`)
-        gradient.setAttribute("y1", `${dot.y}`)
-        gradient.setAttribute("x2", `${(box.left + box.right) / 2}`)
-        gradient.setAttribute("y2", `${(box.top + box.bottom) / 2}`)
-      })
-    }
-    if (dot !== null && peek?.classList.contains("open")) beamFrame = requestAnimationFrame(draw)
-    else svg.style.display = "none"
+  const dot = peek?.classList.contains("open") && peeked ? graph?.dotAt(peeked) : null
+  const box = peek?.getBoundingClientRect()
+  const inside = dot && box && dot.x > box.left && dot.x < box.right && dot.y > box.top && dot.y < box.bottom
+  const shown = dot && box && !inside
+  const from = shown
+    ? [dot.x, dot.y, dot.r, box.left, box.top, box.right, box.bottom, peek!.classList.contains("takeaway")].join()
+    : ""
+  if (from === beamDrawn) return
+  beamDrawn = from
+  svg.style.display = shown ? "" : "none"
+  if (dot && box && !inside) {
+    const corners = [
+      [box.left, box.top],
+      [box.right, box.top],
+      [box.right, box.bottom],
+      [box.left, box.bottom],
+    ]
+    // The dot's whole disc, not its centre: the beam's sides run tangent to it.
+    const rim = Array.from({ length: 24 }, (_, i) => {
+      const a = (i * Math.PI) / 12
+      return [dot.x + dot.r * Math.cos(a), dot.y + dot.r * Math.sin(a)]
+    })
+    const points = hull([...rim, ...corners]).join(" ")
+    svg.querySelectorAll("polygon").forEach((polygon) => polygon.setAttribute("points", points))
+    const hole = svg.querySelector("mask circle")!
+    hole.setAttribute("cx", `${dot.x}`)
+    hole.setAttribute("cy", `${dot.y}`)
+    hole.setAttribute("r", `${dot.r + 0.5}`)
+    const color = peek!.classList.contains("takeaway") ? "var(--wiki-takeaway)" : "var(--dark)"
+    svg.querySelectorAll("linearGradient").forEach((gradient) => {
+      // A style, not the stop-color attribute: an attribute doesn't read CSS variables.
+      gradient.querySelectorAll("stop").forEach((stop) => (stop.style.stopColor = color))
+      gradient.setAttribute("x1", `${dot.x}`)
+      gradient.setAttribute("y1", `${dot.y}`)
+      gradient.setAttribute("x2", `${(box.left + box.right) / 2}`)
+      gradient.setAttribute("y2", `${(box.top + box.bottom) / 2}`)
+    })
   }
-  draw()
+}
+
+// The graph drew a frame (patch-graph.py): the open note's dot may have moved.
+export function graphDrew() {
+  if (beam) followWithBeam()
 }
 
 // The convex hull of a few points (Andrew's monotone chain), as "x,y" pairs.
@@ -923,8 +964,21 @@ let changedAt = 0 // the trainer's last click: an older answer must not undo it
 
 function applyTakeaways(slugs: readonly string[]) {
   starred = new Set(slugs.map((s) => simplifySlug(s as never)))
-  graph?.shine()
+  shineIfChanged()
   showPeekStar()
+}
+
+// The graph shines again only when what its dots shine from changed. The trainer's wiki
+// asks his daemon every second or two, a wiki in a tab of its own every 15 s, and each
+// answer restyled every label and drew a frame, the same as before - which also kept a
+// frozen graph from ever resting (Victor, 2026-11-13).
+let shineDrawn = ""
+
+function shineIfChanged() {
+  const from = JSON.stringify([[...starred].sort(), [...starCounts].sort(), [...mine].sort(), starMode()])
+  if (from === shineDrawn) return
+  shineDrawn = from
+  graph?.shine()
 }
 
 // Lucide's eye-off, in the text's colour: an emoji has no crossed eye.
@@ -1209,7 +1263,7 @@ function applyStars(counts: unknown, own: unknown, starrersNow?: unknown, reveal
     showStarrers()
   }
   showRound()
-  graph?.shine()
+  shineIfChanged()
   showPeekStar()
 }
 
@@ -1421,6 +1475,25 @@ function showStarHint() {
     textContent: "☆\uFE0E Please star your favorites",
   })
   document.body.append(starHint)
+  sweepStarHint(starHint, 1500)
+}
+
+// The sweep of light across the hint (custom.scss, its ::after): 1.25 s of it every 5 s,
+// for as long as the hint is there. Each one a short animation: frames are presented
+// while the light crosses, none in between, nor while the wiki is out of sight (a hidden
+// tab, or another tab of the participant page: the hint then has no box).
+function sweepStarHint(hint: HTMLElement, after: number) {
+  window.setTimeout(() => {
+    if (starHint !== hint) return // starred, and gone
+    if (!document.hidden && hint.getClientRects().length > 0) {
+      hint.animate([{ transform: "translateX(-120%)" }, { transform: "translateX(120%)" }], {
+        duration: 1250,
+        easing: "ease-in-out",
+        pseudoElement: "::after",
+      })
+    }
+    sweepStarHint(hint, 5000)
+  }, after)
 }
 
 // Under the graph, last in its bottom row (patch-graph.py places it): "★ 7 users

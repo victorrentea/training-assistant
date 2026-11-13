@@ -11,6 +11,14 @@ import sys
 path = pathlib.Path(sys.argv[1])
 
 PATCHES = [
+    # A lit edge is drawn as dashes (below): told apart, when frozen, from one at rest.
+    ("""type LinkRenderData = GraphicsInfo & {
+  simulationData: LinkData
+}""",
+     """type LinkRenderData = GraphicsInfo & {
+  simulationData: LinkData
+  dashed?: boolean
+}"""),
     # Obsidian keeps hubs only a bit larger than leaves; sqrt made index/log/overview giant.
     ("return 2 + Math.sqrt(numLinks)",
      "return 3 + Math.log2(1 + numLinks)"),
@@ -58,6 +66,7 @@ PATCHES = [
       badge,
       pencil,
       takeaway,
+      shining: shineOf(nodeId) > 0, // as its label was styled
     }
 
     nodeRenderData.push(nodeRenderDatum)"""),
@@ -195,6 +204,7 @@ PATCHES = [
       ring
         .circle(rn.x + width / 2, rn.y + height / 2, ringedNode.radius + (5 + 4 * pulse) / k)
         .stroke({ width: 3 / k, color: ringColor, alpha: 0.6 + 0.4 * pulse })
+      moving = Math.max(moving, 8) // it breathes 4 px in and out
     }
     if (showStarCue) {
       const { x: tx, y: ty, k } = currentTransform
@@ -228,6 +238,8 @@ PATCHES = [
       graph.dataset.starCue = cue.kind === "arrow" ? `arrow:${cue.id}` : cue.kind === "aim" ? `aim:${cue.ids.join(",")}` : "none"
       // And where the arrow is, in the canvas's pixels, for a test to click it.
       graph.dataset.starCueAt = cue.kind === "arrow" ? `${Math.round(cue.x)},${Math.round(cue.y)}` : ""
+      // The arrow drifts 6 px to and fro; the triangles turn around their dot, some 50 px out.
+      if (cue.kind !== "none") moving = Math.max(moving, cue.kind === "arrow" ? 9 : 25)
     }
     tweens.forEach((t) => t.update(time))
 """),
@@ -244,6 +256,8 @@ PATCHES = [
     takeawayHazeContainer.addChild(takeaway.glow)
     takeawayGlowContainer.addChild(takeaway.burst, takeaway.flare)
     starsContainer.addChild(takeaway.star)
+    // An empty star fills under the pointer (graph-takeaway.ts): a frame for it.
+    takeaway.star.on("pointerover", () => wake()).on("pointerout", () => wake())
 """),
     ("""        n.label.position.set(x + width / 2, y + height / 2 + n.radius + 2)
       }
@@ -255,7 +269,9 @@ PATCHES = [
         hovered.width = hovered.height = n.radius * 9
       }
       n.badge?.place(x + width / 2, y + height / 2, n.radius)
-      n.pencil.show(isEdited(n.simulationData.id), x + width / 2, y + height / 2, n.radius, time)
+      const edited = isEdited(n.simulationData.id)
+      n.pencil.show(edited, x + width / 2, y + height / 2, n.radius, time)
+      if (edited) moving = Math.max(moving, 6 * currentTransform.k) // it breathes a quarter of its size
       // The star right after the note's name, on its line (graph-takeaway.ts).
       // The star after the name, like one more letter of it: a letter's gap after its
       // last one (the label's width takes in its outline, half of it each side), on its
@@ -263,7 +279,8 @@ PATCHES = [
       const em = (n.label.style.fontSize as number) * n.label.scale.x
       const textEnd = n.label.width / 2 - (SHINING_LABEL_STROKE.width / 2) * n.label.scale.x
       const baseline = n.radius + 2 + baselineOf(n.label.style, SHINING_LABEL_STROKE.width) * n.label.scale.y
-      n.takeaway?.place(x + width / 2, y + height / 2, textEnd + 0.06 * em, baseline, 0.68 * em, time)
+      n.takeaway?.place(x + width / 2, y + height / 2, textEnd + 0.06 * em, baseline, 0.68 * em)
+      moving = Math.max(moving, (n.takeaway?.turn(time) ?? 0) * currentTransform.k)
       n.takeaway?.fade(dotSeen(n.simulationData.id))
 """),
     # Keep a margin around each node for its label, so neighbouring labels don't collide.
@@ -304,6 +321,7 @@ PATCHES = [
       const tx = linkData.target.x! + width / 2
       const ty = linkData.target.y! + height / 2
       if (lit) {
+        moving = Math.max(moving, 12) // its dashes creep 12 px a second
         const k = currentTransform.k
         const sx = linkData.source.x! + width / 2
         const sy = linkData.source.y! + height / 2
@@ -338,6 +356,7 @@ PATCHES = [
           else dashes(tx, ty, sx, sy)
         }
         l.gfx.stroke({ alpha: l.alpha, width: 1.6 / k, color: l.color })
+        l.dashed = true
       } else {
         l.gfx
           .lineTo(tx, ty)
@@ -422,7 +441,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, CHEVRON_HIT_RADIUS, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, framingPan, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, roundBadge, saveView, savedView, setFollowed, setShowHome, shineOf, showHome, shownDays, showNoGraphNotice, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, graphDrew, graphFrozen, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, roundBadge, saveView, savedView, setFollowed, setGraphFrozen, setShowHome, shineOf, showHome, shownDays, showNoGraphNotice, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -493,7 +512,9 @@ PATCHES = [
       if (!dragging) renderPixiFromD3()
     },
     ring(id) {
-      ringedNode = nodeRenderData.find((n) => n.simulationData.id === id) ?? null
+      const ringed = nodeRenderData.find((n) => n.simulationData.id === id) ?? null
+      if (ringed !== ringedNode) wake()
+      ringedNode = ringed
     },
     shine() {
       const takeaways = new Set<string>()
@@ -520,8 +541,13 @@ PATCHES = [
         }
         if (!comets.some((c) => c.id === id)) n.takeaway?.set(d) // else on impact
         n.color = color(n.simulationData)
-        n.label.style.fill = d.level > 0 ? computedStyleMap["--wiki-takeaway-text"] : computedStyleMap["--dark"]
-        n.label.style.stroke = d.level > 0 ? { ...SHINING_LABEL_STROKE, color: computedStyleMap["--wiki-outline"] } : PLAIN_LABEL_STROKE
+        // Only a label that starts or stops shining: a style set again, even the same,
+        // has Pixi draw the text anew, and every star in the room did that to every label.
+        if (d.level > 0 !== n.shining) {
+          n.shining = d.level > 0
+          n.label.style.fill = d.level > 0 ? computedStyleMap["--wiki-takeaway-text"] : computedStyleMap["--dark"]
+          n.label.style.stroke = d.level > 0 ? { ...SHINING_LABEL_STROKE, color: computedStyleMap["--wiki-outline"] } : PLAIN_LABEL_STROKE
+        }
       }
       starredIds = takeaways
       shownOnce = true
@@ -568,6 +594,9 @@ PATCHES = [
       const { minX, minY, maxX, maxY } = n.gfx.getBounds()
       return { x: rect.left + (minX + maxX) / 2, y: rect.top + (minY + maxY) / 2, r: (maxX - minX) / 2 }
     },
+    redraw() {
+      wake()
+    },
   }
   if (isGlobal) connectGraph(paneGraph)
 
@@ -579,6 +608,8 @@ PATCHES = [
   }""",
      """  return () => {
     stopAnimation = true
+    clearTimeout(restTimer)
+    document.removeEventListener("visibilitychange", backInView)
     if (isGlobal) disconnectGraph(paneGraph)
     // Not before the first layout ends: frozen halfway, it would never finish, nor fit.
     if (isGlobal && keepLayout && laidOut) {
@@ -699,7 +730,18 @@ PATCHES = [
       className: "graph-session-title",
       textContent: [sessionTitle, "Victor Rentea"].filter(Boolean).join(" · "),
     })
-    container.append(title, reset, home, resetSeenPill, sources)
+    // Last of the pills that are always there: Freeze graph (note-pane.ts graphFrozen),
+    // ticked unless the reader unticked it. The dots stay where they are either way;
+    // unticked, they can be dragged and the graph is drawn every frame again.
+    const freeze = checkboxPill("graph-reset graph-freeze", "Freeze graph", graphFrozen(), (on) => {
+      setGraphFrozen(on)
+      keepLayout = true
+      cleanupGlobalGraphs()
+      keepLayout = false
+      void renderGlobalGraph()
+    })
+    freeze.dataset.tip = "The dots stand still, so the graph is drawn only when it has something to show: easier on your laptop. Untick to drag them around."
+    container.append(title, reset, home, resetSeenPill, freeze, sources)
     // Only on the trainer's machine, right of Home: the notes he opens here are the ones
     // his participants' Follow rings in yellow (Victor, 2026-10-16), while ticked: unticked,
     // he browses without them seeing (Victor, 2026-10-29).
@@ -743,7 +785,7 @@ PATCHES = [
     const placePills = () => {
       if (innerWidth < 900) return
       let left = 13 // 0.8rem
-      for (const pill of [reset, home, resetSeenPill, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads, starrers, round]) {
+      for (const pill of [reset, home, resetSeenPill, freeze, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads, starrers, round]) {
         if (!pill.isConnected || pill.hidden) continue
         pill.style.left = `${left}px`
         left += pill.offsetWidth + 10
@@ -778,6 +820,36 @@ PATCHES = [
   }
   let laidOut = redrawn !== null
   simulation.on("end.laidOut", () => (laidOut = true))
+  // Freeze graph (the pill, ticked by default; note-pane.ts graphFrozen): the dots
+  // stand still - no simulation, no dragging - and nothing else changes in what the
+  // graph shows (Victor, 2026-11-13). A live graph draws a frame after every frame for
+  // as long as the wiki is open, its simulation long at rest. Frozen, the layout is
+  // worked out in one go before the first frame (by the loop's start, below), and
+  // frames are drawn only as needed (the loop's end):
+  // - at full rate while something changes: wake(ms) asks for the next frame and for
+  //   ms more of them (the hover tweens), and a comet's flight keeps them coming;
+  // - a few a second while all that moves is what moves on its own - the shining
+  //   notes' turning bursts, the lit edges' dashes, the Follow ring, a pencil, the next
+  //   star's cue - slow things, drawn as often as it takes to look the same;
+  // - none at all once nothing moves.
+  const frozen = graphFrozen()
+  if (frozen) simulation.stop() // before its first tick
+  const SETTLE_MS = 300 // the hover tweens run 200 ms
+  let awakeUntil = 0
+  let changed = false // since the last frame: all of it is drawn again, not only what moves
+  let looping = false // a frame is on its way
+  let started = false // all is built: frames may be asked for
+  let restTimer = 0 // frozen: the wait until the next frame of what moves on its own
+  let moving = 0 // this frame: the fastest of what moves on its own, in screen px a second
+  const wake = (ms = 0) => {
+    awakeUntil = Math.max(awakeUntil, performance.now() + ms)
+    changed = true
+    if (!started || (looping && !restTimer)) return
+    clearTimeout(restTimer)
+    restTimer = 0
+    looping = true
+    requestAnimationFrame(animate)
+  }
 """),
     ("""  forceRadial,
   zoomIdentity,""",
@@ -802,6 +874,7 @@ PATCHES = [
     ("""  if (isGlobal) connectGraph(paneGraph)
 """,
      """  const keptView = isGlobal && enableZoom ? (redrawn?.view ?? savedView()) : null
+  let fit = () => {} // zooms and pans to the best fit, once (below)
   if (isGlobal && enableZoom) {
     // The wheel zooms; a double-click doesn't (Victor, 2026-10-23): it opened a note and
     // zoomed in on it at once. d3 binds it on the canvas, as "dblclick.zoom".
@@ -816,7 +889,7 @@ PATCHES = [
       )
     }
     let fitted = keptView !== null
-    simulation.on("end.fit", () => {
+    fit = () => {
       if (fitted || stopAnimation) return
       fitted = true
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
@@ -837,7 +910,7 @@ PATCHES = [
       const start = performance.now()
       const step = (now: number) => {
         if (stopAnimation) return
-        const t = Math.min((now - start) / 450, 1)
+        const t = frozen ? 1 : Math.min((now - start) / 450, 1) // frozen: there at once
         const e = t * (2 - t)
         const lerp = (a: number, b: number) => a + (b - a) * e
         select<HTMLCanvasElement, NodeData>(app.canvas).call(
@@ -846,8 +919,10 @@ PATCHES = [
         )
         if (t < 1) requestAnimationFrame(step)
       }
-      requestAnimationFrame(step)
-    })
+      if (frozen) step(start)
+      else requestAnimationFrame(step)
+    }
+    simulation.on("end.fit", fit)
   }
   if (isGlobal) connectGraph(paneGraph)
 """),
@@ -879,9 +954,14 @@ PATCHES = [
      """  const labelSize = new Map<string, { w: number; h: number }>()
   const labelBoxes = (() => {
     let nodes: NodeData[] = []
+    // Each dot's radius, worked out once: nodeRadius() counts its links among all of
+    // them, and this asks for it for every pair of dots on every tick - most of the
+    // 0.2 s the layout of 50 notes took when done in one go (Freeze graph, below).
+    const radii = new Map<string, number>()
+    const radiusOf = (n: NodeData) => radii.get(n.id) ?? radii.set(n.id, nodeRadius(n)).get(n.id)!
     const force = (alpha: number) => {
       const box = (n: NodeData) => {
-        const r = nodeRadius(n)
+        const r = radiusOf(n)
         const size = labelSize.get(n.id) ?? { w: 2 * r, h: 0 }
         const half = Math.max(r + 8, size.w / 2 + 8) // the star after the name
         return { l: n.x! - half, r: n.x! + half, t: n.y! - r - 8, b: n.y! + r + 2 + size.h }
@@ -934,6 +1014,21 @@ PATCHES = [
 """,
      """  function animate(time: number) {
     if (stopAnimation) return
+    // Out of sight - the participant page shows another of its tabs (its display: none
+    // leaves this frame's canvas without a box, yet Chrome goes on running its frames:
+    // the graph was drawn in full, 60 times a second, on every laptop that had opened
+    // the Wiki tab once), or the browser's tab is hidden: nothing is drawn, live or
+    // frozen. A look twice a second brings it back; nothing tells the frame it shows again.
+    if (document.hidden || app.canvas.getClientRects().length === 0) {
+      Ticker.system.stop() // Pixi's own (the loop's start, below): a live graph's runs every frame
+      restTimer = window.setTimeout(() => {
+        restTimer = 0
+        requestAnimationFrame(animate)
+      }, 500)
+      return
+    }
+    if (!frozen && !Ticker.system.started) Ticker.system.start()
+    moving = 0
     hovered.visible = hoveredNodeId !== null
     cometGfx.clear()
     for (const c of [...comets]) {
@@ -948,6 +1043,7 @@ PATCHES = [
       if (p >= 1) {
         comets.splice(comets.indexOf(c), 1)
         n.takeaway?.set(c.d)
+        changed = true // a burst that wasn't there has yet to be placed
         flashes.push({ id: c.id, start: time })
         continue
       }
@@ -962,6 +1058,126 @@ PATCHES = [
       }
       drawFlash(cometGfx, n.simulationData.x! + width / 2, n.simulationData.y! + height / 2, n.radius, q, takeawayColors.on)
     }
+    // Frozen and nothing changed since the last frame: only what moves on its own is
+    // drawn again (and what the tweens fade, on their own).
+    const resting = frozen && !changed
+    changed = false
+"""),
+    # ── Freeze graph (Victor, 2026-11-13; the state and wake() are with the simulation
+    # above, the pill with the others). ──
+    # The small graph in Quartz's sidebar is never seen: the full graph covers the whole
+    # window for good. It was laid out and drawn 60 times a second all the same, a
+    # second WebGL canvas under the first.
+    ("""    for (const container of localGraphContainers) {
+      localGraphCleanups.push(await renderGraph(container as HTMLElement, slug))
+    }
+""",
+     """    // Never drawn: the full graph covers it for good (patch-graph.py).
+"""),
+    ('import { Text, Graphics, Application, Container, Circle } from "pixi.js"',
+     'import { Text, Graphics, Application, Container, Circle, Ticker } from "pixi.js"'),
+    # Whatever restyles the dots draws frames until its tweens end.
+    ("""  function renderPixiFromD3() {
+""",
+     """  function renderPixiFromD3() {
+    wake(SETTLE_MS)
+"""),
+    # While only what moves on its own is drawn, a dot is left where it was - only its
+    # burst turns and its pencil breathes - and so is an edge that isn't lit: each was
+    # placed, or cleared and built again, on every frame.
+    ("""      const { x, y } = n.simulationData
+      if (!x || !y) continue
+      n.gfx.position.set(x + width / 2, y + height / 2)
+""",
+     """      const { x, y } = n.simulationData
+      if (!x || !y) continue
+      if (resting) {
+        moving = Math.max(moving, (n.takeaway?.turn(time) ?? 0) * currentTransform.k)
+        if (isEdited(n.simulationData.id)) {
+          n.pencil.show(true, x + width / 2, y + height / 2, n.radius, time)
+          moving = Math.max(moving, 6 * currentTransform.k)
+        }
+        continue
+      }
+      n.gfx.position.set(x + width / 2, y + height / 2)
+"""),
+    ("""    for (const l of linkRenderData) {
+      const linkData = l.simulationData
+      l.gfx.clear()
+""",
+     """    for (const l of linkRenderData) {
+      const linkData = l.simulationData
+      if (resting && !l.dashed && !litEdge(l)) continue
+      l.dashed = false
+      l.gfx.clear()
+"""),
+    # A zoom or a pan: a frame per step.
+    ("""          currentTransform = transform
+""",
+     """          currentTransform = transform
+          wake()
+"""),
+    # Frozen, no dot is dragged: a press on one is only ever the click that opens its
+    # note. The drag stays bound, so that press still doesn't pan the graph.
+    ("""        .on("start", function dragstarted(event) {
+          if (!event.active) simulation.alphaTarget(1).restart()
+""",
+     """        .on("start", function dragstarted(event) {
+          dragStartTime = Date.now()
+          if (frozen) return
+          if (!event.active) simulation.alphaTarget(1).restart()
+"""),
+    ("""        .on("drag", function dragged(event) {
+""",
+     """        .on("drag", function dragged(event) {
+          if (frozen) return
+"""),
+    # The loop. Live: a frame after every frame, as Quartz does. Frozen: the layout in
+    # one go - as many ticks as the live simulation takes to cool down, with no frame in
+    # between - then the best fit at once, and frames as the note with `frozen` says.
+    # What moves on its own is slow: a frame for every pixel its fastest part travels
+    # on screen shows the same as 60 a second, and no fewer than 20 a second are drawn.
+    # Pixi's own ticker goes too: it replayed the last pointer move on every frame, for
+    # dots moving under a still pointer, which frozen ones never do.
+    ("""    tweens.forEach((t) => t.update(time))
+    app.renderer.render(stage)
+    requestAnimationFrame(animate)
+  }
+
+  requestAnimationFrame(animate)
+""",
+     """    tweens.forEach((t) => t.update(time))
+    app.renderer.render(stage)
+    if (isGlobal) graphDrew() // the beam to the open note's popover follows its dot
+    if (!frozen || time < awakeUntil || comets.length > 0 || flashes.length > 0) requestAnimationFrame(animate)
+    else if (moving > 0) {
+      const every = Math.min(Math.max(1000 / moving, 1000 / 60), 50)
+      // A timer, then the screen's next frame, up to 17 ms later: 10 ms short of the wait.
+      restTimer = window.setTimeout(() => {
+        restTimer = 0
+        requestAnimationFrame(animate)
+      }, every - 10)
+    } else looping = false
+  }
+
+  Ticker.system.autoStart = !frozen
+  if (frozen) {
+    Ticker.system.stop()
+    if (!redrawn) simulation.tick(Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay())))
+    laidOut = true
+    fit()
+  } else {
+    Ticker.system.start()
+  }
+  // A frame when the browser's tab is back in view, or the GPU gave the canvas back:
+  // nothing else would draw a resting graph that came back blank.
+  const backInView = () => {
+    if (!document.hidden) wake()
+  }
+  document.addEventListener("visibilitychange", backInView)
+  app.canvas.addEventListener("webglcontextrestored", backInView)
+  started = true
+  wake(SETTLE_MS)
 """),
 ]
 

@@ -79,6 +79,8 @@ const LEVELS = [
 // A note already read shines the same size but paler (Victor, 2026-11-11): the gold
 // stays where the room's stars are, and the eye goes to what is left to read.
 const SEEN_DIM = 0.4
+// How long a burst takes to turn one radian.
+const BURST_TURN_MS = 6000
 
 // Drawn once, white, tinted per theme: a soft round core and eight rays, four long and
 // four short - a star's sparkle.
@@ -260,9 +262,8 @@ export class TakeawayMark {
 
   // The dot is at (x, y); its star's glyph starts at x + dx, sitting on the label's
   // baseline at y + baseline, drawn at font size `size`, so it reads as one more letter
-  // of the name (Victor, 2026-10-23). The burst turns slowly, so it reads as alive
-  // without pulsing like the yellow Follow ring.
-  place(x: number, y: number, dx: number, baseline: number, size: number, time: number) {
+  // of the name (Victor, 2026-10-23). Its burst is turned by turn(), every frame.
+  place(x: number, y: number, dx: number, baseline: number, size: number) {
     const scale = size / STAR_FONT
     this.star.scale.set(scale)
     this.star.position.set(
@@ -271,12 +272,21 @@ export class TakeawayMark {
     )
     if (this.shine.level > 0) {
       this.burst.position.set(x, y)
-      this.burst.rotation = time / 6000
-      // Turned the other way and offset half a ray: the two together sparkle more.
       this.flare.position.set(x, y)
-      this.flare.rotation = Math.PI / 8 - time / 9000
       this.glow.position.set(x, y)
     }
+  }
+
+  // The burst turns slowly, so it reads as alive without pulsing like the yellow Follow
+  // ring. Apart from place(): on a frozen graph the dot stays put and only this goes
+  // on. Returns how fast its rays' tips travel, in its own units a second (0: no burst),
+  // which says how often it is worth drawing.
+  turn(time: number): number {
+    if (this.shine.level === 0) return 0
+    this.burst.rotation = time / BURST_TURN_MS
+    // Turned the other way and offset half a ray: the two together sparkle more.
+    this.flare.rotation = Math.PI / 8 - time / 9000
+    return ((this.burst.width / 2) * 1000) / BURST_TURN_MS
   }
 }
 
