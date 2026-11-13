@@ -187,8 +187,10 @@ body{visibility:hidden}
 .follow-paused{opacity:0.45;pointer-events:none;cursor:default}
 @keyframes follow-blink-red{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:#e53935;background-color:#ffebee}}
 .follow-blink-red{animation:follow-blink-red 180ms ease-in-out 3}
-@keyframes slides-nav-pulse{0%,100%{color:var(--color-on-surface-variant,#5e6b70)}50%{color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
-.slides-nav-blink,.summary-nav-blink,.wiki-nav-blink{animation:slides-nav-pulse 1.2s ease-in-out infinite}
+/* The pulse fades a highlight layer (opacity) behind the label instead of animating color/background-color, so it runs on the GPU without repainting the item every frame. */
+@keyframes slides-nav-pulse{0%,100%{opacity:0}50%{opacity:1}}
+.slides-nav-blink,.summary-nav-blink,.wiki-nav-blink{position:relative;isolation:isolate;color:var(--color-primary,#4555ba)}
+.slides-nav-blink::after,.summary-nav-blink::after,.wiki-nav-blink::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;background-color:var(--color-primary-container,#dfe0ff);pointer-events:none;will-change:opacity;animation:slides-nav-pulse 1.2s ease-in-out infinite}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70);font-weight:600}
 /* Tighter than py-2: the menu keeps growing (Wiki), and on a laptop screen it crowded the sidebar. */
 aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
@@ -864,7 +866,10 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-rank-row .fill { position: absolute; top: 0; bottom: 0; left: 0; --heat: 0; background: hsla(calc(52 - 52 * var(--heat)), 95%, 52%, .3); transition: width .4s ease, background-color .4s; }
 /* A tile burns for whoever picked it, and for everyone once it is in the revealed top 3: flame tongues licking up from the bottom, fiercest on #1 (--burn). */
 .aishare-rank-row.burning, .aishare-rank-row.mine { border-color: hsl(calc(30 - 30 * var(--burn)), 90%, 50%); }
-.aishare-rank-row.burning::before, .aishare-rank-row.mine::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+/* Sway = transform on a pseudo-element 60px wider than the row, not background-position: the GPU moves the
+   already-painted flames, so an idle page no longer repaints 7 gradients per row on every frame (measured
+   ~50% CPU between Chrome and WindowServer on the trainer's Mac while screen-sharing). */
+.aishare-rank-row.burning::before, .aishare-rank-row.mine::before { content: ''; position: absolute; inset: 0 0 0 -60px; z-index: 1; pointer-events: none; will-change: transform, opacity;
   background:
     radial-gradient(9% 95% at 10% 112%, rgba(255, 150, 0, .95), transparent 78%),
     radial-gradient(7% 75% at 22% 112%, rgba(255, 70, 0, .95), transparent 78%),
@@ -875,7 +880,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
     radial-gradient(9% 95% at 92% 112%, rgba(255, 170, 0, .95), transparent 78%);
   background-size: 50% 100%; background-repeat: repeat-x; opacity: calc(.9 * var(--burn));
   animation: aishare-burn-sway 4s ease-in-out infinite alternate, aishare-burn-flicker 1.7s ease-in-out infinite; }
-@keyframes aishare-burn-sway { from { background-position: 0 4px; } to { background-position: 60px 0; } }
+@keyframes aishare-burn-sway { from { transform: translate(0, 4px); } to { transform: translate(60px, 0); } }
 @keyframes aishare-burn-flicker { 0%, 100% { opacity: calc(.9 * var(--burn)); } 40% { opacity: calc(.65 * var(--burn)); } 70% { opacity: var(--burn); } }
 @media (prefers-reduced-motion: reduce) { .aishare-rank-row.burning::before, .aishare-rank-row.mine::before { animation: none; } }
 .aishare-rank-text { position: relative; z-index: 2; flex: 1; min-width: 0; overflow-wrap: break-word; transition: color .3s; }
