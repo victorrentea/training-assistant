@@ -5,7 +5,11 @@ Bluetooth. It pushes every change of its percentage, plus a keep-alive every 10
 minutes; the Mac reads the last one. Kept in memory: a redeploy loses it only until
 the next keep-alive.
 
-Auth: the bridge's shared token, fail-closed, as `X-Bridge-Token`.
+Auth: fail-closed, as `X-Bridge-Token`. The phone's mailbox (this, the clipboard
+and the file relay) has **its own token, `PHONE_RELAY_TOKEN`**, apart from the
+tablet bridge's: the two were one secret until 2026-11-13, so a copy leaked from
+the phone app also opened the bridge that drives the Mac. Without that variable
+the bridge's token is still accepted, so a deploy never locks the phone out.
 """
 import os
 import secrets
@@ -25,7 +29,8 @@ class PhoneBatteryReading(BaseModel):
 
 
 def _check(token: str | None) -> None:
-    expected = os.environ.get("TABLET_BRIDGE_TOKEN") or os.environ.get("BRIDGE_TOKEN") or ""
+    expected = (os.environ.get("PHONE_RELAY_TOKEN")
+                or os.environ.get("TABLET_BRIDGE_TOKEN") or os.environ.get("BRIDGE_TOKEN") or "")
     if not expected or not token or not secrets.compare_digest(token, expected):
         raise HTTPException(status_code=401, detail="bad token")
 

@@ -13,6 +13,7 @@ AUTH = {"X-Bridge-Token": TOKEN}
 def bridge_env(monkeypatch):
     monkeypatch.setenv("BRIDGE_TOKEN", TOKEN)
     monkeypatch.delenv("TABLET_BRIDGE_TOKEN", raising=False)
+    monkeypatch.delenv("PHONE_RELAY_TOKEN", raising=False)
     phone_battery._latest = None
     yield
     phone_battery._latest = None
@@ -43,3 +44,11 @@ def test_refused_when_no_token_is_configured(monkeypatch):
 
 def test_an_impossible_level_is_refused():
     assert TestClient(app).put("/api/phone-battery", headers=AUTH, json={"pct": 140, "charging": False}).status_code == 422
+
+
+def test_the_phones_own_token_replaces_the_bridges(monkeypatch):
+    """Once PHONE_RELAY_TOKEN is set, the tablet bridge's token no longer opens the mailbox."""
+    monkeypatch.setenv("PHONE_RELAY_TOKEN", "phone-only")
+    with TestClient(app) as client:
+        assert client.get("/api/phone-battery", headers={"X-Bridge-Token": TOKEN}).status_code == 401
+        assert client.get("/api/phone-battery", headers={"X-Bridge-Token": "phone-only"}).status_code == 200
