@@ -4800,7 +4800,10 @@ async function _pollForNewSession() {
 
 function _startHostMachinePolling() {
   if (!_onHostMachine()) return;
-  setInterval(_pollForNewSession, HOST_MACHINE_POLL_MS);
+  // A hidden tab asks nothing: the trainer forgets several of these open, and each one
+  // poked the daemon every second all day. Coming back to the tab asks at once.
+  setInterval(function () { if (!document.hidden) _pollForNewSession(); }, HOST_MACHINE_POLL_MS);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) _pollForNewSession(); });
 }
 var LS_NAME_KEY = 'workshop_participant_name';
 var LS_CUSTOM_NAME_KEY = 'workshop_custom_name';
