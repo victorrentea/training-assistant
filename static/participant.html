@@ -55,13 +55,16 @@ body{visibility:hidden}
   100%{background-color:rgba(139,92,246,0);box-shadow:inset 3px 0 0 rgba(139,92,246,0)}
 }
 #notes-content .notes-fresh{animation:notes-fresh-fade 5s ease-out forwards}
-/* Off-screen cue: "3 new above/below" -- click jumps to the nearest pending line. */
-.notes-cue{position:absolute;left:50%;transform:translateX(-50%);z-index:25;display:none;align-items:center;gap:.3em;padding:.35rem .9rem;border-radius:999px;border:none;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:700;letter-spacing:.02em;color:#fff;background:#8b5cf6;animation:notes-cue-pulse 1.6s ease-in-out infinite}
+/* Off-screen cue: "3 new above/below" -- click jumps to the nearest pending line.
+   Its glow is a second, stronger shadow on ::after that flips on/off (opacity + steps): no repaint and ~1 frame/s,
+   where fading box-shadow itself repainted the pill 60 times a second for as long as it waited. */
+.notes-cue{position:absolute;left:50%;transform:translateX(-50%);z-index:25;display:none;align-items:center;gap:.3em;padding:.35rem .9rem;border-radius:999px;border:none;cursor:pointer;font-family:inherit;font-size:.8rem;font-weight:700;letter-spacing:.02em;color:#fff;background:#8b5cf6;box-shadow:0 4px 14px rgba(139,92,246,.45)}
 .notes-cue.show{display:flex}
 .notes-cue .material-symbols-outlined{font-size:1.1rem}
 #notes-cue-up{top:1.5rem}
 #notes-cue-down{bottom:140px}
-@keyframes notes-cue-pulse{0%,100%{box-shadow:0 4px 14px rgba(139,92,246,.45)}50%{box-shadow:0 4px 22px rgba(139,92,246,.9)}}
+.notes-cue::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:0 4px 22px rgba(139,92,246,.9);opacity:0;will-change:opacity;animation:notes-cue-pulse 1.6s steps(1,end) infinite}
+@keyframes notes-cue-pulse{50%{opacity:1}}
 #summary-content{font-size:calc(1rem * var(--participant-zoom))}
 #files-content{font-size:calc(1rem * var(--participant-zoom))}
 /* Opened Files renders like an IDE project view: each folder owns a nested
@@ -177,20 +180,22 @@ body{visibility:hidden}
 #notes-badge,#summary-badge,#wiki-badge,#files-badge,#prompts-badge{background:#9ca3af}
 .badge-alert{background:#ef4444!important}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Once the feedback form is out: a slow red pulse reminds people to take the materials home. */
+/* Once the feedback form is out: a slow red blink reminds people to take the materials home.
+   steps(): the row flips red/plain every 1.2s. A fade repainted it 60 times a second for the rest of the day. */
 @keyframes zip-remind{0%,100%{background-color:transparent}50%{background-color:#e03131;color:#fff}}
 /* The whole "Download all" row pulses, not only its icon (Victor, 2026-11-12). */
-#gdrive-row:has(#gdrive-zip-btn.zip-remind){animation:zip-remind 2.4s ease-in-out infinite}
+#gdrive-row:has(#gdrive-zip-btn.zip-remind){animation:zip-remind 2.4s steps(1,end) infinite}
 @media (prefers-reduced-motion: reduce){#gdrive-row:has(#gdrive-zip-btn.zip-remind){animation:none;background-color:#e03131;color:#fff}}
 @keyframes follow-pulse{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:var(--color-primary,#4555ba);background-color:var(--color-primary-container,#dfe0ff)}}
 .follow-notify{animation:follow-pulse 1.2s ease-in-out infinite}
 .follow-paused{opacity:0.45;pointer-events:none;cursor:default}
 @keyframes follow-blink-red{0%,100%{border-color:var(--color-on-surface,#2a3439);background-color:transparent}50%{border-color:#e53935;background-color:#ffebee}}
 .follow-blink-red{animation:follow-blink-red 180ms ease-in-out 3}
-/* The pulse fades a highlight layer (opacity) behind the label instead of animating color/background-color, so it runs on the GPU without repainting the item every frame. */
+/* The blink toggles a highlight layer (opacity) behind the label instead of animating color/background-color: no repaint,
+   and with steps() only ~2 frames/s -- a fade made Chrome present 60 frames/s for as long as the tab stayed unopened. */
 @keyframes slides-nav-pulse{0%,100%{opacity:0}50%{opacity:1}}
-.slides-nav-blink,.summary-nav-blink,.wiki-nav-blink{position:relative;isolation:isolate;color:var(--color-primary,#4555ba)}
-.slides-nav-blink::after,.summary-nav-blink::after,.wiki-nav-blink::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;background-color:var(--color-primary-container,#dfe0ff);pointer-events:none;will-change:opacity;animation:slides-nav-pulse 1.2s ease-in-out infinite}
+.nav-item.slides-nav-blink,.nav-item.summary-nav-blink,.nav-item.wiki-nav-blink{position:relative;isolation:isolate;color:var(--color-primary,#4555ba)}
+.slides-nav-blink::after,.summary-nav-blink::after,.wiki-nav-blink::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;background-color:var(--color-primary-container,#dfe0ff);pointer-events:none;will-change:opacity;animation:slides-nav-pulse 1.2s steps(1,end) infinite}
 .nav-item{color:var(--color-on-surface-variant,#5e6b70);font-weight:600}
 /* Tighter than py-2: the menu keeps growing (Wiki), and on a laptop screen it crowded the sidebar. */
 aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
@@ -201,6 +206,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 </style>
 <script>document.fonts.ready.then(function(){var s=function(){document.body.style.visibility='visible'};if(document.body)s();else document.addEventListener('DOMContentLoaded',s)})</script>
 <script src="/static/emoji-float.js"></script>
+<script defer src="/static/idle-animations.js?v=f39631da"></script>
 <script src="/static/aishare-chart.js?v=b6444f5b"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
@@ -533,7 +539,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
         #offline-card.back { border-color: #22c55e; }
         #offline-card .offline-dot {
           flex: none; width: .6rem; height: .6rem; border-radius: 50%; background: #ef4444;
-          animation: offline-pulse 1.4s ease-in-out infinite;
+          animation: offline-pulse 1.4s steps(1, end) infinite;
         }
         #offline-card.back .offline-dot { background: #22c55e; animation: none; }
         @keyframes offline-pulse { 50% { opacity: .3; } }
@@ -879,7 +885,9 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
     radial-gradient(7% 75% at 78% 112%, rgba(255, 60, 0, .95), transparent 78%),
     radial-gradient(9% 95% at 92% 112%, rgba(255, 170, 0, .95), transparent 78%);
   background-size: 50% 100%; background-repeat: repeat-x; opacity: calc(.9 * var(--burn));
-  animation: aishare-burn-sway 4s ease-in-out infinite alternate, aishare-burn-flicker 1.7s ease-in-out infinite; }
+  /* The fire burns ~15s after a tile lights up, then holds still: an endless loop kept every screen that shows the
+     results presenting 60 frames/s. Both runs end on their resting frame (sway back at its start, flicker at base opacity). */
+  animation: aishare-burn-sway 4s ease-in-out 4 alternate forwards, aishare-burn-flicker 1.7s ease-in-out 9; }
 @keyframes aishare-burn-sway { from { transform: translate(0, 4px); } to { transform: translate(60px, 0); } }
 @keyframes aishare-burn-flicker { 0%, 100% { opacity: calc(.9 * var(--burn)); } 40% { opacity: calc(.65 * var(--burn)); } 70% { opacity: var(--burn); } }
 @media (prefers-reduced-motion: reduce) { .aishare-rank-row.burning::before, .aishare-rank-row.mine::before { animation: none; } }
@@ -1159,12 +1167,11 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 #name-gate-error a { text-decoration: underline; cursor: pointer; }
 
 /* ── In-session duplicate-name indicator (participant's own card) ─────────── */
-@keyframes dup-name-blink {
-  0%, 100% { color: var(--color-error, #dc2626); }
-  50%      { color: var(--color-on-surface, #2a3439); }
-}
+/* Red name that flips dim/bright (opacity + steps): fading its colour restyled and repainted it on every frame. */
+@keyframes dup-name-blink { 50% { opacity: .4; } }
 .display-name-text.name-duplicate {
-  animation: dup-name-blink 1.6s ease-in-out infinite;
+  color: var(--color-error, #dc2626);
+  animation: dup-name-blink 1.6s steps(1, end) infinite;
   text-decoration: underline;
   text-decoration-color: var(--color-error, #dc2626);
   text-underline-offset: 2px;
@@ -2917,6 +2924,7 @@ function _hostPageGetter(slug, startPage) {
 function _onIncomingHostSlidesCurrent(slidesCurrent) {
   _hostSlidesCurrent = slidesCurrent || null;
   if (!_isSlidesViewSelected()) {
+    if (_onHostMachine()) return;               // the trainer's own slide change: nobody to call over
     var slidesNav = document.querySelector('[data-nav="slides"]');
     if (slidesNav) slidesNav.classList.add('slides-nav-blink');
     if (!_isSlidesFollowEnabled()) _nudgeSlidesFollow();

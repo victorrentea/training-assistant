@@ -35,11 +35,13 @@ body {
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
-/* ── Wave shimmer on participant link ── */
+/* ── Wave shimmer on participant link ──
+   Two bright crests sweep across the link, then it rests bright. It used to loop forever: a colour
+   animation on ~31 glyphs kept the main thread restyling and Chrome presenting 60 frames/s on an
+   idle host page, which WindowServer then recomposited while screen-sharing. */
 .wave-char {
   display: inline-block;
-  animation: wave-shimmer 2.5s ease-in-out infinite;
-  animation-fill-mode: backwards;
+  animation: wave-shimmer 1.2s ease-in-out 3 alternate both;
   --wave-dim: rgba(255,255,255,.55);
   --wave-bright: #fff;
 }
@@ -50,8 +52,8 @@ body {
 .wave-char-accent { --wave-dim: #f0c040aa; --wave-bright: #f0c040; }
 :where(html.light) .wave-char-accent { --wave-dim: #a6760099; --wave-bright: #a67600; }
 @keyframes wave-shimmer {
-  0%, 100% { color: var(--wave-dim); }
-  40% { color: var(--wave-bright); }
+  from { color: var(--wave-dim); }
+  to { color: var(--wave-bright); }
 }
 
 .badge {
@@ -76,11 +78,30 @@ body {
 .host-footer .badge:hover { background: var(--badge-fill); }
 #pax-badge { transition: background 1.5s ease; }
 #pax-badge.flash { background: #ffd16688; transition: none; }
-@keyframes gdrive-blink {
-  0%, 100% { background: #ff6b6b22; box-shadow: none; }
-  50%       { background: #ff6b6bcc; box-shadow: 0 0 8px 2px #ff6b6b88; }
+/* ── Blink layer ──
+   These "look at me" blinks share one trick: the highlighted look lives on an ::after layer behind the content, and
+   only that layer's opacity flips on/off. Opacity + steps() costs ~2 frames/s and no repaint; fading
+   background/box-shadow on the element itself restyled and repainted it 60 times a second for as long as it showed. */
+#gdrive-badge.disconnected, #log-level-badge.log-level-debug, .mode-pill.mode-pill-multi, .paste-icon, .upload-icon {
+  position: relative;
+  isolation: isolate;
 }
-#gdrive-badge.disconnected { animation: gdrive-blink 0.7s ease-in-out infinite; }
+#gdrive-badge.disconnected::after, #log-level-badge.log-level-debug::after, .mode-pill.mode-pill-multi::after,
+.paste-icon::after, .upload-icon::after {
+  content: '';
+  position: absolute;
+  inset: -1px; /* out to the border box, so a glow starts at the outer edge */
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+  animation: blink-layer var(--blink-period, 1.2s) steps(1, end) infinite;
+}
+@keyframes blink-layer { 50% { opacity: 1; } }
+/* isolation scopes the badge's own tooltip (z-index 9999) to the badge: lift the whole badge while it shows. */
+.host-footer .badge:hover { z-index: 9999; }
+#gdrive-badge.disconnected::after { --blink-period: 1s; background: #ff6b6bcc; box-shadow: 0 0 8px 2px #ff6b6b88; }
 #summary-badge { border-color: var(--accent2) !important; color: var(--accent2); --badge-fill: #48cfad44; }
 .host-footer-right .footer-neutral-badge {
   border-color: var(--muted) !important;
@@ -100,14 +121,10 @@ body {
   background: #ff6b6b22;
   --badge-fill: #ff6b6b55;
   box-shadow: 0 0 12px rgba(255, 45, 45, 0.35);
-  animation: log-debug-blink 1.8s ease-in-out infinite;
 }
+#log-level-badge.log-level-debug::after { --blink-period: 1.8s; background: #ff6b6b3b; }
 #log-level-badge.log-level-pending {
   opacity: 0.65;
-}
-@keyframes log-debug-blink {
-  0%, 100% { background: #ff6b6b22; }
-  50% { background: #ff6b6b55; }
 }
 .footer-badge-tooltip {
   position: absolute;
@@ -690,10 +707,6 @@ body {
   0%, 100% { opacity: .2;  transform: scale(.8); }
   50%       { opacity: 1;  transform: scale(1.2); }
 }
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: .4; }
-}
 @keyframes flash-bg {
   0%, 100% { background-color: rgba(255, 209, 102, 0.4); }
   50%      { background-color: transparent; }
@@ -1165,18 +1178,8 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   color: #f0a500;
   border-color: #f0a500;
   background: #f0a50022;
-  animation: mode-pill-multi-blink 2.2s ease-in-out infinite;
 }
-@keyframes mode-pill-multi-blink {
-  0%, 100% {
-    background: #f0a50022;
-    box-shadow: none;
-  }
-  50% {
-    background: #f0a50055;
-    box-shadow: 0 0 10px 1px #f0a50066;
-  }
-}
+.mode-pill.mode-pill-multi::after { --blink-period: 2.2s; background: #f0a50040; box-shadow: 0 0 10px 1px #f0a50066; }
 
 .no-quiz { color: var(--muted); font-size: .9rem; text-align: center; padding: 2rem 0; }
 
@@ -1277,7 +1280,6 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
 .pax-list li.online .pax-name::before {
   background: #4caf50;
   box-shadow: 0 0 0 1px rgba(76, 175, 80, 0.3), 0 0 8px rgba(76, 175, 80, 0.55);
-  animation: pulse 1.4s infinite;
 }
 .pax-list li.offline .pax-name::before {
   background: #e53935;
@@ -2072,22 +2074,18 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   padding: 2px 4px;
   border-radius: 4px;
   color: var(--text);
-  background: rgba(255, 200, 0, 0.25);
-  animation: paste-blink 1.2s ease-in-out infinite;
+  background: rgba(255, 200, 0, 0.15);
   transition: transform .15s;
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
 }
-@keyframes paste-blink {
-  0%, 100% { background: rgba(255, 200, 0, 0.15); }
-  50% { background: rgba(255, 200, 0, 0.45); }
-}
+.paste-icon::after { inset: 0; background: rgba(255, 200, 0, 0.35); }
 .paste-icon:hover {
   transform: scale(1.15);
   background: rgba(255, 200, 0, 0.5);
-  animation: none;
 }
+.paste-icon:hover::after { animation: none; }
 .paste-copied-tip {
   position: fixed;
   transform: translate(-50%, -100%);
@@ -2110,26 +2108,18 @@ textarea { resize: none; min-height: 80px; overflow: hidden; }
   padding: 2px 4px;
   border-radius: 4px;
   color: var(--text);
-  background: rgba(99, 200, 255, 0.25);
-  animation: upload-blink 1.2s ease-in-out infinite;
+  background: rgba(99, 200, 255, 0.15);
   transition: transform .15s;
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
 }
-@keyframes upload-blink {
-  0%, 100% { background: rgba(99, 200, 255, 0.15); }
-  50% { background: rgba(99, 200, 255, 0.45); }
-}
+.upload-icon::after { inset: 0; background: rgba(99, 200, 255, 0.35); }
 .upload-icon:hover {
   transform: scale(1.15);
   background: rgba(99, 200, 255, 0.5);
-  animation: none;
 }
-.upload-icon.downloaded {
-  animation: none;
-  background: rgba(99, 200, 255, 0.15);
-}
+.upload-icon:hover::after, .upload-icon.downloaded::after { animation: none; }
 
 /* Queue list */
 #queue-list li {
