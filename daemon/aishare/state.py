@@ -68,8 +68,9 @@ QUESTIONS: list[dict] = [
                  "Documentation: missing or obsolete"]},
     # Rarely a yes in practice: asked last, so it does not slow the warm-up.
     {"id": "knowledge_base", "kind": "choice",
-     "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki, Obsidian, context engine)?",
+     "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki, Obsidian, GBrain, context engine)?",
      "links": [{"text": "LLM Wiki", "url": "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f"},
+               {"text": "GBrain", "url": "https://github.com/garrytan/gbrain"},
                {"text": "context engine", "url": "https://getunblocked.com"}],
      "options": YES_NO_IDK},
 ]
