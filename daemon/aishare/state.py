@@ -65,7 +65,7 @@ QUESTIONS: list[dict] = [
      "options": ["Code Review: waiting / performing", "Meetings: too many / too long", "Bureaucracy",
                  "Tech debt: legacy code, lack of tests", "Requirements: unclear / ever-changing", "Context switching",
                  "Permissions: lack of access", "CI: slow pipeline / flaky tests", "Blocked: by other teams",
-                 "Documentation: missing or obsolete"]},
+                 "Documentation: missing or obsolete", "Tokens: not enough"]},
     # Rarely a yes in practice: asked last, so it does not slow the warm-up.
     {"id": "knowledge_base", "kind": "choice",
      "text": "Does your team's agent use a (Markdown) knowledge base of your project, built from its code (e.g. LLM Wiki, Obsidian, GBrain, context engine)?",

@@ -278,7 +278,7 @@ def _ranking(msg):
 def test_ranking_starts_from_the_presets_with_no_votes(client, sent):
     client.post("/api/cur/host/aishare/start")
     items = _result(_last(sent["broadcast"], "aishare_updated"), "devex_pain").items
-    assert items[0].text == "Code Review: waiting / performing" and len(items) == 10
+    assert items[0].text == "Code Review: waiting / performing" and len(items) == 11
     assert all(i.score is None for i in items)       # participants: no tallies before the reveal
 
 
@@ -333,7 +333,7 @@ def test_added_item_gets_its_author_upvote_and_duplicates_fold(client, state, se
     resp = _add(client, "u1", "  Too many   Jira fields ")
     assert resp.status_code == 200
     new_id = resp.json()["id"]
-    assert new_id == 10
+    assert new_id == 11
     assert _add(client, "u2", "too many jira fields").json()["id"] == new_id
     assert _add(client, "u2", "CONTEXT SWITCHING").json()["id"] == 5      # same as a preset
     assert _ranking(_last(sent["host"], "aishare_host_update"))[:2] == [("Too many Jira fields", 2), ("Context switching", 1)]
@@ -368,7 +368,7 @@ def test_ranking_snapshot_round_trips():
     restored = AiShareState()
     restored.restore(s.snapshot())
     assert restored.snapshot() == s.snapshot()
-    assert restored.votes_of("u1") == {"devex_pain": {"10": 1}}
+    assert restored.votes_of("u1") == {"devex_pain": {"11": 1}}
 
 
 def test_restore_drops_downvotes_from_before_upvote_only():
@@ -399,7 +399,7 @@ def test_restore_renames_reworded_presets_but_keeps_their_votes():
 def test_restore_of_an_older_active_snapshot_seeds_the_ranking():
     s = AiShareState()
     s.restore({"active": True, "answers": {"ai_generated": {"u1": 40}}})
-    assert len(s.ranked("devex_pain")) == 10
+    assert len(s.ranked("devex_pain")) == 11
 
 
 def test_restore_merges_no_and_i_dont_know_answers():
