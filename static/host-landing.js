@@ -38,7 +38,7 @@ function renderPage(folders) {
                oninput="onNameInput()"
                onkeydown="if(event.key==='Enter' && !document.getElementById('create-btn-workshop').disabled) doCreate('workshop');" />
         <button id="create-btn-workshop" class="create-btn create-btn-workshop" onclick="doCreate('workshop')" disabled data-tip="New workshop">▶</button>
-        <button id="create-btn-talk" class="create-btn create-btn-talk" onclick="doCreate('talk')" disabled data-tip="New talk">🎙️</button>
+        <button id="create-btn-talk" class="create-btn create-btn-talk" onclick="confirmTalk()" disabled data-tip="New talk">🎙️</button>
       </div>
       <div id="create-error" class="error-msg" style="display:none;"></div>
     </div>
@@ -164,6 +164,37 @@ function showParticipantView(tab, joinUrl) {
   if (!tab) return;
   if (joinUrl) tab.location = joinUrl;
   else tab.close();
+}
+
+// A talk sits one mis-click away from ▶, so it asks first; a workshop starts
+// right away. Confirming is still a click, so the participant tab opens.
+function confirmTalk() {
+  const name = document.getElementById('session-name-input').value.trim();
+  if (!name) return;
+  let overlay = document.getElementById('talk-confirm');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'talk-confirm';
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-dialog talk-confirm-dialog" role="dialog" aria-modal="true">
+        <div class="talk-confirm-title">🎙️ Start a talk?</div>
+        <div class="talk-confirm-text">“<span id="talk-confirm-name"></span>” will start as a <b>talk</b>, not a workshop.</div>
+        <div class="talk-confirm-actions">
+          <button id="talk-confirm-cancel" class="btn">Cancel</button>
+          <button id="talk-confirm-ok" class="btn btn-primary">Start talk</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const close = () => overlay.classList.remove('open');
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    overlay.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    document.getElementById('talk-confirm-cancel').onclick = close;
+    document.getElementById('talk-confirm-ok').onclick = () => { close(); doCreate('talk'); };
+  }
+  document.getElementById('talk-confirm-name').textContent = name;
+  overlay.classList.add('open');
+  document.getElementById('talk-confirm-ok').focus();
 }
 
 async function doCreate(type) {

@@ -273,3 +273,15 @@ body {
   font-weight: 600;
   letter-spacing: .03em;
 }
+
+/* Confirmation before starting a talk (a workshop starts without one) */
+#talk-confirm { background: rgba(0, 0, 0, 0.6); }
+.talk-confirm-dialog {
+  padding: 1.5rem 1.75rem;
+  gap: .9rem;
+  max-width: min(420px, calc(100vw - 2rem));
+}
+.talk-confirm-title { font-size: 1.15rem; font-weight: 700; }
+.talk-confirm-text { color: var(--muted); line-height: 1.45; overflow-wrap: anywhere; }
+.talk-confirm-text b { color: var(--text); }
+.talk-confirm-actions { display: flex; justify-content: flex-end; gap: .6rem; margin-top: .4rem; }
