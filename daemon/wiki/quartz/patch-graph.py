@@ -164,7 +164,7 @@ PATCHES = [
   const comets: Comet[] = []
   const flashes: { id: string; start: number }[] = []
   const shownTotal = new Map<string, number>() // stars per dot as last drawn
-  let shownOnce = false // the first shine() just draws: no comet for stars already there
+  let shownOnce = false // the first shine() after the stars arrived just draws: no comet for stars already there
   const takeawayColors: TakeawayColors = {
     on: computedStyleMap["--wiki-takeaway"],
     burst: computedStyleMap["--wiki-burst"],
@@ -441,7 +441,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, CHEVRON_HIT_RADIUS, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, framingPan, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, graphDrew, graphFrozen, isEdited, isFollowed, isSeen, noteDays, onHostMachine, doneBadge, resetSeen, roundBadge, saveView, savedView, setFollowed, setGraphFrozen, setShowHome, shineOf, showHome, shownDays, showNoGraphNotice, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, graphDrew, graphFrozen, isEdited, isFollowed, isSeen, noteDays, onHostMachine, doneBadge, resetSeen, roundBadge, saveView, savedView, setFollowed, setGraphFrozen, setShowHome, shineOf, showHome, shownDays, showNoGraphNotice, starMode, starrersBadge, starsSettled, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -521,6 +521,7 @@ PATCHES = [
       const shining = new Set<string>()
       const levels: Record<string, number> = {}
       const now = performance.now()
+      const settled = starsSettled()
       for (const n of nodeRenderData) {
         const d = dotShine(n.simulationData.id)
         const id = n.simulationData.id
@@ -550,7 +551,7 @@ PATCHES = [
         }
       }
       starredIds = takeaways
-      shownOnce = true
+      if (settled) shownOnce = true
       if (!dragging) renderPixiFromD3()
       // The canvas has no DOM: what it shows as starred, which dots draw a star beside
       // them and what each reads, and which ones shine, readable from a test.

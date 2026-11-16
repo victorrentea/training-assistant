@@ -962,7 +962,19 @@ const TRAINER_POLL_MS = 1500
 let starred = new Set<SimpleSlug>()
 let changedAt = 0 // the trainer's last click: an older answer must not undo it
 
+// Stars already there when the wiki opens must not fly in as comets (nor throw confetti):
+// only what happens after it opened does. The graph draws before the first answers
+// arrive, so "already there" is what the first answer of each source brings; a source
+// that never answers must not mute the effects for good, hence the time limit.
+const openedAt = Date.now()
+let takeawaysLoaded = false
+let starsLoaded = false
+export function starsSettled(): boolean {
+  return (takeawaysLoaded && starsLoaded) || Date.now() - openedAt > 5000
+}
+
 function applyTakeaways(slugs: readonly string[]) {
+  takeawaysLoaded = true
   starred = new Set(slugs.map((s) => simplifySlug(s as never)))
   shineIfChanged()
   showPeekStar()
@@ -973,10 +985,15 @@ function applyTakeaways(slugs: readonly string[]) {
 // answer restyled every label and drew a frame, the same as before - which also kept a
 // frozen graph from ever resting (Victor, 2026-11-13).
 let shineDrawn = ""
+let shineSettled = false
 
 function shineIfChanged() {
   const from = JSON.stringify([[...starred].sort(), [...starCounts].sort(), [...mine].sort(), starMode()])
-  if (from === shineDrawn) return
+  // The moment the first answers are in, the graph draws once more, to take them as its
+  // baseline (patch-graph.py shine()), even when they changed nothing.
+  const settled = starsSettled()
+  if (from === shineDrawn && (shineSettled || !settled)) return
+  shineSettled = settled
   shineDrawn = from
   graph?.shine()
 }
@@ -1204,6 +1221,7 @@ const PARTICIPANT_UUID_KEY = "workshop_participant_uuid" // participant.html's _
 let starCounts = new Map<SimpleSlug, number>()
 let mine = new Set<SimpleSlug>()
 let starrers = 0 // participants who starred at least one note
+let starrersKnown = false // false until the first count arrives: 0 until then is no count
 // Whether everyone sees everyone's stars (daemon/wiki/stars.py): until the trainer
 // reveals them, a participant's graph shows only their own, each as one star.
 let revealed = false
@@ -1243,6 +1261,7 @@ export function dotShine(slug: SimpleSlug): DotShine {
 }
 
 function applyStars(counts: unknown, own: unknown, starrersNow?: unknown, revealedNow?: unknown, doneNow?: unknown) {
+  starsLoaded = true
   if (typeof revealedNow === "boolean") revealed = revealedNow
   if (typeof doneNow === "boolean") doneMine = doneNow
   const next = new Map<SimpleSlug, number>()
@@ -1260,6 +1279,7 @@ function applyStars(counts: unknown, own: unknown, starrersNow?: unknown, reveal
   if (!revealed && starMode() !== "trainer") starCounts = new Map([...mine].map((s) => [s, 1]))
   if (typeof starrersNow === "number" && Number.isInteger(starrersNow) && starrersNow >= 0) {
     starrers = starrersNow
+    starrersKnown = true
     showStarrers()
   }
   showRound()
@@ -1527,6 +1547,7 @@ export function starrersBadge(): HTMLElement {
 function showStarrers() {
   starrersPill.textContent = `★\uFE0E ${starrers} ${starrers === 1 ? "user" : "users"} starring`
   starrersPill.hidden = starrers === 0
+  if (!starrersKnown) return
   const before = starrersShown
   starrersShown = starrers
   if (before === null || starrers <= before || !starrersPill.isConnected) return
