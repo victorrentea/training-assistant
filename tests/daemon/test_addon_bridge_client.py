@@ -72,6 +72,16 @@ def test_session_started_omits_the_last_day_when_the_folder_has_no_dates():
     assert msg["session_folder"] == "/s/AI@Acme"
 
 
+def test_session_started_asks_for_the_join_link_only_when_told_to():
+    from daemon.addon_bridge_client import _session_started_msg
+
+    fresh = _session_started_msg("https://x/abc", "/s/2026-09-22 AI@Acme", show_join_link=True)
+    resent = _session_started_msg("https://x/abc", "/s/2026-09-22 AI@Acme")
+
+    assert fresh["show_join_link"] is True
+    assert "show_join_link" not in resent
+
+
 def test_session_started_without_a_folder_is_url_only():
     from daemon.addon_bridge_client import _session_started_msg
 

@@ -1364,10 +1364,13 @@ def run() -> None:
                             if _active_session_id
                             else f"{config.server_url}/"
                         )
-                        # Notify addons of session start
+                        # Notify addons of session start. The trainer has just pressed
+                        # start, so the room needs the link now: ask for the banner + QR.
                         from daemon import addon_bridge_client
                         session_folder_str = str(config.session_folder) if config.session_folder else None
-                        addon_bridge_client.send_session_started(participant_join_link, session_folder_str)
+                        addon_bridge_client.send_session_started(
+                            participant_join_link, session_folder_str, show_join_link=True
+                        )
                         log.info("addons   ", f"→ started session {participant_join_link}")
                         log.info(
                             "session",

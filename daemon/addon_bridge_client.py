@@ -44,8 +44,15 @@ def _handle_git_file_opened(data: dict) -> None:
     log.debug(_NAME, f"← git {url.split('/')[-1]}@{branch or '?'} {file_path}")
 
 
-def _session_started_msg(participant_url: str, session_folder: str | None) -> dict:
+def _session_started_msg(
+    participant_url: str, session_folder: str | None, show_join_link: bool = False
+) -> dict:
     """The ``session_started`` payload, dates included.
+
+    ``show_join_link`` asks the addons to put the join link and its QR on the
+    screen right away. Set only when the trainer has just started the session:
+    the same message is re-sent on every daemon restart and addons reconnect,
+    and those must not raise a banner over whatever is being projected.
 
     ``session_last_day`` is the last day of the set the folder name declares
     ("2026-09-14..15 AI@X" -> "2026-09-15"). The addons use it to hold the
@@ -57,6 +64,8 @@ def _session_started_msg(participant_url: str, session_folder: str | None) -> di
     "offer anyway" rather than "never offer".
     """
     msg: dict = {"type": "session_started", "participant_url": participant_url}
+    if show_join_link:
+        msg["show_join_link"] = True
     if not session_folder:
         return msg
     msg["session_folder"] = session_folder
@@ -121,13 +130,19 @@ class AddonBridgeClient:
         msg = {"type": "bell_ring", "caller": caller_name, "anonymous": anonymous}
         return self._send(msg)
 
-    def send_session_started(self, participant_url: str, session_folder: str | None = None) -> bool:
+    def send_session_started(
+        self,
+        participant_url: str,
+        session_folder: str | None = None,
+        show_join_link: bool = False,
+    ) -> bool:
         """Notify addons that a session has started with the participant join URL.
 
         session_folder: absolute path to the active session folder; addons use it to
         save artefacts (e.g. screenshots) into the session.
+        show_join_link: also raise the join link + QR on screen (a session just started).
         """
-        return self._send(_session_started_msg(participant_url, session_folder))
+        return self._send(_session_started_msg(participant_url, session_folder, show_join_link))
 
     def send_session_ended(self) -> bool:
         """Notify addons that the session has ended."""
@@ -324,9 +339,13 @@ def send_bell(caller_name: str, anonymous: bool = False) -> bool:
     return _client is not None and _client.send_bell(caller_name, anonymous)
 
 
-def send_session_started(participant_url: str, session_folder: str | None = None) -> bool:
+def send_session_started(
+    participant_url: str, session_folder: str | None = None, show_join_link: bool = False
+) -> bool:
     """Best-effort session_started message to addons. Returns True if sent."""
-    return _client is not None and _client.send_session_started(participant_url, session_folder)
+    return _client is not None and _client.send_session_started(
+        participant_url, session_folder, show_join_link
+    )
 
 
 def send_session_ended() -> bool:
