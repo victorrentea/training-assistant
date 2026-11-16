@@ -653,8 +653,26 @@ body {
   cursor: pointer;
 }
 
-.graph-round-done {
+// Right after the starrers, on the trainer's graph only (note-pane.ts doneBadge): how many
+// participants clicked Done (🏁). Its own pill, in the same neutral style as the round one.
+.graph-done {
+  position: absolute;
+  bottom: 0.7rem;
+  z-index: 1;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-family: var(--bodyFont);
+  font-size: 0.8rem;
   font-weight: 600;
+  white-space: nowrap;
+  color: var(--wiki-quiet);
+  background: var(--light);
+  border: 1px solid var(--lightgray);
+  user-select: none;
+
+  &[hidden] {
+    display: none;
+  }
 }
 
 // A participant's Done, bottom-right while the stars are private (note-pane.ts); the
@@ -886,6 +904,7 @@ body.peek-dragging {
   .graph-sources,
   .graph-downloads,
   .graph-starrers,
+  .graph-done,
   .graph-day,
   .graph-day.graph-day-host {
     display: none;

@@ -1377,6 +1377,22 @@ export function roundBadge(): HTMLElement {
   return roundPill
 }
 
+// Its own pill, right after "users starring" (patch-graph.py places it): how many
+// participants clicked Done (🏁) looking through the wiki. A count of users, so it
+// sits with them, not inside the stars toggle. The trainer's only.
+const donePill = Object.assign(document.createElement("div"), { className: "graph-done", hidden: true })
+donePill.dataset.tip = "Participants who clicked Done looking through the wiki"
+
+export function doneBadge(): HTMLElement {
+  showDone()
+  return donePill
+}
+
+function showDone() {
+  donePill.hidden = starMode() !== "trainer" || doneCount === 0
+  donePill.textContent = `🏁 ${doneCount} done`
+}
+
 function showRound() {
   const mode = starMode()
   roundPill.hidden = mode !== "trainer"
@@ -1390,10 +1406,9 @@ function showRound() {
       ? "Everyone sees everyone's stars - click to hide them again: each sees only their own, and 🏁 starts over"
       : "Each participant sees only their own stars - click to show everyone's stars to everyone"
     toggle.addEventListener("click", () => toggleRevealed(!revealed))
-    const done = Object.assign(document.createElement("span"), { className: "graph-round-done", textContent: `🏁 ${doneCount} done` })
-    done.dataset.tip = "Participants who clicked Done looking through the wiki"
-    roundPill.replaceChildren(toggle, ...(doneCount > 0 ? [done] : []))
+    roundPill.replaceChildren(toggle)
   }
+  showDone()
   // A participant's Done, bottom-right, while the stars are still private.
   if (mode === "voter" && !revealed && !doneButton.isConnected) document.body.append(doneButton)
   doneButton.hidden = mode !== "voter" || revealed

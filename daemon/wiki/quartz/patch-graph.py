@@ -441,7 +441,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, CHEVRON_HIT_RADIUS, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, framingPan, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, graphDrew, graphFrozen, isEdited, isFollowed, isSeen, noteDays, onHostMachine, resetSeen, roundBadge, saveView, savedView, setFollowed, setGraphFrozen, setShowHome, shineOf, showHome, shownDays, showNoGraphNotice, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, graphDrew, graphFrozen, isEdited, isFollowed, isSeen, noteDays, onHostMachine, doneBadge, resetSeen, roundBadge, saveView, savedView, setFollowed, setGraphFrozen, setShowHome, shineOf, showHome, shownDays, showNoGraphNotice, starMode, starrersBadge, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -772,8 +772,12 @@ PATCHES = [
     // time one more does, to draw in the rest of the room (note-pane.ts; Victor, 2026-11-09).
     const starrers = starrersBadge()
     container.append(starrers)
+    // The trainer's only, after it: how many clicked Done (🏁) looking through the wiki -
+    // a count of users, so it sits next to the starrers (note-pane.ts doneBadge).
+    const done = doneBadge()
+    container.append(done)
     // The trainer's only, after it: whether the room sees everyone's stars or only their
-    // own, and how many clicked Done (🏁) looking through the wiki (note-pane.ts).
+    // own (note-pane.ts roundBadge).
     const round = roundBadge()
     container.append(round)
     // After it, where the trainer looks while picking: the days the graph shows, for a
@@ -785,7 +789,7 @@ PATCHES = [
     const placePills = () => {
       if (innerWidth < 900) return
       let left = 13 // 0.8rem
-      for (const pill of [reset, home, resetSeenPill, freeze, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads, starrers, round]) {
+      for (const pill of [reset, home, resetSeenPill, freeze, ...container.querySelectorAll<HTMLElement>(".graph-followed"), downloads, starrers, done, round]) {
         if (!pill.isConnected || pill.hidden) continue
         pill.style.left = `${left}px`
         left += pill.offsetWidth + 10
