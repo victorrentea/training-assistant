@@ -32,6 +32,7 @@ import { CanvasTextMetrics, Graphics, Rectangle, Sprite, Text, TextStyle, Textur
 export type TakeawayColors = {
   on: string // a star lit
   burst: string // the burst and the glow under it
+  pastBurst: string // the same, for a note of an earlier day than the graph's latest
   off: string // the hollow star the trainer clicks
   halo: string // the page background, behind the star so edges don't run through it
   font: string
@@ -156,6 +157,7 @@ export class TakeawayMark {
   private shine: DotShine = { takeaway: false, count: 0, mine: false, level: 0 }
   private hovered = false // the pointer on the star
   private seen = false // its note read here: a paler shine
+  private past = false // its note taught only on an earlier day: a grey shine
   private readonly mode: StarMode
   private readonly colors: TakeawayColors
   private readonly size: number
@@ -241,6 +243,20 @@ export class TakeawayMark {
     this.star.eventMode = clickable ? "static" : "none"
     this.star.cursor = clickable ? "pointer" : "default"
     this.star.style.fill = lit || total > 0 ? this.colors.on : this.colors.off
+  }
+
+  // While the graph shows two days or more, the shine of a note taught only on an
+  // earlier day than the latest shown turns grey: today's stars stand out in gold
+  // from yesterday's (Victor, 2026-11-17). Stars carry no date, so the note's day
+  // decides; one taught on the latest day too stays gold.
+  setPast(past: boolean) {
+    this.past = past
+    const tint = past ? this.colors.pastBurst : this.colors.burst
+    this.burst.tint = this.flare.tint = this.glow.tint = tint
+  }
+
+  get isPast(): boolean {
+    return this.past
   }
 
   // Called every frame with whether its note is read (note-pane.ts dotSeen, like the

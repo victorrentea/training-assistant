@@ -168,6 +168,7 @@ PATCHES = [
   const takeawayColors: TakeawayColors = {
     on: computedStyleMap["--wiki-takeaway"],
     burst: computedStyleMap["--wiki-burst"],
+    pastBurst: computedStyleMap["--wiki-burst-past"],
     off: computedStyleMap["--wiki-takeaway-off"],
     halo: computedStyleMap["--light"],
     font: computedStyleMap["--bodyFont"],
@@ -253,6 +254,7 @@ PATCHES = [
     const takeaway = new TakeawayMark(nodeRadius(n), takeawayColors, starMode(), (on) =>
       starMode() === "voter" ? toggleStar(nodeId, on) : toggleTakeaway(nodeId, on))
     takeaway.set(dotShine(nodeId))
+    takeaway.setPast(pastDay.has(nodeId))
     takeawayHazeContainer.addChild(takeaway.glow)
     takeawayGlowContainer.addChild(takeaway.burst, takeaway.flare)
     starsContainer.addChild(takeaway.star)
@@ -299,6 +301,7 @@ PATCHES = [
     "--wiki-takeaway-off",
     "--wiki-takeaway-text",
     "--wiki-burst",
+    "--wiki-burst-past",
     "--wiki-edge",
     "--wiki-glyph",
     "--wiki-outline",
@@ -946,6 +949,19 @@ PATCHES = [
       const taught = noteDays(details.content)
       if (taught.length > 0 && !taught.some((d) => onlyDays.includes(d))) data.delete(id)
     }
+  }
+  // Two days or more on the full graph: the notes taught only before the latest of them
+  // shine grey, not gold (graph-takeaway.ts setPast; Victor, 2026-11-17).
+  const pastDay = new Set<string>()
+  if (graph.classList.contains("global-graph-container")) {
+    const taughtOn = new Map([...data].map(([id, details]) => [id, noteDays(details.content)]))
+    const litDays = new Set(onlyDays.length > 0 ? onlyDays : [...taughtOn.values()].flat())
+    const latest = Math.max(...litDays)
+    if (litDays.size >= 2) {
+      for (const [id, taught] of taughtOn) if (taught.length > 0 && !taught.includes(latest)) pastDay.add(id)
+    }
+    // The canvas has no DOM: which dots shine grey, readable from a test.
+    graph.dataset.pastDay = [...pastDay].sort().join(",")
   }
   const links: SimpleLinkData[] = []
   const tags: SimpleSlug[] = []
