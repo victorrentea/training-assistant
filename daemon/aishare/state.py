@@ -35,7 +35,7 @@ QUESTIONS: list[dict] = [
      # its CLI / VS Code / IntelliJ options show once it is ticked (Victor, 2026-11-11).
      "other_option": 5, "other_presets": ["OpenCode", "Pi", "Cursor"],
      "group": {"label": "GitHub Copilot", "options": [1, 2, 3], "parent": 6}},
-    {"id": "personal_sub", "kind": "choice", "text": "Do you have a work or personal Claude or Codex subscription ((up to 50X more value for your money))?",
+    {"id": "personal_sub", "kind": "choice", "text": "Do you have a work or personal Claude or Codex subscription ((gives you ~50x more than you pay))?",
      "links": [{"text": "Claude", "url": "https://claude.com/pricing"},
                {"text": "Codex", "url": "https://developers.openai.com/codex/pricing"}],
      "options": YES_NO},
