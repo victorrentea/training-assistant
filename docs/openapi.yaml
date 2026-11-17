@@ -2643,7 +2643,6 @@ components:
           default: ai_generated
         value:
           type: integer
-          maximum: 100.0
           minimum: 0.0
           title: Value
           description: 'slider: 0..100; choice: the option index; multi: bitmask of

@@ -17,7 +17,6 @@ from daemon.aishare.state import (
     MAX_ITEM_LEN,
     MAX_OTHER_LEN,
     MAX_OTHERS_PER_PARTICIPANT,
-    MAX_VALUE,
     QUESTIONS,
     aishare_state,
     valid_value,
@@ -51,7 +50,8 @@ class RevealRequest(BaseModel):
 
 class AiShareValueRequest(BaseModel):
     question: str = "ai_generated"
-    value: int = Field(ge=0, le=MAX_VALUE,
+    # No upper bound here: a multi's bitmask passes 100 from its 7th option on; valid_value() checks each kind.
+    value: int = Field(ge=0,
                        description="slider: 0..100; choice: the option index; multi: bitmask of the ticked options (0 = none)")
     other: str | None = Field(default=None, max_length=MAX_OTHER_LEN,
                               description='legacy: a single value under the question\'s "other" option, same as others=[other]')

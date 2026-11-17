@@ -35,7 +35,7 @@ QUESTIONS: list[dict] = [
      # its CLI / VS Code / IntelliJ options show once it is ticked (Victor, 2026-11-11).
      "other_option": 5, "other_presets": ["OpenCode", "Pi", "Cursor"],
      "group": {"label": "GitHub Copilot", "options": [1, 2, 3], "parent": 6}},
-    {"id": "personal_sub", "kind": "choice", "text": "Do you have a personal Claude or Codex subscription ((up to 50X more value for your money))?",
+    {"id": "personal_sub", "kind": "choice", "text": "Do you have a work or personal Claude or Codex subscription ((up to 50X more value for your money))?",
      "links": [{"text": "Claude", "url": "https://claude.com/pricing"},
                {"text": "Codex", "url": "https://developers.openai.com/codex/pricing"}],
      "options": YES_NO},
@@ -46,7 +46,7 @@ QUESTIONS: list[dict] = [
     # No hint, so no ❤️: options read "Key: detail", the key in bold (like the ranking's items).
     {"id": "tools", "kind": "multi", "text": "Tools available to your agent in your **work** project",
      "options": ["Issue tracker: Jira, Linear, GitHub Issues, Azure DevOps", "Build: GitHub, GitLab, Bitbucket", "Confluence / Wiki",
-                 "Browser", "Metrics", "Meeting transcripts", "Logs", "Email", "Chat / Slack"]},
+                 "Browser: via Playwright (for example)", "Metrics", "Meeting transcripts", "Logs", "Email", "Chat / Slack"]},
     {"id": "skill", "kind": "choice", "text": "Created/updated a skill?", "options": YES_NO},
     {"id": "plugins", "kind": "choice", "text": "Do you have plugins from your company or team installed in your agent?",
      "links": [{"text": "plugins", "url": "https://agent-plugins.org"}],

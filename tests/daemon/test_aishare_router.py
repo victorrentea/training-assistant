@@ -229,6 +229,13 @@ def test_multi_counts_every_ticked_option_and_the_hearts(client, state, sent):
     assert _result(_last(sent["broadcast"], "aishare_updated"), "harness_work").hearts == [2, 1, 0, 0, 0, 0, 0]
 
 
+def test_multi_accepts_options_whose_bit_is_above_100(client, state):
+    """Email (bit 7 = 128) and Chat / Slack (bit 8 = 256) were refused by a slider-sized cap."""
+    client.post("/api/cur/host/aishare/start")
+    assert _answer(client, "u1", 0b110000000, question="tools").status_code == 204
+    assert state.answers_of("u1") == {"tools": 0b110000000}
+
+
 def test_multi_hearts_only_on_ticked_options_and_untick_all_withdraws(client, state):
     client.post("/api/cur/host/aishare/start")
     _answer(client, "u1", 0b00011, question="harness_work", hearts=0b00011)
