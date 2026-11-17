@@ -29,7 +29,7 @@ YES_NO_IDK = ["Yes", "No / I don't know"]
 
 QUESTIONS: list[dict] = [
     {"id": "harness_work", "kind": "multi", "text": "What agent harness do you use **at work**?",
-     "hint": "…then ❤️ your favourite", "options": ["Claude Code or Codex", "GitHub Copilot CLI", "GitHub Copilot Chat in VS Code",
+     "options": ["Claude Code or Codex", "GitHub Copilot CLI", "GitHub Copilot Chat in VS Code",
                  "GitHub Copilot Chat in IntelliJ", "Microsoft M365 Copilot", "Other", "GitHub Copilot"],
      # "GitHub Copilot" (appended last, so older answers keep their bits) is ticked as the heading itself:
      # its CLI / VS Code / IntelliJ options show once it is ticked (Victor, 2026-11-11).

@@ -6532,6 +6532,8 @@ function _aiShareBuildCard(q) {
     var multi = q.kind === 'multi';
     // A multi with a hint ("…then ❤️ your favourite") gets the ♡ column; one without reads "**Key**: detail".
     var hearts = multi && !!q.hint;
+    // Options written "Key: detail" get the key in bold; plain names ("Claude Code or Codex") stay plain.
+    var keyed = multi && !hearts && q.options.some(function (o) { return o.indexOf(':') > 0; });
     // A group ("GitHub Copilot") gets a sub-heading; its options lose that prefix and sit indented under it.
     var group = q.group || { options: [] };
     var parent = group.parent != null ? group.parent : -1;
@@ -6549,7 +6551,7 @@ function _aiShareBuildCard(q) {
       return (idx === group.options[0] && parent < 0 ? '<div class="aishare-group-label">' + _escHtml(group.label) + '</div>' : '') +
         '<button class="poll-option-btn aishare-opt' + (inGroup ? ' in-group' : '') + '" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
         '<div class="row"><span><span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true"></span>' +
-        (multi && !hearts ? _aiShareKeyHtml(text, true) : _escHtml(text)) + '</span>' +
+        (keyed ? _aiShareKeyHtml(text, true) : _escHtml(text)) + '</span>' +
         (hearts ? '<span class="aishare-heart" role="button" tabindex="0" data-tip="My favourite"><span class="aishare-heart-n"></span><span class="aishare-heart-g"></span></span>' : '') + '</div></button>';
     }).join('') + '</div>';
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
