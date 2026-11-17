@@ -919,16 +919,18 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 /* Room below the last survey question so it scrolls clear of the floating
    emoji bar (and the tooltips above it) instead of ending underneath it. */
 #activity-aishare-section { padding-bottom: 6rem; }
-/* "% done" (bottom-left) and "Download results" (top-right) float in the corners of the view, as far from
-   its edges as the emoji bar (bottom-right) and with its look: same surface, border, shadow and height. */
-.aishare-progress, .aishare-pdf-btn { position: absolute; z-index: 30; box-sizing: border-box; border-radius: 999px;
+/* "Download results" floats top-right of the view, as far from its edges as the emoji bar (bottom-right)
+   and with its look: same surface, border and shadow. */
+.aishare-pdf-btn { position: absolute; z-index: 30; box-sizing: border-box; border-radius: 999px;
   background: rgba(247, 249, 251, .96); border: 1.5px solid rgba(150, 160, 165, .6); box-shadow: 0px 12px 32px rgba(42, 52, 57, .06);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
-:where(html.dark) .aishare-progress, :where(html.dark) .aishare-pdf-btn { background: rgba(18, 21, 26, .96); border-color: rgba(60, 72, 77, .7); box-shadow: 0px 12px 32px rgba(0, 0, 0, .35); }
-.aishare-progress { left: 1.5rem; bottom: 1.5rem; display: flex; align-items: center; height: calc(4.25rem + 3px); padding: 0 1.4rem;
-  --p: 0%; background-image: linear-gradient(90deg, rgba(64,192,87,.35) var(--p), transparent var(--p));
-  color: var(--color-on-surface, #2a3439); font-size: 1.05rem; font-weight: 800; }
-:where(html.dark) .aishare-progress { color: var(--color-on-surface, #dce4e9); }
+:where(html.dark) .aishare-pdf-btn { background: rgba(18, 21, 26, .96); border-color: rgba(60, 72, 77, .7); box-shadow: 0px 12px 32px rgba(0, 0, 0, .35); }
+/* "% done": a progress bar along the bottom edge of the view, below the emoji bar (Victor, 2026-11-17). */
+.aishare-progress { position: absolute; z-index: 30; left: 0; right: 0; bottom: 0; height: 1.25rem;
+  display: flex; align-items: center; justify-content: center; --p: 0%;
+  background: rgba(150, 160, 165, .18) linear-gradient(90deg, rgba(64,192,87,.6) var(--p), transparent var(--p));
+  color: var(--color-on-surface, #2a3439); font-size: .75rem; font-weight: 800; letter-spacing: .02em; }
+:where(html.dark) .aishare-progress { background-color: rgba(60, 72, 77, .45); color: var(--color-on-surface, #dce4e9); }
 .aishare-progress:empty { display: none; }
 .aishare-pdf-btn { top: 1.5rem; right: 1.5rem; display: none; padding: .5rem; color: #fff; cursor: pointer; }
 .aishare-pdf-btn .material-symbols-outlined { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 999px; background: #4caf50; }
@@ -937,8 +939,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 @keyframes aishare-pdf-in { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
 @keyframes aishare-pdf-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(46,160,67,.7); } 50% { box-shadow: 0 0 0 12px rgba(46,160,67,0); transform: scale(1.06); } }
 @media (prefers-reduced-motion: reduce) { .aishare-pdf-btn.shown { animation: none; } }
-/* A phone: the corners the toolbars use there, and "% done" just above the full-width emoji bar */
-@media (max-width: 640px) { .aishare-progress { left: .5rem; bottom: calc(.75rem + 3.6rem + 3px + .5rem); height: 3rem; padding: 0 1rem; }
+/* A phone: the corner the toolbars use there, and the "% done" bar just above the full-width emoji bar */
+@media (max-width: 640px) { .aishare-progress { bottom: calc(.75rem + 3.6rem + 3px + .5rem); }
   .aishare-pdf-btn { top: .5rem; right: .5rem; } }
 /* Results PDF: print only the survey, on white, in full height */
 @media print {
@@ -1546,7 +1548,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
     <div class="aishare-anon">Anonymous AI Survey</div>
     <div id="aishare-questions" class="aishare-questions"></div>
     <div id="aishare-done" class="poll-card aishare-card aishare-done" style="display:none;">🎉 Thank you!</div>
-    <!-- Survey progress, pinned bottom-left of the view (level with the reactions bar) -->
+    <!-- Survey progress: a bar along the bottom edge of the view -->
     <div id="aishare-progress" class="aishare-progress" aria-live="polite"></div>
   </section>
 </div>
@@ -6896,14 +6898,13 @@ function _onAiShareInput(qid, raw, commit, others) {
 // moves under the finger; the next WS snapshot brings everyone else's votes.
 function _onAiShareVote(qid, itemId, vote) {
   if (!_aiShare.active || !_sessionId) return;
-  var first = !_aiShareAnswered(qid);
   var mine = _aiShare.myVotes[qid] = Object.assign({}, _aiShare.myVotes[qid] || {});
   var had = mine[itemId] || 0;
   if (vote) mine[itemId] = vote; else delete mine[itemId];
   var res = _aiShare.results[qid];
   var it = res && (res.items || []).find(function (x) { return x.id === itemId; });
   if (it && it.score != null) it.score += vote - had;  // tallies come only once revealed
-  _renderActivityAiShare(first);
+  _renderActivityAiShare(false);  // no scrolling away: they may 🔥 more than one
   fetch('/' + _sessionId + '/api/participant/aishare/vote', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
@@ -6914,7 +6915,6 @@ function _onAiShareVote(qid, itemId, vote) {
 // A new ranking item comes with the author's 🔥; the WS snapshot puts it in its place.
 function _onAiShareAddItem(qid, text) {
   if (!_aiShare.active || !_sessionId) return;
-  var first = !_aiShareAnswered(qid);
   fetch('/' + _sessionId + '/api/participant/aishare/item', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Participant-ID': _myUUID },
@@ -6926,7 +6926,7 @@ function _onAiShareAddItem(qid, text) {
     if (!data) return;
     _aiShare.myVotes[qid] = Object.assign({}, _aiShare.myVotes[qid] || {});
     _aiShare.myVotes[qid][data.id] = 1;
-    _renderActivityAiShare(first);
+    _renderActivityAiShare(false);  // no scrolling away: they may add or 🔥 more
   }).catch(function () { /* silent — next WS push reconciles */ });
 }
 
@@ -6938,15 +6938,12 @@ function _onAiShareMulti(qid, mask, hearts, others) {
   if (mask) _aiShare.my[qid] = mask; else delete _aiShare.my[qid];
   if (!mask) delete _aiShare.myOther[qid];
   if (hearts) _aiShare.myHearts[qid] = hearts; else delete _aiShare.myHearts[qid];
+  // The next question appears, but no scrolling to it: they may still tick more (Victor, 2026-11-17).
   if (first && mask && !_aiShare.revealed) {
     _aiShare.hold[qid] = Date.now() + AISHARE_HOLD_MS;
-    setTimeout(function () {
-      // No scrolling away from someone still typing their "Other" value.
-      var typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('.aishare-other');
-      _renderActivityAiShare(!typing);
-    }, AISHARE_HOLD_MS + 50);
+    setTimeout(function () { _renderActivityAiShare(false); }, AISHARE_HOLD_MS + 50);
   }
-  _renderActivityAiShare(first && !!mask);
+  _renderActivityAiShare(false);
   var body = { question: qid, value: mask, hearts: hearts };
   if (others !== undefined) body.others = others;
   fetch('/' + _sessionId + '/api/participant/aishare/value', {
