@@ -800,10 +800,12 @@ PATCHES = [
       }
       day.style.left = `${left}px`
     }
-    // Again whenever the last two change size: the starrers show up with the first star,
-    // the day pill once the index has loaded, and a participant's only while one day shows.
+    // Again whenever these change size: the starrers show up with the first star, the 🏁
+    // pill with them (unwatched, it sat over the left end - Victor, 2026-11-18), the day
+    // pill once the index has loaded, and a participant's only while one day shows.
     const pillsResized = new ResizeObserver(placePills)
     pillsResized.observe(starrers)
+    pillsResized.observe(done)
     pillsResized.observe(round)
     pillsResized.observe(day)
     void fetchData.then((index) => {

@@ -670,6 +670,13 @@ body {
   border: 1px solid var(--lightgray);
   user-select: none;
 
+  // Green like the participants' Done button, from the first one done.
+  &.some {
+    color: #fff;
+    background: #16a34a;
+    border-color: #15803d;
+  }
+
   &[hidden] {
     display: none;
   }
@@ -703,8 +710,35 @@ body {
     border-color: #16a34a;
   }
 
+  // Two stars in and not done (note-pane.ts): a few blinks, then bigger and glowing
+  // until clicked (Victor, 2026-11-18).
+  &.nudge {
+    transform: scale(1.15);
+    transform-origin: bottom right;
+    box-shadow:
+      0 0 0 3px rgba(22, 163, 74, 0.35),
+      0 0 18px 4px rgba(250, 204, 21, 0.6);
+    animation: graph-done-blink 0.6s ease-in-out 5;
+  }
+
   &[hidden] {
     display: none;
+  }
+}
+
+@keyframes graph-done-blink {
+  50% {
+    transform: scale(1.3);
+    background: #22c55e;
+    box-shadow:
+      0 0 0 7px rgba(22, 163, 74, 0.5),
+      0 0 28px 10px rgba(250, 204, 21, 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph-done-button.nudge {
+    animation: none;
   }
 }
 

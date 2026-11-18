@@ -1408,9 +1408,22 @@ export function doneBadge(): HTMLElement {
   return donePill
 }
 
+// Grey "🏁 0 done" once someone stars, so the trainer sees where it will count; green from
+// the first one done, with a pop each time one more is (Victor, 2026-11-18).
+let doneShown: number | null = null // null until shown: no pop for those already done
+
 function showDone() {
-  donePill.hidden = starMode() !== "trainer" || doneCount === 0
+  donePill.hidden = starMode() !== "trainer" || (doneCount === 0 && starrers === 0)
   donePill.textContent = `🏁 ${doneCount} done`
+  donePill.classList.toggle("some", doneCount > 0)
+  if (donePill.hidden || !donePill.isConnected) return
+  const before = doneShown
+  doneShown = doneCount
+  if (before === null || doneCount <= before) return
+  donePill.animate(
+    [{ transform: "scale(1)" }, { transform: "scale(1.35)", offset: 0.3 }, { transform: "scale(1)" }],
+    { duration: 700, easing: "cubic-bezier(0.3, 1.6, 0.5, 1)" },
+  )
 }
 
 function showRound() {
@@ -1434,6 +1447,9 @@ function showRound() {
   doneButton.hidden = mode !== "voter" || revealed
   doneButton.textContent = doneMine ? "🏁 Done ✓" : "Done"
   doneButton.classList.toggle("on", doneMine)
+  // Two stars in and not done yet: it blinks, then stays bigger and glowing until clicked.
+  // Done never locks the stars: starring and unstarring go on as before (Victor, 2026-11-18).
+  doneButton.classList.toggle("nudge", !doneMine && mine.size >= 2)
   doneButton.dataset.tip = doneMine
     ? "Victor knows you're done - click if you're not, after all"
     : "Click when you're done looking through the wiki. Your stars stay yours until Victor shows everyone's"
