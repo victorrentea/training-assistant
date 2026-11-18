@@ -435,7 +435,7 @@ def test_restore_follows_meeting_transcripts_up_the_tools_list_exactly_once():
                "answers": {"tools": {"u1": 1 << 7 | 1 << 5, "u2": 1 << 6 | 1}}})
     opts = QUESTIONS_BY_ID["tools"]["options"]
     names = lambda m: {o for i, o in enumerate(opts) if m >> i & 1}
-    assert names(s.answers["tools"]["u1"]) == {"Meeting transcripts", "Logs"}
+    assert names(s.answers["tools"]["u1"]) == {"Meeting transcripts", "Logs, Database"}
     assert names(s.answers["tools"]["u2"]) == {"Email", opts[0]}
     again = AiShareState()
     again.restore(s.snapshot())                                            # the next restart must not move it again
