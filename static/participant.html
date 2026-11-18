@@ -1386,7 +1386,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 <span id="agenda-progress-badge" class="badge-new ml-auto" style="display:none"></span>
 </a>
 <a data-nav="notes" onclick="showView('notes')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer" style="display:none">
-<span class="material-symbols-outlined">book_2</span>
+<span class="material-symbols-outlined">description</span>
 <span class="text-base">Notes</span>
 <span id="notes-badge" class="badge-new"></span>
 </a>
@@ -6329,29 +6329,18 @@ function _resetActivityState(activity) {
 function _updateActivityNavLabel() {
   var el = document.getElementById('activity-nav-label');
   if (!el) return;
-  // Only decorate the label when the activity is actually started AND has
-  // content to display. Just setting current_activity (e.g. host switched
-  // tabs but hasn't started the activity yet) is not enough.
-  var hasContent = false;
-  switch (_currentActivity) {
-    case 'poll': hasContent = !!((_pollActive || _pollEnded) && _currentPoll); break;
-    case 'quiz': hasContent = !!(_quizActive && _currentQuiz); break;
-    case 'aishare': hasContent = _aiShare.active; break;
-    // Other activities (wordcloud / qa / codereview / debate): no
-    // per-activity 'active' flag in participant client yet, so leave them
-    // as plain 'Activity' until we wire similar checks. Avoids showing a
-    // misleading label.
-  }
-  var labels = {
-    poll: 'Activity: Poll',
-    quiz: 'Activity: Quiz',
-    wordcloud: 'Activity: Words',
-    qa: 'Activity: Q&A',
-    codereview: 'Activity: Code',
-    debate: 'Activity: Debate',
-    aishare: 'Activity: AI %',
-  };
-  el.textContent = (hasContent && labels[_currentActivity]) || 'Activity';
+  // The tab is named after what it shows ("Poll", not "Activity: Poll"; Victor,
+  // 2026-11-18), and only once that is really on screen: the host switching tabs
+  // without starting anything leaves it "Activity". The survey outlives
+  // current_activity (it stays up, with its results, while that is 'none'), so what
+  // is shown decides, not the activity the host has selected.
+  var shown = null;
+  if (_quizActive && _currentQuiz) shown = 'Quiz';
+  else if ((_pollActive || _pollEnded) && _currentPoll) shown = 'Poll';
+  else if (_aiShare.active) shown = 'Poll';
+  // Other activities (wordcloud / qa / codereview / debate): no per-activity
+  // 'active' flag in the participant client yet, so they stay plain 'Activity'.
+  el.textContent = shown || 'Activity';
 }
 
 // ── AI share survey ──
