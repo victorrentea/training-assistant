@@ -2518,6 +2518,20 @@ components:
           anyOf:
           - $ref: '#/components/schemas/AiShareOptionGroup'
           - type: 'null'
+        order:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Order
+        option_links:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/AiShareLink'
+            type: array
+          - type: 'null'
+          title: Option Links
         hint:
           anyOf:
           - type: string
