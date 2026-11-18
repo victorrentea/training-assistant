@@ -1,0 +1,28 @@
+/* The copy opened from disk: nothing that needs the live session (offline_site.py). */
+#offline-banner {
+  margin: 0 0 .5rem; padding: 6px 10px; border-radius: 10px; font-size: 12px; line-height: 1.35;
+  background: rgba(100, 116, 139, .16); color: inherit; opacity: .85;
+}
+.offline-copy #offline-card { display: none !important; }
+.offline-copy #floating-reactions,
+.offline-copy [data-nav="upload-paste"],
+.offline-copy [data-nav="report-bug"],
+.offline-copy a[onclick="togglePastSlides()"],
+.offline-copy #slide-history-list,
+.offline-copy #slides-follow-toggle,
+.offline-copy [data-nav="slides"] .topics-arrow,
+.offline-no-drive #gdrive-row,
+.offline-copy #profile-card,
+.offline-copy #summary-follow-controls,
+.offline-copy #wiki-toolbar,
+.offline-copy #feedback-cta,
+.offline-copy #fx-fire-row,
+.offline-copy #dup-indicator,
+.offline-copy #name-gate { display: none !important; }
+/* The decks are links to the PDFs next to the copy: always listed, nothing to expand. */
+.offline-copy .topics-list { max-height: none !important; overflow: visible !important; }
+.offline-copy [data-nav="slides"] { cursor: default; pointer-events: none; }
+/* What was on screen last stays readable; there is no one left to answer to. */
+.offline-copy #activity-view input,
+.offline-copy #activity-view textarea,
+.offline-copy #activity-view button:not(.aishare-pdf-btn) { pointer-events: none; }

@@ -206,6 +206,11 @@ def wiki_updated_at() -> str | None:
     return _installed.updated_at if _installed else None
 
 
+def published_site() -> bytes | None:
+    """The zip of the site last published (None: none yet)."""
+    return _installed._payload if _installed else None
+
+
 _notes_of: tuple[bytes, frozenset[str]] | None = None  # (site zip, its note ids)
 
 

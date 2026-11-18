@@ -14,7 +14,8 @@ import uuid
 from pathlib import Path
 
 from daemon import log
-from daemon.materials.viewed_decks import select_viewed_decks
+from daemon.materials.offline_site import DRIVE_ZIP, SITE_DIR, OfflineDeck
+from daemon.materials.viewed_decks import ZipDeck, select_viewed_decks
 from daemon.materials.zip_builder import (
     ZipTooLargeError,
     build_session_zip,
@@ -78,6 +79,34 @@ def post_multipart(url: str, body: bytes, boundary: str, config) -> None:
         pass
 
 
+def _offline_site(decks: list[ZipDeck], folder: Path) -> dict[str, bytes]:
+    """The open-from-disk copy of the participant site, as the zip's interact/ folder.
+
+    It links only the decks Railway already holds: those are the ones it will put in
+    slides/. Best effort: the materials ship without it rather than not at all.
+    """
+    from daemon.materials.offline_copy import current_site, write_drive_zip
+
+    try:
+        cached = {slug for slug, deck in misc_state.slides_updated.items() if deck.get("status") == "cached"}
+        linked = [
+            OfflineDeck(title=str(misc_state.slides_catalog[d.slug].get("title") or d.slug), filename=d.filename)
+            for d in decks
+            if d.slug in cached
+        ]
+        files = current_site(linked)
+        if files is None:
+            return {}
+        # Someone is taking the materials home now: the Drive folder gets today's copy too.
+        drive_files = current_site() if linked else files
+        if drive_files and write_drive_zip(folder, drive_files):
+            log.info("materials", f"offline copy written: {DRIVE_ZIP}")
+        return {f"{SITE_DIR}/{path}": content for path, content in files.items()}
+    except Exception as exc:  # noqa: BLE001
+        log.error("materials", f"Offline copy left out of the session zip: {exc}")
+        return {}
+
+
 def handle_build_materials_zip(data: dict, config) -> None:
     """Build the session zip and POST it to Railway; report failures the same way."""
     session_id = str(data.get("session_id") or "")
@@ -90,11 +119,18 @@ def handle_build_materials_zip(data: dict, config) -> None:
     try:
         if folder is None:
             raise FileNotFoundError("No active session folder")
-        payload = build_session_zip(folder)
+        decks = select_viewed_decks(list(misc_state.slides_viewed), dict(misc_state.slides_catalog))
+        site = _offline_site(decks, folder)
+        try:
+            payload = build_session_zip(folder, site)
+        except ZipTooLargeError:
+            if not site:
+                raise
+            # The materials themselves matter more than the copy of the site.
+            payload = build_session_zip(folder)
         filename = session_zip_filename(folder)
         fields["filename"] = filename
         file_part = (filename, payload)
-        decks = select_viewed_decks(list(misc_state.slides_viewed), dict(misc_state.slides_catalog))
         fields["decks"] = json.dumps([deck.model_dump() for deck in decks])
         deck_names = ", ".join(deck.filename for deck in decks) or "none"
         log.info(

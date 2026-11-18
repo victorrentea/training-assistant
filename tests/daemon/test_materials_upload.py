@@ -1,6 +1,17 @@
+import io
 import types
+import zipfile
+
+import pytest
 
 from daemon.materials.upload import build_multipart, handle_build_materials_zip
+
+
+@pytest.fixture(autouse=True)
+def _no_live_daemon(monkeypatch):
+    """The copy of the participant site is snapshotted from the daemon on loopback; a
+    daemon running on this machine must not leak into these tests."""
+    monkeypatch.setattr("daemon.materials.offline_copy._local_fetch", lambda path: None)
 
 
 def _config(tmp_path):
@@ -119,3 +130,25 @@ def test_handler_names_the_viewed_decks_for_railway(tmp_path, monkeypatch):
     assert b'name="decks"' in posted["body"]
     assert b'"filename": "Agentic Engineering.pdf"' in posted["body"]
     assert b"bio-victor" not in posted["body"]
+
+
+def test_handler_adds_the_offline_site_and_writes_the_drive_copy(tmp_path, monkeypatch):
+    (tmp_path / "ai-summary.md").write_text("summary", encoding="utf-8")
+    answers = {"state": {"session_name": "S", "wiki_updated_at": None}, "notes": {"notes_content": "n"}}
+    monkeypatch.setattr("daemon.materials.offline_copy._local_fetch", lambda path: answers.get(path))
+    posted = {}
+    monkeypatch.setattr(
+        "daemon.materials.upload.post_multipart",
+        lambda url, body, boundary, config: posted.update(body=body),
+    )
+
+    handle_build_materials_zip({"session_id": "e2etst"}, _config(tmp_path))
+
+    start = posted["body"].index(b"PK\x03\x04")
+    with zipfile.ZipFile(io.BytesIO(posted["body"][start:])) as archive:
+        names = archive.namelist()
+    assert "ai-summary.md" in names
+    assert "interact/index.html" in names
+    assert "interact/offline-data.js" in names
+    assert "interact.zip" not in names
+    assert (tmp_path / "interact.zip").is_file()

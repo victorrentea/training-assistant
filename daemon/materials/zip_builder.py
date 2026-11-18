@@ -31,8 +31,9 @@ def _is_excluded_name(name: str) -> bool:
     return any(fnmatch.fnmatch(name, pattern) for pattern in EXCLUDED_GLOBS)
 
 
-def build_session_zip(session_folder: Path) -> bytes:
-    """Return a DEFLATE archive of session_folder, minus the exclusion set.
+def build_session_zip(session_folder: Path, extra: dict[str, bytes] | None = None) -> bytes:
+    """Return a DEFLATE archive of session_folder, minus the exclusion set, plus the
+    `extra` files (archive path → content) that are not on disk.
 
     Raises FileNotFoundError if the folder is missing, ZipTooLargeError if the
     result exceeds MAX_ZIP_BYTES.
@@ -51,6 +52,8 @@ def build_session_zip(session_folder: Path) -> bytes:
             if _is_excluded_name(path.name):
                 continue
             archive.write(path, arcname=str(relative))
+        for name in sorted(extra or {}):
+            archive.writestr(name, (extra or {})[name])
 
     data = buffer.getvalue()
     if len(data) > MAX_ZIP_BYTES:

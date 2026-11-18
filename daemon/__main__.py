@@ -28,6 +28,7 @@ from daemon.lock import (
     install_signal_handlers,
     write_lock,
 )
+from daemon.materials.offline_copy import OfflineCopyPublisher
 from daemon.materials.upload import handle_build_materials_zip as _handle_materials_zip
 from daemon.session import pending as session_pending
 from daemon.session import state as session_shared_state
@@ -1108,6 +1109,7 @@ def run() -> None:
     wiki_publisher = WikiPublisher(upload=wiki_uploader(config), on_change=_on_wiki_change)
     install_wiki_publisher(wiki_publisher)
     ws_client.on_connect(wiki_publisher.invalidate)
+    offline_copy_publisher = OfflineCopyPublisher()
 
     ws_client.start()
 
@@ -1501,6 +1503,7 @@ def run() -> None:
                     misc_state.agenda_docx_path = _agenda_path_from_probe(notes_summary_probe)
                     _broadcast_notes_summary_counts(notes_summary_probe, change_parts, prev_probe)
                 wiki_publisher.tick(_active_session_id, config.session_folder)
+                offline_copy_publisher.tick(_active_session_id, config.session_folder)
 
                 if now - last_persist_poll_at >= 3.0:
                     last_persist_poll_at = now
