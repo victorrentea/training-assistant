@@ -1016,7 +1016,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-head-end { display: inline-flex; align-items: center; gap: .35rem; flex-shrink: 0; }
 /* The voters total ends where the option counts below it end (their bar's border + the count's own inset). */
 .aishare-card:has(.aishare-choices) .aishare-head-end .aishare-status { margin-right: calc(1px + .55rem); }
-.aishare-copy { display: inline-flex; padding: .2rem; border: 0; border-radius: 6px; background: transparent; color: var(--color-on-surface-variant, #566166); cursor: pointer; transition: color .15s, background .15s; }
+.aishare-copy { display: inline-flex; vertical-align: middle; margin-left: .4rem; padding: .2rem; border: 0; border-radius: 6px; background: transparent; color: var(--color-on-surface-variant, #566166); cursor: pointer; transition: color .15s, background .15s; }
 .aishare-copy[hidden] { display: none; }
 .aishare-copy .material-symbols-outlined { font-size: 1.2rem; }
 .aishare-copy:hover { color: var(--color-primary, #4555ba); background: var(--color-surface-container, rgba(127,127,127,.15)); }
@@ -6567,8 +6567,9 @@ function _aiShareBuildCard(q) {
     var copy = q.kind === 'ranking' && _onHostMachine() ?
       '<button type="button" class="aishare-copy" data-tip="Copy the ranking" aria-label="Copy the ranking" hidden>' +
       '<span class="material-symbols-outlined">content_copy</span></button>' : '';
-    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + skip + '</h2>' +
-      '<span class="aishare-head-end"><span class="aishare-status" data-tip="voters"></span>' + copy + '</span></div>';
+    // The copy button right after the question, not out by the voters count (Victor, 2026-11-18).
+    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + skip + copy + '</h2>' +
+      '<span class="aishare-head-end"><span class="aishare-status" data-tip="voters"></span></span></div>';
   }
   if (q.kind === 'slider') {
     card.innerHTML = head +
