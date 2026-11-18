@@ -152,6 +152,9 @@ PATCHES = [
   // From level 3 a soft glow spreads under the bursts, under every dot's burst.
   const takeawayHazeContainer = new Container({ zIndex: 1.4, isRenderGroup: true, eventMode: "none" })
   const takeawayGlowContainer = new Container({ zIndex: 1.5, isRenderGroup: true, eventMode: "none" })
+  // The reader's own stars (graph-takeaway.ts ownTexture): over every dot's burst.
+  const ownGlowContainer = new Container({ zIndex: 1.6, isRenderGroup: true, eventMode: "none" })
+  stage.addChild(ownGlowContainer)
   const starsContainer = new Container({ zIndex: 4.5, eventMode: "passive" })
   stage.addChild(takeawayHazeContainer, takeawayGlowContainer, starsContainer)
   const hovered = hoverGlow(computedStyleMap["--dark"])
@@ -171,6 +174,7 @@ PATCHES = [
     pastBurst: computedStyleMap["--wiki-burst-past"],
     off: computedStyleMap["--wiki-takeaway-off"],
     halo: computedStyleMap["--light"],
+    mine: computedStyleMap["--wiki-mine"],
     font: computedStyleMap["--bodyFont"],
   }
   let starredIds: ReadonlySet<string> = new Set()
@@ -257,6 +261,7 @@ PATCHES = [
     takeaway.setPast(pastDay.has(nodeId))
     takeawayHazeContainer.addChild(takeaway.glow)
     takeawayGlowContainer.addChild(takeaway.burst, takeaway.flare)
+    ownGlowContainer.addChild(takeaway.own)
     starsContainer.addChild(takeaway.star)
     // An empty star fills under the pointer (graph-takeaway.ts): a frame for it.
     takeaway.star.on("pointerover", () => wake()).on("pointerout", () => wake())
@@ -302,6 +307,7 @@ PATCHES = [
     "--wiki-takeaway-text",
     "--wiki-burst",
     "--wiki-burst-past",
+    "--wiki-mine",
     "--wiki-edge",
     "--wiki-glyph",
     "--wiki-outline",
@@ -562,6 +568,7 @@ PATCHES = [
         JSON.stringify(nodeRenderData.filter(keep).map((n) => n.simulationData.id))
       graph.dataset.takeaways = ids((n) => takeaways.has(n.simulationData.id))
       graph.dataset.starsShown = ids((n) => n.takeaway?.starShown ?? false)
+      graph.dataset.mine = ids((n) => n.takeaway?.ownShown ?? false)
       graph.dataset.shining = ids((n) => shining.has(n.simulationData.id))
       graph.dataset.levels = JSON.stringify(levels)
       graph.dataset.stars = JSON.stringify(

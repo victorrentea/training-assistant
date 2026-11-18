@@ -48,4 +48,4 @@ def test_offline_site_inlines_the_bundle_in_index_and_bundles_what_the_graph_fet
         assert z.read("T wiki/talks/Demo.html").decode().count('<script src="../offline.js">') == 1
         shim = z.read("T wiki/offline.js").decode()
         assert '"static/contentIndex.json": "{\\"a\\": 1}"' in shim
-        assert json.dumps({"wiki/stars": {"counts": {"Drift": 2}}, "wiki/takeaways": {"slugs": ["AGENTS"]}}) in shim
+        assert json.dumps({"wiki/stars": {"counts": {"Drift": 2}, "revealed": True}, "wiki/takeaways": {"slugs": ["AGENTS"]}}) in shim

@@ -35,6 +35,7 @@ export type TakeawayColors = {
   pastBurst: string // the same, for a note of an earlier day than the graph's latest
   off: string // the hollow star the trainer clicks
   halo: string // the page background, behind the star so edges don't run through it
+  mine: string // the glow under a note the reader starred
   font: string
 }
 
@@ -96,6 +97,31 @@ export function hoverGlow(color: string): Sprite {
   return new Sprite({ texture: hazeTexture(), anchor: 0.5, eventMode: "none", tint: color, alpha: 0.3, visible: false, zIndex: 1.3 })
 }
 
+// A participant's own stars: a yellow glow right under the dot, over the gold burst that
+// says how many starred the note, so theirs stand out once everyone's stars are shown
+// and in the copy they take home (Victor, 2026-11-18). Never greyed for an earlier day
+// nor paled once read: it marks a choice, not news. Nearly flat, with a soft rim: a
+// patch of highlighter, where the haze under a burst is a light fading out; lighter
+// in the middle, so the dot (white on the dark theme) still shows on it.
+const OWN_GLOW = 5.2 // its width, in dot radii
+let ownGlow: Texture | undefined
+function ownTexture(): Texture {
+  if (ownGlow) return ownGlow
+  const canvas = document.createElement("canvas")
+  canvas.width = canvas.height = TEXTURE_SIZE
+  const ctx = canvas.getContext("2d")!
+  const c = TEXTURE_SIZE / 2
+  const g = ctx.createRadialGradient(c, c, 0, c, c, c)
+  g.addColorStop(0, "rgba(255,255,255,0.5)")
+  g.addColorStop(0.3, "rgba(255,255,255,0.62)")
+  g.addColorStop(0.62, "rgba(255,255,255,0.95)")
+  g.addColorStop(1, "rgba(255,255,255,0)")
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE)
+  ownGlow = Texture.from(canvas)
+  return ownGlow
+}
+
 function hazeTexture(): Texture {
   if (haze) return haze
   const canvas = document.createElement("canvas")
@@ -154,6 +180,7 @@ export class TakeawayMark {
   readonly burst: Sprite
   readonly flare: Sprite // a second burst over the first, from level 2: a brighter star
   readonly glow: Sprite // under the bursts, from level 3, wider each level
+  readonly own: Sprite // over the bursts: the reader starred this note (ownTexture)
   private shine: DotShine = { takeaway: false, count: 0, mine: false, level: 0 }
   private hovered = false // the pointer on the star
   private seen = false // its note read here: a paler shine
@@ -176,6 +203,8 @@ export class TakeawayMark {
     this.burst.width = this.burst.height = this.size
     this.flare = sprite(burstTexture())
     this.glow = sprite(hazeTexture())
+    this.own = new Sprite({ texture: ownTexture(), anchor: 0.5, eventMode: "none", tint: colors.mine, visible: false })
+    this.own.width = this.own.height = 2 * r * OWN_GLOW
     this.star = new Text({
       text: HOLLOW,
       anchor: { x: 0, y: 0 },
@@ -224,6 +253,7 @@ export class TakeawayMark {
       this.glow.width = this.glow.height = 2 * this.r * look.glow
       this.glow.alpha = look.glowAlpha * dim
     }
+    this.own.visible = this.mode === "voter" && mine
     // Everyone's stars, his takeaway counting as one, as for the level of shine.
     const total = count + (takeaway ? 1 : 0)
     // Filled when it's the reader's own: the trainer's takeaway, the participant's star.
@@ -272,6 +302,10 @@ export class TakeawayMark {
     return this.star.visible
   }
 
+  get ownShown(): boolean {
+    return this.own.visible
+  }
+
   get starText(): string {
     return this.star.visible ? this.star.text.replace(/\uFE0E/g, "") : ""
   }
@@ -286,6 +320,7 @@ export class TakeawayMark {
       x + dx - (STAR_STROKE / 2) * scale,
       y + baseline - baselineOf(this.star.style, STAR_STROKE) * scale,
     )
+    if (this.own.visible) this.own.position.set(x, y)
     if (this.shine.level > 0) {
       this.burst.position.set(x, y)
       this.flare.position.set(x, y)

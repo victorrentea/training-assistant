@@ -26,6 +26,28 @@ function extractFunction(file, name) {
 }
 
 const PARTICIPANT_HTML = path.join(__dirname, '..', 'static', 'participant.html');
+// ── _zipWithFile: the participant's own wiki stars, added to the zip on its way out ──
+const zipWithFile = new Function(
+  extractFunction(PARTICIPANT_HTML, '_crc32') + ';' + extractFunction(PARTICIPANT_HTML, '_zipWithFile') +
+  '; return { zipWithFile: _zipWithFile, crc32: _crc32 };')();
+const zipChecks = (async () => {
+  const text = 'window.__MY_STARS__ = ["Guardrails"]\n';
+  const zlib = require('zlib');
+  const emptyZip = Buffer.from('504b0506' + '00'.repeat(18), 'hex');
+  const out = Buffer.from(await (await zipWithFile.zipWithFile(new Blob([emptyZip]), 'interact/my-stars.js', text)).arrayBuffer());
+  const end = out.length - 22;
+  const dirStart = out.readUInt32LE(end + 16);
+  const nameLength = out.readUInt16LE(26);
+  return {
+    crc: typeof zlib.crc32 !== 'function' || zipWithFile.crc32(Buffer.from(text)) === zlib.crc32(Buffer.from(text)),
+    entries: out.readUInt16LE(end + 10) === 1,
+    stored: out.subarray(30 + nameLength, dirStart).toString() === text,
+    listed: out.readUInt32LE(dirStart) === 0x02014b50 && out.readUInt32LE(dirStart + 42) === 0,
+    name: out.subarray(dirStart + 46, dirStart + 46 + nameLength).toString() === 'interact/my-stars.js',
+    notAZip: (await zipWithFile.zipWithFile(new Blob([Buffer.from('nope')]), 'a', 'b')).size === 4,
+  };
+})();
+
 const restoreMarkTagsInCode = new Function(
   extractFunction(PARTICIPANT_HTML, 'restoreMarkTagsInCode') + '; return restoreMarkTagsInCode;'
 )();
@@ -832,6 +854,7 @@ Promise.all([
   runHostMachinePoll({ cookie: 'ON_HOST_MACHINE=true', activeSessionId: 'newone', currentSessionId: 'oldone' })
     .then((r) => hostMachineResults.push(['new session => fresh UUID, then navigate', r.navigatedTo === '/newone/' && r.removed.join() === 'workshop_participant_uuid'])),
   ...pendingAsync,
+  zipChecks.then((c) => Object.entries(c).forEach(([what, ok]) => hostMachineResults.push(['_zipWithFile: ' + what, ok]))),
 ]).then(() => {
   hostMachineResults.forEach(([desc, ok]) => assert(desc, ok));
   console.log(`\n${passed} passed, ${failed} failed`);

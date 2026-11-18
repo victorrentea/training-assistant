@@ -82,7 +82,8 @@ def offline_site_zip(site_dir: Path, title: str, counts: dict[str, int], takeawa
         rel = path.relative_to(site_dir).as_posix()
         if path.is_file() and (path.suffix == ".html" or rel in ("static/contentIndex.json", "note-badges.json")):
             data[rel] = path.read_text(encoding="utf-8", errors="replace")
-    api = {"wiki/stars": {"counts": counts}, "wiki/takeaways": {"slugs": sorted(takeaways)}}
+    # revealed: a copy taken home shows everyone's stars, whatever the round was at.
+    api = {"wiki/stars": {"counts": counts, "revealed": True}, "wiki/takeaways": {"slugs": sorted(takeaways)}}
     offline_js = OFFLINE_SHIM.replace("__FILES__", json.dumps(data)).replace("__API__", json.dumps(api))
     bundle = (site_dir / "postscript.js").read_text(encoding="utf-8")
 
@@ -128,6 +129,10 @@ OFFLINE_SHIM = """// Opened from disk, the wiki's own fetches are refused; this 
   var files = __FILES__
   var api = __API__
   var root = new URL(".", document.currentScript.src).href
+  // Inside the copy of the participant site (daemon/materials/offline_site.py), the
+  // folder above holds the stars of whoever downloaded it: participant.html adds
+  // my-stars.js to the zip on its way out. Elsewhere the file is simply not there.
+  document.write('<script src="' + root + '../my-stars.js"><\\/script>')
   var realFetch = window.fetch.bind(window)
   function answer(body, type) {
     return Promise.resolve(new Response(body, { status: 200, headers: { "Content-Type": type } }))
@@ -136,7 +141,12 @@ OFFLINE_SHIM = """// Opened from disk, the wiki's own fetches are refused; this 
     // A string, a URL or a Request
     var url = new URL(input instanceof Request ? input.url : String(input), location.href)
     for (var key in api) {
-      if (url.pathname.endsWith("/" + key)) return answer(JSON.stringify(api[key]), "application/json")
+      if (!url.pathname.endsWith("/" + key)) continue
+      var body = api[key]
+      if (key === "wiki/stars" && Array.isArray(window.__MY_STARS__)) {
+        body = Object.assign({}, body, { mine: window.__MY_STARS__ })
+      }
+      return answer(JSON.stringify(body), "application/json")
     }
     if (url.href.indexOf(root) === 0) {
       var rel = decodeURIComponent(url.pathname.slice(new URL(root).pathname.length))

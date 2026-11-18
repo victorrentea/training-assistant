@@ -1002,6 +1002,7 @@ body.peek-dragging {
   --wiki-takeaway-text: #a84b05;
   --wiki-burst: #f59e0b;
   --wiki-burst-past: #9ca3af; // an earlier day's shine (graph-takeaway.ts setPast)
+  --wiki-mine: #ffe14d; // under a note the reader starred (graph-takeaway.ts ownTexture)
   --wiki-takeaway-off: #7d8590;
 }
 
@@ -1010,6 +1011,7 @@ body.peek-dragging {
   --wiki-takeaway-text: #fbbf24;
   --wiki-burst: #fbbf24;
   --wiki-burst-past: #9ca3af;
+  --wiki-mine: #ffe83a; // lemon, apart from the bursts' amber
   --wiki-takeaway-off: #6b7280;
 }
 

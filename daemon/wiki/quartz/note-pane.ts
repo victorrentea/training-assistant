@@ -1375,6 +1375,12 @@ if (!embedded) {
   window.setInterval(() => {
     if (document.visibilityState === "visible") fetchStars()
   }, TRAINER_POLL_MS)
+} else if (window.location.protocol === "file:") {
+  // Inside the copy of the participant site opened from disk (daemon/materials/
+  // offline_site.py): pages opened from files cannot post to each other, so the wiki
+  // asks for itself, once; offline.js answers from what the copy holds.
+  fetchTakeaways()
+  fetchStars()
 }
 
 // ── Private stars, then revealed ──
