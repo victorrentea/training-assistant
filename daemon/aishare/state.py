@@ -31,7 +31,7 @@ QUESTIONS: list[dict] = [
     {"id": "harness_work", "kind": "multi", "text": "What agent harness do you use **at work**?",
      "options": ["Claude Code or Codex", "GitHub Copilot CLI", "GitHub Copilot Chat in VS Code",
                  "GitHub Copilot Chat in IntelliJ", "Microsoft M365 Copilot", "Other", "GitHub Copilot",
-                 "GitHub Copilot Agents in VS Code / Desktop app", "Cursor", "OpenCode", "Pi", "Orca"],
+                 "GitHub Copilot Agents in VS Code / Copilot Desktop app", "Cursor", "OpenCode", "Pi", "Orca"],
      # New options are appended, so older answers keep their bits; "order" is how they are shown.
      # "GitHub Copilot" is ticked as the heading itself: the options under it show, inside its box,
      # once it is ticked (Victor, 2026-11-11; inside the box, and the agents option, 2026-11-18).
@@ -41,7 +41,7 @@ QUESTIONS: list[dict] = [
      "group": {"label": "GitHub Copilot", "options": [1, 7, 2, 3], "parent": 6},
      "option_links": [
          {"text": "Agents in VS Code", "url": "https://code.visualstudio.com/docs/agents/run/agents-window"},
-         {"text": "Desktop app",
+         {"text": "Copilot Desktop app",
           "url": "https://github.blog/changelog/2026-05-14-github-copilot-app-is-now-available-in-technical-preview/"}]},
     {"id": "personal_sub", "kind": "choice", "text": "Do you have a work or personal Claude or Codex subscription ((gives you ~50x what you pay))?",
      "links": [{"text": "Claude", "url": "https://claude.com/pricing"},
