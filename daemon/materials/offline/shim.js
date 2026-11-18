@@ -110,6 +110,8 @@
     window._applyGdriveToast = function () {}
     window.loadSlidesCatalog = function () { decksMenu(); return Promise.resolve() }
     window._setPastSlidesBadge = function () {}
+    // The row blinks until the zip is taken; whoever reads this copy already has it.
+    window._applyZipReminder = function () {}
     // "Download all" has no zip to build any more: it opens the Drive folder instead.
     var drive = (api.state || {}).gdrive_url
     window.downloadMaterialsZip = function () { if (drive) window.open(drive, "_blank", "noopener") }
