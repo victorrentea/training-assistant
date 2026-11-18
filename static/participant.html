@@ -1005,6 +1005,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 /* Same size as the question (.poll-card h2) — it reads as the question's other half. */
 .aishare-status { flex-shrink: 0; font-size: 1.15rem; line-height: 1.4; font-weight: 700; color: var(--color-on-surface-variant, #566166); }
 .aishare-head-end { display: inline-flex; align-items: center; gap: .35rem; flex-shrink: 0; }
+/* The voters total ends where the option counts below it end (their bar's border + the count's own inset). */
+.aishare-card:has(.aishare-choices) .aishare-head-end .aishare-status { margin-right: calc(1px + .55rem); }
 .aishare-copy { display: inline-flex; padding: .2rem; border: 0; border-radius: 6px; background: transparent; color: var(--color-on-surface-variant, #566166); cursor: pointer; transition: color .15s, background .15s; }
 .aishare-copy[hidden] { display: none; }
 .aishare-copy .material-symbols-outlined { font-size: 1.2rem; }
@@ -6478,7 +6480,7 @@ function _aiShareBuildCard(q) {
   var head;
   if (q.kind === 'multi' && q.hint) {
     // Count right after the question; on the right, once something is ticked: the hint and the ❤️ total.
-    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline"></span></h2>' +
+    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline" data-tip="voters"></span></h2>' +
       '<div class="aishare-head-side aishare-fav"><span class="aishare-head-hint">' + _escHtml(q.hint) + '</span>' +
       '<span class="aishare-hearts-total"></span></div></div>';
   } else {
@@ -6488,7 +6490,7 @@ function _aiShareBuildCard(q) {
       '<button type="button" class="aishare-copy" data-tip="Copy the ranking" aria-label="Copy the ranking" hidden>' +
       '<span class="material-symbols-outlined">content_copy</span></button>' : '';
     head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + skip + '</h2>' +
-      '<span class="aishare-head-end"><span class="aishare-status"></span>' + copy + '</span></div>';
+      '<span class="aishare-head-end"><span class="aishare-status" data-tip="voters"></span>' + copy + '</span></div>';
   }
   if (q.kind === 'slider') {
     card.innerHTML = head +
