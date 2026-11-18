@@ -30,12 +30,20 @@ YES_NO_IDK = ["Yes", "No / I don't know"]
 QUESTIONS: list[dict] = [
     {"id": "harness_work", "kind": "multi", "text": "What agent harness do you use **at work**?",
      "options": ["Claude Code or Codex", "GitHub Copilot CLI", "GitHub Copilot Chat in VS Code",
-                 "GitHub Copilot Chat in IntelliJ", "Microsoft M365 Copilot", "Other", "GitHub Copilot"],
-     # "GitHub Copilot" (appended last, so older answers keep their bits) is ticked as the heading itself:
-     # its CLI / VS Code / IntelliJ options show once it is ticked (Victor, 2026-11-11).
-     "other_option": 5, "other_presets": ["OpenCode", "Pi", "Cursor"],
-     "group": {"label": "GitHub Copilot", "options": [1, 2, 3], "parent": 6}},
-    {"id": "personal_sub", "kind": "choice", "text": "Do you have a work or personal Claude or Codex subscription ((gives you ~50x more than you pay))?",
+                 "GitHub Copilot Chat in IntelliJ", "Microsoft M365 Copilot", "Other", "GitHub Copilot",
+                 "GitHub Copilot Agents in VS Code / Desktop app", "Cursor", "OpenCode", "Pi", "Orca"],
+     # New options are appended, so older answers keep their bits; "order" is how they are shown.
+     # "GitHub Copilot" is ticked as the heading itself: the options under it show, inside its box,
+     # once it is ticked (Victor, 2026-11-11; inside the box, and the agents option, 2026-11-18).
+     # Cursor, OpenCode, Pi and Orca were what people typed under "Other" at Jfokus (2026-11-18).
+     "order": [0, 6, 1, 7, 2, 3, 8, 9, 10, 11, 4, 5],
+     "other_option": 5,
+     "group": {"label": "GitHub Copilot", "options": [1, 7, 2, 3], "parent": 6},
+     "option_links": [
+         {"text": "Agents in VS Code", "url": "https://code.visualstudio.com/docs/agents/run/agents-window"},
+         {"text": "Desktop app",
+          "url": "https://github.blog/changelog/2026-05-14-github-copilot-app-is-now-available-in-technical-preview/"}]},
+    {"id": "personal_sub", "kind": "choice", "text": "Do you have a work or personal Claude or Codex subscription ((gives you ~50x what you pay))?",
      "links": [{"text": "Claude", "url": "https://claude.com/pricing"},
                {"text": "Codex", "url": "https://developers.openai.com/codex/pricing"}],
      "options": YES_NO},

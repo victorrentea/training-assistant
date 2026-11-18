@@ -74,7 +74,13 @@ def test_questions_are_shipped_in_order(client, sent):
     assert [q.id for q in pax.questions] == ["harness_work", "personal_sub", "agents_md", "mcp", "tools", "skill", "plugins", "custom_agent", "code_review", "nontech_pr", "ai_generated", "review", "devex_pain", "knowledge_base"]
     assert pax.questions[0].kind == "multi" and pax.questions[0].options[pax.questions[0].other_option] == "Other"
     assert pax.questions[0].options[pax.questions[0].group.parent] == "GitHub Copilot"
-    assert pax.questions[0].other_presets == ["OpenCode", "Pi", "Cursor"]
+    harness = pax.questions[0]
+    # Shown in `order`, stored by index: every option exactly once, the Copilot ones under their heading.
+    assert sorted(harness.order) == list(range(len(harness.options)))
+    assert [harness.options[i] for i in harness.order[:3]] == ["Claude Code or Codex", "GitHub Copilot", "GitHub Copilot CLI"]
+    assert all(harness.options[i].startswith("GitHub Copilot ") for i in harness.group.options)
+    assert {"Cursor", "OpenCode", "Pi", "Orca"} <= set(harness.options)
+    assert all(any(l.text in o for o in harness.options) for l in harness.option_links)
     assert pax.questions[2].options == ["Yes", "No / I don't know"]
     assert [l.text for l in pax.questions[1].links] == ["Claude", "Codex"]
     assert pax.questions[-1].options == ["Yes", "No / I don't know"]
@@ -221,12 +227,12 @@ def test_multi_counts_every_ticked_option_and_the_hearts(client, state, sent):
     _answer(client, "u1", 0b00011, question="harness_work", hearts=0b00011)   # two favourites
     _answer(client, "u2", 0b00101, question="harness_work", hearts=0b00001)
     host = _last(sent["host"], "aishare_host_update")
-    assert _result(host, "harness_work").counts == [2, 1, 1, 0, 0, 0, 2]   # GitHub Copilot: ticked with CLI or VS Code
-    assert _result(host, "harness_work").hearts == [2, 1, 0, 0, 0, 0, 0]
+    assert _result(host, "harness_work").counts == [2, 1, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0]   # GitHub Copilot: ticked with CLI or VS Code
+    assert _result(host, "harness_work").hearts == [2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     pax = _last(sent["broadcast"], "aishare_updated")
     assert _result(pax, "harness_work").hearts is None              # hidden until revealed
     client.post("/api/cur/host/aishare/reveal", json={"revealed": True})
-    assert _result(_last(sent["broadcast"], "aishare_updated"), "harness_work").hearts == [2, 1, 0, 0, 0, 0, 0]
+    assert _result(_last(sent["broadcast"], "aishare_updated"), "harness_work").hearts == [2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
 def test_multi_accepts_options_whose_bit_is_above_100(client, state):
@@ -243,7 +249,7 @@ def test_multi_hearts_only_on_ticked_options_and_untick_all_withdraws(client, st
     assert state.hearts_of("u1") == {"harness_work": 0b00001}
     _answer(client, "u1", 0b00001, question="harness_work", hearts=0b00010)   # ❤️ on an unticked one
     assert state.hearts_of("u1") == {}
-    assert _answer(client, "u1", 0b10000000, question="harness_work").status_code == 422
+    assert _answer(client, "u1", 1 << 12, question="harness_work").status_code == 422
     _answer(client, "u1", 0, question="harness_work")
     assert state.answers_of("u1") == {}
 

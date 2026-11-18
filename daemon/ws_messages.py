@@ -142,7 +142,7 @@ class AiShareLink(BaseModel):
 
 class AiShareOptionGroup(BaseModel):
     label: str          # a sub-heading over consecutive options; each one is shown without this prefix
-    options: list[int]  # the indexes of the options under it, consecutive
+    options: list[int]  # the indexes of the options under it, in the order shown
     parent: int | None = None  # the option ticked as the heading itself: its sub-options show once it is ticked,
                                # ticking any of them ticks it, unticking it unticks them
 
@@ -158,6 +158,9 @@ class AiShareQuestion(BaseModel):
     other_option: int | None = None          # choice: picking this option opens a free-text box
     other_presets: list[str] | None = None   # "Other" chips offered before anyone typed them (ticked like typed ones)
     group: AiShareOptionGroup | None = None  # multi: some options gathered under a sub-heading (participants only)
+    order: list[int] | None = None           # multi: the option indexes in the order shown (new options are appended,
+                                             # so stored answers keep their bits); None: as listed
+    option_links: list[AiShareLink] | None = None  # turns each `text` inside an option into a link
     hint: str | None = None            # multi: on the right, over the ❤️ column, once anything is ticked;
                                        # a multi without one has no ❤️ and shows its options as "**Key**: detail"
     low: str | None = None             # slider: label at 0%

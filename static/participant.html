@@ -983,6 +983,15 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 :where(html.dark) .aishare-group-label { color: var(--color-on-surface, #dce4e9); }
 .aishare-opt.in-group { margin-left: 1.5rem; width: calc(100% - 1.5rem); }
 .aishare-opt.in-group.folded { display: none; }
+/* A heading that is itself an option ("GitHub Copilot"): the box is drawn around it and the options under it,
+   so they read as its children. Folded, it looks like any other option. */
+.aishare-group { border-radius: 8px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); transition: border-color .2s; }
+.aishare-group:has(> .aishare-opt.selected), .aishare-group:has(> .aishare-opt:hover) { border-color: var(--color-primary, #4555ba); }
+.aishare-group > .aishare-opt { border-width: 0; border-radius: 6.5px; }
+.aishare-group-kids { display: flex; flex-direction: column; gap: .4rem; padding: .5rem .5rem .5rem 0; }
+.aishare-group-kids:not(:has(.aishare-opt:not(.folded))) { display: none; }
+.aishare-group-kids .aishare-opt.in-group { margin-left: 1.5rem; width: calc(100% - 1.5rem); min-height: 40px; padding-top: .55rem; padding-bottom: .55rem; }
+.aishare-opt a { color: inherit; text-decoration: underline; position: relative; z-index: 3; }
 .aishare-other { display: none; flex-direction: column; gap: .5rem; padding-left: 1.5rem; }
 .aishare-other.open { display: flex; }
 .aishare-other-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
@@ -6611,21 +6620,37 @@ function _aiShareBuildCard(q) {
     var group = q.group || { options: [] };
     var parent = group.parent != null ? group.parent : -1;
     // A heading that is itself an option ("GitHub Copilot") is drawn where the group starts, not at its index.
-    var order = [];
-    q.options.forEach(function (_, idx) {
+    var order = q.order ? q.order.slice() : [];
+    if (!q.order) q.options.forEach(function (_, idx) {
       if (idx === parent) return;
       if (idx === group.options[0] && parent >= 0) order.push(parent);
       order.push(idx);
     });
-    card.innerHTML = head + '<div class="aishare-choices">' + order.map(function (idx) {
+    var label = function (text) {
+      var html = keyed ? _aiShareKeyHtml(text, true) : _escHtml(text);
+      // A link in an option opens its page; it must not tick the option around it.
+      (q.option_links || []).forEach(function (l) {
+        html = html.replace(_escHtml(l.text), '<a href="' + _escHtml(l.url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + _escHtml(l.text) + '</a>');
+      });
+      return html;
+    };
+    var option = function (idx) {
       var text = q.options[idx];
       var inGroup = group.options.indexOf(idx) >= 0;
       if (inGroup && text.indexOf(group.label + ' ') === 0) text = text.slice(group.label.length + 1);
-      return (idx === group.options[0] && parent < 0 ? '<div class="aishare-group-label">' + _escHtml(group.label) + '</div>' : '') +
-        '<button class="poll-option-btn aishare-opt' + (inGroup ? ' in-group' : '') + '" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
+      return '<button class="poll-option-btn aishare-opt' + (inGroup ? ' in-group' : '') + '" data-i="' + idx + '"><div class="fill" style="width:0%"></div>' +
         '<div class="row"><span><span class="poll-option-mark' + (multi ? ' multi' : '') + '" aria-hidden="true"></span>' +
-        (keyed ? _aiShareKeyHtml(text, true) : _escHtml(text)) + '</span>' +
+        label(text) + '</span>' +
         (hearts ? '<span class="aishare-heart" role="button" tabindex="0" data-tip="My favourite"><span class="aishare-heart-n"></span><span class="aishare-heart-g"></span></span>' : '') + '</div></button>';
+    };
+    card.innerHTML = head + '<div class="aishare-choices">' + order.map(function (idx) {
+      if (parent >= 0 && group.options.indexOf(idx) >= 0) return '';  // drawn inside its heading's box, below
+      // A heading that is an option: one box around it and the options under it (Victor, 2026-11-18).
+      if (idx === parent) {
+        return '<div class="aishare-group">' + option(idx) + '<div class="aishare-group-kids">' +
+          order.filter(function (i) { return group.options.indexOf(i) >= 0; }).map(option).join('') + '</div></div>';
+      }
+      return (idx === group.options[0] && parent < 0 ? '<div class="aishare-group-label">' + _escHtml(group.label) + '</div>' : '') + option(idx);
     }).join('') + '</div>';
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
       var idx = +btn.dataset.i;
