@@ -103,13 +103,14 @@ def recover() -> None:
 
 
 def shutdown() -> None:
-    """The queue goes with the daemon: a printer with nothing behind it would swallow
-    whatever the trainer sent to it."""
+    """Stops the printer's server; the queue stays registered. Removing it after
+    PowerPoint had printed to it was followed by "An error occurred while PowerPoint
+    was saving" on the same deck, until the queue was back (Victor, 2026-11-19, 03:02):
+    PowerPoint seems to keep the printer it last used with the presentation."""
     global _server
     _restore_default()
     if _server is not None and _server.poll() is None:
         _server.terminate()
-        _run("lpadmin", "-x", QUEUE)
     _server = None
 
 
