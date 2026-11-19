@@ -5,7 +5,7 @@ from datetime import timezone
 from email.utils import formatdate, parsedate_to_datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
@@ -101,6 +101,80 @@ async def refresh_slide(slug: str, body: RefreshSlideRequest):
     finally:
         _pending_refresh.pop(slug, None)
 
+
+
+class DeckStoredResponse(BaseModel):
+    status: str
+    sha256: str
+    size: int
+    pages: int = 0
+
+
+async def _deck_stored(slug: str, data: bytes, what: str) -> DeckStoredResponse:
+    """Put the deck in the cache and tell the daemon, exactly as after a download from
+    Google Drive: its "download_slide_completed" is what makes participants reload."""
+    import hashlib
+    from datetime import datetime
+
+    from railway.features.slides.cache import _cache_path, _push_log, _set_status
+    from railway.features.slides.pages import write_atomically
+
+    await asyncio.to_thread(write_atomically, _cache_path(slug), data)
+    downloaded_at = datetime.now(timezone.utc).isoformat()
+    _set_status(slug, "cached", size_bytes=len(data), downloaded_at=downloaded_at)
+    await _push_log(slug, "download_slide_completed", f"{what}: {len(data) / (1024 * 1024):.1f} MB",
+                    downloaded_at=downloaded_at)
+    return DeckStoredResponse(status="cached", sha256=hashlib.sha256(data).hexdigest(), size=len(data))
+
+
+async def _read_pdf(file: UploadFile) -> bytes:
+    from railway.features.slides.pages import MAX_DECK_BYTES
+
+    data = await file.read(MAX_DECK_BYTES + 1)
+    if len(data) > MAX_DECK_BYTES:
+        raise HTTPException(status_code=413, detail="PDF too large")
+    if not data.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="Not a PDF")
+    return data
+
+
+@daemon_router.post("/api/slides/deck/{slug}", response_model=DeckStoredResponse)
+async def store_deck(slug: str, file: UploadFile = File(...)):
+    """The whole deck as PowerPoint prints it (daemon/slides/local_publish.py): replaces
+    whatever is cached for the slug, Google Drive's conversion included."""
+    return await _deck_stored(_slugify(slug), await _read_pdf(file), "Deck printed by PowerPoint")
+
+
+@daemon_router.post("/api/slides/pages/{slug}", response_model=DeckStoredResponse)
+async def replace_deck_pages(
+    slug: str,
+    base_sha256: str = Form(...),
+    positions: str = Form(...),
+    file: UploadFile = File(...),
+):
+    """Only the pages a save changed, put into the cached deck at `positions` (a JSON list,
+    1-based). 409 unless the cached deck is the one the daemon thinks it is (`base_sha256`):
+    after a restart, or with Google Drive's version in the cache, it must send the whole deck."""
+    import json
+
+    from railway.features.slides.cache import _cache_path, _file_sha256
+    from railway.features.slides.pages import PagesDoNotFit, replace_pages
+
+    slug = _slugify(slug)
+    cached = _cache_path(slug)
+    if not cached.exists() or await asyncio.to_thread(_file_sha256, cached) != base_sha256:
+        raise HTTPException(status_code=409, detail="The cached deck is not the one these pages belong to")
+    try:
+        wanted = json.loads(positions)
+        if not isinstance(wanted, list) or not all(isinstance(p, int) and not isinstance(p, bool) for p in wanted):
+            raise ValueError("positions must be a list of integers")
+        pages = await _read_pdf(file)
+        merged = await asyncio.to_thread(replace_pages, cached.read_bytes(), pages, wanted)
+    except (ValueError, PagesDoNotFit) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    stored = await _deck_stored(slug, merged, f"Slides {wanted} printed by PowerPoint")
+    stored.pages = len(wanted)
+    return stored
 
 
 def _resolve_local_slides_dir() -> Path | None:

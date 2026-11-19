@@ -9,6 +9,8 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=7.0.0",
     "uvicorn[standard]>=0.39.0",
     "websockets>=12.0",
+    # Railway puts the pages a save changed into the cached deck (railway/features/slides/pages.py).
+    "pypdf>=4.0",
 ]
 
 [project.optional-dependencies]

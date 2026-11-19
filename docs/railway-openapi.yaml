@@ -148,6 +148,90 @@ paths:
         '502':
           description: Google Drive download failed
       x-feature: slides
+  /api/slides/deck/{slug}:
+    post:
+      tags:
+      - slides
+      summary: Store the whole deck as PowerPoint prints it
+      description: >
+        The daemon prints the deck in PowerPoint on the trainer's Mac and sends the PDF
+        (daemon/slides/local_publish.py). Replaces whatever is cached for the slug,
+        Google Drive's conversion included. The daemon receives a slide_log
+        "download_slide_completed" over WS and broadcasts decks_updated to participants.
+      operationId: store_deck
+      security:
+      - basicAuth: []
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: URL-safe identifier for the slide deck.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Deck cached; its SHA256 and size
+        '400':
+          description: Not a PDF
+        '413':
+          description: PDF too large
+      x-feature: slides
+  /api/slides/pages/{slug}:
+    post:
+      tags:
+      - slides
+      summary: Replace the pages of the cached deck that a save changed
+      description: >
+        Only the changed slides, printed by PowerPoint, put into the cached deck at
+        `positions`. Refused with 409 unless the cached deck is the one the daemon
+        expects (`base_sha256`): after a restart, or with Google Drive's version in the
+        cache, the daemon then sends the whole deck to /api/slides/deck/{slug}.
+      operationId: replace_deck_pages
+      security:
+      - basicAuth: []
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: URL-safe identifier for the slide deck.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [base_sha256, positions, file]
+              properties:
+                base_sha256:
+                  type: string
+                  description: SHA256 of the deck these pages belong to.
+                positions:
+                  type: string
+                  description: JSON list of the 1-based pages to replace, in the order of the pages sent.
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Pages replaced; the new deck's SHA256 and size
+        '409':
+          description: The cached deck is missing or is not the one the pages belong to
+        '422':
+          description: The pages and the positions do not fit the deck
+      x-feature: slides
   /api/{session_id}/upload/{file_id}:
     get:
       tags:

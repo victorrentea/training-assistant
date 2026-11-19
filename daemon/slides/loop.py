@@ -28,7 +28,7 @@ _REDOWNLOAD_MAX_RETRIES = 5
 
 
 
-def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
+def _run_redownload_poller(slug: str, drive_export_url: str, source: Path | None = None) -> None:
     """Background thread: call Railway REST to re-download PDF, compare hashes, retry if unchanged.
 
     On success (hash changed): marks cached, broadcasts refreshed_slugs.
@@ -42,6 +42,14 @@ def _run_redownload_poller(slug: str, drive_export_url: str) -> None:
     prev_hash = misc_state.slides_updated.get(slug, {}).get("last_sha256", "")
 
     try:
+        # The deck open in PowerPoint: its changed slides are printed there and sent, as
+        # PowerPoint draws them. Google's conversion below is the fallback (deck not open,
+        # a slide show running, no printer) — see daemon/slides/local_publish.py.
+        if source is not None:
+            from daemon.slides.local_publish import publish
+            if publish(slug, source):
+                _mark_cache_status(slug, "cached")
+                return
         log.info("slides", f"Waiting {_REDOWNLOAD_FIRST_DELAY_S:.0f}s for Google Drive to sync before polling slug={slug}")
         time.sleep(_REDOWNLOAD_FIRST_DELAY_S)
         for attempt in range(1, _REDOWNLOAD_MAX_RETRIES + 1):
@@ -81,6 +89,8 @@ class SlidesRunner:
         self._slides_state: dict = {}
 
     def start(self) -> None:
+        from daemon.slides import pdf_printer
+        pdf_printer.recover()
         try:
             cfg = slides_daemon.config_from_env()
         except Exception as exc:
@@ -232,7 +242,7 @@ class SlidesRunner:
                         _broadcast_slides_updated()
                         t = threading.Thread(
                             target=_run_redownload_poller,
-                            args=(slug, drive_url),
+                            args=(slug, drive_url, Path(_key)),
                             daemon=True,
                             name=f"redownload-{slug}",
                         )
