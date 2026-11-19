@@ -126,6 +126,15 @@ def _publish(slug: str, source: Path) -> bool:
     decks, slide_show = pdf_printer.open_decks()
     if source.name not in decks or slide_show:
         return False
+    try:
+        return _print_and_send(slug, source)
+    finally:
+        # Only the deck and its state are kept between saves.
+        for leftover in ("printed.pdf", "cropped.pdf", "pages.pdf", "deck.new.pdf"):
+            (_folder(slug) / leftover).unlink(missing_ok=True)
+
+
+def _print_and_send(slug: str, source: Path) -> bool:
 
     folder = _folder(slug)
     folder.mkdir(parents=True, exist_ok=True)
