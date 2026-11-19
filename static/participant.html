@@ -1018,6 +1018,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-eye:hover:not(:disabled) { color: var(--color-primary, #4555ba); background: var(--color-surface-container, rgba(127,127,127,.15)); }
 .aishare-eye:disabled { cursor: default; }
 .aishare-eye.on { color: #2f9e44; }
+/* The 👁 before the 👤 count, so the count lines up with the option counts under it (Victor, 2026-11-19) */
+.aishare-head-end .aishare-eye { margin-left: 0; }
 .aishare-skip { margin-left: .6rem; padding: .15rem .75rem; border-radius: 999px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: transparent; color: var(--color-on-surface-variant, #566166); font: inherit; font-size: .85rem; font-weight: 600; vertical-align: middle; cursor: pointer; transition: border-color .15s, color .15s; }
 .aishare-skip:hover { border-color: var(--color-primary, #4555ba); color: var(--color-primary, #4555ba); }
 .aishare-card.settled .aishare-skip { display: none; }
@@ -6601,7 +6603,7 @@ function _aiShareBuildCard(q) {
       '<span class="material-symbols-outlined">content_copy</span></button>' : '';
     // The copy button right after the question, not out by the voters count (Victor, 2026-11-18).
     head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + skip + copy + '</h2>' +
-      '<span class="aishare-head-end"><span class="aishare-status" data-tip="voters"></span>' + eye + '</span></div>';
+      '<span class="aishare-head-end">' + eye + '<span class="aishare-status" data-tip="voters"></span></span></div>';
   }
   if (q.kind === 'slider') {
     card.innerHTML = head +
