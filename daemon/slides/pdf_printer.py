@@ -103,10 +103,11 @@ def recover() -> None:
 
 
 def shutdown() -> None:
-    """Stops the printer's server; the queue stays registered. Removing it after
-    PowerPoint had printed to it was followed by "An error occurred while PowerPoint
-    was saving" on the same deck, until the queue was back (Victor, 2026-11-19, 03:02):
-    PowerPoint seems to keep the printer it last used with the presentation."""
+    """Stops the printer's server; the queue stays registered, so a daemon restart does
+    not add and remove a printer in the trainer's print dialogs each time.
+    (2026-11-19: a save error on the deck was first blamed on removing the queue. It was
+    Google Drive holding the deck through its upload hard link; PowerPoint cannot save a
+    file that has a second link.)"""
     global _server
     _restore_default()
     if _server is not None and _server.poll() is None:
