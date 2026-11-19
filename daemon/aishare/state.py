@@ -54,7 +54,7 @@ QUESTIONS: list[dict] = [
     # No hint, so no ❤️: options read "Key: detail", the key in bold (like the ranking's items).
     {"id": "tools", "kind": "multi", "text": "What tools are available to your agent **at work**?",
      "options": ["Issue tracker: Jira, Linear, GitHub Issues, Azure DevOps", "Build: GitHub, GitLab, Bitbucket", "Confluence / Wiki",
-                 "Browser: via Playwright…", "Meeting transcripts", "Metrics, Logs, Database", "Email", "Chat / Slack"]},
+                 "Browser: via Playwright…", "Metrics, Logs, Database", "Meeting transcripts", "Email", "Chat / Slack"]},
     {"id": "skill", "kind": "choice", "text": "Created/updated a skill?", "options": YES_NO},
     {"id": "plugins", "kind": "choice", "text": "Have you installed agent plugins from a team/company marketplace on an internal git?",
      "links": [{"text": "agent plugins", "url": "https://agent-plugins.org"}],
@@ -101,9 +101,11 @@ INSERTED_OPTIONS = {"harness_work": 4}
 # 3 (2026-11-10): "Meeting transcripts" moved up from after "Email" to right after "Metrics".
 # 4 (2026-11-19): "Metrics" merged into "Logs, Database", now "Metrics, Logs, Database":
 #                 same security stance — read access to production (Victor).
+# 5 (2026-11-19): "Metrics, Logs, Database" moved up above "Meeting transcripts".
 MOVED_OPTIONS = {3: {"tools": [0, 1, 2, 3, 4, 6, 7, 5, 8]},
-                 4: {"tools": [0, 1, 2, 3, 5, 4, 5, 6, 7]}}
-OPTIONS_VERSION = 4
+                 4: {"tools": [0, 1, 2, 3, 5, 4, 5, 6, 7]},
+                 5: {"tools": [0, 1, 2, 3, 5, 4, 6, 7]}}
+OPTIONS_VERSION = 5
 
 # Seeded ranking items reworded after votes were cast: old text → new, applied on restore
 # so a running survey keeps its 🔥. Items participants added (by != None) are never renamed.

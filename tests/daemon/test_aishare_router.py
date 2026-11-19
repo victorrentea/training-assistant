@@ -466,6 +466,20 @@ def test_restore_follows_meeting_transcripts_up_the_tools_list_exactly_once():
     assert again.answers == s.answers
 
 
+def test_restore_moves_metrics_logs_database_above_meeting_transcripts_exactly_once():
+    s = AiShareState()
+    # Version-4 bits: 4 Meeting transcripts, 5 Metrics, Logs, Database.
+    s.restore({"active": True, "options_version": 4, "answers": {"tools": {"u1": 1 << 4, "u2": 1 << 5 | 1 << 7}}})
+    opts = QUESTIONS_BY_ID["tools"]["options"]
+    names = lambda m: {o for i, o in enumerate(opts) if m >> i & 1}
+    assert opts.index("Metrics, Logs, Database") < opts.index("Meeting transcripts")
+    assert names(s.answers["tools"]["u1"]) == {"Meeting transcripts"}
+    assert names(s.answers["tools"]["u2"]) == {"Metrics, Logs, Database", "Chat / Slack"}
+    again = AiShareState()
+    again.restore(s.snapshot())
+    assert again.answers == s.answers
+
+
 def test_restore_merges_metrics_into_logs_database_exactly_once():
     s = AiShareState()
     # Version-3 bits: 4 Metrics, 5 Meeting transcripts, 6 Logs, Database, 7 Email, 8 Chat / Slack.
