@@ -50,9 +50,9 @@ QUESTIONS: list[dict] = [
     {"id": "agents_md", "kind": "choice", "text": "Is there an AGENTS.md (or CLAUDE.md) in the root of 🫵your **work** project?",
      "links": [{"text": "AGENTS.md", "url": "https://agents.md"}],
      "options": YES_NO_IDK},
-    {"id": "mcp", "kind": "choice", "text": "Used an MCP tool?", "options": YES_NO_IDK},
+    {"id": "mcp", "kind": "choice", "text": "Ever used an MCP?", "options": YES_NO_IDK},
     # No hint, so no ❤️: options read "Key: detail", the key in bold (like the ranking's items).
-    {"id": "tools", "kind": "multi", "text": "Tools available to your agent **at work**",
+    {"id": "tools", "kind": "multi", "text": "What tools are available to your agent **at work**?",
      "options": ["Issue tracker: Jira, Linear, GitHub Issues, Azure DevOps", "Build: GitHub, GitLab, Bitbucket", "Confluence / Wiki",
                  "Browser: via Playwright…", "Metrics", "Meeting transcripts", "Logs, Database", "Email", "Chat / Slack"]},
     {"id": "skill", "kind": "choice", "text": "Created/updated a skill?", "options": YES_NO},
