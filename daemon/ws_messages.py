@@ -210,6 +210,7 @@ class AiShareUpdatedMsg(BaseModel):
     type: Literal["aishare_updated"] = "aishare_updated"
     active: bool
     revealed: bool
+    revealed_questions: list[str] = []  # questions the host revealed one by one (all are, once `revealed`)
     questions: list[AiShareQuestion] = []
     results: list[AiShareResult] = []
 

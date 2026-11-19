@@ -89,12 +89,16 @@ def _results() -> list[AiShareResult]:
 def participant_view() -> dict:
     """What any participant may see: everyone's answers only once revealed."""
     results = aishare_state.results()
-    if not aishare_state.revealed:
+    hidden = [r for r in results if not aishare_state.is_revealed(r["id"])]
+    if hidden:
         # A ranking keeps its items (and who added what), but not their 🔥 tallies or their order:
         # seeing what the others burned for would sway the vote.
         # The values typed under "Other" stay — they are chips anyone may tick — but without their counts.
-        results = [{k: v for k, v in r.items() if k in ("id", "count", "items", "other_values")} for r in results]
+        results = [{k: v for k, v in r.items() if k in ("id", "count", "items", "other_values")}
+                   if r in hidden else r for r in results]
         for r in results:
+            if aishare_state.is_revealed(r["id"]):
+                continue
             if r.get("items"):
                 r["items"] = sorted(({**it, "score": None} for it in r["items"]), key=lambda it: it["id"])
             if r.get("other_values"):
@@ -104,6 +108,7 @@ def participant_view() -> dict:
     return {
         "active": aishare_state.active,
         "revealed": aishare_state.revealed,
+        "revealed_questions": sorted(aishare_state.revealed_questions),
         "questions": QUESTIONS,
         "results": results,
     }
@@ -147,6 +152,16 @@ async def start_aishare():
 async def reveal_aishare(body: RevealRequest):
     """Show (or hide) everyone's answers to all participants."""
     aishare_state.revealed = body.revealed
+    await _push_state()
+    return Response(status_code=204)
+
+
+@host_router.post("/reveal/{question}", status_code=204)
+async def reveal_aishare_question(question: str):
+    """Show one question's answers to all participants (the host walks through them one by one).
+    There is no hiding it again."""
+    if not aishare_state.reveal_question(question):
+        return JSONResponse({"error": "No such question"}, status_code=404)
     await _push_state()
     return Response(status_code=204)
 

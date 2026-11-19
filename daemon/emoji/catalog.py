@@ -45,7 +45,7 @@ class EmojiDef(BaseModel):
 EMOJI_CATALOG: list[EmojiDef] = [
     # Self-explanatory glyphs carry an empty title on purpose: no tooltip at all.
     # ☕ — breaks (and food)
-    EmojiDef(emoji="☕", title="Request a break\n(counted anonymously)", section="primary"),
+    EmojiDef(emoji="☕", title="Request a break\n(❤️ anonymous)", section="primary"),
     EmojiDef(emoji="🍕", title="Pizza time!", section="stacked", stack_of="☕"),
     EmojiDef(emoji="🍔", title="Burger time!", section="stacked", stack_of="☕"),
     EmojiDef(emoji="🌮", title="Taco break!", section="stacked", stack_of="☕"),

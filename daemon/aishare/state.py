@@ -163,6 +163,8 @@ def picked(q: dict, value: int, option: int | None) -> bool:
 class AiShareState:
     active: bool = False
     revealed: bool = False
+    revealed_questions: set[str] = field(default_factory=set)
+    # the questions whose answers the host showed one by one; there is no hiding one again
     answers: dict[str, dict[str, int]] = field(default_factory=dict)
     # answers[question_id][participant_uuid] = slider 0..100 | choice option index
     others: dict[str, dict[str, list[str]]] = field(default_factory=dict)
@@ -233,11 +235,22 @@ class AiShareState:
     def reset(self) -> None:
         self.active = False
         self.revealed = False
+        self.revealed_questions.clear()
         self.answers.clear()
         self.others.clear()
         self.hearts.clear()
         self.items.clear()
         self.votes.clear()
+
+    def reveal_question(self, qid: str) -> bool:
+        """Host: show this one question's answers to everyone. False when there is no such question."""
+        if qid not in QUESTIONS_BY_ID:
+            return False
+        self.revealed_questions.add(qid)
+        return True
+
+    def is_revealed(self, qid: str) -> bool:
+        return self.revealed or qid in self.revealed_questions
 
     def _ranking_items(self, qid: str) -> list[dict] | None:
         q = QUESTIONS_BY_ID.get(qid)
@@ -350,6 +363,7 @@ class AiShareState:
 
     def snapshot(self) -> dict:
         return {"active": self.active, "revealed": self.revealed, "options_version": OPTIONS_VERSION,
+                "revealed_questions": sorted(self.revealed_questions),
                 "answers": {qid: dict(per) for qid, per in self.answers.items()},
                 "others": {qid: {pid: list(ts) for pid, ts in per.items()} for qid, per in self.others.items()},
                 "hearts": {qid: dict(per) for qid, per in self.hearts.items()},
@@ -362,6 +376,8 @@ class AiShareState:
             return
         self.active = bool(data.get("active", False))
         self.revealed = bool(data.get("revealed", False))
+        raw_rq = data.get("revealed_questions")
+        self.revealed_questions = {str(q) for q in raw_rq if str(q) in QUESTIONS_BY_ID} if isinstance(raw_rq, list) else set()
         version = data.get("options_version", 1)
         inserted = INSERTED_OPTIONS if version < 2 else {}
         moved = MOVED_OPTIONS if version < 3 else {}

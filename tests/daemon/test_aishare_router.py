@@ -121,6 +121,24 @@ def test_answers_hidden_from_participants_until_revealed(client, sent):
     assert _result(pax, "mcp").counts == [1, 1]
 
 
+def test_host_reveals_one_question_at_a_time(client, sent, state):
+    client.post("/api/cur/host/aishare/start")
+    _answer(client, "u1", 80)
+    _answer(client, "u1", 0, question="mcp")
+    assert client.post("/api/cur/host/aishare/reveal/mcp").status_code == 204
+    pax = _last(sent["broadcast"], "aishare_updated")
+    assert pax.revealed is False and pax.revealed_questions == ["mcp"]
+    assert _result(pax, "mcp").counts == [1, 0]
+    assert _result(pax, "ai_generated").values is None  # the others stay hidden
+    assert client.post("/api/cur/host/aishare/reveal/nope").status_code == 404
+
+    restored = AiShareState()
+    restored.restore(state.snapshot())
+    assert restored.revealed_questions == {"mcp"}
+    client.post("/api/cur/host/aishare/start")
+    assert state.revealed_questions == set()
+
+
 def test_everything_is_anonymous(client, sent):
     client.post("/api/cur/host/aishare/start")
     _answer(client, "u1", 80)

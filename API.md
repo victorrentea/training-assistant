@@ -501,7 +501,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Host started the anonymous "how much AI is in your code" survey<br>Bare signal; participants jump to the Activity view and reset their own answers.<br>WS ordering guarantees aishare_updated arrives immediately after.<br>`aishare_opened` | - |
-| AI-share snapshot — fires on start, reveal toggle, every answer and clear<br>Each result carries only `count` until the host reveals the answers; then `values` / `counts` too. Always anonymous.<br>`active=false` means the activity was cleared; hide the survey.<br>`aishare_updated` | `active: bool`<br>`revealed: bool`<br>`questions?: list[object]  # The survey, in the order participants answer it (one question appears after the previous one is answered)`<br>`results?: list[object]  # Anonymous per-question results (no names, no UUIDs), in question order` |
+| AI-share snapshot — fires on start, reveal toggle, every answer and clear<br>Each result carries only `count` until the host reveals the answers (all at once, or that question alone); then `values` / `counts` too. Always anonymous.<br>`active=false` means the activity was cleared; hide the survey.<br>`aishare_updated` | `active: bool`<br>`revealed: bool`<br>`revealed_questions?: list[string]  # The questions the host revealed one by one (from the trainer's machine); there is no hiding one again`<br>`questions?: list[object]  # The survey, in the order participants answer it (one question appears after the previous one is answered)`<br>`results?: list[object]  # Anonymous per-question results (no names, no UUIDs), in question order` |
 
 ### Host REST
 | Endpoint | Request | Response |
@@ -510,6 +510,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Clear Aishare<br>`POST /api/{session_id}/host/aishare/clear` | - | - |
 | Delete Aishare Item, moderation: drop a ranking item (a preset or one a participant added) with its votes.<br>`DELETE /api/{session_id}/host/aishare/items/{question}/{item_id}` | - | - |
 | Reveal Aishare, show (or hide) everyone's answers to all participants.<br>`POST /api/{session_id}/host/aishare/reveal` | `revealed: bool` | - |
+| Reveal Aishare Question, show one question's answers to all participants (the host walks through them one by one); there is no hiding it again.<br>`POST /api/{session_id}/host/aishare/reveal/{question}` | - | - |
 | Start Aishare, open a fresh round and route every participant to the survey.<br>`POST /api/{session_id}/host/aishare/start` | - | - |
 
 ### Host WS

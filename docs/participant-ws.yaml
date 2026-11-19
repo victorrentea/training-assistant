@@ -314,7 +314,7 @@ components:
       summary: AI-share snapshot — fires on start, reveal toggle, every answer and clear
       x-feature: aishare
       x-doc-notes:
-        - "Each result carries only `count` until the host reveals the answers; then `values` / `counts` too. Always anonymous."
+        - "Each result carries only `count` until the host reveals the answers (all at once, or that question alone); then `values` / `counts` too. Always anonymous."
         - "`active=false` means the activity was cleared; hide the survey."
       payload:
         type: object
@@ -327,6 +327,11 @@ components:
             type: boolean
           revealed:
             type: boolean
+          revealed_questions:
+            type: array
+            items:
+              type: string
+            description: The questions the host revealed one by one (from the trainer's machine); there is no hiding one again
           questions:
             type: array
             description: The survey, in the order participants answer it (one question appears after the previous one is answered)

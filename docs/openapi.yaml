@@ -1060,6 +1060,27 @@ paths:
         '204':
           description: Successful Response
       x-feature: aishare
+  /api/{session_id}/host/aishare/reveal/{question}:
+    post:
+      tags:
+      - aishare
+      summary: Reveal Aishare Question
+      description: 'Show one question''s answers to all participants (the host walks
+        through them one by one).
+
+        There is no hiding it again.'
+      operationId: reveal_aishare_question_api__session_id__host_aishare_reveal__question__post
+      parameters:
+      - name: question
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Question
+      responses:
+        '204':
+          description: Successful Response
+      x-feature: aishare
   /api/{session_id}/host/aishare/items/{question}/{item_id}:
     delete:
       tags:

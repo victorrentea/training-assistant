@@ -1007,7 +1007,17 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 .aishare-other-save:disabled { opacity: .45; cursor: default; }
 :where(html.dark) .aishare-other input { background: var(--color-surface, #12151a); color: var(--color-on-surface, #dce4e9); }
 .aishare-done { margin-top: 1rem; text-align: center; font-size: 1.4rem; font-weight: 800; color: var(--color-primary, #4555ba); animation: aishare-q-in .45s cubic-bezier(.2,.8,.2,1); }
-.aishare-anon { margin-bottom: .5rem; text-align: center; font-size: 1.15rem; font-weight: 400; color: var(--color-on-surface-variant, #566166); }
+/* "AI Survey" big at the top, "Answers are anonymous" under it (Victor, 2026-11-19) */
+.aishare-anon { margin: -1.75rem 0 .75rem; text-align: center; }
+.aishare-anon-title { font-size: 2.2rem; font-weight: 800; line-height: 1.15; color: var(--color-on-surface, #2a3439); }
+:where(html.dark) .aishare-anon-title { color: var(--color-on-surface, #dce4e9); }
+.aishare-anon-sub { margin-top: .2rem; font-size: 1rem; font-weight: 400; color: var(--color-on-surface-variant, #566166); }
+/* Trainer's machine only: 👁 shows one question's answers to everyone; open (and inert) once it has. */
+.aishare-eye { display: inline-flex; vertical-align: middle; margin-left: .4rem; padding: .2rem; border: 0; border-radius: 6px; background: transparent; color: var(--color-on-surface-variant, #566166); cursor: pointer; transition: color .15s, background .15s; }
+.aishare-eye .material-symbols-outlined { font-size: 1.3rem; }
+.aishare-eye:hover:not(:disabled) { color: var(--color-primary, #4555ba); background: var(--color-surface-container, rgba(127,127,127,.15)); }
+.aishare-eye:disabled { cursor: default; }
+.aishare-eye.on { color: #2f9e44; }
 .aishare-skip { margin-left: .6rem; padding: .15rem .75rem; border-radius: 999px; border: 1.5px solid var(--color-outline-variant, #a9b4b9); background: transparent; color: var(--color-on-surface-variant, #566166); font: inherit; font-size: .85rem; font-weight: 600; vertical-align: middle; cursor: pointer; transition: border-color .15s, color .15s; }
 .aishare-skip:hover { border-color: var(--color-primary, #4555ba); color: var(--color-primary, #4555ba); }
 .aishare-card.settled .aishare-skip { display: none; }
@@ -1556,7 +1566,7 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
     <!-- Shown 2 s after the host reveals the results; prints the survey (Save as PDF) -->
     <button type="button" id="aishare-pdf-btn" class="aishare-pdf-btn" onclick="_aiSharePrintPdf()" data-tip="Download results" aria-label="Download results">
       <span class="material-symbols-outlined">download</span></button>
-    <div class="aishare-anon">Anonymous AI Survey</div>
+    <div class="aishare-anon"><div class="aishare-anon-title">AI Survey</div><div class="aishare-anon-sub">Answers are anonymous</div></div>
     <div id="aishare-questions" class="aishare-questions"></div>
     <div id="aishare-done" class="poll-card aishare-card aishare-done" style="display:none;">🎉 Thank you!</div>
     <!-- Survey progress: a bar along the bottom edge of the view -->
@@ -6426,7 +6436,7 @@ function _updateActivityNavLabel() {
   var shown = null;
   if (_quizActive && _currentQuiz) shown = 'Quiz';
   else if ((_pollActive || _pollEnded) && _currentPoll) shown = 'Poll';
-  else if (_aiShare.active) shown = 'Poll';
+  else if (_aiShare.active) shown = 'Survey';  // the AI survey (Victor, 2026-11-19)
   // Other activities (wordcloud / qa / codereview / debate): no per-activity
   // 'active' flag in the participant client yet, so they stay plain 'Activity'.
   el.textContent = shown || 'Activity';
@@ -6436,7 +6446,7 @@ function _updateActivityNavLabel() {
 // Questions come from the daemon; each next one appears once the previous one
 // is answered (all of them once the host reveals the answers). Anonymous: the
 // broadcasts carry counts/values only; own answers arrive with /state.
-var _aiShare = { active: false, revealed: false, questions: [], results: {}, my: {}, live: {}, myOther: {}, myHearts: {}, myVotes: {}, hold: {} };
+var _aiShare = { active: false, revealed: false, revealedQs: {}, questions: [], results: {}, my: {}, live: {}, myOther: {}, myHearts: {}, myVotes: {}, hold: {} };
 // my: committed answers — a slider counts once released; they unlock the next question.
 //     A multi's answer is the bitmask of its ticked options.
 // live: a slider's value while it is being dragged.
@@ -6451,6 +6461,8 @@ var AISHARE_HOLD_MS = 3000;
 function _applyAiShareState(msg) {
   _aiShare.active = !!msg.active;
   _aiShare.revealed = !!msg.revealed;
+  _aiShare.revealedQs = {};
+  (msg.revealed_questions || []).forEach(function (qid) { _aiShare.revealedQs[qid] = true; });
   if (msg.questions) _aiShare.questions = msg.questions;
   _aiShare.results = {};
   (msg.results || []).forEach(function (r) { _aiShare.results[r.id] = r; });
@@ -6486,6 +6498,24 @@ function _aiShareAnswered(qid) {
 }
 
 // Still keeping the next question back after a multi's first tick?
+// Everyone sees this question's answers: all of them revealed, or this one (the host walks through them one by one).
+function _aiShareRevealedQ(qid) { return _aiShare.revealed || !!_aiShare.revealedQs[qid]; }
+
+// Trainer's machine only: 👁 reveals this one question's answers to everyone, for good (no hiding it again).
+function _aiShareRevealOne(qid) {
+  if (_aiShareRevealedQ(qid) || !_sessionId) return;
+  _aiShare.revealedQs[qid] = true;
+  _renderActivityAiShare(false);
+  fetch(HOST_MACHINE_DAEMON + '/api/' + encodeURIComponent(_sessionId) + '/host/aishare/reveal/' + encodeURIComponent(qid),
+    { method: 'POST' }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  }).catch(function (e) {
+    delete _aiShare.revealedQs[qid];
+    _renderActivityAiShare(false);
+    console.warn('[aishare] reveal failed', e);
+  });
+}
+
 function _aiShareHeld(qid) { return (_aiShare.hold[qid] || 0) > Date.now(); }
 
 // How many questions are on screen: up to and including the first unanswered (or held) one.
@@ -6556,9 +6586,11 @@ function _aiShareBuildCard(q) {
   card.className = 'poll-card aishare-card aishare-q';
   card.dataset.q = q.id;
   var head;
+  var eye = _onHostMachine() ?
+    '<button type="button" class="aishare-eye"><span class="material-symbols-outlined"></span></button>' : '';
   if (q.kind === 'multi' && q.hint) {
     // Count right after the question; on the right, once something is ticked: the hint and the ❤️ total.
-    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline" data-tip="voters"></span></h2>' +
+    head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + '<span class="aishare-status aishare-status-inline" data-tip="voters"></span>' + eye + '</h2>' +
       '<div class="aishare-head-side aishare-fav"><span class="aishare-head-hint">' + _escHtml(q.hint) + '</span>' +
       '<span class="aishare-hearts-total"></span></div></div>';
   } else {
@@ -6569,7 +6601,7 @@ function _aiShareBuildCard(q) {
       '<span class="material-symbols-outlined">content_copy</span></button>' : '';
     // The copy button right after the question, not out by the voters count (Victor, 2026-11-18).
     head = '<div class="aishare-head"><h2>' + _aiShareTitleHtml(q) + skip + copy + '</h2>' +
-      '<span class="aishare-head-end"><span class="aishare-status" data-tip="voters"></span></span></div>';
+      '<span class="aishare-head-end"><span class="aishare-status" data-tip="voters"></span>' + eye + '</span></div>';
   }
   if (q.kind === 'slider') {
     card.innerHTML = head +
@@ -6706,6 +6738,8 @@ function _aiShareBuildCard(q) {
       addOther.addEventListener('click', send);
     }
   }
+  var eyeBtn = card.querySelector('.aishare-eye');
+  if (eyeBtn) eyeBtn.addEventListener('click', function () { _aiShareRevealOne(q.id); });
   return card;
 }
 
@@ -6727,6 +6761,15 @@ function _aiShareUpdateCard(card, q) {
   if (status) status.textContent = q.kind === 'ranking' ? _aiShareRespondentsText(res.count || 0) :
     q.kind === 'multi' ? _aiShareMultiCountText(res.count || 0) : _aiShareCountText(res.count || 0);
   var answered = _aiShareAnswered(q.id);
+  var revealed = _aiShareRevealedQ(q.id);
+  var eye = card.querySelector('.aishare-eye');
+  if (eye) {
+    eye.disabled = revealed;
+    eye.classList.toggle('on', revealed);
+    eye.firstChild.textContent = revealed ? 'visibility' : 'visibility_off';
+    eye.dataset.tip = revealed ? 'Everyone sees these answers' : 'Show these answers to everyone';
+    eye.setAttribute('aria-label', eye.dataset.tip);
+  }
   card.classList.toggle('settled', _aiShareSettled(q.id));
   var mine = _aiShare.my[q.id];
   if (q.kind === 'ranking') {
@@ -6739,7 +6782,7 @@ function _aiShareUpdateCard(card, q) {
     // Don't yank the thumb from under a participant who is dragging it.
     if (document.activeElement !== slider) slider.value = touched ? (live != null ? live : mine) : 50;
     slider.classList.toggle('untouched', !touched);
-    var shown = _aiShare.revealed && res.values && window.AiShareChart;
+    var shown = revealed && res.values && window.AiShareChart;
     _aiShareThumbLabel(card, touched ? +slider.value : shown ? '' : null);
     if (shown) {
       // The curve sits right over the slider: x=0/100 at the thumb centres.
@@ -6751,18 +6794,18 @@ function _aiShareUpdateCard(card, q) {
     }
   } else {
     var multi = q.kind === 'multi';
-    var counts = _aiShare.revealed ? res.counts : null;
-    var hearts = _aiShare.revealed ? res.hearts : null;
+    var counts = revealed ? res.counts : null;
+    var hearts = revealed ? res.hearts : null;
     var maxCount = counts ? Math.max.apply(null, counts.concat([0])) : 0;
     var picked = function (idx) { return answered && (multi ? !!(mine >> idx & 1) : mine === idx); };
-    card.classList.toggle('ticked', multi && (answered || _aiShare.revealed));
+    card.classList.toggle('ticked', multi && (answered || revealed));
     var heartsTotal = card.querySelector('.aishare-hearts-total');
     if (heartsTotal) {
       var total = (hearts || []).reduce(function (a, b) { return a + b; }, 0);
       heartsTotal.textContent = total ? '×' + total : '';
     }
     var grp = q.group || { options: [] };
-    var unfolded = grp.parent == null || picked(grp.parent) || _aiShare.revealed;
+    var unfolded = grp.parent == null || picked(grp.parent) || revealed;
     card.querySelectorAll('.aishare-opt').forEach(function (btn) {
       var idx = +btn.dataset.i;
       var sel = picked(idx);
@@ -6838,7 +6881,7 @@ function _aiShareSortItems(items) {
 // added, so nobody follows the crowd; on the reveal the rows slide into place and the top 3 catch fire.
 function _aiShareUpdateRanking(card, q, res) {
   var list = card.querySelector('.aishare-rank');
-  var shown = _aiShare.revealed;
+  var shown = _aiShareRevealedQ(q.id);
   var items = shown ? _aiShareSortItems(res.items || []) : (res.items || []);
   var mine = _aiShare.myVotes[q.id] || {};
   var copyBtn = card.querySelector('.aishare-copy');
@@ -7036,7 +7079,7 @@ function _onAiShareMulti(qid, mask, hearts, others) {
   if (!mask) delete _aiShare.myOther[qid];
   if (hearts) _aiShare.myHearts[qid] = hearts; else delete _aiShare.myHearts[qid];
   // The next question appears, but no scrolling to it: they may still tick more (Victor, 2026-11-17).
-  if (first && mask && !_aiShare.revealed) {
+  if (first && mask && !_aiShareRevealedQ(qid)) {
     _aiShare.hold[qid] = Date.now() + AISHARE_HOLD_MS;
     setTimeout(function () { _renderActivityAiShare(false); }, AISHARE_HOLD_MS + 50);
   }
@@ -7546,7 +7589,7 @@ function _handleWsMessage(msg) {
       _showPaxLb(msg);
       break;
     case 'aishare_opened':
-      _aiShare = { active: true, revealed: false, questions: _aiShare.questions, results: {}, my: {}, live: {}, myOther: {}, myHearts: {}, myVotes: {}, hold: {} };
+      _aiShare = { active: true, revealed: false, revealedQs: {}, questions: _aiShare.questions, results: {}, my: {}, live: {}, myOther: {}, myHearts: {}, myVotes: {}, hold: {} };
       _aiShareSetSkipped({});
       document.getElementById('aishare-questions').innerHTML = '';
       _renderActivityAiShare();
