@@ -54,7 +54,7 @@ QUESTIONS: list[dict] = [
     # No hint, so no ❤️: options read "Key: detail", the key in bold (like the ranking's items).
     {"id": "tools", "kind": "multi", "text": "What tools are available to your agent **at work**?",
      "options": ["Issue tracker: Jira, Linear, GitHub Issues, Azure DevOps", "Build: GitHub, GitLab, Bitbucket", "Confluence / Wiki",
-                 "Browser: via Playwright…", "Metrics", "Meeting transcripts", "Logs, Database", "Email", "Chat / Slack"]},
+                 "Browser: via Playwright…", "Meeting transcripts", "Metrics, Logs, Database", "Email", "Chat / Slack"]},
     {"id": "skill", "kind": "choice", "text": "Created/updated a skill?", "options": YES_NO},
     {"id": "plugins", "kind": "choice", "text": "Have you installed agent plugins from a team/company marketplace on an internal git?",
      "links": [{"text": "agent plugins", "url": "https://agent-plugins.org"}],
@@ -96,10 +96,14 @@ MERGED_OPTIONS = {qid: [0, 1, 1] for qid in ("agents_md", "mcp", "plugins", "cod
 # Unlike a merge, re-applying this would corrupt the answers, so snapshots carry OPTIONS_VERSION.
 # 2 (2026-11-03): "Microsoft M365 Copilot" went in before "Other", which moved from bit 4 to 5.
 INSERTED_OPTIONS = {"harness_work": 4}
-# A multi's options re-ordered after answers were given: old bit → new bit, for snapshots before version 3.
+# A multi's options re-ordered or merged after answers were given: old bit → new bit, applied to
+# a snapshot taken before that version, oldest step first. Two old bits sharing a new one merge.
 # 3 (2026-11-10): "Meeting transcripts" moved up from after "Email" to right after "Metrics".
-MOVED_OPTIONS = {"tools": [0, 1, 2, 3, 4, 6, 7, 5, 8]}
-OPTIONS_VERSION = 3
+# 4 (2026-11-19): "Metrics" merged into "Logs, Database", now "Metrics, Logs, Database":
+#                 same security stance — read access to production (Victor).
+MOVED_OPTIONS = {3: {"tools": [0, 1, 2, 3, 4, 6, 7, 5, 8]},
+                 4: {"tools": [0, 1, 2, 3, 5, 4, 5, 6, 7]}}
+OPTIONS_VERSION = 4
 
 # Seeded ranking items reworded after votes were cast: old text → new, applied on restore
 # so a running survey keeps its 🔥. Items participants added (by != None) are never renamed.
@@ -143,8 +147,20 @@ def insert_bit(mask: int, at: int) -> int:
 
 
 def move_bits(mask: int, to: list[int]) -> int:
-    """`mask` with bit i moved to bit to[i]."""
-    return sum(1 << to[i] for i in range(len(to)) if mask >> i & 1)
+    """`mask` with bit i moved to bit to[i]; bits moved onto the same one merge."""
+    out = 0
+    for i in range(len(to)):
+        if mask >> i & 1:
+            out |= 1 << to[i]
+    return out
+
+
+def moved_since(version: int, qid: str, mask: int) -> int:
+    """`mask`, stored under options `version`, in today's option numbering."""
+    for at in sorted(MOVED_OPTIONS):
+        if version < at and qid in MOVED_OPTIONS[at]:
+            mask = move_bits(mask, MOVED_OPTIONS[at][qid])
+    return mask
 
 
 def clean_other(text: object) -> str:
@@ -380,7 +396,6 @@ class AiShareState:
         self.revealed_questions = {str(q) for q in raw_rq if str(q) in QUESTIONS_BY_ID} if isinstance(raw_rq, list) else set()
         version = data.get("options_version", 1)
         inserted = INSERTED_OPTIONS if version < 2 else {}
-        moved = MOVED_OPTIONS if version < 3 else {}
         raw = data.get("answers")
         if not raw and isinstance(data.get("values"), dict):
             # Legacy single-question shape: values[uuid] = 0..100 for "ai_generated".
@@ -396,8 +411,7 @@ class AiShareState:
                     for pid, v in per.items() if isinstance(v, (int, float))}
             if str(qid) in inserted:
                 kept = {pid: insert_bit(v, inserted[str(qid)]) for pid, v in kept.items()}
-            if str(qid) in moved:
-                kept = {pid: move_bits(v, moved[str(qid)]) for pid, v in kept.items()}
+            kept = {pid: moved_since(version, str(qid), v) for pid, v in kept.items()}
             kept = {pid: v for pid, v in kept.items() if valid_value(str(qid), v)}
             if str(qid) in QUESTIONS_BY_ID:  # answers given before the group heading became an option
                 kept = {pid: with_group_parent(QUESTIONS_BY_ID[str(qid)], v) for pid, v in kept.items()}
@@ -424,8 +438,7 @@ class AiShareState:
             ticked = self.answers.get(str(qid), {})
             if str(qid) in inserted:
                 per = {pid: insert_bit(h, inserted[str(qid)]) for pid, h in per.items() if isinstance(h, int)}
-            if str(qid) in moved:
-                per = {pid: move_bits(h, moved[str(qid)]) for pid, h in per.items() if isinstance(h, int)}
+            per = {pid: moved_since(version, str(qid), h) for pid, h in per.items() if isinstance(h, int)}
             kept = {str(pid): h & ticked[str(pid)] for pid, h in per.items()
                     if isinstance(h, int) and h & ticked.get(str(pid), 0)}
             if kept:

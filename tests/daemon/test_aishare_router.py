@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 from daemon.aishare.router import host_router, participant_router
-from daemon.aishare.state import QUESTIONS_BY_ID, AiShareState
+from daemon.aishare.state import QUESTIONS, QUESTIONS_BY_ID, AiShareState
 from daemon.participant.state import ParticipantState
 
 
@@ -254,10 +254,10 @@ def test_multi_counts_every_ticked_option_and_the_hearts(client, state, sent):
 
 
 def test_multi_accepts_options_whose_bit_is_above_100(client, state):
-    """Email (bit 7 = 128) and Chat / Slack (bit 8 = 256) were refused by a slider-sized cap."""
+    """Email (bit 6 = 64) and Chat / Slack (bit 7 = 128): 192 was refused by a slider-sized cap."""
     client.post("/api/cur/host/aishare/start")
-    assert _answer(client, "u1", 0b110000000, question="tools").status_code == 204
-    assert state.answers_of("u1") == {"tools": 0b110000000}
+    assert _answer(client, "u1", 0b11000000, question="tools").status_code == 204
+    assert state.answers_of("u1") == {"tools": 0b11000000}
 
 
 def test_multi_hearts_only_on_ticked_options_and_untick_all_withdraws(client, state):
@@ -459,11 +459,30 @@ def test_restore_follows_meeting_transcripts_up_the_tools_list_exactly_once():
                "answers": {"tools": {"u1": 1 << 7 | 1 << 5, "u2": 1 << 6 | 1}}})
     opts = QUESTIONS_BY_ID["tools"]["options"]
     names = lambda m: {o for i, o in enumerate(opts) if m >> i & 1}
-    assert names(s.answers["tools"]["u1"]) == {"Meeting transcripts", "Logs, Database"}
+    assert names(s.answers["tools"]["u1"]) == {"Meeting transcripts", "Metrics, Logs, Database"}
     assert names(s.answers["tools"]["u2"]) == {"Email", opts[0]}
     again = AiShareState()
     again.restore(s.snapshot())                                            # the next restart must not move it again
     assert again.answers == s.answers
+
+
+def test_restore_merges_metrics_into_logs_database_exactly_once():
+    s = AiShareState()
+    # Version-3 bits: 4 Metrics, 5 Meeting transcripts, 6 Logs, Database, 7 Email, 8 Chat / Slack.
+    s.restore({"active": True, "options_version": 3,
+               "answers": {"tools": {"u1": 1 << 4, "u2": 1 << 6 | 1 << 8, "u3": 1 << 4 | 1 << 6 | 1 << 5, "u4": 1 << 7}},
+               "hearts": {"tools": {"u3": 1 << 4}}})
+    opts = QUESTIONS_BY_ID["tools"]["options"]
+    names = lambda m: {o for i, o in enumerate(opts) if m >> i & 1}
+    assert names(s.answers["tools"]["u1"]) == {"Metrics, Logs, Database"}
+    assert names(s.answers["tools"]["u2"]) == {"Metrics, Logs, Database", "Chat / Slack"}
+    assert names(s.answers["tools"]["u3"]) == {"Metrics, Logs, Database", "Meeting transcripts"}
+    assert names(s.answers["tools"]["u4"]) == {"Email"}
+    assert names(s.hearts["tools"]["u3"]) == {"Metrics, Logs, Database"}
+    assert s.results()[[q["id"] for q in QUESTIONS].index("tools")]["counts"][opts.index("Metrics, Logs, Database")] == 3
+    again = AiShareState()
+    again.restore(s.snapshot())                                            # the next restart must not merge it again
+    assert again.answers == s.answers and again.hearts == s.hearts
 
 
 def test_ticking_a_copilot_option_ticks_the_github_copilot_heading():
