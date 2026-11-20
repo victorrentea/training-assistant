@@ -2,7 +2,7 @@
 
 Inputs, all optional except the play log (a missing one just means no moments):
 
-- **Play log** — Victor Addons appends one JSON line per snippet it played
+- **Play log** — Victor Mac appends one JSON line per snippet it played
   (`{"ts":"2026-10-22T17:32:01.123+03:00","id":"KD_1Z8iUDho","title":"Argentina",
   "startSeconds":145,"kind":"video"}`; `kind` is `soundtrack` for the ♪ button, sound
   only). Path: `$SOUNDBOARD_PLAY_LOG`, else `~/.victor-addons/video-plays.jsonl`.
@@ -31,12 +31,12 @@ _NAME = "shorts"
 
 DEFAULT_PLAY_LOG = Path.home() / ".victor-addons" / "video-plays.jsonl"
 DEFAULT_LEDGER = Path.home() / "workspace" / "victor-vibe-board" / "youtube-publish.json"
-PLAY_SECONDS = 60.0  # Victor Addons' VideoPlayer auto-kill
+PLAY_SECONDS = 60.0  # Victor Mac' VideoPlayer auto-kill
 BURST_GAP_S = 10.0
 
 
 class Play(BaseModel):
-    """One line of the play log, as Victor Addons writes it."""
+    """One line of the play log, as Victor Mac writes it."""
 
     ts: datetime
     id: str

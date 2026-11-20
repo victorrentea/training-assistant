@@ -117,7 +117,7 @@ git push
 
 ---
 
-### Task 2: Forward `/press/` through Victor Addons
+### Task 2: Forward `/press/` through Victor Mac
 
 The daemon must reach Effects through the one door it already knows, `:55123`, so it also gets the merged `/ping` that reports `effectsUp`.
 
@@ -318,7 +318,7 @@ Create `daemon/effects_client.py`:
 ```python
 """HTTP client for the Mac's soundboard apps.
 
-One door: Victor Addons on :55123, which forwards everything about tiles,
+One door: Victor Mac on :55123, which forwards everything about tiles,
 sounds and effects to Victor Effects on :55124 and merges the two halves of
 `/ping`. The daemon never needs to know the second port exists.
 
@@ -2276,7 +2276,7 @@ Expected: PASS. If it fails on a snapshot mismatch, regenerate the snapshot the 
 
 Add the new edges to the C4 and system-interaction diagrams:
 
-- daemon → `http://127.0.0.1:55123` (Victor Addons) → `:55124` (Victor Effects): a second, HTTP-shaped edge to the Mac apps, alongside the existing `ws://127.0.0.1:8765` bridge. Used for the soundboard catalog and tile presses.
+- daemon → `http://127.0.0.1:55123` (Victor Mac) → `:55124` (Victor Effects): a second, HTTP-shaped edge to the Mac apps, alongside the existing `ws://127.0.0.1:8765` bridge. Used for the soundboard catalog and tile presses.
 - Railway `/fx/*` → daemon `/api/participant/fx/*`: a second public entry point beside the participant proxy, unauthenticated by design and independent of whether a session is active.
 
 - [ ] **Step 4: Record the feature in the backlog**
@@ -2332,7 +2332,7 @@ Expected: PASS. Investigate any failure before continuing; do not proceed on red
 ```bash
 cd /Users/victorrentea/workspace/victor-effects && swift build -c release
 cd /Users/victorrentea/workspace/victor-mac && ./build-app.sh
-pkill -f "Victor Addons"; open "/Applications/Victor Addons.app"
+pkill -f "Victor Mac"; open "/Applications/Victor Mac.app"
 ```
 
 Restart Victor Effects the same way its own repo documents — via `open`, **never** by running the binary inside the bundle, or macOS registers a second app by path and the permissions do not follow.

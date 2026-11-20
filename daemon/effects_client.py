@@ -1,6 +1,6 @@
 """HTTP client for the Mac's soundboard apps.
 
-One door: Victor Addons on :55123, which forwards everything about tiles,
+One door: Victor Mac on :55123, which forwards everything about tiles,
 sounds and effects to Victor Effects on :55124 and merges the two halves of
 `/ping`. The daemon never needs to know the second port exists.
 

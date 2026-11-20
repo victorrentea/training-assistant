@@ -1,7 +1,7 @@
 """Shared fixtures for daemon tests."""
 import os
 
-# The soundboard apps on this Mac (Victor Addons :55123 → Victor Effects) have no
+# The soundboard apps on this Mac (Victor Mac :55123 → Victor Effects) have no
 # auth and are live during a workshop, so a test run that reaches them plays a
 # real sound in front of a real room. It happened: an unmocked host Test-button
 # test pressed tile 69 (the default, the ghost) on every suite run — while the
