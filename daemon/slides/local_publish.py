@@ -8,6 +8,10 @@ breaks; Victor, 2026-11-18). Now, when the deck is open in PowerPoint:
   (pdf_printer.py) → cropped and compressed (pdf_pages.py) → uploaded, ~0.1 MB a slide
   → Railway puts them into the deck it holds.
 
+When the save was Victor Mac's (its auto-save every 3 min, or its slides-seen save) and
+PowerPoint is in front, the print waits until PowerPoint leaves the front: it shows a
+progress bar (save_origin.py, loop.py; Victor, 2026-11-20). His own ⌘S prints at once.
+
 The first time, and whenever slides were added, removed or moved, the whole deck is printed
 and sent (~10 MB). Railway is told which deck the pages belong to (the SHA-256 of the one it
 should have): after a Railway restart, or when it holds Google's version, it refuses and gets

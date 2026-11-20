@@ -10,6 +10,7 @@ from daemon import log
 from daemon.misc.state import misc_state
 from daemon.session.state import get_active_session_id
 from daemon.slides import daemon as slides_daemon
+from daemon.slides import save_origin
 from daemon.slides.catalog import (
     _abs_key,
     _iso_utc,
@@ -87,6 +88,8 @@ class SlidesRunner:
         self.main_config = main_config
         self._slides_config: SlidesDaemonConfig | None = None
         self._slides_state: dict = {}
+        # slug → deck: saved by Victor Mac with PowerPoint in front; printed once it is not.
+        self._deferred_prints: dict[str, Path] = {}
 
     def start(self) -> None:
         from daemon.slides import pdf_printer
@@ -192,6 +195,7 @@ class SlidesRunner:
         files, metadata = resolve_tracked_sources(self._slides_config)
         if not files:
             return False
+        self._release_deferred_prints()
         changed = refresh_pptx_mtimes(files, self._slides_state)
         if not changed:
             return False
@@ -227,24 +231,53 @@ class SlidesRunner:
                 if existing.get("status") == "cached":
                     drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
                     if drive_url:
-                        from daemon.slides.router import (
-                            _broadcast_slides_updated,
-                            _claim_download,
-                            _mark_cache_status,
-                            _queue_pending_redownload,
-                        )
-                        if not _claim_download(slug):
-                            log.info("slides", f"PPTX updated for slug={slug} — queuing redownload after current completes")
-                            _queue_pending_redownload(slug)
+                        # Victor Mac saved it, not Victor: PowerPoint's print progress bar
+                        # waits until he has left PowerPoint (see save_origin.py).
+                        if save_origin.defer_print(Path(_key), float(pptx_mtime)):
+                            if slug not in self._deferred_prints:
+                                log.info("slides", f"PPTX auto-saved for slug={slug} — print waits for PowerPoint to leave the front")
+                            self._deferred_prints[slug] = Path(_key)
                             continue
-                        log.info("slides", f"PPTX updated for slug={slug} — starting redownload poller")
-                        _mark_cache_status(slug, "downloading")
-                        _broadcast_slides_updated()
-                        t = threading.Thread(
-                            target=_run_redownload_poller,
-                            args=(slug, drive_url, Path(_key)),
-                            daemon=True,
-                            name=f"redownload-{slug}",
-                        )
-                        t.start()
+                        self._deferred_prints.pop(slug, None)
+                        self._start_redownload(slug, drive_url, Path(_key))
         return True
+
+    def _start_redownload(self, slug: str, drive_url: str, source: Path) -> bool:
+        from daemon.slides.router import (
+            _broadcast_slides_updated,
+            _claim_download,
+            _mark_cache_status,
+            _queue_pending_redownload,
+        )
+        if not _claim_download(slug):
+            log.info("slides", f"PPTX updated for slug={slug} — queuing redownload after current completes")
+            _queue_pending_redownload(slug)
+            return False
+        log.info("slides", f"PPTX updated for slug={slug} — starting redownload poller")
+        _mark_cache_status(slug, "downloading")
+        _broadcast_slides_updated()
+        threading.Thread(
+            target=_run_redownload_poller,
+            args=(slug, drive_url, source),
+            daemon=True,
+            name=f"redownload-{slug}",
+        ).start()
+        return True
+
+    def _release_deferred_prints(self) -> None:
+        """Prints held back after an auto-save go out once PowerPoint is not in front."""
+        if not self._deferred_prints or save_origin.powerpoint_frontmost():
+            return
+        from daemon.slides.router import _claim_download, _finish_download
+        for slug, source in list(self._deferred_prints.items()):
+            drive_url = misc_state.slides_catalog.get(slug, {}).get("drive_export_url", "")
+            if not drive_url:
+                self._deferred_prints.pop(slug)
+                continue
+            # Another download in flight: try again at the next scan, with this deck as the source.
+            if not _claim_download(slug):
+                continue
+            _finish_download(slug)
+            log.info("slides", f"PowerPoint left the front — printing the auto-saved slug={slug}")
+            self._deferred_prints.pop(slug)
+            self._start_redownload(slug, drive_url, source)
