@@ -338,6 +338,8 @@ class ParticipantStateResponse(BaseModel):
     wiki_takeaways: list[str] = []
     # The workshop days the trainer shows on the wiki graph ([]: every day)
     wiki_days: list[int] = []
+    # Whether the notes of earlier days shine grey while the graph shows two days or more
+    wiki_grey_past: bool = True
     # How many participants starred each wiki note, and the ones this one starred
     wiki_stars: dict[str, int] = {}
     wiki_my_stars: list[str] = []
@@ -866,7 +868,7 @@ async def get_wiki_takeaways():
 async def get_wiki_day():
     from daemon.misc.state import misc_state
 
-    return WikiDay(days=misc_state.wiki_days)
+    return WikiDay(days=misc_state.wiki_days, grey_past=misc_state.wiki_grey_past)
 
 
 # Participants star the notes they found interesting, so they shine for the whole group
@@ -1026,6 +1028,8 @@ async def get_participant_state(request: Request):
         "wiki_takeaways": current_takeaways(),
         # The workshop days whose notes the graph shows ([]: every day)
         "wiki_days": misc_state.wiki_days,
+        # Whether the notes of earlier days shine grey, not gold
+        "wiki_grey_past": misc_state.wiki_grey_past,
         # The notes participants starred (counts only) and this participant's own stars
         "wiki_stars": wiki_stars.visible_counts(pid),
         "wiki_my_stars": wiki_stars.stars_of(pid),

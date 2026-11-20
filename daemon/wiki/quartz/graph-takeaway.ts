@@ -186,14 +186,22 @@ export class TakeawayMark {
   private seen = false // its note read here: a paler shine
   private past = false // its note taught only on an earlier day: a grey shine
   private readonly mode: StarMode
+  private readonly readOnly: boolean // the copy taken home: stars shown, never clicked
   private readonly colors: TakeawayColors
   private readonly size: number
   private readonly r: number
 
   // onToggle gets what the star should become: the takeaway for the trainer, the
   // participant's own star for a voter.
-  constructor(r: number, colors: TakeawayColors, mode: StarMode, onToggle: (starred: boolean) => void) {
+  constructor(
+    r: number,
+    colors: TakeawayColors,
+    mode: StarMode,
+    onToggle: (starred: boolean) => void,
+    readOnly: boolean = false,
+  ) {
     this.mode = mode
+    this.readOnly = readOnly
     this.colors = colors
     this.size = 2 * r * 6.5
     this.r = r
@@ -258,7 +266,7 @@ export class TakeawayMark {
     const total = count + (takeaway ? 1 : 0)
     // Filled when it's the reader's own: the trainer's takeaway, the participant's star.
     const own = this.mode === "trainer" ? takeaway : this.mode === "voter" ? mine : total > 0
-    const clickable = this.mode !== "viewer"
+    const clickable = this.mode !== "viewer" && !this.readOnly
     const visible = clickable || total > 0
     const lit = own || (this.hovered && clickable)
     this.star.text = lit ? FILLED : HOLLOW

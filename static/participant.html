@@ -6181,7 +6181,7 @@ function _setDuplicateIndicator(isDup) {
     _hostSummaryScroll = state.summary_scroll || null;
     _hostWikiNote = state.wiki_note || null;
     _onIncomingWikiTakeaways(state.wiki_takeaways);
-    _onIncomingWikiDay(state.wiki_days);
+    _onIncomingWikiDay(state.wiki_days, state.wiki_grey_past);
     _onIncomingWikiStars(state.wiki_stars, state.wiki_my_stars, state.wiki_starrers, state.wiki_stars_revealed, state.wiki_done);
     var saved = _computeLandingView({
       urlTab: location.pathname.split('/')[2] || '',
@@ -6284,7 +6284,7 @@ function _applyState(msg) {
   // a wiki published while the socket was down (session switch, daemon restart) must show up.
   if (msg.wiki_updated_at !== undefined) _applyWiki(msg.wiki_updated_at);
   if (msg.wiki_takeaways !== undefined) _onIncomingWikiTakeaways(msg.wiki_takeaways);
-  if (msg.wiki_days !== undefined) _onIncomingWikiDay(msg.wiki_days);
+  if (msg.wiki_days !== undefined) _onIncomingWikiDay(msg.wiki_days, msg.wiki_grey_past);
   if (msg.wiki_stars !== undefined) _onIncomingWikiStars(msg.wiki_stars, msg.wiki_my_stars, msg.wiki_starrers, msg.wiki_stars_revealed, msg.wiki_done);
   if (msg.summary_updated_at !== undefined) {
     var summaryNav = document.querySelector('[data-nav="summary"]');
@@ -7419,7 +7419,7 @@ function _handleWsMessage(msg) {
     case 'wiki_updated': _applyWiki(msg.updated_at); break;
     case 'wiki_note': _onIncomingHostWikiNote(msg.slug); break;
     case 'wiki_takeaways': _onIncomingWikiTakeaways(msg.slugs); break;
-    case 'wiki_day': _onIncomingWikiDay(msg.days); break;
+    case 'wiki_day': _onIncomingWikiDay(msg.days, msg.grey_past); break;
     case 'wiki_stars': _onIncomingWikiStars(msg.counts, undefined, msg.starrers, msg.revealed); break;
     case 'agenda_updated': {
       document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
@@ -8972,15 +8972,18 @@ function _onIncomingWikiTakeaways(slugs) {
 // those days' notes, for everyone (Victor, 2026-11-10). With the state and each `wiki_day`
 // broadcast, into the wiki once its graph is up, like the takeaways.
 var _wikiDays = [];
+// The trainer's tick in the same pill: earlier days' notes shine grey, not gold (2026-11-20).
+var _wikiGreyPast = true;
 
 function _postWikiDay() {
   var frame = document.getElementById('wiki-frame');
   if (!_wikiFrameReady || !frame || !frame.contentWindow) return;
-  frame.contentWindow.postMessage({ type: 'wiki-day', days: _wikiDays }, location.origin);
+  frame.contentWindow.postMessage({ type: 'wiki-day', days: _wikiDays, grey_past: _wikiGreyPast }, location.origin);
 }
 
-function _onIncomingWikiDay(days) {
+function _onIncomingWikiDay(days, greyPast) {
   _wikiDays = Array.isArray(days) ? days : [];
+  _wikiGreyPast = greyPast !== false;
   _postWikiDay();
 }
 

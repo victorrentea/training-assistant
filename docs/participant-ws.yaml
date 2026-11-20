@@ -902,6 +902,9 @@ components:
               minimum: 1
               maximum: 31
             description: The day numbers ticked, sorted, from each note's closing "Ziua N —" / "Day N —" line; empty shows every day
+          grey_past:
+            type: boolean
+            description: The host's "grey earlier" tick — while two days or more show, the notes taught only on an earlier day shine grey instead of gold; false shines every star gold
 
     wiki_stars:
       summary: A participant starred or un-starred a wiki note as interesting, or the trainer revealed or hid everyone's stars — once revealed every graph shows how many starred each note, and the starred ones shine; while hidden each participant sees only their own stars, so the counts are left out (throttled to one per second)

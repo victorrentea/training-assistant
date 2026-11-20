@@ -856,6 +856,38 @@ body {
   }
 }
 
+// The trainer's "grey earlier" tick, right of the day numbers (note-pane.ts greyPastBox).
+.graph-day-grey {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0 0.4rem 0 0.35rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--lightgray);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--dark);
+  }
+
+  // Quartz's own checkbox, quiet like Freeze graph's: ticked by default.
+  input {
+    margin: 0;
+    transform: none;
+    cursor: pointer;
+  }
+
+  input:checked {
+    border-color: var(--wiki-quiet);
+    background-color: var(--wiki-quiet);
+  }
+
+  &:hover input:checked {
+    border-color: var(--dark);
+    background-color: var(--dark);
+  }
+}
+
 .graph-day-toggle {
   width: 1.45rem;
   height: 1.45rem;

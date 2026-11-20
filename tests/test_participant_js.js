@@ -670,7 +670,7 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
   const fetched = [];
   const fakeFetch = (url, opts) => { fetched.push({ url, opts }); return fetch ? fetch(url, opts) : Promise.reject(new Error('offline')); };
   const api = new Function('document', 'location', 'LS', '_onHostMachine', 'fetch', '_sessionId', '_myUUID',
-    'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0, _wikiTakeaways = [], _wikiDays = [];\n' +
+    'var _hostWikiNote = null, _wikiFrameReady = ' + ready + ', _wikiFollowBlinkAt = 0, _wikiTakeaways = [], _wikiDays = [], _wikiGreyPast = true;\n' +
     'var _wikiStarCounts = {}, _wikiMyStars = [], _wikiStarrers = 0, _wikiStarQueue = Promise.resolve(), _wikiStarsInFlight = 0, _wikiStarsRevealed = false, _wikiDone = false;\n' +
     names.map((n) => extractFunction(PARTICIPANT_HTML, n)).join('\n') +
     '\nreturn { ' + names.join(', ') +
@@ -745,6 +745,9 @@ function makeWikiFollow({ onHost = false, followed = true, onWiki = true, ready 
     w.posted.length === 1 && w.posted[0].msg.type === 'wiki-day' && w.posted[0].msg.days.join() === '2');
   w.api._onIncomingWikiDay(undefined);
   assert('no days show every day', w.posted.length === 2 && w.posted[1].msg.days.length === 0);
+  assert('earlier days shine grey unless the trainer unticked it', w.posted[1].msg.grey_past === true);
+  w.api._onIncomingWikiDay([1, 2], false);
+  assert("the trainer's 'grey earlier' tick is posted with the days", w.posted.length === 3 && w.posted[2].msg.grey_past === false);
 }
 {
   const w = makeWikiFollow({ ready: false });

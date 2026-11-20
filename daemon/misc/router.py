@@ -507,15 +507,21 @@ async def wiki_takeaway_local(body: WikiTakeawayToggle):
 
 # The trainer ticks which workshop days the wiki graph shows ([]: every day): every
 # participant's graph keeps only those days' notes, so a two-day wiki stays readable
-# while he talks about one of them. Host-machine only, like the takeaways; kept in the
+# while he talks about one of them. His tick in the same pill, grey_past, has the notes
+# of the earlier days shine grey instead of gold, for everyone. Host-machine only, like the takeaways; kept in the
 # session snapshot, so it outlives the daemon restart a push to master brings.
 @local_router.post("/wiki/day", response_model=WikiDay)
 async def wiki_day_local(body: WikiDay):
     from daemon import log
 
     misc_state.wiki_days = body.days
-    log.info("wiki", f"📅 graph shows {'days ' + ', '.join(map(str, body.days)) if body.days else 'every day'}")
-    broadcast(WikiDayMsg(days=body.days))
+    misc_state.wiki_grey_past = body.grey_past
+    log.info(
+        "wiki",
+        f"📅 graph shows {'days ' + ', '.join(map(str, body.days)) if body.days else 'every day'}"
+        f"{', earlier days grey' if body.grey_past else ', every star gold'}",
+    )
+    broadcast(WikiDayMsg(days=body.days, grey_past=body.grey_past))
     return body
 
 

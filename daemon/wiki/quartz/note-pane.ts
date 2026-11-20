@@ -920,7 +920,7 @@ window.addEventListener("message", (e) => {
   }
   // The days the trainer shows on the graph (see "The days on the graph" below).
   if (msg?.type === "wiki-day") {
-    applyDays(parseDays(msg.days))
+    applyDays(parseDays(msg.days), msg.grey_past !== false)
     return
   }
   // The participants' stars (see "Participants' stars" below).
@@ -1035,8 +1035,9 @@ function showPeekStar() {
   const lit = own || button.classList.contains("hovered")
   button.replaceChildren(lit ? "★\uFE0E" : "☆\uFE0E", ...(total > (yours ? 1 : 0) ? [times] : []))
   button.classList.toggle("on", own)
-  button.hidden = mode === "viewer" && total === 0
-  button.disabled = mode === "viewer"
+  const clickable = mode !== "viewer" && !starsReadOnly()
+  button.hidden = !clickable && total === 0
+  button.disabled = !clickable
   const people = count === 1 ? "1 participant starred it" : `${count} participants starred it`
   // While hidden, a participant's own star is the only one they see: no head count.
   const othersHidden = mode === "voter" && !revealed
@@ -1044,7 +1045,7 @@ function showPeekStar() {
     mode === "trainer"
       ? (takeaway ? "Key takeaway - click to un-star" : "Star as a key takeaway: it glows for everyone") +
         (count > 0 ? ` · ${people}` : "")
-      : mode === "voter"
+      : mode === "voter" && clickable
         ? othersHidden
           ? voted
             ? "You starred it - click to un-star · everyone's stars show once Victor reveals them"
@@ -1105,9 +1106,17 @@ let shown: number[] = [] // the days ticked, sorted; none: every day
 let daysChangedAt = 0 // the trainer's last click: an older answer must not undo it
 const dayPill = Object.assign(document.createElement("div"), { className: "graph-day", hidden: true })
 let days: number[] = [] // every day the wiki has notes of
+// The trainer's tick in the same pill (Victor, 2026-11-20): while two days or more show,
+// the notes of the earlier ones shine grey, today's gold (patch-graph.py pastDay);
+// unticked, every star shines gold. His for everyone, like the days.
+let greyPast = true
 
 export function shownDays(): number[] {
   return shown
+}
+
+export function greyPastDays(): boolean {
+  return greyPast
 }
 
 // The days a note was taught on: the summarizer ends each note with one line per day,
@@ -1119,10 +1128,11 @@ export function noteDays(content: string | undefined): number[] {
   return [...found].sort((a, b) => a - b)
 }
 
-function applyDays(next: number[]) {
+function applyDays(next: number[], grey: boolean = greyPast) {
   const sorted = [...new Set(next)].sort((a, b) => a - b)
-  if (sorted.join() === shown.join()) return
+  if (sorted.join() === shown.join() && grey === greyPast) return
   shown = sorted
+  greyPast = grey
   showDayFilter()
   document.dispatchEvent(new CustomEvent<{}>("wikidaychange", { detail: {} }))
 }
@@ -1139,26 +1149,35 @@ function toggleDay(d: number) {
   const lit = shown.length ? shown : days
   const next = lit.includes(d) ? lit.filter((x) => x !== d) : [...lit, d]
   if (next.length === 0) return
+  sendDays(next.length >= days.length ? [] : next, greyPast)
+}
+
+function toggleGreyPast() {
+  if (!onHostMachine()) return
+  sendDays(shown, !greyPast)
+}
+
+function sendDays(sent: number[], grey: boolean) {
   const before = shown
+  const greyBefore = greyPast
   daysChangedAt = Date.now()
-  const sent = next.length >= days.length ? [] : next
-  applyDays(sent)
+  applyDays(sent, grey)
   fetch(`${HOST_DAEMON}/wiki/day`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ days: sent }),
+    body: JSON.stringify({ days: sent, grey_past: grey }),
   })
     .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`${res.status}`))))
-    .then((json: { days?: unknown }) => applyDays(parseDays(json.days)))
-    .catch(() => applyDays(before)) // not saved: the graph goes back
+    .then((json: { days?: unknown; grey_past?: unknown }) => applyDays(parseDays(json.days), json.grey_past !== false))
+    .catch(() => applyDays(before, greyBefore)) // not saved: the graph goes back
 }
 
 function fetchDays() {
   const asked = Date.now()
   fetch(new URL("wiki/day", participantApi()))
     .then((res) => (res.ok ? res.json() : null))
-    .then((json: { days?: unknown } | null) => {
-      if (json && asked > daysChangedAt) applyDays(parseDays(json.days))
+    .then((json: { days?: unknown; grey_past?: unknown } | null) => {
+      if (json && asked > daysChangedAt) applyDays(parseDays(json.days), json.grey_past !== false)
     })
     .catch(() => {})
 }
@@ -1198,7 +1217,21 @@ function showDayFilter() {
       button.addEventListener("click", () => toggleDay(d))
       return button
     }),
+    greyPastBox(),
   )
+}
+
+// Right of the day numbers, in the trainer's pill: "☑ grey earlier", whether the notes
+// of the earlier days shine grey or gold on every graph (Victor, 2026-11-20).
+function greyPastBox(): HTMLElement {
+  const label = Object.assign(document.createElement("label"), { className: "graph-day-grey" })
+  const box = Object.assign(document.createElement("input"), { type: "checkbox", checked: greyPast })
+  box.addEventListener("change", () => toggleGreyPast())
+  label.append(box, "grey earlier")
+  label.dataset.tip = greyPast
+    ? "With two days or more shown, earlier days' stars shine grey for everyone, today's gold - untick: all gold"
+    : "Every star shines gold for everyone - tick: earlier days' stars turn grey, so today's stand out"
+  return label
 }
 
 // ── Participants' stars ──
@@ -1239,6 +1272,13 @@ function participantId(): string | null {
 export function starMode(): StarMode {
   if (onHostMachine()) return "trainer"
   return embedded || participantId() ? "voter" : "viewer"
+}
+
+// The copy taken home, opened from disk (daemon/materials/offline_site.py, or the
+// "⤓ HTML" zip): it still shows whose stars are whose, but a click there would be saved
+// nowhere, so no star takes one, nor does Done (Victor, 2026-11-20).
+export function starsReadOnly(): boolean {
+  return window.location.protocol === "file:"
 }
 
 export function starsOf(slug: SimpleSlug): { count: number; mine: boolean } {
@@ -1291,7 +1331,7 @@ function applyStars(counts: unknown, own: unknown, starrersNow?: unknown, reveal
 // to the page around the wiki, or straight to the daemon from a tab of its own; either
 // answers with what was saved.
 export function toggleStar(slug: SimpleSlug, on: boolean) {
-  if (starMode() !== "voter") return
+  if (starMode() !== "voter" || starsReadOnly()) return
   const counts = Object.fromEntries(starCounts)
   if (on !== mine.has(slug)) counts[slug] = Math.max(0, (counts[slug] ?? 0) + (on ? 1 : -1))
   if (on && starHint) celebrate(starHint)
@@ -1449,8 +1489,9 @@ function showRound() {
   }
   showDone()
   // A participant's Done, bottom-right, while the stars are still private.
-  if (mode === "voter" && !revealed && !doneButton.isConnected) document.body.append(doneButton)
-  doneButton.hidden = mode !== "voter" || revealed
+  const doneShown = mode === "voter" && !revealed && !starsReadOnly()
+  if (doneShown && !doneButton.isConnected) document.body.append(doneButton)
+  doneButton.hidden = !doneShown
   doneButton.textContent = doneMine ? "🏁 Done ✓" : "Done"
   doneButton.classList.toggle("on", doneMine)
   // Two stars in and not done yet: it blinks, then stays bigger and glowing until clicked.
@@ -1486,7 +1527,7 @@ function toggleRevealed(on: boolean) {
 }
 
 function toggleDone(on: boolean) {
-  if (starMode() !== "voter") return
+  if (starMode() !== "voter" || starsReadOnly()) return
   roundChangedAt = Date.now()
   doneMine = on
   showRound()
@@ -1519,7 +1560,7 @@ let starHint: HTMLElement | null = null
 let starHintDone = false
 
 function showStarHint() {
-  if (starMode() !== "voter" || starHintDone) return
+  if (starMode() !== "voter" || starsReadOnly() || starHintDone) return
   if (mine.size > 0) {
     starHintDone = true
     starHint?.remove()

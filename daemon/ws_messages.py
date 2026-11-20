@@ -556,6 +556,9 @@ class WikiTakeawaysMsg(WikiTakeaways):
 class WikiDay(BaseModel):
     """The workshop days whose notes the wiki graph shows to everyone; empty: every day."""
     days: list[Annotated[int, Field(ge=1, le=31)]] = Field(default_factory=list, max_length=31)
+    # While two days or more show, the notes taught only on an earlier day shine grey, so
+    # today's stars stand out in gold; off: every star gold. The trainer's tick, for everyone.
+    grey_past: bool = True
 
     @field_validator("days")
     @classmethod

@@ -37,6 +37,9 @@ class MiscState:
         # The workshop days the wiki graph shows to everyone ([]: every day), as the
         # trainer ticked them. Saved with the session: a push restarts the daemon mid-day.
         self.wiki_days: list[int] = []
+        # Whether, while two days or more show, the notes of the earlier ones shine grey
+        # rather than gold (the trainer's tick in the same pill), saved the same way.
+        self.wiki_grey_past: bool = True
         # The session notes as the trainer's VS Code has them open (talk mode):
         # {revision, text, line, selection, collapsed}. None until VS Code first
         # reports the file — the notes are shared only once he opens them. In
@@ -103,6 +106,8 @@ class MiscState:
             if "wiki_days" in data:
                 days = data["wiki_days"] or []
                 self.wiki_days = sorted({d for d in days if isinstance(d, int) and d >= 1})
+            if "wiki_grey_past" in data:
+                self.wiki_grey_past = data["wiki_grey_past"] is not False
 
     def add_paste(self, pid: str, text: str) -> dict | None:
         entries = self.paste_texts.setdefault(pid, [])
@@ -199,6 +204,7 @@ class MiscState:
             self.summary_scroll = None
             self.wiki_note = None
             self.wiki_days = []
+            self.wiki_grey_past = True
             self.talk_notes = None
             self.presenter_view = "slides"
             self.talk_presentation_name = None

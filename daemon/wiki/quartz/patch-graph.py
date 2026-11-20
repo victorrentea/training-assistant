@@ -256,7 +256,7 @@ PATCHES = [
     const pencil = new EditPencil()
     pencilsContainer.addChild(pencil)
     const takeaway = new TakeawayMark(nodeRadius(n), takeawayColors, starMode(), (on) =>
-      starMode() === "voter" ? toggleStar(nodeId, on) : toggleTakeaway(nodeId, on))
+      starMode() === "voter" ? toggleStar(nodeId, on) : toggleTakeaway(nodeId, on), starsReadOnly())
     takeaway.set(dotShine(nodeId))
     takeaway.setPast(pastDay.has(nodeId))
     takeawayHazeContainer.addChild(takeaway.glow)
@@ -450,7 +450,7 @@ PATCHES = [
      'import "./tooltip.js"\n'
      'import { BadgeColors, EditPencil, NoteBadge, loadBadges, makeBadge } from "./graph-badges"\n'
      'import { COMET_MS, DotShine, FLASH_MS, TakeawayColors, TakeawayMark, CHEVRON_HIT_RADIUS, baselineOf, drawAim, drawChevrons, drawComet, drawFlash, framingPan, hoverGlow, nextStarCue } from "./graph-takeaway"\n'
-     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, graphDrew, graphFrozen, isEdited, isFollowed, isSeen, noteDays, onHostMachine, doneBadge, resetSeen, roundBadge, saveView, savedView, setFollowed, setGraphFrozen, setShowHome, shineOf, showHome, shownDays, showNoGraphNotice, starMode, starrersBadge, starsSettled, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
+     'import { PaneGraph, connectGraph, dayFilter, disconnectGraph, dotSeen, dotShine, graphDrew, graphFrozen, greyPastDays, isEdited, isFollowed, isSeen, noteDays, onHostMachine, doneBadge, resetSeen, roundBadge, saveView, savedView, setFollowed, setGraphFrozen, setShowHome, shineOf, showHome, shownDays, showNoGraphNotice, starMode, starrersBadge, starsReadOnly, starsSettled, starsWon, toggleNote, toggleStar, toggleTakeaway, warmNote } from "./note-pane"\n'
      '// The outline of a shining note\'s yellow label, over its burst, in --wiki-outline: black\n'
      '// on dark, the page colour on light. Every other\n'
      '// label has the same outline, invisible: an outline widens the text, and a label\n'
@@ -960,13 +960,14 @@ PATCHES = [
     }
   }
   // Two days or more on the full graph: the notes taught only before the latest of them
-  // shine grey, not gold (graph-takeaway.ts setPast; Victor, 2026-11-17).
+  // shine grey, not gold (graph-takeaway.ts setPast; Victor, 2026-11-17) - unless the
+  // trainer unticked "grey earlier" by the days (note-pane.ts greyPastDays; 2026-11-20).
   const pastDay = new Set<string>()
   if (graph.classList.contains("global-graph-container")) {
     const taughtOn = new Map([...data].map(([id, details]) => [id, noteDays(details.content)]))
     const litDays = new Set(onlyDays.length > 0 ? onlyDays : [...taughtOn.values()].flat())
     const latest = Math.max(...litDays)
-    if (litDays.size >= 2) {
+    if (litDays.size >= 2 && greyPastDays()) {
       for (const [id, taught] of taughtOn) if (taught.length > 0 && !taught.includes(latest)) pastDay.add(id)
     }
     // The canvas has no DOM: which dots shine grey, readable from a test.
