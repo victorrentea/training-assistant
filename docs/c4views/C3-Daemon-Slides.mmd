@@ -4,7 +4,7 @@ graph LR
   subgraph diagram ["Component View: Workshop Live Interaction Tool - Training Daemon"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    5["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Local Mac bridge that emits<br />slide and IDE file-open<br />events, and receives<br />emoji/session notifications.</div>"]
+    5["<div style='font-weight: bold'>victor-mac</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Local Mac bridge that emits<br />slide and IDE file-open<br />events, and receives<br />emoji/session notifications.</div>"]
     style 5 fill:#1d6f42,stroke:#144d2e,color:#ffffff
     9["<div style='font-weight: bold'>Host session files</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Session folders, normalized<br />transcripts, ai-summary.md,<br />uploaded files, and slide<br />manifests on the trainer's<br />Mac.</div>"]
     style 9 fill:#1d6f42,stroke:#144d2e,color:#ffffff
@@ -25,7 +25,7 @@ graph LR
         style 32 fill:#d6e8c8,stroke:#95a28c,color:#10210f
         36["<div style='font-weight: bold'>Slides and upload pipeline</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/*]</div><div style='font-size: 80%; margin-top:10px'>Loads catalogs, tracks<br />current slide, converts<br />decks, invalidates Railway<br />cache, scans PPTX mtimes, and<br />pushes slide metadata/files.</div>"]
         style 36 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        37["<div style='font-weight: bold'>Addons bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/addon_bridge_client.py + daemon/adapters/*]</div><div style='font-size: 80%; margin-top:10px'>Receives slide events,<br />slides_viewed deltas, and IDE<br />file-open events from<br />victor-macos-addons, and<br />forwards emoji/session<br />notifications back.</div>"]
+        37["<div style='font-weight: bold'>Addons bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/addon_bridge_client.py + daemon/adapters/*]</div><div style='font-size: 80%; margin-top:10px'>Receives slide events,<br />slides_viewed deltas, and IDE<br />file-open events from<br />victor-mac, and<br />forwards emoji/session<br />notifications back.</div>"]
         style 37 fill:#d6e8c8,stroke:#95a28c,color:#10210f
       end
 

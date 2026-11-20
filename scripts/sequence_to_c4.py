@@ -49,7 +49,7 @@ _KNOWN: dict[str, ParticipantDef] = {
     ),
     "GDrive": ParticipantDef("System_Ext", "Google Drive", desc="Source of slide PDF exports"),
     "Claude": ParticipantDef("System_Ext", "Anthropic Claude API", desc="LLM used by the daemon"),
-    "macOS Addons": ParticipantDef("System_Ext", "victor-macos-addons", desc="Local slide/overlay event bridge"),
+    "macOS Addons": ParticipantDef("System_Ext", "victor-mac", desc="Local slide/overlay event bridge"),
 }
 
 # Identifiers used in C4 (no spaces/special chars)

@@ -1,11 +1,11 @@
 ## Context
 
-The training-assistant daemon runs on the trainer's Mac alongside `victor-macos-addons`. Two integrations with addons are currently broken or inefficient:
+The training-assistant daemon runs on the trainer's Mac alongside `victor-mac`. Two integrations with addons are currently broken or inefficient:
 
 1. **Emoji reactions** — `daemon/emoji/router.py` attempts `POST http://localhost:8765/emoji` on every participant reaction, but no HTTP server exists at that port in addons. The call silently fails every time.
 2. **Current slide tracking** — `daemon/__main__.py` polls `activity-slides-YYYY-MM-DD.md` every 0.5 s inside the main async loop to detect PowerPoint navigation. This couples the daemon to a file-path convention and adds 0–500 ms latency to slide updates broadcast to participants.
 
-The `victor-macos-addons` repo already has all the pieces: a WS server at port 8765 (`wispr-flow/ws_server.py`) that knows the current slide and can relay emoji animations to the overlay. What's missing is the daemon connecting to this existing server.
+The `victor-mac` repo already has all the pieces: a WS server at port 8765 (`wispr-flow/ws_server.py`) that knows the current slide and can relay emoji animations to the overlay. What's missing is the daemon connecting to this existing server.
 
 ## Goals / Non-Goals
 

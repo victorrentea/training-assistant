@@ -6,7 +6,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
 
         claudeApi = softwareSystem "Anthropic Claude API" "LLM used by the daemon for debate AI cleanup and code-review smart paste extraction."
         githubApi = softwareSystem "GitHub API" "Repo metadata (default branch), repo trees, and blob existence checks used to link opened files to the branch captured at open time. Unauthenticated."
-        macosAddons = softwareSystem "victor-macos-addons" "Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications."
+        macosAddons = softwareSystem "victor-mac" "Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications."
         nominatim = softwareSystem "Nominatim" "Reverse geocodes GPS coordinates into city and country."
         googleDrive = softwareSystem "Google Drive" "Hosts exported slide PDFs consumed by the Railway cache."
         agentMail = softwareSystem "AgentMail" "Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks."
@@ -40,7 +40,7 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
                 codereviewSmartPaste = component "Code-review smart paste" "Claude Haiku call that extracts a code snippet and language from pasted LLM output." "daemon/codereview/router.py + daemon/llm/adapter.py"
                 summaryHelpers = component "Summary helpers" "File-driven helpers that read ai-summary.md and surface its mtime; consumed by misc routes and host snapshots." "daemon/summary/loop.py"
                 slidesPipeline = component "Slides and upload pipeline" "Loads catalogs, tracks current slide, converts decks, invalidates Railway cache, scans PPTX mtimes, and pushes slide metadata/files." "daemon/slides/*"
-                addonsBridge = component "Addons bridge" "Receives slide events, slides_viewed deltas, and IDE file-open events from victor-macos-addons, and forwards emoji/session notifications back." "daemon/addon_bridge_client.py + daemon/adapters/*"
+                addonsBridge = component "Addons bridge" "Receives slide events, slides_viewed deltas, and IDE file-open events from victor-mac, and forwards emoji/session notifications back." "daemon/addon_bridge_client.py + daemon/adapters/*"
                 openedFilesLinking = component "Opened files linking" "Resolves IDE file-open events to GitHub blob links against the branch captured at open time (falling back to the repo default branch), and maintains the opened-files.md artifact; a standalone CLI re-resolves every link before summarization." "daemon/files_md.py + daemon/github_client.py + daemon/relink_open_files.py"
                 transcriptIngest = component "Transcript ingest" "Loads normalized transcript files, tracks deltas, and exposes range queries used by quizzes and host inspection." "daemon/transcript/*"
                 ragIndexer = component "Materials RAG indexer" "Background ChromaDB indexer over local workshop materials; retriever helpers available for future consumers." "daemon/rag/*"

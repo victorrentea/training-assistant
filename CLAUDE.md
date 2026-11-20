@@ -43,7 +43,7 @@ Key capabilities: quiz generation, debate AI cleanup, live summary, transcript r
 
 On startup the daemon opens the host panel (`http://127.0.0.1:1234/host`) in the default browser, once the local server accepts connections. `start.sh` does this **only on the first launch** (`DAEMON_OPEN_BROWSER=0` on every auto-update restart) so a push to master does not spawn a tab each time. Set `DAEMON_OPEN_BROWSER=0` to suppress it entirely.
 
-Transcription (Whisper, audio capture) is in [`victor-macos-addons`](https://github.com/victorrentea/victor-macos-addons) — this daemon only reads normalized transcript files.
+Transcription (Whisper, audio capture) is in [`victor-mac`](https://github.com/victorrentea/victor-mac) — this daemon only reads normalized transcript files.
 
 Transcript query: `python3 -m daemon.transcript.query <from_iso> <to_iso>`
 

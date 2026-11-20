@@ -18,8 +18,8 @@ A third need drives the first: the training summarizer must be able to cite the 
 | Component | Where | What it does today |
 |---|---|---|
 | IntelliJ plugin | `live-coding/…/openfile/OpenFileReporter.kt` | After a 5s dwell on a file in a focused IDE window, resolves the repo via `git4idea` and POSTs `{url, branch, file, project}` to `http://127.0.0.1:55123/intellij/file-opened`. `file` is the path relative to the git root. Gated by `AppSettingsState.reportOpenFileToAddon`, **default `false`**. |
-| macOS addon | `victor-macos-addons/…/AppDelegate.swift:1123` | Receives the POST, normalizes the remote to https, forwards over the local WS bridge as `git_file_opened`. Deliberately passes `fileURL: nil` — comment: *"Daemon ignores branch/fileURL"*. |
-| macOS addon | `victor-macos-addons/…/IntelliJMonitor.swift` | AppleScript window-title scraper, the pre-plugin capture path. **Already disabled** — `ijMonitor.start()` is commented out at `AppDelegate.swift:1118`. |
+| macOS addon | `victor-mac/…/AppDelegate.swift:1123` | Receives the POST, normalizes the remote to https, forwards over the local WS bridge as `git_file_opened`. Deliberately passes `fileURL: nil` — comment: *"Daemon ignores branch/fileURL"*. |
+| macOS addon | `victor-mac/…/IntelliJMonitor.swift` | AppleScript window-title scraper, the pre-plugin capture path. **Already disabled** — `ijMonitor.start()` is commented out at `AppDelegate.swift:1118`. |
 | Daemon | `daemon/addon_bridge_client.py:29` | Reads only `url` and `file` from the message; `branch` is dropped on the floor. |
 | Daemon | `daemon/files_md.py` | Keys entries by basename, resolves against the GitHub default branch tree, downgrades to unlinked on basename collision, retries unresolved entries on every load. Stores the **first** open timestamp in UTC. |
 | Participant UI | `static/participant.html:5083` (`loadFilesMd`) | `marked.parse` of the raw markdown; a post-pass greys the directory prefix of each link. Flat list. |
@@ -87,7 +87,7 @@ The privacy rule is unchanged: a repo that the GitHub API reports as private or 
 - Cost on a machine without the addon, with the setting mistakenly enabled: roughly a dozen refused connections per hour.
 - Recovery on Victor's machine: if IntelliJ starts before the addon, reporting resumes within 5 minutes with no IDE restart.
 
-### `victor-macos-addons`
+### `victor-mac`
 
 - Delete `Sources/VictorAddons/IntelliJMonitor.swift`, the `ijMonitor` property, its construction and the commented-out `start()` call in `AppDelegate.swift`.
 - `IntelliJMonitor.httpsRemote(_:)` is still used by the plugin-POST handler — move it to a small `GitRemote` helper (or onto `TabletHttpServer`) so deleting the monitor does not take it down.

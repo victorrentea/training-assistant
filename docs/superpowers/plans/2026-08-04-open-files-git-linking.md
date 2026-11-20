@@ -20,7 +20,7 @@
 - Never use `font-style: italic` anywhere in the UI.
 - Hide count badges when the value is 0.
 - The WS contract does not change (`GitFileOpenedMsg` already declares `branch`), so **no `API.md` regeneration and no Railway deploy**. `static/` and `daemon/` changes hot-deploy on push to `master`.
-- Three repos are touched. Unless stated otherwise, work in `/Users/victorrentea/workspace/training-assistant`. Tasks 7 and 8 work in `/Users/victorrentea/workspace/victor-macos-addons` and `/Users/victorrentea/workspace/live-coding` respectively. Task 9 works in `/Users/victorrentea/workspace/ai`.
+- Three repos are touched. Unless stated otherwise, work in `/Users/victorrentea/workspace/training-assistant`. Tasks 7 and 8 work in `/Users/victorrentea/workspace/victor-mac` and `/Users/victorrentea/workspace/live-coding` respectively. Task 9 works in `/Users/victorrentea/workspace/ai`.
 
 ## File Structure
 
@@ -33,7 +33,7 @@
 | `tests/daemon/test_files_md.py` | Unit tests for model, format, resolution, ingestion | 1, 2, 3 |
 | `tests/daemon/test_relink_open_files.py` (new) | Unit tests for the relink pass | 5 |
 | `tests/test_participant_js.js` | Unit tests for `buildFileTree` / `parseFilesMd` | 6 |
-| `victor-macos-addons/Sources/VictorAddons/GitRemote.swift` (new) | `httpsRemote` helper, rescued from the deleted monitor | 7 |
+| `victor-mac/Sources/VictorAddons/GitRemote.swift` (new) | `httpsRemote` helper, rescued from the deleted monitor | 7 |
 | `live-coding/…/openfile/OpenFileReporter.kt` | Circuit breaker | 8 |
 | `ai/skills/training-summarizer/SKILL.md` | Relink step + corrected artifact name | 9 |
 
@@ -1479,7 +1479,7 @@ git push origin master
 
 Delete the AppleScript window-title scraper — dormant since the plugin took over — while rescuing the one helper the live path still calls.
 
-**Files:** (all in `/Users/victorrentea/workspace/victor-macos-addons`)
+**Files:** (all in `/Users/victorrentea/workspace/victor-mac`)
 - Create: `Sources/VictorAddons/GitRemote.swift`
 - Delete: `Sources/VictorAddons/IntelliJMonitor.swift`
 - Modify: `Sources/VictorAddons/AppDelegate.swift:1110-1139`, `Sources/VictorAddons/LocalWebSocketServer.swift:122-130`
@@ -1546,7 +1546,7 @@ In `LocalWebSocketServer.swift`:
 - [ ] **Step 4: Build to verify**
 
 ```bash
-cd /Users/victorrentea/workspace/victor-macos-addons && swift build 2>&1 | tail -20
+cd /Users/victorrentea/workspace/victor-mac && swift build 2>&1 | tail -20
 ```
 
 Expected: build succeeds with no reference to `IntelliJMonitor`. Confirm with `grep -rn "IntelliJMonitor" Sources/` returning nothing.
@@ -1554,7 +1554,7 @@ Expected: build succeeds with no reference to `IntelliJMonitor`. Confirm with `g
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/victorrentea/workspace/victor-macos-addons
+cd /Users/victorrentea/workspace/victor-mac
 git add -A Sources/VictorAddons
 git commit -m "refactor(addons): delete the AppleScript IntelliJ monitor superseded by the plugin"
 git push origin master

@@ -100,7 +100,7 @@ playing.
 - Test in `EffectsRouterTests`: `/press/69` parses to `.panelPress(69, .effects)`,
   `/press/` and `/press/abc` parse to `.unknown`.
 
-### victor-macos-addons
+### victor-mac
 
 - Add `"/press/"` to `TabletHttpServer.proxiedPrefixes`. One line. Keeps the
   daemon on a single door (`:55123`) and inherits the merged `/ping`, which
@@ -271,7 +271,7 @@ requests.
 
 1. victor-effects: build, then restart — **never mid-session**, per
    `tasks/lessons.md`.
-2. victor-macos-addons: `./build-app.sh` and restart, same caveat.
+2. victor-mac: `./build-app.sh` and restart, same caveat.
 3. training-assistant: push to `master`. Railway redeploys because
    `railway/**` changed; the daemon hot-deploys `static/` and `daemon/` on the
    same push.

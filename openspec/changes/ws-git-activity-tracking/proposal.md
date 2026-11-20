@@ -27,4 +27,4 @@ The current git activity tracking writes and reads a plain text file on disk, co
 - `daemon/participant/state.py` — add `git_repos` field to `ParticipantState`.
 - Session state persistence (JSON on disk) — include `git_repos`.
 - `static/host.js` / `static/host.html` — footer badge driven by session state / new endpoint.
-- victor-macos-addons (external repo) — addon must emit `git_file_opened` WS message instead of writing file.
+- victor-mac (external repo) — addon must emit `git_file_opened` WS message instead of writing file.

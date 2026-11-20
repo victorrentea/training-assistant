@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Addon sends git_file_opened WS message to daemon
-The macOS addon (victor-macos-addons) SHALL send a `git_file_opened` message over the existing persistent WS connection to the daemon whenever the user opens a file in IntelliJ that differs from the last-sent file. The addon SHALL only deduplicate against its immediately previous message — it does not need to remember any older history.
+The macOS addon (victor-mac) SHALL send a `git_file_opened` message over the existing persistent WS connection to the daemon whenever the user opens a file in IntelliJ that differs from the last-sent file. The addon SHALL only deduplicate against its immediately previous message — it does not need to remember any older history.
 
 #### Scenario: User opens a file in IntelliJ
 - **WHEN** the user opens (or switches focus to) a file in IntelliJ and the combination `(url, branch, file)` differs from the last message sent

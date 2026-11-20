@@ -2,21 +2,21 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace file-based slide duration tracking between victor-macos-addons and the training-assistant daemon with a WebSocket message (`slides_viewed`) sent every 60 seconds, persisted in `PersistedSessionState.slides_viewed`.
+**Goal:** Replace file-based slide duration tracking between victor-mac and the training-assistant daemon with a WebSocket message (`slides_viewed`) sent every 60 seconds, persisted in `PersistedSessionState.slides_viewed`.
 
 **Architecture:** The addons PowerPointMonitor already tracks per-slide durations in memory (`slideDurations`) and writes them to a `YYYY-MM-DD-slides.txt` file. We add a 60-second timer that computes **delta** durations (seconds since last send), fires a new `onSlidesViewed` callback, which flows through the existing LocalWebSocketServer (port 8765) to the daemon's `AddonBridgeClient`. The daemon merges incoming deltas into `misc_state.slides_viewed` (a list of `ViewedSlide` objects), persists them in session snapshots, and serves them via the existing `slides_log` host state fields — replacing the file-reading `activity_reader.read_slides_log()` call.
 
 **Tech Stack:** Swift (macOS app), Python (FastAPI, Pydantic), WebSocket (NWProtocol / websockets)
 
 **Important:** Two repos are involved:
-- **Addons:** `/Users/victorrentea/workspace/victor-macos-addons` (Swift)
+- **Addons:** `/Users/victorrentea/workspace/victor-mac` (Swift)
 - **Daemon:** `/Users/victorrentea/workspace/training-assistant` (Python)
 
 ---
 
 ## File Map
 
-### Addons (victor-macos-addons)
+### Addons (victor-mac)
 
 | Action | File | Responsibility |
 |--------|------|----------------|
@@ -543,13 +543,13 @@ Add a new private method:
 
 - [ ] **Step 6: Build and verify**
 
-Run: `swift build` in the victor-macos-addons directory.
+Run: `swift build` in the victor-mac directory.
 Expected: Build succeeds with no errors.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-cd ~/workspace/victor-macos-addons
+cd ~/workspace/victor-mac
 git add Sources/VictorAddons/PowerPointMonitor.swift
 git commit -m "feat(slides): add 60s slides_viewed delta timer with cross-deck accumulation"
 ```
@@ -630,7 +630,7 @@ Expected: All tests pass.
 
 - [ ] **Step 2: Run addons build**
 
-Run: `cd ~/workspace/victor-macos-addons && swift build`
+Run: `cd ~/workspace/victor-mac && swift build`
 Expected: Build succeeds.
 
 - [ ] **Step 3: Manual smoke test (if daemon + addons running)**

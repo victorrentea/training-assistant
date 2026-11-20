@@ -28,7 +28,7 @@
 
 ## 6. macOS Addon update (external repo)
 
-- [x] 6.1 In `victor-macos-addons`, replace the file-append logic with a call to send `{"type": "git_file_opened", "url": ..., "branch": ..., "file": ...}` over the existing WS connection
+- [x] 6.1 In `victor-mac`, replace the file-append logic with a call to send `{"type": "git_file_opened", "url": ..., "branch": ..., "file": ...}` over the existing WS connection
 - [x] 6.2 Implement last-sent deduplication in the addon (store the last sent tuple; skip send if identical)
 - [x] 6.3 Remove any file-write code for `activity-git-*.md` from the addon
 

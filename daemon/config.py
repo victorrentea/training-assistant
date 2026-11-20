@@ -67,7 +67,7 @@ def load_secrets_env() -> None:
 def config_from_env(minutes: int = DEFAULT_MINUTES) -> "Config":
     """Build a Config from environment variables (after loading shared secrets)."""
     load_secrets_env()
-    folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-macos-addons/addons-output"))
+    folder = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-mac/addons-output"))
     # Unused since the LLM calls go through the Claude subscription (daemon/llm/claude_cli.py).
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not folder.exists() or not folder.is_dir():

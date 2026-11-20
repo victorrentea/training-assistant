@@ -58,7 +58,7 @@ Hiding controls in the UI SHALL NOT be the only enforcement. The daemon SHALL in
 - **THEN** the bell endpoint and the host notification endpoint SHALL process requests normally
 
 ### Requirement: The Swift overlay requires no change for the gate
-The macOS overlay side (the already-merged `victor-macos-addons` `bell-overlay-card`) SHALL require no modification for this gate. Because the daemon never emits `bell_ring` while `attention_enabled` is off, the overlay is inherently inert when the capability is disabled, and no work in the addons repository is needed for the enable-gate.
+The macOS overlay side (the already-merged `victor-mac` `bell-overlay-card`) SHALL require no modification for this gate. Because the daemon never emits `bell_ring` while `attention_enabled` is off, the overlay is inherently inert when the capability is disabled, and no work in the addons repository is needed for the enable-gate.
 
 #### Scenario: Overlay stays inert while disabled without any addons change
 - **WHEN** the capability is off and participants exist

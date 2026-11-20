@@ -9,7 +9,7 @@ Key architectural challenge: the host browser connects directly to daemon's loca
 ## Goal
 
 - Build host WS push infrastructure: daemon can inject messages into the host browser's local WS connection.
-- Migrate emoji reactions: participant REST call to daemon, daemon forwards to host (local WS) and desktop overlay (HTTP POST to victor-macos-addons at localhost:56789).
+- Migrate emoji reactions: participant REST call to daemon, daemon forwards to host (local WS) and desktop overlay (HTTP POST to victor-mac at localhost:56789).
 - Migrate Q&A end-to-end: state, participant submit/upvote, host submit/edit/delete/answered/clear, broadcasts with client-side personalization.
 - No backward compat sync for Q&A (Railway's qa_questions goes stale; old cached JS must refresh).
 
@@ -183,7 +183,7 @@ async def emoji_reaction(request: Request):
     from daemon.host_ws import send_to_host
     await send_to_host({"type": "emoji_reaction", "emoji": emoji})
 
-    # Forward to desktop overlay (victor-macos-addons)
+    # Forward to desktop overlay (victor-mac)
     try:
         import httpx
         async with httpx.AsyncClient() as client:

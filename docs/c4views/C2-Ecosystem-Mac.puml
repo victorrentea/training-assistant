@@ -24,7 +24,7 @@ System(livecoding, "live-coding", $descr="IntelliJ plugin: live-coding visual ef
 System(victorvsc, "victor-vsc", $descr="VS Code extension holding every customization (colors, icons, keybindings, terminal profiles).", $tags="", $link="")
 System(ClaudeCode, "Claude Code", $descr="The agent itself: hooks, skills, plugins, MCP servers.", $tags="", $link="")
 System(Whispertranscripts, "Whisper transcripts", $descr="~/Documents/transcriptions/ -- files on disk, written by the Mac and read by the daemon.", $tags="", $link="")
-System(victormacosaddons, "victor-macos-addons", $descr="Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications.", $tags="", $link="")
+System(victormacosaddons, "victor-mac", $descr="Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications.", $tags="", $link="")
 
 Rel(victorvibeboard, victormacosaddons, "HTTP :55123. Tablet-initiated in every case -- the Mac never dials the tablet. First transport that answers: adb reverse (USB) -> LAN -> mDNS Victor-Mac.local -> WSS relay wss://interact.victorrentea.ro/ws/bridge/tablet", $techn="", $tags="", $link="")
 Rel(victorvibeboard, victormacosaddons, "GET /ping every 5s carrying soundsHash / tilesHash / effectsHash / usageHash -- the change detector every other pull hangs off", $techn="", $tags="", $link="")

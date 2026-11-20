@@ -56,7 +56,7 @@ Railway's `qa_submit` WS handler accepts submissions regardless of `current_acti
 
 ### Overlay POST is fire-and-forget
 
-The daemon POSTs emoji reactions to `localhost:56789` (victor-macos-addons desktop overlay). If that service isn't running, the exception is silently caught. The FastAPI server on victor-macos-addons will be configured separately in a future task.
+The daemon POSTs emoji reactions to `localhost:56789` (victor-mac desktop overlay). If that service isn't running, the exception is silently caught. The FastAPI server on victor-mac will be configured separately in a future task.
 
 ---
 
@@ -284,7 +284,7 @@ async def emoji_reaction(request: Request):
     # Forward to host browser (local WS)
     await send_to_host({"type": "emoji_reaction", "emoji": emoji})
 
-    # Forward to desktop overlay (victor-macos-addons) — fire and forget
+    # Forward to desktop overlay (victor-mac) — fire and forget
     try:
         async with httpx.AsyncClient() as client:
             await client.post("http://localhost:56789/emoji",
@@ -1253,7 +1253,7 @@ After all tasks complete:
 
 ## Future work (not in this plan)
 
-- **victor-macos-addons FastAPI**: configure a FastAPI server on `localhost:56789` to receive emoji POSTs from daemon. This is a separate project/repo.
+- **victor-mac FastAPI**: configure a FastAPI server on `localhost:56789` to receive emoji POSTs from daemon. This is a separate project/repo.
 
 ---
 

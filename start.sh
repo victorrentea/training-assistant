@@ -6,7 +6,7 @@
 # Starts the training daemon which polls the Railway backend for
 # quiz/debate/summary requests.
 #
-# NOTE: Desktop overlay has moved to victor-macos-addons repo.
+# NOTE: Desktop overlay has moved to victor-mac repo.
 # NOTE: Wispr cleanup (wispr-addons/app.py) is NOT started here — run it separately.
 #
 # Auto-updates: every 2s, `git fetch` checks for new commits on master.

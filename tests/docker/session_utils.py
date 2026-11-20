@@ -148,7 +148,7 @@ def daemon_has_participant(session_id: str, name: str) -> bool:
 
 
 class MockAddonBridge:
-    """Stand-in for victor-macos-addons' WS server, which tells the daemon what the
+    """Stand-in for victor-mac' WS server, which tells the daemon what the
     trainer is presenting.
 
     The daemon's addon-bridge client dials ws://127.0.0.1:8765 and re-dials every

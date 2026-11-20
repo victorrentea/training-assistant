@@ -10,7 +10,7 @@ graph LR
     style 3 fill:#1d6f42,stroke:#144d2e,color:#ffffff
     4["<div style='font-weight: bold'>GitHub API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Repo metadata (default<br />branch), repo trees, and blob<br />existence checks used to link<br />opened files to the branch<br />captured at open time.<br />Unauthenticated.</div>"]
     style 4 fill:#1d6f42,stroke:#144d2e,color:#ffffff
-    5["<div style='font-weight: bold'>victor-macos-addons</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Local Mac bridge that emits<br />slide and IDE file-open<br />events, and receives<br />emoji/session notifications.</div>"]
+    5["<div style='font-weight: bold'>victor-mac</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Local Mac bridge that emits<br />slide and IDE file-open<br />events, and receives<br />emoji/session notifications.</div>"]
     style 5 fill:#1d6f42,stroke:#144d2e,color:#ffffff
     8["<div style='font-weight: bold'>AgentMail</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosted inbox/email service:<br />delivers participant feedback<br />notifications and routes<br />incoming Claude email<br />webhooks.</div>"]
     style 8 fill:#1d6f42,stroke:#144d2e,color:#ffffff
@@ -45,7 +45,7 @@ graph LR
         style 35 fill:#d6e8c8,stroke:#95a28c,color:#10210f
         36["<div style='font-weight: bold'>Slides and upload pipeline</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/slides/*]</div><div style='font-size: 80%; margin-top:10px'>Loads catalogs, tracks<br />current slide, converts<br />decks, invalidates Railway<br />cache, scans PPTX mtimes, and<br />pushes slide metadata/files.</div>"]
         style 36 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        37["<div style='font-weight: bold'>Addons bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/addon_bridge_client.py + daemon/adapters/*]</div><div style='font-size: 80%; margin-top:10px'>Receives slide events,<br />slides_viewed deltas, and IDE<br />file-open events from<br />victor-macos-addons, and<br />forwards emoji/session<br />notifications back.</div>"]
+        37["<div style='font-weight: bold'>Addons bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/addon_bridge_client.py + daemon/adapters/*]</div><div style='font-size: 80%; margin-top:10px'>Receives slide events,<br />slides_viewed deltas, and IDE<br />file-open events from<br />victor-mac, and<br />forwards emoji/session<br />notifications back.</div>"]
         style 37 fill:#d6e8c8,stroke:#95a28c,color:#10210f
         38["<div style='font-weight: bold'>Opened files linking</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/files_md.py + daemon/github_client.py + daemon/relink_open_files.py]</div><div style='font-size: 80%; margin-top:10px'>Resolves IDE file-open events<br />to GitHub blob links against<br />the branch captured at open<br />time (falling back to the<br />repo default branch), and<br />maintains the opened-files.md<br />artifact; a standalone CLI<br />re-resolves every link before<br />summarization.</div>"]
         style 38 fill:#d6e8c8,stroke:#95a28c,color:#10210f

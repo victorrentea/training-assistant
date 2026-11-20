@@ -5,7 +5,7 @@ During live workshops the trainer (host) and the participants lose each other's 
 - **Direction A — Host → all participants:** the host fires an OS-level notification (with sound) that surfaces on every participant's device even when the session tab is backgrounded, so "we're resuming" actually reaches a distracted, tired audience.
 - **Direction B — Participant → host "bell":** a participant taps a bell in the reaction bar; the daemon logs who rang and forwards it to the always-running macOS overlay app, which plays a sound and shows a persistent card on the trainer's screen — reaching the host even while PowerPoint is fullscreen.
 
-Both directions ride existing transport (the generic Railway `broadcast` relay and the local `ws://127.0.0.1:8765` addons bridge), so **no Railway redeploy is needed** — daemon + static changes hot-deploy on push. The overlay half of Direction B lives in the `victor-macos-addons` repo (change `bell-overlay-card`); the two are linked by the shared `bell_ring` WebSocket contract documented identically in both proposals.
+Both directions ride existing transport (the generic Railway `broadcast` relay and the local `ws://127.0.0.1:8765` addons bridge), so **no Railway redeploy is needed** — daemon + static changes hot-deploy on push. The overlay half of Direction B lives in the `victor-mac` repo (change `bell-overlay-card`); the two are linked by the shared `bell_ring` WebSocket contract documented identically in both proposals.
 
 ## What Changes
 
@@ -35,7 +35,7 @@ The entire attention channel — **both** directions (host→participant OS noti
 - `participant-host-bell`: The participant bell button + `ringBell()` throttle, and the `daemon/bell/router.py` endpoint that resolves the caller's name, logs who + when, and forwards `bell_ring` to the overlay via `send_bell` (plus optional host-browser render). The button appears only while the master gate is on, and the endpoint rejects rings while it is off.
 
 ### Modified Capabilities
-- `addon-overlay-ws-bridge`: Add the new daemon → overlay `bell_ring` message to the existing addons bridge protocol (the `send_bell` sender on `AddonBridgeClient` and the `docs/addons-ws.yaml` entry). This is the training-assistant side of the shared contract; the overlay side lives in `victor-macos-addons` change `bell-overlay-card`.
+- `addon-overlay-ws-bridge`: Add the new daemon → overlay `bell_ring` message to the existing addons bridge protocol (the `send_bell` sender on `AddonBridgeClient` and the `docs/addons-ws.yaml` entry). This is the training-assistant side of the shared contract; the overlay side lives in `victor-mac` change `bell-overlay-card`.
 
 ## Impact
 
@@ -43,7 +43,7 @@ The entire attention channel — **both** directions (host→participant OS noti
 - **Backend (`daemon/`):** new `daemon/bell/router.py` (`/api/participant/bell`), mounted in `daemon/host_server.py` next to the emoji routers (~`app.include_router(emoji_participant_router)`), gated on `attention_enabled`; new `HostNotificationMsg` in `daemon/ws_messages.py` + registration in `PARTICIPANT_MESSAGES`; a new host endpoint that calls `broadcast(...)` (`daemon/ws_publish.py`), refused when `attention_enabled` is off; a new `send_bell(caller_name)` method + module-level wrapper in `daemon/addon_bridge_client.py` (next to `send_emoji`); name resolution via `participant_state.participant_names` (`daemon/participant/state.py`); logging via `daemon/log.py`.
 - **Frontend (`static/`):** `static/participant.html` — pinned permission indicator (fixed bar like `#reconnect-giveup` or appended to `#floating-reactions`), bell button in `#emoji-main-bar`, `ringBell()` mirroring `sendEmoji`, and the `case 'host_notification':` receipt in `_handleWsMessage` with a sound + in-page toast fallback — all gated on the broadcast `attention_enabled` flag; `static/host.html` / `static/host.js` — the notification text input + Send button, and the `#attention-master-badge` master toggle.
 - **Docs:** `docs/addons-ws.yaml` gains the `bell_ring` subscribe message; regenerate `docs/openapi.yaml` and then `API.md` via `python3 scripts/generate_apis_md.py --output API.md` (never hand-edit `API.md`); record in `backlog.md`.
-- **Cross-repo:** the overlay behaviour (sound + persistent bottom-left card "🔔 [Name] is calling you") is implemented in `victor-macos-addons` change `bell-overlay-card`; both proposals document the `bell_ring` contract identically.
+- **Cross-repo:** the overlay behaviour (sound + persistent bottom-left card "🔔 [Name] is calling you") is implemented in `victor-mac` change `bell-overlay-card`; both proposals document the `bell_ring` contract identically.
 - **Cross-change dependency:** the bell card shows the caller's **real name**, which depends on the `participant-real-names` change. Until real names exist, `send_bell` forwards whatever name the participant currently has (fictional/assigned).
 - **No Railway deploy:** new participant message types ride the generic `broadcast` envelope and new `/api/participant/*` endpoints ride the catch-all proxy; both hot-deploy via the daemon on push to `master`.
 
@@ -53,4 +53,4 @@ The entire attention channel — **both** directions (host→participant OS noti
 - **No individual targeting** of host notifications — broadcast to all in phase 1; targeting a single participant is a later stage.
 - **No structured event log / DB** for bell events — "who rang" goes to `logs/daemon.log`, matching the emoji precedent; there is no new persistence.
 - **No per-participant enablement.** The master gate is a single session-wide flag (like `emoji_global_enabled`); the host cannot enable the feature for a subset of participants. (Per-participant targeting of host notifications is separately a later stage, above.)
-- **No Swift overlay change.** The overlay side (`victor-macos-addons`, already merged) needs no rework for the gate: when the feature is disabled the daemon simply never sends `bell_ring`, so the overlay is inherently inert. Do not re-touch the addons repo for this.
+- **No Swift overlay change.** The overlay side (`victor-mac`, already merged) needs no rework for the gate: when the feature is disabled the daemon simply never sends `bell_ring`, so the overlay is inherently inert. Do not re-touch the addons repo for this.

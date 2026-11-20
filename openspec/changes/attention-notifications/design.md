@@ -62,7 +62,7 @@ New `daemon/bell/router.py` with `participant_router = APIRouter(prefix="/api/pa
 **Alternatives considered:** forwarding only to the overlay (no host render) — kept as the default with host render optional, matching emoji's dual-render; a raw dict endpoint — rejected per the project's Pydantic-contracts rule.
 
 ### 5. Shared `bell_ring` contract (documented identically in both repos)
-This is the single wire contract linking `training-assistant` and `victor-macos-addons`. It is written verbatim below and in the `bell-overlay-card` design in the addons repo.
+This is the single wire contract linking `training-assistant` and `victor-mac`. It is written verbatim below and in the `bell-overlay-card` design in the addons repo.
 
 ```
 Message:    bell_ring
@@ -118,7 +118,7 @@ The whole capability (both directions) is gated behind one session-wide flag, `a
 
 **Permission affordance is gated too.** The pinned indicator only presents/activates its `Notification.requestPermission()` affordance when `attention_enabled` is on — there is no point prompting for OS-notification permission the host never uses.
 
-**Swift overlay unaffected.** The overlay side (`victor-macos-addons`, `bell-overlay-card`, already merged) needs no change for this gate: when the feature is disabled the daemon never sends `bell_ring`, so the overlay is inherently inert. No one should re-touch the addons repo for this.
+**Swift overlay unaffected.** The overlay side (`victor-mac`, `bell-overlay-card`, already merged) needs no change for this gate: when the feature is disabled the daemon never sends `bell_ring`, so the overlay is inherently inert. No one should re-touch the addons repo for this.
 
 **Alternatives considered:** defaulting ON like the emoji switch — rejected because the product requirement is explicit opt-in per session (the host decides when the audience may ring / be notified). A host-only flag with no participant broadcast (exact emoji parity) — rejected because participants must see the bell appear/disappear the instant the host toggles, without reloading.
 
@@ -144,7 +144,7 @@ Direction A's entire value is reaching a participant whose tab is **backgrounded
 - **Additive only.** New message types (`AttentionEnabledMsg`, `HostNotificationMsg`, optional `BellRungMsg`), a new `attention_enabled` flag on `ParticipantState` (default OFF), a new host toggle endpoint `POST /api/{session_id}/host/attention/global-toggle`, a new `/api/participant/bell` endpoint, a new host notification endpoint, a new `send_bell` bridge method, a new `bell_ring` entry in `docs/addons-ws.yaml`. No existing contract changes; `attention_enabled` is a new persisted state field that defaults OFF, so existing sessions restore to OFF (safe default).
 - **No Railway redeploy.** Participant messages ride the `broadcast` envelope; `/api/participant/*` rides the catch-all proxy; `static/` + `daemon/` hot-deploy on push to `master` (daemon `static_sync` + in-process reload).
 - **Docs.** Regenerate `docs/openapi.yaml` and any WS YAMLs, then `API.md` via `python3 scripts/generate_apis_md.py --output API.md` (never hand-edit `API.md`). Record in `backlog.md`.
-- **Cross-repo coordination.** The overlay must handle `bell_ring` (change `bell-overlay-card` in `victor-macos-addons`). Until it does, `send_bell` is a harmless no-op on the wire (the overlay logs & ignores unknown types). Ship order is independent; the daemon side degrades gracefully.
+- **Cross-repo coordination.** The overlay must handle `bell_ring` (change `bell-overlay-card` in `victor-mac`). Until it does, `send_bell` is a harmless no-op on the wire (the overlay logs & ignores unknown types). Ship order is independent; the daemon side degrades gracefully.
 - **Rollback.** Revert the change dir + remove the new routers/message/sender + the `docs/addons-ws.yaml` entry. No persisted state to unwind.
 
 ## Open Questions

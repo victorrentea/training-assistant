@@ -15,7 +15,7 @@ from pathlib import Path
 
 _NORMALIZED_FILE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-transcription\.txt$", re.IGNORECASE)
 _LINE_RE = re.compile(r"^\[(\d{2}):(\d{2})\]\s*(.*)$")
-_DEFAULT_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-macos-addons/addons-output"))
+_DEFAULT_FOLDER = Path(os.environ.get("TRANSCRIPTION_FOLDER", "/Users/victorrentea/workspace/victor-mac/addons-output"))
 
 
 @dataclass

@@ -38,7 +38,7 @@ System(codesearch, "code-search", $descr="Semantic duplicate detection CLI (Olla
 System(agentichow, "agentic.how", $descr="Workshop landing page on cPanel.", $tags="", $link="")
 System(agenticwiki, "agentic-wiki", $descr="LLM wiki published with Quartz.", $tags="", $link="")
 System(victorrentearo, "victorrentea.ro", $descr="Personal static site.", $tags="", $link="")
-System(victormacosaddons, "victor-macos-addons", $descr="Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications.", $tags="", $link="")
+System(victormacosaddons, "victor-mac", $descr="Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications.", $tags="", $link="")
 
 Rel(victorvibeboard, victormacosaddons, "HTTP :55123. Tablet-initiated in every case -- the Mac never dials the tablet. First transport that answers: adb reverse (USB) -> LAN -> mDNS Victor-Mac.local -> WSS relay wss://interact.victorrentea.ro/ws/bridge/tablet", $techn="", $tags="", $link="")
 Rel(victorvibeboard, victormacosaddons, "GET /ping every 5s carrying soundsHash / tilesHash / effectsHash / usageHash -- the change detector every other pull hangs off", $techn="", $tags="", $link="")

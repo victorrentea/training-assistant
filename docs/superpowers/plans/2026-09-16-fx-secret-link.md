@@ -122,8 +122,8 @@ git push
 The daemon must reach Effects through the one door it already knows, `:55123`, so it also gets the merged `/ping` that reports `effectsUp`.
 
 **Files:**
-- Modify: `/Users/victorrentea/workspace/victor-macos-addons/Sources/VictorAddons/TabletHttpServer.swift` (the `proxiedPrefixes` array, around line 640)
-- Test: `/Users/victorrentea/workspace/victor-macos-addons/Tests/VictorAddonsTests/EffectsProxyRoutingTests.swift`
+- Modify: `/Users/victorrentea/workspace/victor-mac/Sources/VictorAddons/TabletHttpServer.swift` (the `proxiedPrefixes` array, around line 640)
+- Test: `/Users/victorrentea/workspace/victor-mac/Tests/VictorAddonsTests/EffectsProxyRoutingTests.swift`
 
 **Interfaces:**
 - Consumes: `GET /press/<n>` on 55124 from Task 1.
@@ -151,7 +151,7 @@ Append to `EffectsProxyRoutingTests.swift`:
 - [ ] **Step 2: Run the test to verify it fails**
 
 ```bash
-cd /Users/victorrentea/workspace/victor-macos-addons && swift test --filter EffectsProxyRoutingTests
+cd /Users/victorrentea/workspace/victor-mac && swift test --filter EffectsProxyRoutingTests
 ```
 
 Expected: FAIL — `testTilePressIsForwardedToTheEffectsApp` gets `false`.
@@ -177,7 +177,7 @@ In `TabletHttpServer.proxiedPrefixes`, add `"/press/"` with a comment:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 ```bash
-cd /Users/victorrentea/workspace/victor-macos-addons && swift test --filter EffectsProxyRoutingTests
+cd /Users/victorrentea/workspace/victor-mac && swift test --filter EffectsProxyRoutingTests
 ```
 
 Expected: PASS.
@@ -185,7 +185,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/victorrentea/workspace/victor-macos-addons
+cd /Users/victorrentea/workspace/victor-mac
 git add Sources/VictorAddons/TabletHttpServer.swift Tests/VictorAddonsTests/EffectsProxyRoutingTests.swift
 git commit -m "Forward /press/<n> to the effects app
 
@@ -2289,7 +2289,7 @@ Append to `backlog.md`:
   gives them one button that presses a soundboard tile on the Mac (default #69,
   the wazzup ghost). Two brakes: a master switch that is off at the start of
   every session, and a server-side cooldown. Spans three repos — `/press/<n>` in
-  victor-effects, one proxy prefix in victor-macos-addons, and `daemon/fx/` +
+  victor-effects, one proxy prefix in victor-mac, and `daemon/fx/` +
   `railway/features/fx/` here.
 ```
 
@@ -2331,7 +2331,7 @@ Expected: PASS. Investigate any failure before continuing; do not proceed on red
 
 ```bash
 cd /Users/victorrentea/workspace/victor-effects && swift build -c release
-cd /Users/victorrentea/workspace/victor-macos-addons && ./build-app.sh
+cd /Users/victorrentea/workspace/victor-mac && ./build-app.sh
 pkill -f "Victor Addons"; open "/Applications/Victor Addons.app"
 ```
 
@@ -2379,7 +2379,7 @@ Summarise for the user: the URL, which tile it is bound to, how to change it, ho
 
 ## Self-Review
 
-**Spec coverage** — every section of the spec maps to a task: victor-effects → 1; victor-macos-addons → 2; `effects_client` → 3; state → 4; participant endpoints + `FxFiredMsg` + the page file → 5; host endpoints → 6; `static/fx.html` → 7; host UI → 8; Railway relay → 9; docs/contracts → 10; testing and deployment order → 11. The spec's security requirements are each pinned by a test: `compare_digest` and the flat 404 (Task 5), integer-only presses (Tasks 3 and 5), the path alphabet (Task 9), both brakes (Tasks 5 and 6).
+**Spec coverage** — every section of the spec maps to a task: victor-effects → 1; victor-mac → 2; `effects_client` → 3; state → 4; participant endpoints + `FxFiredMsg` + the page file → 5; host endpoints → 6; `static/fx.html` → 7; host UI → 8; Railway relay → 9; docs/contracts → 10; testing and deployment order → 11. The spec's security requirements are each pinned by a test: `compare_digest` and the flat 404 (Task 5), integer-only presses (Tasks 3 and 5), the path alphabet (Task 9), both brakes (Tasks 5 and 6).
 
 **Deviations from the spec, deliberate:**
 - The spec left the `POST /test` cooldown behaviour to "neither consumes nor observes"; Task 6 pins that with three tests, including that it does not take the lever away from someone holding the link.
