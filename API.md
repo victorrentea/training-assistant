@@ -129,6 +129,8 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | --- | --- | --- |
 | Get Slides Compilation, compile all viewed slide pages into one PDF and return as a download; long-running: may trigger Railway to download PDFs from Google Drive first; progress is logged to the daemon log.<br>`GET /api/{session_id}/host/slides-compilation` | - | `any` |
 | Clear Shown Slides, host wipes the shown slides so the audience starts clean; resets the current slide and the slide history; connected phones drop every slide on screen, and one joining afterwards waits for the next slide.<br>`POST /api/{session_id}/host/slides/clear` | - | `ok?: bool` |
+| Clear Seen Slides, empty the session's "Seen slides" deck only, leaving the rest of the shown-slides state alone; loopback only.<br>`DELETE /api/{session_id}/host/slides/seen` | - | `ok?: bool` |
+| Report Slide Seen, loopback only.<br>`POST /api/{session_id}/host/slides/seen` | `path: string`<br>`slide_id: int`<br>`slide?: int`<br>`deck?: string` | `ok?: bool` |
 
 ### Host WS
 | Message | Payload |

@@ -42,3 +42,20 @@ def test_clear_slides_resets_state_and_broadcasts():
 
 def test_slides_cleared_msg_type():
     assert SlidesClearedMsg().model_dump() == {"type": "slides_cleared"}
+
+
+def test_a_slide_can_be_reported_seen_by_hand_but_not_through_the_proxy():
+    from daemon.proxy_handler import RAILWAY_PROXY_MARKER
+
+    body = {"path": "/d/talk.pptx", "slide_id": 256, "slide": 3}
+    with patch("daemon.slides.seen_slides.submit") as submit:
+        assert _client().post("/api/cur/host/slides/seen", json=body).status_code == 200
+        refused = _client().post("/api/cur/host/slides/seen", json=body, headers={RAILWAY_PROXY_MARKER: "1"})
+    assert refused.status_code == 403
+    submit.assert_called_once_with({"phase": "qualified", "path": "/d/talk.pptx", "slide_id": 256, "slide": 3, "deck": ""})
+
+
+def test_the_seen_deck_alone_can_be_emptied():
+    with patch("daemon.slides.seen_slides.service") as service:
+        assert _client().delete("/api/cur/host/slides/seen").status_code == 200
+    service.return_value.clear.assert_called_once()

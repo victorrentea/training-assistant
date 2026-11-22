@@ -385,6 +385,39 @@ async def clear_shown_slides():
     return SlidesClearedResponse()
 
 
+class SlideSeenRequest(BaseModel):
+    path: str
+    slide_id: int
+    slide: int = 0
+    deck: str = ""
+
+
+@host_router.post("/slides/seen", response_model=SlidesClearedResponse)
+async def report_slide_seen(request: Request, body: SlideSeenRequest):
+    """Report a slide as shown, as Victor Mac's `slide_seen` does — to replay or try
+    the "Seen slides" deck by hand. Loopback only."""
+    from daemon.proxy_handler import RAILWAY_PROXY_MARKER
+    from daemon.slides import seen_slides
+
+    if request.headers.get(RAILWAY_PROXY_MARKER):
+        return JSONResponse({"error": "Not available through the proxy"}, status_code=403)
+    seen_slides.submit({"phase": "qualified", **body.model_dump()})
+    return SlidesClearedResponse()
+
+
+@host_router.delete("/slides/seen", response_model=SlidesClearedResponse)
+async def clear_seen_slides(request: Request):
+    """Empty the session's "Seen slides" deck only, leaving the rest of the shown-slides
+    state alone. Loopback only."""
+    from daemon.proxy_handler import RAILWAY_PROXY_MARKER
+    from daemon.slides import seen_slides
+
+    if request.headers.get(RAILWAY_PROXY_MARKER):
+        return JSONResponse({"error": "Not available through the proxy"}, status_code=403)
+    seen_slides.service().clear()
+    return SlidesClearedResponse()
+
+
 @host_router.get("/pastes", response_model=PastsResponse)
 async def get_pastes():
     """Return all pending paste entries grouped by participant uuid."""
