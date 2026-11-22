@@ -6058,9 +6058,15 @@ function _setDuplicateIndicator(isDup) {
       hasNotes: state.notes_updated_at,
       hasSummary: state.summary_updated_at,
     });
-    if (saved === 'past-slides') {
+    if (saved === 'past-slides' && _seenSlides && Number(_seenSlides.count || 0)) {
+      // Follow off and the seen deck claimed first, so Slides does not start loading the
+      // trainer's deck (or the last one read) and swap it in over this one.
+      _setSlidesFollowCb(false);
+      LS.setFollow(false);
+      openSeenSlides();
       showView('slides');
-      if (_seenSlides && Number(_seenSlides.count || 0)) openSeenSlides(); else _setTabUrl('slides');
+    } else if (saved === 'past-slides') {
+      showView('slides');
     } else {
       showView(saved);
     }

@@ -9,6 +9,7 @@ WebSocket mocked, so no server or daemon is involved.
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -37,8 +38,9 @@ def _state(seen_count: int) -> dict:
 
 
 class _Participant:
-    def __init__(self, browser, seen_count: int):
+    def __init__(self, browser, seen_count: int, slow_deck: bool = False):
         self.seen_count = seen_count
+        self.slow_deck = slow_deck
         self.sockets = []
         self.downloads: list[str] = []
         self.ctx = browser.new_context(viewport={"width": 1280, "height": 800})
@@ -57,7 +59,7 @@ class _Participant:
                 return route.fulfill(status=404, body="")
             ct = "text/css" if f.suffix == ".css" else "application/javascript"
             return route.fulfill(body=f.read_bytes(), content_type=ct)
-        if path in (f"/{SID}", f"/{SID}/"):
+        if path in (f"/{SID}", f"/{SID}/", f"/{SID}/past-slides"):
             return route.fulfill(body=(REPO / "static" / "participant.html").read_bytes(), content_type="text/html")
         if path == f"/{SID}/api/participant/state":
             return route.fulfill(json=_state(self.seen_count))
@@ -71,6 +73,8 @@ class _Participant:
             self.downloads.append(SEEN)
             return route.fulfill(body=_minimal_pdf(self.seen_count, "Seen"), content_type="application/pdf")
         if path.startswith(f"/{SID}/api/slides/download/"):
+            if self.slow_deck:  # the trainer's real deck is ~8 MB: it arrives last
+                time.sleep(1.5)
             return route.fulfill(body=_minimal_pdf(20, "Deck"), content_type="application/pdf")
         if path.startswith(f"/{SID}/api/slides/check/"):
             return route.fulfill(json={"status": "cached"})
@@ -107,7 +111,7 @@ def test_seen_slides_open_at_the_last_page_and_grow_live(participant):
     pax = participant(seen_count=3)
     pax.page.goto(f"{ORIGIN}/{SID}?as=Alice")
     pax.page.wait_for_function("() => typeof window.loadPdf === 'function'", timeout=15000)
-    assert pax.page.locator("#seen-slides-badge").inner_text() == "3"
+    pax.page.wait_for_function("() => document.getElementById('seen-slides-badge').textContent === '3'", timeout=15000)
 
     pax.page.locator("#seen-slides-nav").click()
 
@@ -136,9 +140,23 @@ def test_seen_slides_open_at_the_last_page_and_grow_live(participant):
 def test_without_slides_shown_the_entry_says_so(participant):
     pax = participant(seen_count=0)
     pax.page.goto(f"{ORIGIN}/{SID}?as=Alice")
-    pax.page.wait_for_function("() => typeof window.loadPdf === 'function'", timeout=15000)
+    pax.page.wait_for_function("() => typeof window.loadPdf === 'function' && typeof _seenSlides !== 'undefined'"
+                               " && !!_seenSlides", timeout=15000)
     assert not pax.page.locator("#seen-slides-badge").is_visible()
 
     pax.page.locator("#seen-slides-nav").click()
 
     assert pax.downloads == []
+
+
+def test_the_past_slides_link_opens_the_seen_deck_not_the_trainers(participant):
+    """A first visit follows the trainer by default; landing on /past-slides must not let
+    his deck load and swap in over the seen one."""
+    pax = participant(seen_count=3, slow_deck=True)
+    pax.page.goto(f"{ORIGIN}/{SID}/past-slides?as=Alice")
+
+    pax.page.wait_for_function(f"() => window.Slides && window.Slides.front.slug === '{SEEN}'", timeout=15000)
+    pax.wait_page("3 / 3")
+    pax.page.wait_for_timeout(1500)  # no late swap to the trainer's deck
+    assert pax.page.evaluate("() => window.Slides.front.slug") == SEEN
+    assert pax.page.evaluate("() => location.pathname") == f"/{SID}/past-slides"
