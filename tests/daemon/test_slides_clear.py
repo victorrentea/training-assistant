@@ -6,7 +6,7 @@ from starlette.testclient import TestClient
 
 from daemon.misc.router import host_router
 from daemon.misc.state import misc_state
-from daemon.ws_messages import SlidesClearedMsg, SlidesHistoryCountUpdatedMsg
+from daemon.ws_messages import SlidesClearedMsg
 
 
 def _client() -> TestClient:
@@ -21,7 +21,8 @@ def test_clear_slides_resets_state_and_broadcasts():
     misc_state.slide_timeline = [{"slug": "talk", "page": 7, "seconds": 30, "at": "x"}]
     misc_state.slides_cleared = False
     try:
-        with patch("daemon.misc.router.broadcast") as broadcast:
+        with patch("daemon.misc.router.broadcast") as broadcast, \
+             patch("daemon.slides.seen_slides.service") as seen:
             resp = _client().post("/api/cur/host/slides/clear")
         assert resp.status_code == 200
         assert resp.json() == {"ok": True}
@@ -31,7 +32,7 @@ def test_clear_slides_resets_state_and_broadcasts():
         assert misc_state.slides_cleared is True
         sent = [c.args[0] for c in broadcast.call_args_list]
         assert any(isinstance(m, SlidesClearedMsg) for m in sent)
-        assert any(isinstance(m, SlidesHistoryCountUpdatedMsg) and m.count == 0 for m in sent)
+        seen.return_value.clear.assert_called_once()  # the "Seen slides" deck starts again too
     finally:
         misc_state.current_slide = None
         misc_state.slides_viewed = []

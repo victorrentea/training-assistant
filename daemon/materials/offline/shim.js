@@ -109,7 +109,8 @@
     window._showAccessToast = function () {}
     window._applyGdriveToast = function () {}
     window.loadSlidesCatalog = function () { decksMenu(); return Promise.resolve() }
-    window._setPastSlidesBadge = function () {}
+    // "Seen slides" is one of the linked decks in this copy (offline/offline.css hides the live row).
+    window._applySeenSlides = function () {}
     // The row blinks until the zip is taken; whoever reads this copy already has it.
     window._applyZipReminder = function () {}
     // "Download all" has no zip to build any more: it opens the Drive folder instead.

@@ -20,7 +20,7 @@ BADGE_MESSAGE_TYPES = [
     "notes_updated",
     "summary_updated",
     "agenda_updated",
-    "slides_history_updated",
+    "slides_seen_updated",
     "files_count_updated",
     "active_participants_count_updated",
 ]

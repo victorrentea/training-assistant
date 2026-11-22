@@ -15,6 +15,13 @@ Protocol:
               — pushed on every PowerPoint slide/deck change (no message when unchanged),
                 and once more with "frontmost": true when PowerPoint comes to the front
                 (talk phones switch from the trainer's notes back to the slides)
+  Addons → Daemon: {"type": "slide_seen", "phase": "qualified"|"closed", "path": "<abs .pptx>",
+                    "deck": "<name>", "slide_id": <n>, "slide": <n>, "at": "<ISO 8601>"}
+              — a slide stayed 7 s with PowerPoint in front (qualified), or was left (closed);
+                the deck is saved on disk by then (daemon/slides/seen_slides.py)
+  Daemon → Addons: {"type": "slide_seen_captured", "deck": "<name>", "slide": <n>, "change": "added"|"updated"}
+              — the session's seen deck took a new slide or a new version of one: a brief
+                toast on the trainer's screen, so a capture outside class hours is noticed
   Addons → Daemon: {"type": "slides_viewed", "slides": [{"fileName": "<name>", "page": <n>, "seconds": <n>}, ...]}
               — periodic (60s) delta of per-slide viewing durations
   On connect:  server immediately sends the last known slide state as a welcome message.
@@ -167,6 +174,13 @@ class AddonBridgeClient:
         msg = {"type": "fx_fired", "caller": caller, "anonymous": anonymous}
         return self._send(msg)
 
+    def send_slide_seen_captured(self, deck: str, slide: int, change: str) -> bool:
+        """The session's seen deck changed: Victor Mac shows a passing toast."""
+        sent = self._send({"type": "slide_seen_captured", "deck": deck, "slide": slide, "change": change})
+        if sent:
+            log.info(_NAME, f"→ slide_seen_captured: {deck} #{slide} {change}")
+        return sent
+
     def send_pdf_export_alarm(self, deck: str, slug: str, failing: bool, detail: str = "") -> bool:
         """Raise (failing=True) or clear (failing=False) the macOS 'PDF export
         failing' alarm for a deck. Best-effort; never raises.
@@ -284,6 +298,9 @@ class AddonBridgeClient:
                 if data.get("type") == "slide_presenting_now":
                     self._slide_queue.put(data)
                     self.slide_wakeup.set()
+                elif data.get("type") == "slide_seen":
+                    from daemon.slides import seen_slides
+                    seen_slides.submit(data)
                 elif data.get("type") == "slides_viewed":
                     slides = data.get("slides", [])
                     if slides:
@@ -351,6 +368,11 @@ def send_session_started(
 def send_session_ended() -> bool:
     """Best-effort session_ended message to addons. Returns True if sent."""
     return _client is not None and _client.send_session_ended()
+
+
+def send_slide_seen_captured(deck: str, slide: int, change: str) -> bool:
+    """Best-effort slide_seen_captured message to addons. Returns True if sent."""
+    return _client is not None and _client.send_slide_seen_captured(deck, slide, change)
 
 
 def send_pdf_export_alarm(deck: str, slug: str, failing: bool, detail: str = "") -> bool:

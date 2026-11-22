@@ -47,7 +47,7 @@ def _state(host_page: int) -> dict:
         "qa_questions": [], "quiz": None, "quiz_active": False, "poll": None, "poll_active": False,
         "codereview": {}, "debate": {}, "emoji_counters": {},
         "slides_current": {"slug": "deck", "page": host_page},
-        "slides_history_count": 0, "files_count": 0, "prompts_count": 0, "emoji_catalog": [],
+        "slides_seen": None, "files_count": 0, "prompts_count": 0, "emoji_catalog": [],
     }
 
 

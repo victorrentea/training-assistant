@@ -198,7 +198,10 @@ class DaemonWsClient:
                     _label = _labels.get(_event, _event)
                     _arrow = "↓" if _event.endswith("_completed") else "↑"
                     log.info("railway", f"{_arrow} {_label}: {_slug}")
-                    if _event == "download_slide_completed" and _full_slug:
+                    from daemon.slides.seen_slides import is_seen_slug
+                    if is_seen_slug(_full_slug):
+                        pass  # the "Seen slides" deck: seen_slides.py broadcasts it itself
+                    elif _event == "download_slide_completed" and _full_slug:
                         from daemon.misc.state import misc_state
                         from daemon.slides.router import _broadcast_slides_updated
                         from daemon.telemetry.ws_propagation import extract_trace_context

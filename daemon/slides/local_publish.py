@@ -116,29 +116,56 @@ def _send_whole_deck(slug: str, deck: Path) -> str:
 
 def publish(slug: str, source: Path) -> bool:
     """True once Railway holds the saved deck as PowerPoint prints it."""
+    return _guarded(slug, source, upload=True)
+
+
+def print_locally(key: str, source: Path) -> bool:
+    """The same print into `deck.pdf` under `key`, without sending it anywhere: for the
+    seen slides of a deck that is not in the slides catalog (seen_slides.py)."""
+    return _guarded(key, source, upload=False)
+
+
+def page_of(key: str, slide_id: str, digest: str) -> tuple[Path, int] | None:
+    """The printed deck and the 0-based page holding this version of the slide, if the
+    last print has it."""
+    state = _load(key)
+    deck = _folder(key) / "deck.pdf"
+    if state is None or not deck.exists():
+        return None
+    for index, (printed_id, printed_digest) in enumerate(state.fingerprint.slides):
+        if printed_id == slide_id:
+            return (deck, index) if printed_digest == digest else None
+    return None
+
+
+def _guarded(slug: str, source: Path, upload: bool) -> bool:
     if not pdf_printer.supported():
         return False
     try:
         with _lock:
-            return _publish(slug, source)
+            done = _publish(slug, source, upload)
     except Exception as exc:  # noqa: BLE001 — whatever fails, Google's PDF is still there
         log.error("slides", f"Local print failed for slug={slug}, falling back to Google Drive: {exc}")
         return False
+    if done:
+        from daemon.slides import seen_slides  # pages of slides shown meanwhile may be here now
+        seen_slides.wake()
+    return done
 
 
-def _publish(slug: str, source: Path) -> bool:
+def _publish(slug: str, source: Path, upload: bool = True) -> bool:
     decks, slide_show = pdf_printer.open_decks()
     if source.name not in decks or slide_show:
         return False
     try:
-        return _print_and_send(slug, source)
+        return _print_and_send(slug, source, upload)
     finally:
         # Only the deck and its state are kept between saves.
         for leftover in ("printed.pdf", "cropped.pdf", "pages.pdf", "deck.new.pdf"):
             (_folder(slug) / leftover).unlink(missing_ok=True)
 
 
-def _print_and_send(slug: str, source: Path) -> bool:
+def _print_and_send(slug: str, source: Path, upload: bool = True) -> bool:
 
     folder = _folder(slug)
     folder.mkdir(parents=True, exist_ok=True)
@@ -160,6 +187,9 @@ def _print_and_send(slug: str, source: Path) -> bool:
         merged = folder / "deck.new.pdf"
         pdf_pages.replace_pages(deck, pages, changed, merged)
         os.replace(merged, deck)
+        if not upload:
+            _save(slug, PublishedDeck(fingerprint=after, box=state.box, railway_sha256=state.railway_sha256))
+            return True
         try:
             answer = _post(
                 f"/api/slides/pages/{slug}",
@@ -187,6 +217,6 @@ def _print_and_send(slug: str, source: Path) -> bool:
     fresh = folder / "deck.new.pdf"
     pdf_pages.compress(cropped, fresh, count)
     os.replace(fresh, deck)
-    sha = _send_whole_deck(slug, deck)
+    sha = _send_whole_deck(slug, deck) if upload else ""
     _save(slug, PublishedDeck(fingerprint=after, box=box, railway_sha256=sha))
     return True

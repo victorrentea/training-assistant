@@ -36,7 +36,9 @@ from daemon.participant.sanitize import (
 )
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
+from daemon.slides import seen_slides
 from daemon.slides.models import CurrentSlide
+from daemon.slides.seen_slides import SeenDeckState
 from daemon.throttle import LoopThrottle
 from daemon.wiki import stars as wiki_stars
 from daemon.wiki.publisher import published_notes, wiki_updated_at
@@ -353,7 +355,8 @@ class ParticipantStateResponse(BaseModel):
     # opens them) and whether he presents from the slides or the notes.
     talk_notes: TalkNotesMsg | None = None
     presenter_view: str = "slides"
-    slides_history_count: int
+    # The session's "Seen slides" deck (daemon/slides/seen_slides.py); None without a session
+    slides_seen: SeenDeckState | None = None
     files_count: int = 0
     prompts_count: int = 0
     gdrive_url: str | None = None
@@ -362,6 +365,12 @@ class ParticipantStateResponse(BaseModel):
     emoji_catalog: list[EmojiDef]
     # Attention master switch — drives the bell button + notification affordance.
     attention_enabled: bool = False
+
+
+def _seen_slides_state() -> dict | None:
+    """The session's "Seen slides" deck, for a participant's first load."""
+    state = seen_slides.service().state()
+    return state.model_dump() if state else None
 
 
 def _files_count() -> int:
@@ -1039,7 +1048,7 @@ async def get_participant_state(request: Request):
         # Talk mode: the notes on screen in VS Code, and slides vs notes
         "talk_notes": misc_state.talk_notes if ps.mode == "talk" else None,
         "presenter_view": misc_state.presenter_view,
-        "slides_history_count": len(misc_state.slides_viewed),
+        "slides_seen": _seen_slides_state(),
         # Files opened this session (count only — full list fetched on demand)
         "files_count": _files_count(),
         # Agent prompts intercepted this session (count only — texts fetched on demand)

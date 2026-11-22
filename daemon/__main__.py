@@ -1047,8 +1047,6 @@ def run() -> None:
         else:
             session_shared_state.set_feedback_url(None)
 
-    _prev_slides_history_count = len(misc_state.slides_viewed)
-
     notes_summary_probe_prev: dict | None = _build_notes_summary_probe(config.session_folder)
     runtime_session_snapshot: dict | None = _without_session_id(startup_session_state) if startup_session_state else None
     last_persist_poll_at: float = 0.0
@@ -1099,6 +1097,10 @@ def run() -> None:
 
     # Re-probe Railway slide cache on every (re)connect (e.g. after Railway redeploy)
     ws_client.on_connect(slides_runner.probe_railway_cache)
+    # The "Seen slides" deck lives in Railway's slides cache, lost on its restarts.
+    from daemon.slides import seen_slides
+    seen_slides.start()
+    ws_client.on_connect(lambda: seen_slides.service().reupload())
 
     # Session wiki: the summarizer's wiki/ vault, built with Quartz and served by
     # Railway. Rebuilt only when the vault changes; re-sent (not rebuilt) on reconnect.
@@ -1184,12 +1186,6 @@ def run() -> None:
                     misc_state.slides_viewed, _sv_batch, _slug_map,
                     timeline=misc_state.slide_timeline,
                 )
-            _slides_history_count_after = len(misc_state.slides_viewed)
-            if _slides_history_count_after != _prev_slides_history_count:
-                from daemon.ws_messages import SlidesHistoryCountUpdatedMsg
-                ws_publish.broadcast(SlidesHistoryCountUpdatedMsg(count=_slides_history_count_after))
-                _prev_slides_history_count = _slides_history_count_after
-
             # ── Push overlay_connected state change to host ──
             _curr_overlay = _bridge.connected
             if _curr_overlay != _prev_overlay_connected:

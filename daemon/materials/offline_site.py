@@ -55,7 +55,7 @@ _LIVE_STATE = {
     "summary_scroll": None,
     "wiki_note": None,
     "attention_enabled": False,
-    "slides_history_count": 0,
+    "slides_seen": None,
     "my_name": "",
     "my_score": 0,
     "my_score_token": "",

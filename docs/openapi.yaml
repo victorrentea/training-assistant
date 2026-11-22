@@ -1299,21 +1299,6 @@ paths:
       x-doc-notes:
       - Returns cache status snapshot for all known decks on initial page load; decks_updated
         WS carries full data so no re-polling needed.
-  /api/participant/slides/history:
-    get:
-      tags:
-      - misc
-      summary: Get Slides History
-      description: Return accumulated slide viewing history for the current session.
-      operationId: get_slides_history_api_participant_slides_history_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SlidesHistoryResponse'
-      x-feature: slides
   /api/participant/agenda:
     get:
       tags:
@@ -4252,9 +4237,10 @@ components:
           type: string
           title: Presenter View
           default: slides
-        slides_history_count:
-          type: integer
-          title: Slides History Count
+        slides_seen:
+          anyOf:
+          - $ref: '#/components/schemas/SeenDeckState'
+          - type: 'null'
         files_count:
           type: integer
           title: Files Count
@@ -4299,7 +4285,6 @@ components:
       - aishare
       - codereview
       - debate
-      - slides_history_count
       - emoji_catalog
       title: ParticipantStateResponse
     PasteEntry:
@@ -4672,6 +4657,25 @@ components:
       - round_index
       - seconds
       title: RoundTimerRequest
+    SeenDeckState:
+      properties:
+        slug:
+          type: string
+          title: Slug
+        count:
+          type: integer
+          title: Count
+        updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Updated At
+      type: object
+      required:
+      - slug
+      - count
+      title: SeenDeckState
+      description: 'What a participant needs to show the deck: in /state and in `slides_seen_updated`.'
     SelectionRequest:
       properties:
         lines:
@@ -4817,39 +4821,6 @@ components:
           default: true
       type: object
       title: SlidesClearedResponse
-    SlidesHistoryResponse:
-      properties:
-        slides_log:
-          items:
-            $ref: '#/components/schemas/SlidesLogEntry'
-          type: array
-          title: Slides Log
-      type: object
-      required:
-      - slides_log
-      title: SlidesHistoryResponse
-    SlidesLogEntry:
-      properties:
-        slug:
-          type: string
-          title: Slug
-        slide:
-          type: integer
-          title: Slide
-        seconds_spent:
-          type: number
-          title: Seconds Spent
-        last_seen_at:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Last Seen At
-      type: object
-      required:
-      - slug
-      - slide
-      - seconds_spent
-      title: SlidesLogEntry
     StartSessionRequest:
       properties:
         name:

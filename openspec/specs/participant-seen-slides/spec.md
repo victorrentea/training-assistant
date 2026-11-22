@@ -1,0 +1,30 @@
+## ADDED Requirements
+
+### Requirement: The session keeps one "Seen slides" deck, each slide in the form it was shown
+While a session is active, the daemon SHALL record every slide Victor Mac reports with a `slide_seen` message (shown 7 s with PowerPoint in front, and again when left; the deck is saved by then). A slide is identified by its deck file and PowerPoint's slide id, and versioned by the per-slide digest of `daemon/slides/pptx_slides.py` (slide XML and linked media, not layouts/theme). Without an active session the message SHALL be ignored.
+
+#### Scenario: A slide shown for the first time
+- **WHEN** a slide not in the session's registry is reported
+- **THEN** it is appended (pages are in order of first showing) and the daemon sends Victor Mac `slide_seen_captured` with `change: "added"`
+
+#### Scenario: The same slide shown again unchanged
+- **WHEN** a slide is reported with the digest already recorded
+- **THEN** nothing changes and no `slide_seen_captured` is sent
+
+#### Scenario: The slide was edited and shown again
+- **WHEN** a slide is reported with a new digest
+- **THEN** its page is replaced in place once printed, and `slide_seen_captured` is sent with `change: "updated"`
+
+#### Scenario: The same content in another deck
+- **WHEN** a slide copied into another deck is shown
+- **THEN** it is recorded as another slide
+
+### Requirement: Pages come from PowerPoint's own print, never printed under the trainer's hands
+A slide's page SHALL be the page of the deck PowerPoint last printed (`local_publish.py`'s `deck.pdf`) when that print holds the shown version. Otherwise the deck SHALL be printed, but only while PowerPoint is not the frontmost app and no slide show runs; decks outside the slides catalog are printed locally without upload. The assembled `seen.pdf` SHALL be stored in Railway's slides cache as slug `seen-slides-<session>` and announced with `slides_seen_updated {slug, count, updated_at}`; it is re-sent on every Railway reconnect.
+
+#### Scenario: PowerPoint in front
+- **WHEN** a shown version has no printed page and PowerPoint is frontmost
+- **THEN** no print starts; the slide waits and is printed once PowerPoint leaves the front
+
+### Requirement: Participants read the deck under "Seen slides"
+The participant sidebar SHALL offer "Seen slides" (badge = page count), opening the deck in the Slides viewer at its last page, with follow turned off. New pages SHALL arrive live: a reader on the last page moves to the new last page, a reader who scrolled back stays. `/<session>/past-slides` SHALL open it. The materials zip SHALL include it as `slides/Slides seen.pdf`, and the offline copy links it as a deck. The host's "Clear slides" SHALL empty it.

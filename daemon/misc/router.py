@@ -30,14 +30,13 @@ from daemon.misc.feedback_form import (
 from daemon.misc.state import misc_state
 from daemon.participant.state import participant_state
 from daemon.session import state as session_shared_state
-from daemon.slides.models import Deck, SlidesHistoryResponse, SlidesLogEntry
+from daemon.slides.models import Deck
 from daemon.summary.highlight import REJECTED, HighlightAnchor, apply_highlight_to_file
 from daemon.summary.loop import AI_SUMMARY_FILE, get_ai_summary_mtime
 from daemon.ws_messages import (
     FeedbackFormUpdatedMsg,
     PasteReceivedMsg,
     SlidesClearedMsg,
-    SlidesHistoryCountUpdatedMsg,
     SummaryScrollMsg,
     SummaryScrollPosition,
     SummaryUpdatedMsg,
@@ -347,16 +346,6 @@ async def get_slides_decks():
     return DecksResponse.model_validate({"decks": _slides_updated_with_titles()})
 
 
-@participant_router.get("/slides/history", response_model=SlidesHistoryResponse)
-async def get_slides_history():
-    """Return accumulated slide viewing history for the current session."""
-    entries = [
-        SlidesLogEntry(slug=sv["slug"], slide=sv["page"], seconds_spent=sv["seconds"], last_seen_at=sv.get("last_seen_at"))
-        for sv in misc_state.slides_viewed
-    ]
-    return SlidesHistoryResponse(slides_log=entries)
-
-
 @participant_router.get("/agenda", response_model=AgendaResponse)
 async def get_agenda():
     """Serve the agenda .docx as base64-encoded JSON (survives WS proxy)."""
@@ -389,7 +378,8 @@ async def clear_shown_slides():
     """
     misc_state.clear_shown_slides()
     broadcast(SlidesClearedMsg())
-    broadcast(SlidesHistoryCountUpdatedMsg(count=0))
+    from daemon.slides import seen_slides
+    seen_slides.service().clear()  # broadcasts the emptied "Seen slides" deck
     from daemon import log
     log.info("slides", "🧹 Shown slides cleared by host")
     return SlidesClearedResponse()

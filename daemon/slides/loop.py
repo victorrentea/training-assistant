@@ -113,6 +113,8 @@ class SlidesRunner:
             slides_daemon.save_daemon_state(cfg.state_file, self._slides_state)
             log.info("slides", "Migrated legacy bare-UUID slugs to human-readable prefixes")
         self._init_misc_state_from_catalog(cfg)
+        from daemon.slides import seen_slides
+        seen_slides.set_catalog_resolver(self.catalog_slug)
         # Run initial PPTX mtime scan so modified_at is available immediately
         self.scan_pptx_mtimes()
 
@@ -156,6 +158,11 @@ class SlidesRunner:
                 pass
             misc_state.slides_updated[slug] = status
         log.info("slides", f"Initialized catalog: {len(catalog_entries)} entries")
+
+    def catalog_slug(self, source: Path) -> str | None:
+        """The slides-catalog slug of a deck file, if it is one of the catalog's decks."""
+        slug = (self._slides_state.get("files", {}).get(_abs_key(source)) or {}).get("slug")
+        return slug if slug and slug in misc_state.slides_catalog else None
 
     def probe_railway_cache(self) -> None:
         """Check Railway cache status for all catalog slugs via HEAD requests.

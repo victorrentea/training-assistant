@@ -47,10 +47,13 @@ class ActiveParticipantsCountUpdatedMsg(BaseModel):
     count: int
 
 
-class SlidesHistoryCountUpdatedMsg(BaseModel):
-    """Participant-only: total number of tracked viewed slides."""
-    type: Literal["slides_history_updated"] = "slides_history_updated"
+class SlidesSeenUpdatedMsg(BaseModel):
+    """Participant-only: the session's "Seen slides" deck changed (daemon/slides/seen_slides.py).
+    The PDF is at /api/slides/download/{slug}; `updated_at` is its version (cache key)."""
+    type: Literal["slides_seen_updated"] = "slides_seen_updated"
+    slug: str
     count: int
+    updated_at: str | None = None
 
 
 class ParticipantListUpdatedMsg(BaseModel):
@@ -746,7 +749,7 @@ PARTICIPANT_MESSAGES: dict[str, type[BaseModel]] = {
     # Identity
     "active_participants_count_updated": ActiveParticipantsCountUpdatedMsg,
     "participant_names_updated": ParticipantNamesUpdatedMsg,
-    "slides_history_updated": SlidesHistoryCountUpdatedMsg,
+    "slides_seen_updated": SlidesSeenUpdatedMsg,
     # Quiz
     "quiz_opened": QuizOpenedMsg,
     "quiz_ended": QuizEndedMsg,
@@ -855,7 +858,7 @@ PARTICIPANT_MESSAGE_FEATURES: dict[str, str] = {
     # Identity
     "active_participants_count_updated": "identity",
     "participant_names_updated": "identity",
-    "slides_history_updated": "slides",
+    "slides_seen_updated": "slides",
     # Quiz
     "quiz_opened": "quiz",
     "quiz_ended": "quiz",

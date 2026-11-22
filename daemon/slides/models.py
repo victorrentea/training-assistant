@@ -24,13 +24,3 @@ class CurrentSlide(BaseModel):
     slug: str
     page: int
 
-
-class SlidesLogEntry(BaseModel):
-    slug: str
-    slide: int
-    seconds_spent: float
-    last_seen_at: str | None = None
-
-
-class SlidesHistoryResponse(BaseModel):
-    slides_log: list[SlidesLogEntry]

@@ -154,7 +154,7 @@ body{visibility:hidden}
 #activity-score-badge{background:#fde047;color:#000}
 @keyframes badge-blink{0%,100%{opacity:1}50%{opacity:0}}
 .badge-blink{animation:badge-blink 0.35s ease-in-out 3}
-#past-slides-badge{background:#9ca3af;transition:background-color 3s ease}
+#seen-slides-badge{background:#9ca3af}
 .pdf-buffer { position: absolute; inset: 0; }
 /* pdf.js text layer — invisible, exactly-positioned copies of the slide's text
    laid over the rendered canvas, so participants can select and copy it.
@@ -1384,18 +1384,12 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 </div>
 </div>
 </div>
-<!-- Past Slides (never active) -->
-<div>
-<a onclick="togglePastSlides()" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
+<!-- Seen slides: the slides the trainer showed this session, as they were on screen -->
+<a id="seen-slides-nav" onclick="openSeenSlides()" data-tip="Every slide shown in this session, as it was on screen" class="nav-item rounded-full px-2 h-10 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined">history</span>
-<span class="inline-flex items-center gap-1">
-<span class="text-base">Past Slides</span>
-<span class="material-symbols-outlined past-slides-arrow text-xl transition-transform duration-300">chevron_right</span>
-</span>
-<span id="past-slides-badge" class="badge-new ml-auto" style="display:none"></span>
+<span class="text-base">Seen slides</span>
+<span id="seen-slides-badge" class="badge-new ml-auto" style="display:none"></span>
 </a>
-<div id="slide-history-list" class="mx-2 mt-1 rounded-xl bg-surface-container-high" style="display:none;overflow:hidden"></div>
-</div>
 <a data-nav="activity" onclick="showView('activity')" class="nav-item rounded-full px-2 py-2 flex items-center gap-3 transition-all cursor-pointer">
 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
 <span class="text-base" id="activity-nav-label">Activity</span>
@@ -2981,7 +2975,6 @@ var _slidesCatalog = [];
 var _activeSlideId = null;
 var _slidesCacheStatus = {};
 var _activeSlideSlug = null;
-var _historySelectedRowEl = null;
 var _hostSlidesCurrent = null;
 var _lastHostSlidesCurrentKey = '';
 
@@ -3023,31 +3016,11 @@ function setActive(name) {
   var el = document.querySelector('[data-nav="' + name + '"]');
   if (el) el.classList.add('nav-active');
 }
-function openPastSlides() {
-  closeTopics();
-  var arrow = document.querySelector('.past-slides-arrow');
-  if (arrow) arrow.style.transform = 'rotate(90deg)';
-  _loadSlideHistory();
-}
-function closePastSlides(options) {
-  options = options || {};
-  var arrow = document.querySelector('.past-slides-arrow');
-  if (arrow) arrow.style.transform = 'rotate(0deg)';
-  _hideSlideHistory();
-  if (options.focusAllTopics !== false) {
-    _focusCurrentTopicInAllTopics();
-  }
-}
-// Backward-compatible wrappers for existing calls.
-function openSlides() { openPastSlides(); }
-function closeSlides(options) { closePastSlides(options); }
-var _slideHistoryTimer = null;
 var _menuCollapseTimer = null;
 function _startMenuCollapseTimer() {
   clearTimeout(_menuCollapseTimer);
   _menuCollapseTimer = setTimeout(function() {
     closeTopics();
-    closePastSlides({ focusAllTopics: false });
   }, 10000);
 }
 // The hidden checkbox holds the state (much of the page reads it); the crosshair
@@ -3190,39 +3163,6 @@ function _getCurrentSlidesPage() {
   var n = Number(m[1]);
   return Number.isFinite(n) ? n : null;
 }
-async function _openSlideFromHistory(slug, page, focusEl) {
-  var slide = _findSlideBySlug(slug);
-  if (!slide) {
-    showToast('Could not match that history item to an available topic.');
-    return false;
-  }
-  var topicEl = document.querySelector('.topic-item[data-slide-id="' + slide._id + '"]');
-  var targetPage = Math.max(1, Number(page || 1));
-  var sameSlideAlreadyOpen = (_activeSlideId && slide._id === _activeSlideId);
-  if (!sameSlideAlreadyOpen) {
-    // Cross-deck: selectTopic -> prefetchInto loads new deck in back buffer,
-    // instant-scrolls it to targetPage, then atomically swaps. No visible scroll.
-    await selectTopic(topicEl || document.querySelector('.topic-item'), null, slide, targetPage);
-  }
-  var currentPage = _getCurrentSlidesPage();
-  if (currentPage === targetPage) {
-    return true;
-  }
-  // Same-deck (or post-swap safety net): jump instantly, no smooth-scroll animation.
-  if (!_scrollSlidesToPage(targetPage, { instant: true })) {
-    setTimeout(function() { _scrollSlidesToPage(targetPage, { instant: true }); }, 200);
-  }
-  if (focusEl && typeof focusEl.focus === 'function') {
-    setTimeout(function() {
-      try {
-        focusEl.focus({ preventScroll: true });
-      } catch (_) {
-        focusEl.focus();
-      }
-    }, 0);
-  }
-  return true;
-}
 async function _applyHostSlideFollow(slidesCurrent) {
   if (!slidesCurrent || !_isSlidesViewSelected() || !_isSlidesFollowEnabled()) return;
   if (!_slidesCatalog.length) {
@@ -3268,43 +3208,65 @@ function _onIncomingHostSlidesCurrent(slidesCurrent) {
   if (!_isSlidesFollowEnabled()) _nudgeSlidesFollow();
   _applyHostSlideFollow(_hostSlidesCurrent).catch(function() {});
 }
-function _focusCurrentTopicInAllTopics() {
-  openTopics({ skipCloseSlides: true });
-  var target = document.querySelector('.topic-item.topic-active');
-  if (!target && _activeSlideId) {
-    target = document.querySelector('.topic-item[data-slide-id="' + _activeSlideId + '"]');
-    if (target) target.classList.add('topic-active');
-  }
-  if (!target) target = document.querySelector('.topic-item');
-  if (!target) return;
-  if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
-  setTimeout(function() {
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_) {
-      target.focus();
-    }
-    if (typeof target.scrollIntoView === 'function') {
-      target.scrollIntoView({ block: 'nearest' });
-    }
-  }, 650);
+// ── Seen slides: every slide the trainer showed this session, as it was on screen ──
+// One PDF the daemon assembles (daemon/slides/seen_slides.py) and Railway serves as one
+// more deck. It opens in the Slides viewer, at its last page; new pages arrive live, and
+// a reader who scrolled back is left where they are.
+var SEEN_SLIDES_ID = '__seen__';
+var _seenSlides = null;  // {slug, count, updated_at}
+function _seenSlidesDeck() {
+  return {
+    _id: SEEN_SLIDES_ID, slug: _seenSlides.slug, name: 'Seen slides.pdf', skipCheck: true,
+    url: '/' + _sessionId + '/api/slides/download/' + encodeURIComponent(_seenSlides.slug),
+  };
 }
-function _hideSlideHistory() {
-  clearTimeout(_slideHistoryTimer);
-  _slideHistoryTimer = null;
-  var el = document.getElementById('slide-history-list');
-  if (el) { el.style.overflowY = 'hidden'; el.style.maxHeight = ''; el.style.display = 'none'; }
-  if (_historySelectedRowEl) {
-    _historySelectedRowEl.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-semibold');
-    _historySelectedRowEl = null;
-  }
+function _isSeenSlidesOpen() { return _activeSlideId === SEEN_SLIDES_ID; }
+function _markSeenSlidesNavActive() {
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('nav-active'); });
+  document.querySelectorAll('.topic-item').forEach(function(n) { n.classList.remove('topic-active'); });
+  var nav = document.getElementById('seen-slides-nav');
+  if (nav) nav.classList.add('nav-active');
 }
-function _setPastSlidesBadge(total) {
-  var badge = document.getElementById('past-slides-badge');
-  if (!badge) return;
-  var n = Math.max(0, Number(total || 0));
-  badge.textContent = String(n);
-  badge.style.display = n > 0 ? '' : 'none';
+function _applySeenSlides(state) {
+  var prev = _seenSlides;
+  _seenSlides = (state && state.slug) ? state : null;
+  var n = _seenSlides ? Number(_seenSlides.count || 0) : 0;
+  var badge = document.getElementById('seen-slides-badge');
+  if (badge) { badge.textContent = String(n); badge.style.display = n > 0 ? '' : 'none'; }
+  if (!n || !_isSeenSlidesOpen() || !_isSlidesViewSelected()) return;
+  if (prev && prev.updated_at === _seenSlides.updated_at) return;
+  var prevCount = prev ? Number(prev.count || 0) : 0;
+  var deck = _seenSlidesDeck();
+  if (!(window.Slides && window.Slides.front && window.Slides.front.pdfDoc) || !window.prefetchInto) return;
+  window.prefetchInto({
+    url: deck.url,
+    slug: deck.slug,
+    downloadedAt: _seenSlides.updated_at,
+    // A reader on the last page moves on to the new one; one who scrolled back stays.
+    getPage: function() {
+      var current = _getCurrentSlidesPage() || 1;
+      return current >= prevCount ? n : Math.min(current, n);
+    },
+  });
+}
+async function openSeenSlides(opts) {
+  closeTopics();
+  if (!_seenSlides || !Number(_seenSlides.count || 0)) {
+    showToast('No slides shown yet in this session.');
+    return;
+  }
+  // Following the trainer would take the reader off this deck at his next slide.
+  _setSlidesFollowCb(false);
+  LS.setFollow(false);
+  var deck = _seenSlidesDeck();
+  _slidesCacheStatus[deck.slug] = { downloaded_at: _seenSlides.updated_at };
+  var last = Number(_seenSlides.count);
+  // A reload comes back to the page the reader was on; a click opens at the last one.
+  var opening = selectTopic(null, null, deck, (opts && opts.restore) || _isSeenSlidesOpen() ? null : last);
+  _markSeenSlidesNavActive();
+  _setTabUrl('past-slides');
+  await opening;
+  if (_isSeenSlidesOpen()) { _markSeenSlidesNavActive(); _setTabUrl('past-slides'); }
 }
 function _setFilesBadge(total) {
   var badge = document.getElementById('files-badge');
@@ -3319,100 +3281,6 @@ function _setPromptsBadge(total) {
   var n = Math.max(0, Number(total || 0));
   badge.textContent = String(n);
   badge.style.display = n > 0 ? '' : 'none';
-}
-function _autoHideSlideHistoryAndCloseSlides() {
-  if (_historySelectedRowEl) {
-    closeSlides({ focusAllTopics: true });
-  } else {
-    _hideSlideHistory();
-  }
-}
-function _restartSlideHistoryAutoHideTimer() {
-  clearTimeout(_slideHistoryTimer);
-  _slideHistoryTimer = setTimeout(_autoHideSlideHistoryAndCloseSlides, 30000);
-}
-function _loadSlideHistory() {
-  if (!_sessionId) return;
-  clearTimeout(_slideHistoryTimer);
-  _slideHistoryTimer = null;
-  fetch('/' + _sessionId + '/api/participant/slides/history')
-    .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
-    .then(function(data) {
-      var slides = data.slides_log || [];
-      _setPastSlidesBadge(slides.length);
-      var el = document.getElementById('slide-history-list');
-      if (!el) return;
-      if (!slides.length) { el.style.display = 'none'; return; }
-      var groups = {}, order = [];
-      slides.forEach(function(s) {
-        var slug = s.slug || '';
-        if (!slug) return;
-        if (!groups[slug]) { groups[slug] = []; order.push(slug); }
-        groups[slug].push({ page: s.slide, seconds: s.seconds_spent || 0, last_seen_at: s.last_seen_at || null });
-      });
-      var allSeconds = slides.map(function(s) { return s.seconds_spent || 0; });
-      var minSec = Math.min.apply(null, allSeconds), maxSec = Math.max.apply(null, allSeconds);
-      var allTs = slides.map(function(s) { return s.last_seen_at ? new Date(s.last_seen_at).getTime() : 0; }).filter(Boolean);
-      var minTs = allTs.length ? Math.min.apply(null, allTs) : 0, maxTs = allTs.length ? Math.max.apply(null, allTs) : 0;
-      el.innerHTML = order.map(function(slug) {
-        var entries = groups[slug];
-        var catalogEntry = _findSlideBySlug(slug);
-        var title = (catalogEntry && catalogEntry.name) || slug;
-        var isDark = document.documentElement.classList.contains('dark');
-        var pagesHtml = entries.map(function(e) {
-          var tRatio = (maxTs > minTs && e.last_seen_at) ? (new Date(e.last_seen_at).getTime() - minTs) / (maxTs - minTs) : 1;
-          var ch = isDark ? Math.round(80 + 175 * tRatio) : Math.round(160 - 160 * tRatio);
-          var color = 'rgb(' + ch + ',' + ch + ',' + ch + ')';
-          var sRatio = (maxSec > minSec) ? (e.seconds - minSec) / (maxSec - minSec) : 1;
-          var weight = Math.round(300 + 400 * sRatio);
-          return '<a href="#" onclick="return false" class="underline" style="color:' + color + ';font-weight:' + weight + '" data-history-slug="' + slug.replace(/"/g, '&quot;') + '" data-history-page="' + Number(e.page || 1) + '">' + e.page + '</a>';
-        }).join(', ');
-        return '<div class="slide-history-row pl-4 pr-4 py-0.5 text-sm leading-relaxed rounded transition-colors flex items-baseline gap-1">' +
-          '<span class="flex-shrink-0 text-on-surface-variant opacity-60">•</span>' +
-          '<span class="text-on-surface">' + title + ' ' + pagesHtml + '</span></div>';
-      }).join('');
-      el.onclick = function(ev) {
-        var link = ev.target && ev.target.closest('a[data-history-slug][data-history-page]');
-        if (!link) return;
-        ev.preventDefault();
-        var row = link.closest('.slide-history-row');
-        if (_historySelectedRowEl && _historySelectedRowEl !== row) {
-          _historySelectedRowEl.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-semibold');
-        }
-        if (row) {
-          row.classList.add('bg-primary-container', 'text-on-primary-container', 'font-semibold');
-          if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
-          _historySelectedRowEl = row;
-        }
-        var slug = link.getAttribute('data-history-slug') || '';
-        var page = Number(link.getAttribute('data-history-page') || '1');
-        _openSlideFromHistory(slug, page, row || link);
-        _restartSlideHistoryAutoHideTimer();
-      };
-      el.onmouseenter = _restartSlideHistoryAutoHideTimer;
-      el.onmousemove = _restartSlideHistoryAutoHideTimer;
-      el.style.display = 'block';
-      requestAnimationFrame(function() {
-        el.style.maxHeight = _computeListHeight(el) + 'px';
-        el.style.overflowY = 'auto';
-      });
-      _restartSlideHistoryAutoHideTimer();
-    })
-    .catch(function() { var el = document.getElementById('slide-history-list'); if (el) el.style.display = 'none'; });
-}
-function toggleSlides() {
-  togglePastSlides();
-}
-function togglePastSlides() {
-  var el = document.getElementById('slide-history-list');
-  var isOpen = !!(el && el.style.display !== 'none');
-  if (!isOpen) {
-    openPastSlides();
-    _setTabUrl('past-slides');
-  } else {
-    closePastSlides({ focusAllTopics: false });
-    _setTabUrl(LS.getView());
-  }
 }
 function _computeListHeight(list) {
   var nav = document.querySelector('nav');
@@ -3440,15 +3308,10 @@ function _recomputeOpenMenuHeights() {
     topics.style.maxHeight = _computeListHeight(topics) + 'px';
     requestAnimationFrame(function() { topics.style.transition = ''; });
   }
-  var pastSlides = document.getElementById('slide-history-list');
-  if (pastSlides && pastSlides.style.display !== 'none' && pastSlides.style.display !== '') {
-    pastSlides.style.maxHeight = _computeListHeight(pastSlides) + 'px';
-  }
 }
 window.addEventListener('resize', _recomputeOpenMenuHeights);
 function openTopics(options) {
   options = options || {};
-  if (!options.skipCloseSlides) closeSlides({ focusAllTopics: false });
   var list = document.querySelector('.topics-list');
   var arrow = document.querySelector('.topics-arrow');
   list.style.maxHeight = '0px';
@@ -4639,7 +4502,7 @@ async function selectTopic(el, event, slide, targetPageOverride) {
   _placeWikiFollowControls();
   _setTabUrl('slides');
   if (slide && slide.url) {
-    if (slide.slug && _sessionId) {
+    if (slide.slug && _sessionId && !slide.skipCheck) {
       var hasFront = !!(window.Slides && window.Slides.front && window.Slides.front.pdfDoc);
       var _checkOverlay = document.getElementById('pdf-check-overlay');
       // Centered loader only on first-time (no visible slide yet).
@@ -4676,7 +4539,7 @@ async function selectTopic(el, event, slide, targetPageOverride) {
       var _earlyOverlay = document.getElementById('pdf-check-overlay');
       if (_earlyOverlay) _earlyOverlay.style.display = 'none';
       // Double-buffer path: old slide stays visible, new loads in back.
-      // We DO await so callers (_applyHostSlideFollow, _openSlideFromHistory)
+      // We DO await so callers (_applyHostSlideFollow, openSeenSlides)
       // that chain follow-up actions (like _scrollSlidesToPage) see the swap done.
       await window.prefetchInto({
         url: slide.url,
@@ -4797,7 +4660,6 @@ function showView(name) {
   var followToggle = document.getElementById('slides-follow-toggle');
   if (name !== 'slides') {
     closeTopics();
-    closeSlides({ focusAllTopics: false });
   } else {
     var slidesNav = document.querySelector('[data-nav="slides"]');
     if (slidesNav) slidesNav.classList.remove('slides-nav-blink');
@@ -4845,6 +4707,10 @@ function showView(name) {
       if (lastSlug) {
         var restoreSlide = function() {
           var slide = _slidesCatalog.find(function(s) { return s.slug === lastSlug; });
+          if (!slide && _seenSlides && _seenSlides.slug === lastSlug && Number(_seenSlides.count || 0)) {
+            openSeenSlides({ restore: true });
+            return;
+          }
           if (slide) {
             var topicEl = document.querySelector('.topic-item[data-slide-id="' + slide._id + '"]');
             selectTopic(topicEl, null, slide);
@@ -6173,7 +6039,7 @@ function _setDuplicateIndicator(isDup) {
     _applyGdriveLink(state.gdrive_url);
     _applyGdriveToast(state.gdrive_url);
     _applyFeedbackUrl(state.feedback_url);
-    _setPastSlidesBadge(state.slides_history_count || 0);
+    _applySeenSlides(state.slides_seen || null);
     document.getElementById('files-badge').classList.toggle('badge-alert', (state.files_count || 0) > 0 && LS.isFilesUnread());
     document.getElementById('prompts-badge').classList.toggle('badge-alert', (state.prompts_count || 0) > 0 && LS.isPromptsUnread());
     await _slidesCatalogReady; // never rejects: loadSlidesCatalog swallows its errors
@@ -6194,8 +6060,7 @@ function _setDuplicateIndicator(isDup) {
     });
     if (saved === 'past-slides') {
       showView('slides');
-      openPastSlides();
-      _setTabUrl('past-slides');
+      if (_seenSlides && Number(_seenSlides.count || 0)) openSeenSlides(); else _setTabUrl('slides');
     } else {
       showView(saved);
     }
@@ -6312,8 +6177,8 @@ function _applyState(msg) {
     document.querySelector('[data-nav="agenda"]').style.display = msg.has_agenda ? '' : 'none';
     if (msg.has_agenda) _agendaDirty = true;
   }
-  if (msg.slides_history_count != null) {
-    _setPastSlidesBadge(msg.slides_history_count);
+  if (msg.slides_seen !== undefined) {
+    _applySeenSlides(msg.slides_seen);
   }
   if (msg.files_count != null) {
     _setFilesBadge(msg.files_count);
@@ -7506,7 +7371,7 @@ function _handleWsMessage(msg) {
       })(msg.decks);
       break;
     case 'current_slide_updated': _onIncomingHostSlidesCurrent(msg.current_slide || null); break;
-    case 'slides_history_updated': _setPastSlidesBadge(msg.count); break;
+    case 'slides_seen_updated': _applySeenSlides(msg); break;
     case 'files_count_updated': {
       var previousFilesCount = _lastFilesCount;
       _lastFilesCount = msg.count;

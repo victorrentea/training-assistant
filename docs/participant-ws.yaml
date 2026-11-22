@@ -24,7 +24,7 @@ channels:
           - $ref: '#/components/messages/activity_updated'
           - $ref: '#/components/messages/active_participants_count_updated'
           - $ref: '#/components/messages/participant_names_updated'
-          - $ref: '#/components/messages/slides_history_updated'
+          - $ref: '#/components/messages/slides_seen_updated'
           - $ref: '#/components/messages/quiz_opened'
           - $ref: '#/components/messages/quiz_ended'
           - $ref: '#/components/messages/quiz_correct_revealed'
@@ -165,18 +165,25 @@ components:
             items:
               type: string
 
-    slides_history_updated:
-      summary: Participant slide history count changed
+    slides_seen_updated:
+      summary: The session's "Seen slides" deck changed (a slide shown, or a new version of one)
       x-feature: slides
       payload:
         type: object
-        required: [type, count]
+        required: [type, slug, count]
         properties:
           type:
             type: string
-            enum: [slides_history_updated]
+            enum: [slides_seen_updated]
+          slug:
+            type: string
+            description: The deck's slug; the PDF is at /{session_id}/api/slides/download/{slug}
           count:
             type: integer
+            description: Pages in the deck
+          updated_at:
+            type: string
+            description: The deck's version (ISO 8601), the participant's cache key
 
     # ── Quiz ─────────────────────────────────────────────────────────────────
 

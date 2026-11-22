@@ -16,6 +16,8 @@ from pathlib import Path
 from daemon import log
 from daemon.materials.offline_site import DRIVE_ZIP, SITE_DIR, OfflineDeck
 from daemon.materials.viewed_decks import ZipDeck, select_viewed_decks
+from daemon.slides import seen_slides
+from daemon.slides.seen_slides import is_seen_slug
 from daemon.materials.zip_builder import (
     ZipTooLargeError,
     build_session_zip,
@@ -93,7 +95,7 @@ def _offline_site(decks: list[ZipDeck], folder: Path) -> dict[str, bytes]:
             OfflineDeck(title=str(misc_state.slides_catalog[d.slug].get("title") or d.slug), filename=d.filename)
             for d in decks
             if d.slug in cached
-        ]
+        ] + [OfflineDeck(title="Seen slides", filename=d.filename) for d in decks if is_seen_slug(d.slug)]
         files = current_site(linked)
         if files is None:
             return {}
@@ -120,6 +122,9 @@ def handle_build_materials_zip(data: dict, config) -> None:
         if folder is None:
             raise FileNotFoundError("No active session folder")
         decks = select_viewed_decks(list(misc_state.slides_viewed), dict(misc_state.slides_catalog))
+        seen = seen_slides.service().state()
+        if seen and seen.count:  # Railway holds it already, as one more cached deck
+            decks.append(ZipDeck(slug=seen.slug, filename=seen_slides.ZIP_FILENAME))
         site = _offline_site(decks, folder)
         try:
             payload = build_session_zip(folder, site)
