@@ -7,6 +7,7 @@ Used by local_publish.py to print only the slides a save changed.
 """
 from __future__ import annotations
 
+import hashlib
 import posixpath
 import re
 import zipfile
@@ -65,6 +66,11 @@ def fingerprint(pptx: Path) -> DeckFingerprint:
         size = _SLIDE_SIZE.search(presentation)
         aspect = int(size.group(1)) / int(size.group(2)) if size else 16 / 9
     return DeckFingerprint(slides=slides, shared=shared, aspect=aspect)
+
+
+def slide_version(digest: str) -> str:
+    """A short, fixed-length name for one version of a slide (its digest lists links)."""
+    return hashlib.sha1(digest.encode()).hexdigest()[:20]
 
 
 def changed_positions(before: DeckFingerprint | None, after: DeckFingerprint) -> list[int] | None:

@@ -34,7 +34,13 @@ from pypdf import PdfWriter
 
 from daemon import log
 from daemon.slides import pdf_pages, pdf_printer
-from daemon.slides.pptx_slides import DeckFingerprint, as_ranges, changed_positions, fingerprint
+from daemon.slides.pptx_slides import (
+    DeckFingerprint,
+    as_ranges,
+    changed_positions,
+    fingerprint,
+    slide_version,
+)
 
 _HOME = Path.home() / "Library" / "Caches" / "training-assistant" / "local-slides"
 _UPLOAD_TIMEOUT_S = 120
@@ -125,16 +131,16 @@ def print_locally(key: str, source: Path) -> bool:
     return _guarded(key, source, upload=False)
 
 
-def page_of(key: str, slide_id: str, digest: str) -> tuple[Path, int] | None:
-    """The printed deck and the 0-based page holding this version of the slide, if the
-    last print has it."""
+def page_of(key: str, slide_id: str, version: str) -> tuple[Path, int] | None:
+    """The printed deck and the 0-based page holding this version of the slide
+    (pptx_slides.slide_version), if the last print has it."""
     state = _load(key)
     deck = _folder(key) / "deck.pdf"
     if state is None or not deck.exists():
         return None
     for index, (printed_id, printed_digest) in enumerate(state.fingerprint.slides):
         if printed_id == slide_id:
-            return (deck, index) if printed_digest == digest else None
+            return (deck, index) if slide_version(printed_digest) == version else None
     return None
 
 

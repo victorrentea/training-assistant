@@ -38,7 +38,7 @@ from pypdf import PdfReader, PdfWriter
 
 from daemon import log
 from daemon.slides import seen_registry
-from daemon.slides.pptx_slides import fingerprint
+from daemon.slides.pptx_slides import fingerprint, slide_version
 from daemon.slides.seen_registry import SeenRegistry, SeenSlide
 
 REGISTRY_FILE = "slides-seen.json"
@@ -171,7 +171,8 @@ class SeenSlides:
             return
         with self._lock:
             registry = self.registry(session_id)
-            change = seen_registry.record(registry, str(source), event.deck or source.name, slide_id, digest,
+            change = seen_registry.record(registry, str(source), event.deck or source.name, slide_id,
+                                          slide_version(digest),
                                           event.at or _now())
             self._save(registry)
         if change:
@@ -188,17 +189,17 @@ class SeenSlides:
         stem = _SLUG_UNSAFE.sub("-", deck_path.stem.lower()).strip("-")
         return f"local-{stem}-{hashlib.sha1(str(deck_path).encode()).hexdigest()[:6]}", False
 
-    def _take_page(self, session_id: str, slide: SeenSlide, deck_pdf: Path, index: int, digest: str) -> None:
+    def _take_page(self, session_id: str, slide: SeenSlide, deck_pdf: Path, index: int, version: str) -> None:
         pages = self._cache(session_id) / "pages"
         pages.mkdir(parents=True, exist_ok=True)
         writer = PdfWriter()
         writer.add_page(PdfReader(str(deck_pdf)).pages[index])
-        target = pages / seen_registry.page_file_name(digest)
+        target = pages / seen_registry.page_file_name(version)
         with open(target.with_suffix(".tmp"), "wb") as out:
             writer.write(out)
         os.replace(target.with_suffix(".tmp"), target)
-        slide.page = digest
-        slide.digest = digest
+        slide.page = version
+        slide.version = version
 
     def resolve(self, session_id: str | None = None) -> None:
         """Give every waiting slide its page, print the decks still missing some, and
@@ -223,29 +224,30 @@ class SeenSlides:
             for slide in list(seen_registry.pending(registry)):
                 source = Path(slide.deck_path)
                 key, catalog = self._deck_key(source)
-                hit = self.deps.page_of(key, slide.slide_id, slide.digest)
+                hit = self.deps.page_of(key, slide.slide_id, slide.version)
                 if hit:
-                    self._take_page(session_id, slide, *hit, slide.digest)
+                    self._take_page(session_id, slide, *hit, slide.version)
                     dirty = True
                     continue
                 try:
                     current = dict(fingerprint(source).slides).get(slide.slide_id)
                 except (OSError, KeyError, ValueError):
                     current = None
+                current = slide_version(current) if current is not None else None
                 if current is None:
                     # The deck or the slide is gone: the version shown can no longer be printed.
                     if slide.page is None:
                         registry.slides.remove(slide)
                     else:
-                        slide.digest = slide.page
+                        slide.version = slide.page
                     log.info(_NAME, f"Seen slides: {source.name} id {slide.slide_id} is gone — kept what was printed")
                     dirty = True
                     continue
-                if current != slide.digest:
+                if current != slide.version:
                     # Edited again after it was shown, before its page was printed: the
                     # shown version is lost. Keep the page there is, else take the newer one.
                     if slide.page is not None:
-                        slide.digest = slide.page
+                        slide.version = slide.page
                         dirty = True
                         continue
                     hit = self.deps.page_of(key, slide.slide_id, current)
@@ -346,7 +348,11 @@ _thread: threading.Thread | None = None
 
 
 def _registry_dir(session_id: str) -> Path | None:
-    from daemon.session.state import get_active_session_id, get_active_session_name, get_sessions_root
+    from daemon.session.state import (
+        get_active_session_id,
+        get_active_session_name,
+        get_sessions_root,
+    )
 
     root, name = get_sessions_root(), get_active_session_name()
     if root and name and get_active_session_id() == session_id:

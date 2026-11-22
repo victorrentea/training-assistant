@@ -7,7 +7,7 @@ import pytest
 from pypdf import PdfReader, PdfWriter
 
 from daemon.slides import seen_registry
-from daemon.slides.pptx_slides import fingerprint
+from daemon.slides.pptx_slides import fingerprint, slide_version
 from daemon.slides.seen_registry import SeenRegistry
 from daemon.slides.seen_slides import Deps, SeenSlides, SlideSeenEvent, is_seen_slug, seen_slug
 
@@ -20,7 +20,7 @@ def test_a_new_slide_is_added_an_identical_reshow_changes_nothing_an_edit_update
     assert seen_registry.record(reg, "/d/a.pptx", "a.pptx", "300", "w1", "t2") == "added"
     assert seen_registry.record(reg, "/d/a.pptx", "a.pptx", "256", "v1", "t3") is None
     assert seen_registry.record(reg, "/d/a.pptx", "a.pptx", "256", "v2", "t4") == "updated"
-    assert [(s.slide_id, s.digest, s.first_seen) for s in reg.slides] == [("256", "v2", "t1"), ("300", "w1", "t2")]
+    assert [(s.slide_id, s.version, s.first_seen) for s in reg.slides] == [("256", "v2", "t1"), ("300", "w1", "t2")]
 
 
 def test_the_same_slide_id_in_another_deck_is_another_slide():
@@ -102,7 +102,7 @@ class World:
         fp = fingerprint(source)
         texts = list(self.slides.values())
         deck = _pdf(self.tmp / f"{key}-deck.pdf", [len(t) * 100 + i for i, t in enumerate(texts)])
-        self.printed[key] = (deck, dict(fp.slides))
+        self.printed[key] = (deck, {sid: slide_version(d) for sid, d in fp.slides})
         return True
 
     def page_of(self, key: str, slide_id: str, digest: str):
@@ -221,7 +221,7 @@ def test_pages_keep_their_links(world, tmp_path):
     with open(deck, "wb") as f:
         writer.write(f)
     world.save({"256": "a"})
-    world.printed["linked"] = (deck, dict(fingerprint(tmp_path / "talk.pptx").slides))
+    world.printed["linked"] = (deck, {s: slide_version(d) for s, d in fingerprint(tmp_path / "talk.pptx").slides})
     world.catalog[str(tmp_path / "talk.pptx")] = "linked"
 
     world.show("256")
@@ -231,7 +231,13 @@ def test_pages_keep_their_links(world, tmp_path):
 
 
 def _uri_link():
-    from pypdf.generic import ArrayObject, DictionaryObject, FloatObject, NameObject, TextStringObject
+    from pypdf.generic import (
+        ArrayObject,
+        DictionaryObject,
+        FloatObject,
+        NameObject,
+        TextStringObject,
+    )
 
     return DictionaryObject({
         NameObject("/Type"): NameObject("/Annot"),
