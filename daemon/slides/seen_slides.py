@@ -272,10 +272,6 @@ class SeenSlides:
         """True when a deck was printed."""
         printed = False
         for key, (source, catalog) in decks.items():
-            # Never under his hands: the print shows a progress bar. Asked before every
-            # deck — a whole deck takes ~20 s to print, and he may be back by the next one.
-            if self.deps.powerpoint_frontmost():
-                break
             try:
                 mtime = source.stat().st_mtime
             except OSError:
@@ -286,6 +282,10 @@ class SeenSlides:
                     continue  # this save does not print: only a new save is worth a new try
                 if time.monotonic() - last[1] < _PRINT_RETRY_S:
                     continue  # deck closed or a slide show a moment ago: not yet
+            # Never under his hands: the print shows a progress bar. Asked before every
+            # deck — a whole deck takes ~20 s to print, and he may be back by the next one.
+            if self.deps.powerpoint_frontmost():
+                break
             outcome = (self.deps.publish if catalog else self.deps.print_locally)(key, source)
             self._last_print[key] = (mtime, time.monotonic(), outcome == "failed")
             if outcome == "done":
