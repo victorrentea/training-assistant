@@ -10,14 +10,15 @@ import pytest
 from pypdf import PdfReader, PdfWriter
 
 from daemon.slides import local_publish, pdf_pages
-from daemon.slides.pptx_slides import as_ranges, changed_positions, fingerprint
+from daemon.slides.pptx_slides import as_ranges, changed_positions, fingerprint, hidden_slides
 
 PRESENTATION = (
     '<p:presentation><p:sldIdLst>{ids}</p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/></p:presentation>'
 )
 
 
-def _deck(path: Path, slides: dict[str, str], *, order=None, notes="n", layout="L", picture=b"png") -> Path:
+def _deck(path: Path, slides: dict[str, str], *, order=None, notes="n", layout="L", picture=b"png",
+          hidden=()) -> Path:
     """A .pptx with just enough in it: `slides` maps a slide id to its text."""
     order = order or list(slides)
     with zipfile.ZipFile(path, "w") as z:
@@ -27,7 +28,8 @@ def _deck(path: Path, slides: dict[str, str], *, order=None, notes="n", layout="
             f'<Relationship Id="r{sid}" Type="x/slide" Target="slides/slide{sid}.xml"/>' for sid in order
         ) + "</Relationships>")
         for sid, text in slides.items():
-            z.writestr(f"ppt/slides/slide{sid}.xml", f"<p:sld>{text}</p:sld>")
+            root = '<p:sld xmlns:p="x" show="0">' if sid in hidden else '<p:sld xmlns:p="x">'
+            z.writestr(f"ppt/slides/slide{sid}.xml", f"{root}{text}</p:sld>")
             z.writestr(f"ppt/slides/_rels/slide{sid}.xml.rels", (
                 "<Relationships>"
                 f'<Relationship Id="a" Type="x/notesSlide" Target="../notesSlides/notes{sid}.xml"/>'
@@ -74,6 +76,14 @@ def test_the_whole_deck_is_printed_when_its_structure_changed(tmp_path, change):
 
     assert changed_positions(before, after) is None
     assert changed_positions(None, after) is None
+
+
+def test_hidden_slides_are_found_by_position(tmp_path):
+    deck = _deck(tmp_path / "a.pptx", {"256": "one", "257": "two", "258": "three"},
+                 order=["258", "256", "257"], hidden={"256", "258"})
+
+    assert hidden_slides(deck) == [1, 2]
+    assert hidden_slides(_deck(tmp_path / "b.pptx", {"256": "one"})) == []
 
 
 def test_neighbouring_slides_print_as_one_job():
@@ -197,7 +207,27 @@ def test_google_stays_the_fallback_when_powerpoint_cannot_print_it(tmp_path, wor
     source = _save(tmp_path, world, {"256": "one"})
 
     assert local_publish.publish("deck", source) is False
+    assert local_publish.attempt("deck", source, upload=True) == "not_now", "worth asking again later"
     assert world["printed"] == [] and world["sent"] == []
+
+
+def test_a_deck_with_hidden_slides_is_never_printed(tmp_path, world):
+    """PowerPoint's print leaves hidden slides out: the pages would not line up with the
+    slides, so the print was thrown away — after showing its progress bar (2026-11-23)."""
+    world["slides"] = 3
+    source = _deck(tmp_path / "deck.pptx", {"256": "one", "257": "two", "258": "three"}, hidden={"257"})
+
+    assert local_publish.publish("deck", source) is False
+    assert local_publish.attempt("deck", source, upload=False) == "failed", "not worth asking again for this save"
+    assert world["printed"] == [] and world["sent"] == []
+
+
+def test_a_print_that_goes_wrong_is_a_failure_of_that_save(tmp_path, world, monkeypatch):
+    source = _save(tmp_path, world, {"256": "one"})
+    monkeypatch.setattr(local_publish.pdf_pages, "matches_aspect", lambda box, aspect: False)
+
+    assert local_publish.attempt("deck", source, upload=True) == "failed"
+    assert world["sent"] == []
 
 
 def test_a_failure_falls_back_and_is_tried_again_next_save(tmp_path, world, monkeypatch):

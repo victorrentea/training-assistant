@@ -17,6 +17,10 @@ and sent (~10 MB). Railway is told which deck the pages belong to (the SHA-256 o
 should have): after a Railway restart, or when it holds Google's version, it refuses and gets
 the whole deck. Anything that goes wrong here returns False, and the caller falls back to
 Google's PDF as before.
+
+A deck with hidden slides is not printed at all: PowerPoint's print leaves them out, so the
+pages no longer line up with the slides, and the print was thrown away after its progress
+bar had been shown (2026-11-23: three such decks, each printed whole once a minute, all day).
 """
 from __future__ import annotations
 
@@ -28,6 +32,7 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel
 from pypdf import PdfWriter
@@ -39,6 +44,7 @@ from daemon.slides.pptx_slides import (
     as_ranges,
     changed_positions,
     fingerprint,
+    hidden_slides,
     slide_version,
 )
 
@@ -48,6 +54,14 @@ _UPLOAD_TIMEOUT_S = 120
 # resets what the swapped-in pages added (each carries its own copy of the fonts).
 _MAX_CHANGED_SHARE = 0.25
 _lock = threading.Lock()
+
+# What became of one request to print a save of a deck:
+#   done    — deck.pdf holds that save;
+#   not_now — PowerPoint cannot print it at this moment (the deck is not open, a slide show
+#             runs); nothing was printed, the same save can be asked for again;
+#   failed  — this save does not print: asking again would show the print's progress bar
+#             again for the same result. Only a new save of the deck is worth a new print.
+PrintOutcome = Literal["done", "not_now", "failed"]
 
 
 class PublishedDeck(BaseModel):
@@ -122,13 +136,13 @@ def _send_whole_deck(slug: str, deck: Path) -> str:
 
 def publish(slug: str, source: Path) -> bool:
     """True once Railway holds the saved deck as PowerPoint prints it."""
-    return _guarded(slug, source, upload=True)
+    return attempt(slug, source, upload=True) == "done"
 
 
 def print_locally(key: str, source: Path) -> bool:
     """The same print into `deck.pdf` under `key`, without sending it anywhere: for the
     seen slides of a deck that is not in the slides catalog (seen_slides.py)."""
-    return _guarded(key, source, upload=False)
+    return attempt(key, source, upload=False) == "done"
 
 
 def page_of(key: str, slide_id: str, version: str) -> tuple[Path, int] | None:
@@ -144,27 +158,32 @@ def page_of(key: str, slide_id: str, version: str) -> tuple[Path, int] | None:
     return None
 
 
-def _guarded(slug: str, source: Path, upload: bool) -> bool:
+def attempt(slug: str, source: Path, upload: bool) -> PrintOutcome:
+    """`publish` (upload) or `print_locally`, saying why when it did not happen."""
     if not pdf_printer.supported():
-        return False
+        return "failed"
     try:
         with _lock:
-            done = _publish(slug, source, upload)
+            outcome = _publish(slug, source, upload)
     except Exception as exc:  # noqa: BLE001 — whatever fails, Google's PDF is still there
         log.error("slides", f"Local print failed for slug={slug}, falling back to Google Drive: {exc}")
-        return False
-    if done:
+        return "failed"
+    if outcome == "done":
         from daemon.slides import seen_slides  # pages of slides shown meanwhile may be here now
         seen_slides.wake()
-    return done
+    return outcome
 
 
-def _publish(slug: str, source: Path, upload: bool = True) -> bool:
+def _publish(slug: str, source: Path, upload: bool = True) -> PrintOutcome:
+    hidden = hidden_slides(source)
+    if hidden:
+        log.info("slides", f"No local print for slug={slug}: {len(hidden)} hidden slides, which PowerPoint's print leaves out")
+        return "failed"
     decks, slide_show = pdf_printer.open_decks()
     if source.name not in decks or slide_show:
-        return False
+        return "not_now"
     try:
-        return _print_and_send(slug, source, upload)
+        return "done" if _print_and_send(slug, source, upload) else "failed"
     finally:
         # Only the deck and its state are kept between saves.
         for leftover in ("printed.pdf", "cropped.pdf", "pages.pdf", "deck.new.pdf"):

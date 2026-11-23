@@ -16,6 +16,11 @@ front, where the print's progress bar would cover his work, and never during a s
 show. Decks outside the slides catalog are printed too, into a local `deck.pdf` that is
 not sent anywhere.
 
+A print that failed is not asked for again until the deck is saved again: the same save
+fails the same way, and each try shows PowerPoint's print progress bar. On 2026-11-23 three
+decks with hidden slides (which PowerPoint's print leaves out) were printed whole once a
+minute for a whole training day, ~340 prints, none of them kept.
+
 Files: the registry in the session folder (`slides-seen.json`, next to
 session-state.json); the pages and the assembled `seen.pdf` in the local cache, from
 where they can always be rebuilt.
@@ -38,13 +43,15 @@ from pypdf import PdfReader, PdfWriter
 
 from daemon import log
 from daemon.slides import seen_registry
+from daemon.slides.local_publish import PrintOutcome
 from daemon.slides.pptx_slides import fingerprint, slide_version
 from daemon.slides.seen_registry import SeenRegistry, SeenSlide
 
 REGISTRY_FILE = "slides-seen.json"
 ZIP_FILENAME = "Slides seen.pdf"
 _CACHE = Path.home() / "Library" / "Caches" / "training-assistant" / "slides-seen"
-# The same save of a deck is printed again for missing pages only after this.
+# A save PowerPoint could not print just now (deck closed, a slide show) is asked for again
+# after this. A print that failed is not: see `_print`.
 _PRINT_RETRY_S = 60.0
 _TICK_S = 10.0
 _NAME = "slides"
@@ -92,8 +99,8 @@ class Deps:
     cache_root: Path
     catalog_slug: Callable[[Path], str | None]  # the deck's slug in the slides catalog, if any
     page_of: Callable[[str, str, str], tuple[Path, int] | None]
-    publish: Callable[[str, Path], bool]  # print + send to Railway (catalog decks)
-    print_locally: Callable[[str, Path], bool]  # print only (other decks)
+    publish: Callable[[str, Path], PrintOutcome]  # print + send to Railway (catalog decks)
+    print_locally: Callable[[str, Path], PrintOutcome]  # print only (other decks)
     powerpoint_frontmost: Callable[[], bool]
     upload: Callable[[str, Path], None]  # (slug, pdf) → Railway's slides cache
     broadcast: Callable[[SeenDeckState], None]  # → participants
@@ -105,7 +112,8 @@ class SeenSlides:
         self.deps = deps
         self._lock = threading.RLock()
         self._registries: dict[str, SeenRegistry] = {}
-        self._last_print: dict[str, tuple[float, float]] = {}  # deck key → (deck mtime, when)
+        # deck key → (deck mtime, when, failed): the last save of the deck a print was asked for.
+        self._last_print: dict[str, tuple[float, float, bool]] = {}
         self._uploaded: dict[str, str | None] = {}  # session → updated_at Railway holds
 
     # ── files ──
@@ -262,22 +270,29 @@ class SeenSlides:
 
     def _print(self, decks: dict[str, tuple[Path, bool]]) -> bool:
         """True when a deck was printed."""
-        if not decks or self.deps.powerpoint_frontmost():
-            return False  # never under his hands: the print shows a progress bar
         printed = False
         for key, (source, catalog) in decks.items():
+            # Never under his hands: the print shows a progress bar. Asked before every
+            # deck — a whole deck takes ~20 s to print, and he may be back by the next one.
+            if self.deps.powerpoint_frontmost():
+                break
             try:
                 mtime = source.stat().st_mtime
             except OSError:
                 continue
             last = self._last_print.get(key)
-            # The same save printed a moment ago and still no page (deck closed, a slide
-            # show, a refused print): wait before trying again.
-            if last and last[0] == mtime and time.monotonic() - last[1] < _PRINT_RETRY_S:
-                continue
-            self._last_print[key] = (mtime, time.monotonic())
-            log.info(_NAME, f"Seen slides: printing {source.name} for slides shown since its last print")
-            printed |= (self.deps.publish if catalog else self.deps.print_locally)(key, source)
+            if last and last[0] == mtime:
+                if last[2]:
+                    continue  # this save does not print: only a new save is worth a new try
+                if time.monotonic() - last[1] < _PRINT_RETRY_S:
+                    continue  # deck closed or a slide show a moment ago: not yet
+            outcome = (self.deps.publish if catalog else self.deps.print_locally)(key, source)
+            self._last_print[key] = (mtime, time.monotonic(), outcome == "failed")
+            if outcome == "done":
+                log.info(_NAME, f"Seen slides: printed {source.name} for slides shown since its last print")
+                printed = True
+            elif outcome == "failed":
+                log.info(_NAME, f"Seen slides: {source.name} does not print as saved — its slides wait for its next save")
         return printed
 
     def _assemble(self, session_id: str) -> None:
@@ -379,14 +394,14 @@ def _notify_trainer(deck: str, slide: int, change: str) -> None:
     addon_bridge_client.send_slide_seen_captured(deck, slide, change)
 
 
-def _publish_catalog_deck(slug: str, source: Path) -> bool:
+def _publish_catalog_deck(slug: str, source: Path) -> PrintOutcome:
     from daemon.slides import local_publish
     from daemon.slides.router import _mark_cache_status
 
-    done = local_publish.publish(slug, source)
-    if done:
+    outcome = local_publish.attempt(slug, source, upload=True)
+    if outcome == "done":
         _mark_cache_status(slug, "cached")
-    return done
+    return outcome
 
 
 def service() -> SeenSlides:
@@ -402,7 +417,7 @@ def service() -> SeenSlides:
             catalog_slug=lambda path: _catalog_slug(path),
             page_of=local_publish.page_of,
             publish=_publish_catalog_deck,
-            print_locally=local_publish.print_locally,
+            print_locally=lambda key, source: local_publish.attempt(key, source, upload=False),
             powerpoint_frontmost=save_origin.powerpoint_frontmost,
             upload=_upload,
             broadcast=_broadcast,

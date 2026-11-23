@@ -19,6 +19,9 @@ _SLIDE_ID = re.compile(r'<p:sldId\b[^>]*?\bid="(\d+)"[^>]*?\br:id="([^"]+)"')
 _RELATIONSHIP = re.compile(r"<Relationship\b[^>]*>")
 _ATTR = re.compile(r'\b(Id|Target|Type|TargetMode)="([^"]*)"')
 _SLIDE_SIZE = re.compile(r'<p:sldSz\b[^>]*?\bcx="(\d+)"[^>]*?\bcy="(\d+)"')
+# "Hide Slide" is an attribute of the slide's root element, which opens the file.
+_HIDDEN = re.compile(rb'<p:sld\b[^>]*?\bshow="(?:0|false)"')
+_ROOT_TAG_WITHIN = 4096
 # What every slide is drawn on: a change here can move anything on any slide.
 _SHARED_PARTS = ("ppt/slideLayouts/", "ppt/slideMasters/", "ppt/theme/")
 _NOT_ON_THE_SLIDE = ("notesSlide", "comments", "slideLayout")
@@ -66,6 +69,25 @@ def fingerprint(pptx: Path) -> DeckFingerprint:
         size = _SLIDE_SIZE.search(presentation)
         aspect = int(size.group(1)) / int(size.group(2)) if size else 16 / 9
     return DeckFingerprint(slides=slides, shared=shared, aspect=aspect)
+
+
+def hidden_slides(pptx: Path) -> list[int]:
+    """The 1-based positions of the slides marked "Hide Slide". PowerPoint's print leaves
+    them out, so a printed deck has fewer pages than the deck has slides."""
+    with zipfile.ZipFile(pptx) as deck:
+        presentation = deck.read("ppt/presentation.xml").decode("utf-8")
+        targets = {
+            rel["Id"]: rel["Target"]
+            for rel in _relationships(deck.read("ppt/_rels/presentation.xml.rels").decode("utf-8"))
+            if "Id" in rel and "Target" in rel
+        }
+        hidden: list[int] = []
+        for position, (_, rel_id) in enumerate(_SLIDE_ID.findall(presentation), start=1):
+            part = posixpath.normpath(posixpath.join("ppt", targets[rel_id]))
+            with deck.open(part) as slide:
+                if _HIDDEN.search(slide.read(_ROOT_TAG_WITHIN)):
+                    hidden.append(position)
+    return hidden
 
 
 def slide_version(digest: str) -> str:

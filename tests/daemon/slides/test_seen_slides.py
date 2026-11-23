@@ -1,5 +1,6 @@
 """The session's "Seen slides" deck: each slide shown once, in the form it was shown
 (daemon/slides/seen_registry.py, seen_slides.py)."""
+import os
 import zipfile
 from pathlib import Path
 
@@ -74,6 +75,8 @@ class World:
         self.frontmost = False
         self.printed: dict[str, tuple[Path, dict[str, str]]] = {}  # key → (deck.pdf, slide id → digest)
         self.prints: list[str] = []
+        self.outcome = "done"  # what PowerPoint makes of a print: local_publish.PrintOutcome
+        self.on_print = lambda: None
         self.uploads: list[tuple[str, list[int]]] = []
         self.broadcasts: list = []
         self.toasts: list[tuple[str, int, str]] = []
@@ -97,13 +100,16 @@ class World:
         self.slides = slides
         return _deck(self.tmp / "talk.pptx", slides)
 
-    def print_deck(self, key: str, source: Path) -> bool:
+    def print_deck(self, key: str, source: Path) -> str:
         self.prints.append(key)
+        self.on_print()
+        if self.outcome != "done":
+            return self.outcome
         fp = fingerprint(source)
         texts = list(self.slides.values())
         deck = _pdf(self.tmp / f"{key}-deck.pdf", [len(t) * 100 + i for i, t in enumerate(texts)])
         self.printed[key] = (deck, {sid: slide_version(d) for sid, d in fp.slides})
-        return True
+        return "done"
 
     def page_of(self, key: str, slide_id: str, digest: str):
         if key not in self.printed:
@@ -160,6 +166,52 @@ def test_no_print_while_powerpoint_is_in_front_the_slide_waits(world):
     world.frontmost = False
     world.service.resolve()
     assert world.seen() == [100]
+
+
+def test_a_failed_print_is_not_repeated_until_the_deck_is_saved_again(world, monkeypatch):
+    """2026-11-23: decks with hidden slides were printed whole once a minute, all day."""
+    monkeypatch.setattr("daemon.slides.seen_slides._PRINT_RETRY_S", 0.0)
+    deck = world.save({"256": "a"})
+    world.outcome = "failed"
+    world.show("256")
+    world.service.resolve()
+    world.service.resolve()
+    assert len(world.prints) == 1 and world.service.state().count == 0
+
+    world.outcome = "done"
+    world.service.resolve()
+    assert len(world.prints) == 1, "still the same save: nothing new to print"
+
+    os.utime(deck, (deck.stat().st_atime, deck.stat().st_mtime + 5))  # saved again
+    world.service.resolve()
+    assert len(world.prints) == 2 and world.seen() == [100]
+
+
+def test_a_deck_powerpoint_cannot_print_right_now_is_asked_for_again_later(world, monkeypatch):
+    world.save({"256": "a"})
+    world.outcome = "not_now"  # the deck is closed, or a slide show runs
+    world.show("256")
+    world.service.resolve()
+    assert len(world.prints) == 1, "not within the retry period"
+
+    monkeypatch.setattr("daemon.slides.seen_slides._PRINT_RETRY_S", 0.0)
+    world.outcome = "done"
+    world.service.resolve()
+    assert len(world.prints) == 2 and world.seen() == [100]
+
+
+def test_powerpoint_back_in_front_stops_the_decks_still_to_print(world):
+    world.save({"256": "a"})
+    other = _deck(world.tmp / "other.pptx", {"900": "zz"})
+    world.frontmost = True
+    world.show("256")
+    world.service.on_slide_seen(SlideSeenEvent(path=str(other), deck="other.pptx", slide_id="900", slide=1))
+    world.frontmost = False
+    world.on_print = lambda: setattr(world, "frontmost", True)  # he comes back during the first print
+
+    world.service.resolve()
+
+    assert len(world.prints) == 1
 
 
 def test_an_existing_print_is_reused_without_printing_again(world):

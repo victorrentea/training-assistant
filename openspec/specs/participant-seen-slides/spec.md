@@ -26,5 +26,17 @@ A slide's page SHALL be the page of the deck PowerPoint last printed (`local_pub
 - **WHEN** a shown version has no printed page and PowerPoint is frontmost
 - **THEN** no print starts; the slide waits and is printed once PowerPoint leaves the front
 
+#### Scenario: PowerPoint comes back to the front between two decks
+- **WHEN** several decks wait for a print and PowerPoint becomes frontmost while the first one prints
+- **THEN** the remaining decks are not printed; they wait until PowerPoint leaves the front again
+
+#### Scenario: A print that failed
+- **WHEN** the print of a deck fails (anything but "the deck is not open" or "a slide show runs")
+- **THEN** that save of the deck is not printed again; the slides wait until the deck is saved again
+
+#### Scenario: A deck with hidden slides
+- **WHEN** the deck holds slides marked "Hide Slide", which PowerPoint's print leaves out
+- **THEN** no print is started for it (the pages would not line up with the slides); its shown slides wait until a save without hidden slides
+
 ### Requirement: Participants read the deck under "Seen slides"
 The participant sidebar SHALL offer "Seen slides" (badge = page count), opening the deck in the Slides viewer at its last page, with follow turned off. New pages SHALL arrive live: a reader on the last page moves to the new last page, a reader who scrolled back stays. `/<session>/past-slides` SHALL open it. The materials zip SHALL include it as `slides/Slides seen.pdf`, and the offline copy links it as a deck. The host's "Clear slides" SHALL empty it.
