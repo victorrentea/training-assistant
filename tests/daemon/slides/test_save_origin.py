@@ -77,7 +77,8 @@ def test_an_auto_save_with_powerpoint_in_front_waits_then_prints_once_it_leaves(
          patch("daemon.slides.export_probe.schedule_probe"), \
          patch.object(save_origin, "is_scripted_save", return_value=True), \
          patch.object(save_origin, "powerpoint_frontmost", side_effect=lambda: frontmost[0]), \
-         patch.object(SlidesRunner, "_start_redownload", lambda self, slug, url, src: started.append((slug, src))):
+         patch.object(SlidesRunner, "_start_redownload",
+                      lambda self, slug, url, src, behind_only=False: started.append((slug, src, behind_only))):
         assert runner.scan_pptx_mtimes()
         assert started == []
         assert runner._deferred_prints == {"ae": deck}
@@ -87,8 +88,66 @@ def test_an_auto_save_with_powerpoint_in_front_waits_then_prints_once_it_leaves(
 
         frontmost[0] = False
         runner.scan_pptx_mtimes()
-        assert started == [("ae", deck)]
+        assert started == [("ae", deck, True)], "started as a print that must stay behind"
         assert runner._deferred_prints == {}
+
+
+def test_back_in_powerpoint_before_the_held_print_starts_it_waits_again(tmp_path):
+    """The print thread may wait 20 s for another deck's print: by then he can be back."""
+    from daemon.slides import local_publish
+    from daemon.slides.loop import _run_redownload_poller
+
+    deck = tmp_path / "ae.pptx"
+    deck.write_bytes(b"x")
+    runner = _runner(tmp_path, deck)
+    ms = _misc()
+    ms.slides_updated["ae"]["status"] = "downloading"  # as _start_redownload leaves it
+    asked = []
+
+    def attempt(slug, source, upload, in_front_ok=True):
+        asked.append(in_front_ok)
+        return "not_now"
+
+    with patch("daemon.slides.router.misc_state", ms), \
+         patch("daemon.slides.router._broadcast_slides_updated"), \
+         patch("daemon.slides.router.download_on_railway") as google, \
+         patch.object(local_publish, "attempt", attempt), \
+         patch.object(save_origin, "powerpoint_frontmost", return_value=True):
+        _run_redownload_poller("ae", "https://drive.test/ae", deck, lambda: runner._hold_back("ae", deck))
+
+    assert asked == [False]
+    assert runner._deferred_prints == {"ae": deck}
+    assert ms.slides_updated["ae"]["status"] == "cached"
+    google.assert_not_called()
+
+
+def test_when_the_front_app_cannot_be_read_powerpoint_counts_as_in_front():
+    """A print held back a little longer costs nothing; one under his hands does."""
+    import subprocess
+
+    def run(answers):
+        calls = iter(answers)
+
+        def fake(cmd, **kwargs):
+            answer = next(calls)
+            if isinstance(answer, Exception):
+                raise answer
+            return SimpleNamespace(returncode=answer[0], stdout=answer[1])
+        return fake
+
+    with patch.object(save_origin.sys, "platform", "darwin"):
+        with patch.object(save_origin.subprocess, "run", run([subprocess.TimeoutExpired("lsappinfo", 5)])):
+            assert save_origin.powerpoint_frontmost()
+        with patch.object(save_origin.subprocess, "run", run([(0, "")])):
+            assert save_origin.powerpoint_frontmost()
+        with patch.object(save_origin.subprocess, "run", run([(0, "ASN:0x0-0x1:"), (1, "")])):
+            assert save_origin.powerpoint_frontmost()
+        with patch.object(save_origin.subprocess, "run",
+                          run([(0, "ASN:0x0-0x1:"), (0, '"CFBundleIdentifier"="com.apple.Terminal"')])):
+            assert not save_origin.powerpoint_frontmost()
+        with patch.object(save_origin.subprocess, "run",
+                          run([(0, "ASN:0x0-0x1:"), (0, '"CFBundleIdentifier"="com.microsoft.Powerpoint"')])):
+            assert save_origin.powerpoint_frontmost()
 
 
 def test_a_save_by_hand_prints_at_once_even_with_powerpoint_in_front(tmp_path):
@@ -104,7 +163,8 @@ def test_a_save_by_hand_prints_at_once_even_with_powerpoint_in_front(tmp_path):
          patch("daemon.slides.export_probe.schedule_probe"), \
          patch.object(save_origin, "is_scripted_save", return_value=False), \
          patch.object(save_origin, "powerpoint_frontmost", return_value=True), \
-         patch.object(SlidesRunner, "_start_redownload", lambda self, slug, url, src: started.append((slug, src))):
+         patch.object(SlidesRunner, "_start_redownload",
+                      lambda self, slug, url, src, behind_only=False: started.append((slug, src, behind_only))):
         assert runner.scan_pptx_mtimes()
-    assert started == [("ae", deck)]
+    assert started == [("ae", deck, False)], "his own save may print in front"
     assert runner._deferred_prints == {}

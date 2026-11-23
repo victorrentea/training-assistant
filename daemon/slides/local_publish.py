@@ -21,6 +21,11 @@ Google's PDF as before.
 A deck with hidden slides is not printed at all: PowerPoint's print leaves them out, so the
 pages no longer line up with the slides, and the print was thrown away after its progress
 bar had been shown (2026-11-23: three such decks, each printed whole once a minute, all day).
+
+A print that goes wrong for another reason (a print that never arrived, Railway down) is
+tried again for the same save after ~5 min and once more ~25 min later, then left alone:
+each try shows the progress bar again. The pages a print did produce are kept even when
+Railway could not be reached, and sent with the next try without printing again.
 """
 from __future__ import annotations
 
@@ -28,17 +33,18 @@ import hashlib
 import json
 import os
 import threading
+import time
 import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from pydantic import BaseModel
 from pypdf import PdfWriter
 
 from daemon import log
-from daemon.slides import pdf_pages, pdf_printer
+from daemon.slides import pdf_pages, pdf_printer, save_origin
 from daemon.slides.pptx_slides import (
     DeckFingerprint,
     as_ranges,
@@ -59,9 +65,48 @@ _lock = threading.Lock()
 #   done    — deck.pdf holds that save;
 #   not_now — PowerPoint cannot print it at this moment (the deck is not open, a slide show
 #             runs); nothing was printed, the same save can be asked for again;
-#   failed  — this save does not print: asking again would show the print's progress bar
-#             again for the same result. Only a new save of the deck is worth a new print.
+#   failed  — the print of this save went wrong, or is not due for another try yet
+#             (`_may_try`): nothing for the caller to do but ask again later.
 PrintOutcome = Literal["done", "not_now", "failed"]
+
+# After a print of a save failed, that save is printed again this long after the first
+# failure, then this long after the second, then no more.
+_RETRY_AFTER_S = (300.0, 1500.0)
+_clock = time.monotonic
+
+
+class HiddenSlides(RuntimeError):
+    """The deck holds hidden slides: no print of this save can line up with its slides."""
+
+
+class _Failed(NamedTuple):
+    mtime: float  # the save that failed
+    tries: int
+    at: float  # _clock() of the last try
+    for_good: bool  # no retry can help (hidden slides)
+
+
+# slug → the failed prints of its current save. In memory: a daemon restart tries once more.
+_failed: dict[str, _Failed] = {}
+
+
+def _may_try(slug: str, mtime: float) -> bool:
+    memo = _failed.get(slug)
+    if memo is None or memo.mtime != mtime:
+        return True  # another save: a new story
+    if memo.for_good or memo.tries > len(_RETRY_AFTER_S):
+        return False
+    return _clock() - memo.at >= _RETRY_AFTER_S[memo.tries - 1]
+
+
+def _note_failure(slug: str, mtime: float, for_good: bool) -> str:
+    """Remembers the failure; what happens next, for the log."""
+    memo = _failed.get(slug)
+    tries = memo.tries + 1 if memo is not None and memo.mtime == mtime else 1
+    _failed[slug] = _Failed(mtime, tries, _clock(), for_good)
+    if for_good or tries > len(_RETRY_AFTER_S):
+        return "not printed again until the deck is saved again"
+    return f"printed again in {_RETRY_AFTER_S[tries - 1] / 60:.0f} min at the earliest"
 
 
 class PublishedDeck(BaseModel):
@@ -158,40 +203,59 @@ def page_of(key: str, slide_id: str, version: str) -> tuple[Path, int] | None:
     return None
 
 
-def attempt(slug: str, source: Path, upload: bool) -> PrintOutcome:
-    """`publish` (upload) or `print_locally`, saying why when it did not happen."""
+def attempt(slug: str, source: Path, upload: bool, in_front_ok: bool = True) -> PrintOutcome:
+    """`publish` (upload) or `print_locally`, saying why when it did not happen.
+
+    `in_front_ok=False`: the caller's print must not come up under the trainer's hands (a
+    print nobody asked for by saving). PowerPoint in front is then "not_now", asked once the
+    print lock is held: another deck's print may have kept this one waiting for 20 s."""
     if not pdf_printer.supported():
         return "failed"
     try:
+        mtime = source.stat().st_mtime
+    except OSError:
+        return "failed"
+    if not _may_try(slug, mtime):
+        return "failed"
+    try:
         with _lock:
-            outcome = _publish(slug, source, upload)
+            outcome = _publish(slug, source, upload, in_front_ok)
+    except HiddenSlides as exc:
+        log.info("slides", f"No local print for slug={slug}: {exc} — {_note_failure(slug, mtime, for_good=True)}")
+        return "failed"
     except Exception as exc:  # noqa: BLE001 — whatever fails, Google's PDF is still there
-        log.error("slides", f"Local print failed for slug={slug}, falling back to Google Drive: {exc}")
+        log.error("slides", f"Local print failed for slug={slug}, falling back to Google Drive: {exc} — "
+                            f"{_note_failure(slug, mtime, for_good=False)}")
         return "failed"
     if outcome == "done":
+        _failed.pop(slug, None)
         from daemon.slides import seen_slides  # pages of slides shown meanwhile may be here now
         seen_slides.wake()
     return outcome
 
 
-def _publish(slug: str, source: Path, upload: bool = True) -> PrintOutcome:
+def _publish(slug: str, source: Path, upload: bool = True, in_front_ok: bool = True) -> PrintOutcome:
     hidden = hidden_slides(source)
     if hidden:
-        log.info("slides", f"No local print for slug={slug}: {len(hidden)} hidden slides, which PowerPoint's print leaves out")
-        return "failed"
+        raise HiddenSlides(f"{len(hidden)} hidden slides, which PowerPoint's print leaves out")
     decks, slide_show = pdf_printer.open_decks()
     if source.name not in decks or slide_show:
         return "not_now"
+    if not in_front_ok and save_origin.powerpoint_frontmost():
+        return "not_now"
     try:
-        return "done" if _print_and_send(slug, source, upload) else "failed"
+        _print_and_send(slug, source, upload)
+        return "done"
     finally:
         # Only the deck and its state are kept between saves.
         for leftover in ("printed.pdf", "cropped.pdf", "pages.pdf", "deck.new.pdf"):
             (_folder(slug) / leftover).unlink(missing_ok=True)
 
 
-def _print_and_send(slug: str, source: Path, upload: bool = True) -> bool:
-
+def _print_and_send(slug: str, source: Path, upload: bool = True) -> None:
+    """deck.pdf and its state are written as soon as the pages are printed, with no Railway
+    sha: if the upload then fails, the pages are still there for the seen slides, and the
+    next call sends the whole deck without printing anything."""
     folder = _folder(slug)
     folder.mkdir(parents=True, exist_ok=True)
     deck = folder / "deck.pdf"
@@ -200,7 +264,12 @@ def _print_and_send(slug: str, source: Path, upload: bool = True) -> bool:
     changed = changed_positions(state.fingerprint if state else None, after)
 
     if state and changed == []:
-        return True  # a save that changed no slide (speaker notes, a re-save)
+        # A save that changed no slide (speaker notes, a re-save) — or one already printed
+        # whose upload failed: Railway still has to get it.
+        if upload and not state.railway_sha256:
+            sha = _send_whole_deck(slug, deck)
+            _save(slug, PublishedDeck(fingerprint=after, box=state.box, railway_sha256=sha))
+        return
 
     if state and changed and len(changed) <= max(3, len(after.slides) * _MAX_CHANGED_SHARE):
         printed = _printed(source.name, as_ranges(changed), folder)
@@ -212,24 +281,28 @@ def _print_and_send(slug: str, source: Path, upload: bool = True) -> bool:
         merged = folder / "deck.new.pdf"
         pdf_pages.replace_pages(deck, pages, changed, merged)
         os.replace(merged, deck)
+        _save(slug, PublishedDeck(fingerprint=after, box=state.box, railway_sha256=""))
         if not upload:
-            _save(slug, PublishedDeck(fingerprint=after, box=state.box, railway_sha256=state.railway_sha256))
-            return True
-        try:
-            answer = _post(
-                f"/api/slides/pages/{slug}",
-                {"base_sha256": state.railway_sha256, "positions": json.dumps(changed)},
-                pages,
-            )
-            sha = str(answer["sha256"])
-            log.info("slides", f"↑ slides {changed} as PowerPoint prints them: slug={slug}, {pages.stat().st_size // 1024} KB")
-        except urllib.error.HTTPError as refused:
-            if refused.code != 409:
-                raise
-            # Railway restarted, or holds Google's version: it gets the whole deck.
+            return
+        sha = None
+        if state.railway_sha256:
+            try:
+                answer = _post(
+                    f"/api/slides/pages/{slug}",
+                    {"base_sha256": state.railway_sha256, "positions": json.dumps(changed)},
+                    pages,
+                )
+                sha = str(answer["sha256"])
+                log.info("slides", f"↑ slides {changed} as PowerPoint prints them: slug={slug}, {pages.stat().st_size // 1024} KB")
+            except urllib.error.HTTPError as refused:
+                if refused.code != 409:
+                    raise
+        if sha is None:
+            # Railway restarted, holds Google's version, or never got our last print (its
+            # upload failed): it gets the whole deck.
             sha = _send_whole_deck(slug, deck)
         _save(slug, PublishedDeck(fingerprint=after, box=state.box, railway_sha256=sha))
-        return True
+        return
 
     printed = _printed(source.name, None, folder)
     box = pdf_pages.slide_box(printed)
@@ -242,6 +315,7 @@ def _print_and_send(slug: str, source: Path, upload: bool = True) -> bool:
     fresh = folder / "deck.new.pdf"
     pdf_pages.compress(cropped, fresh, count)
     os.replace(fresh, deck)
-    sha = _send_whole_deck(slug, deck) if upload else ""
-    _save(slug, PublishedDeck(fingerprint=after, box=box, railway_sha256=sha))
-    return True
+    _save(slug, PublishedDeck(fingerprint=after, box=box, railway_sha256=""))
+    if upload:
+        sha = _send_whole_deck(slug, deck)
+        _save(slug, PublishedDeck(fingerprint=after, box=box, railway_sha256=sha))

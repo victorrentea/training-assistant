@@ -30,9 +30,21 @@ A slide's page SHALL be the page of the deck PowerPoint last printed (`local_pub
 - **WHEN** several decks wait for a print and PowerPoint becomes frontmost while the first one prints
 - **THEN** the remaining decks are not printed; they wait until PowerPoint leaves the front again
 
+#### Scenario: PowerPoint comes back to the front while the print waits its turn
+- **WHEN** PowerPoint becomes frontmost while the print waits for another deck's print to end
+- **THEN** it does not start; the same holds for the print held back after an auto-save, which goes back to waiting
+
 #### Scenario: A print that failed
-- **WHEN** the print of a deck fails (anything but "the deck is not open" or "a slide show runs")
-- **THEN** that save of the deck is not printed again; the slides wait until the deck is saved again
+- **WHEN** the print of a deck fails (anything but "the deck is not open", "a slide show runs" or "PowerPoint in front")
+- **THEN** that save of the deck is printed again ~5 min later and once more ~25 min after that, then no more until the deck is saved again
+
+#### Scenario: Railway cannot be reached after the print
+- **WHEN** the pages were printed but their upload failed
+- **THEN** the printed pages are kept and serve the seen slides; the next try sends the whole deck without printing again
+
+#### Scenario: The frontmost app cannot be read
+- **WHEN** `lsappinfo` fails or times out
+- **THEN** PowerPoint counts as frontmost and no such print starts
 
 #### Scenario: A deck with hidden slides
 - **WHEN** the deck holds slides marked "Hide Slide", which PowerPoint's print leaves out

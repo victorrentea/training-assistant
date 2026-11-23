@@ -47,18 +47,21 @@ def is_scripted_save(path: Path, mtime: float, log_file: Path | None = None) -> 
 
 def powerpoint_frontmost() -> bool:
     """PowerPoint is the app in front. `lsappinfo` needs no Automation grant, unlike
-    System Events. Anything unexpected reads as "not in front": the print then runs."""
+    System Events. When it cannot be asked the answer is "in front": a print held back a
+    little longer costs nothing, one under the trainer's hands does."""
     if sys.platform != "darwin":
         return False
     try:
-        front = subprocess.run(["lsappinfo", "front"], capture_output=True, text=True, timeout=5).stdout.strip()
-        if not front:
-            return False
-        info = subprocess.run(["lsappinfo", "info", "-only", "bundleid", front],
-                              capture_output=True, text=True, timeout=5).stdout
+        front = subprocess.run(["lsappinfo", "front"], capture_output=True, text=True, timeout=5)
+        if front.returncode != 0 or not front.stdout.strip():
+            return True
+        info = subprocess.run(["lsappinfo", "info", "-only", "bundleid", front.stdout.strip()],
+                              capture_output=True, text=True, timeout=5)
+        if info.returncode != 0:
+            return True
     except (OSError, subprocess.SubprocessError):
-        return False
-    return f'"{_POWERPOINT_BUNDLE}"'.lower() in info.lower()
+        return True
+    return f'"{_POWERPOINT_BUNDLE}"'.lower() in info.stdout.lower()
 
 
 def defer_print(path: Path, mtime: float) -> bool:

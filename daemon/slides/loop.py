@@ -2,6 +2,7 @@
 
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -29,11 +30,16 @@ _REDOWNLOAD_MAX_RETRIES = 5
 
 
 
-def _run_redownload_poller(slug: str, drive_export_url: str, source: Path | None = None) -> None:
+def _run_redownload_poller(slug: str, drive_export_url: str, source: Path | None = None,
+                           hold_back: Callable[[], None] | None = None) -> None:
     """Background thread: call Railway REST to re-download PDF, compare hashes, retry if unchanged.
 
     On success (hash changed): marks cached, broadcasts refreshed_slugs.
     On exhaustion (hash unchanged after retries): logs warning, beeps.
+
+    `hold_back`: this is the print of an auto-save, which must not come up under the
+    trainer's hands. If he is back in PowerPoint by the time it would start, nothing is
+    printed or downloaded and `hold_back` puts the deck back among the waiting ones.
     """
     from daemon.slides.router import (
         _mark_cache_status,
@@ -47,9 +53,13 @@ def _run_redownload_poller(slug: str, drive_export_url: str, source: Path | None
         # PowerPoint draws them. Google's conversion below is the fallback (deck not open,
         # a slide show running, no printer) — see daemon/slides/local_publish.py.
         if source is not None:
-            from daemon.slides.local_publish import publish
-            if publish(slug, source):
+            from daemon.slides import local_publish
+            outcome = local_publish.attempt(slug, source, upload=True, in_front_ok=hold_back is None)
+            if outcome == "done":
                 _mark_cache_status(slug, "cached")
+                return
+            if hold_back is not None and outcome == "not_now" and save_origin.powerpoint_frontmost():
+                hold_back()
                 return
         log.info("slides", f"Waiting {_REDOWNLOAD_FIRST_DELAY_S:.0f}s for Google Drive to sync before polling slug={slug}")
         time.sleep(_REDOWNLOAD_FIRST_DELAY_S)
@@ -249,7 +259,17 @@ class SlidesRunner:
                         self._start_redownload(slug, drive_url, Path(_key))
         return True
 
-    def _start_redownload(self, slug: str, drive_url: str, source: Path) -> bool:
+    def _hold_back(self, slug: str, source: Path) -> None:
+        """Called on the poller thread: he came back to PowerPoint before the print of an
+        auto-save could start. The deck waits again, and shows as cached as it was."""
+        from daemon.slides.router import _broadcast_slides_updated, _mark_cache_status
+        log.info("slides", f"PowerPoint is in front again — the print of the auto-saved slug={slug} waits")
+        self._deferred_prints.setdefault(slug, source)
+        _mark_cache_status(slug, "cached")
+        _broadcast_slides_updated()
+
+    def _start_redownload(self, slug: str, drive_url: str, source: Path, behind_only: bool = False) -> bool:
+        """`behind_only`: the print of an auto-save, never started with PowerPoint in front."""
         from daemon.slides.router import (
             _broadcast_slides_updated,
             _claim_download,
@@ -265,7 +285,7 @@ class SlidesRunner:
         _broadcast_slides_updated()
         threading.Thread(
             target=_run_redownload_poller,
-            args=(slug, drive_url, source),
+            args=(slug, drive_url, source, (lambda: self._hold_back(slug, source)) if behind_only else None),
             daemon=True,
             name=f"redownload-{slug}",
         ).start()
@@ -287,4 +307,4 @@ class SlidesRunner:
             _finish_download(slug)
             log.info("slides", f"PowerPoint left the front — printing the auto-saved slug={slug}")
             self._deferred_prints.pop(slug)
-            self._start_redownload(slug, drive_url, source)
+            self._start_redownload(slug, drive_url, source, behind_only=True)

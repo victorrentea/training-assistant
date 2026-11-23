@@ -2,6 +2,7 @@
 is sent to Railway (daemon/slides/pptx_slides.py, pdf_pages.py, local_publish.py)."""
 import io
 import json
+import os
 import urllib.error
 import zipfile
 from pathlib import Path
@@ -138,7 +139,11 @@ def world(tmp_path, monkeypatch):
     """PowerPoint, the printer, Ghostscript and Railway, all in memory."""
     sent: list[tuple[str, dict, list[int]]] = []
     state = {"open": ["deck.pptx"], "slide_show": False, "printed": [], "refuse_pages": False}
+    state.update(now=1000.0, frontmost=False, railway_down=False)
     monkeypatch.setattr(local_publish, "_HOME", tmp_path / "cache")
+    monkeypatch.setattr(local_publish, "_failed", {})
+    monkeypatch.setattr(local_publish, "_clock", lambda: state["now"])
+    monkeypatch.setattr(local_publish.save_origin, "powerpoint_frontmost", lambda: state["frontmost"])
     monkeypatch.setattr(local_publish.pdf_printer, "supported", lambda: True)
     monkeypatch.setattr(local_publish.pdf_printer, "open_decks", lambda: (state["open"], state["slide_show"]))
 
@@ -155,6 +160,8 @@ def world(tmp_path, monkeypatch):
     monkeypatch.setattr(local_publish.pdf_pages, "compress", lambda src, out, pages: Path(out).write_bytes(Path(src).read_bytes()))
 
     def post(path, fields, pdf):
+        if state["railway_down"]:
+            raise urllib.error.URLError("no route to host")
         if path.startswith("/api/slides/pages/") and state["refuse_pages"]:
             raise urllib.error.HTTPError(path, 409, "Conflict", {}, io.BytesIO(b""))
         sent.append((path, fields, [round(float(p.mediabox.width)) for p in PdfReader(str(pdf)).pages]))
@@ -222,12 +229,97 @@ def test_a_deck_with_hidden_slides_is_never_printed(tmp_path, world):
     assert world["printed"] == [] and world["sent"] == []
 
 
-def test_a_print_that_goes_wrong_is_a_failure_of_that_save(tmp_path, world, monkeypatch):
+def test_a_deck_with_hidden_slides_is_not_tried_again_however_long_it_waits(tmp_path, world):
+    world["slides"] = 2
+    source = _deck(tmp_path / "deck.pptx", {"256": "one", "257": "two"}, hidden={"257"})
+    assert local_publish.attempt("deck", source, upload=True) == "failed"
+    world["open"] = []  # would answer "not_now" if PowerPoint were asked at all
+
+    world["now"] += 24 * 3600
+    assert local_publish.attempt("deck", source, upload=True) == "failed"
+
+    _deck(tmp_path / "deck.pptx", {"256": "one", "257": "two"})  # saved again, nothing hidden
+    os.utime(source, (2000, 2000))
+    world["open"] = ["deck.pptx"]
+    assert local_publish.attempt("deck", source, upload=True) == "done"
+
+
+def test_a_failed_print_is_tried_again_after_5_and_25_minutes_then_no_more(tmp_path, world, monkeypatch):
+    """Not every minute (2026-11-23), and not never: a print that did not arrive once may
+    arrive the next time."""
     source = _save(tmp_path, world, {"256": "one"})
     monkeypatch.setattr(local_publish.pdf_pages, "matches_aspect", lambda box, aspect: False)
 
-    assert local_publish.attempt("deck", source, upload=True) == "failed"
+    def tries_after(seconds: float) -> int:
+        world["now"] += seconds
+        assert local_publish.attempt("deck", source, upload=True) == "failed"
+        return len(world["printed"])
+
+    assert tries_after(0) == 1
+    assert tries_after(60) == 1, "a minute later: not yet"
+    assert tries_after(240) == 2, "5 min after the first failure"
+    assert tries_after(20 * 60) == 2, "20 min after the second: not yet"
+    assert tries_after(5 * 60) == 3, "25 min after the second"
+    assert tries_after(24 * 3600) == 3, "three failures: this save is left alone"
     assert world["sent"] == []
+
+    os.utime(source, (2000, 2000))  # saved again
+    assert tries_after(0) == 4
+
+
+def test_a_print_that_works_again_forgets_the_failures(tmp_path, world, monkeypatch):
+    source = _save(tmp_path, world, {"256": "one"})
+    with monkeypatch.context() as broken:
+        broken.setattr(local_publish.pdf_pages, "matches_aspect", lambda box, aspect: False)
+        assert local_publish.attempt("deck", source, upload=True) == "failed"
+
+    world["now"] += 300
+    assert local_publish.attempt("deck", source, upload=True) == "done"
+    assert local_publish._failed == {}
+
+
+def test_pages_printed_survive_a_railway_failure_and_are_sent_later_without_printing_again(tmp_path, world):
+    source = _save(tmp_path, world, {"256": "one", "257": "two"})
+    world["railway_down"] = True
+
+    assert local_publish.attempt("deck", source, upload=True) == "failed"
+    version = local_publish.slide_version(dict(fingerprint(source).slides)["257"])
+    assert local_publish.page_of("deck", "257", version) is not None, "the seen slides still get their page"
+
+    world["railway_down"] = False
+    world["now"] += 300
+    assert local_publish.attempt("deck", source, upload=True) == "done"
+    assert world["printed"] == [None], "printed once"
+    assert [path for path, _, _ in world["sent"]] == ["/api/slides/deck/deck"]
+
+
+def test_changed_pages_whose_upload_failed_reach_railway_as_a_whole_deck(tmp_path, world):
+    source = _save(tmp_path, world, {"256": "one", "257": "two", "258": "three", "259": "four"})
+    assert local_publish.publish("deck", source) is True
+    _save(tmp_path, world, {"256": "one", "257": "TWO", "258": "three", "259": "four"})
+    os.utime(source, (2000, 2000))
+    world["railway_down"] = True
+    assert local_publish.attempt("deck", source, upload=True) == "failed"
+
+    world["railway_down"] = False
+    _save(tmp_path, world, {"256": "one", "257": "TWO", "258": "THREE", "259": "four"})
+    os.utime(source, (3000, 3000))
+    assert local_publish.attempt("deck", source, upload=True) == "done"
+
+    path, _, pages = world["sent"][-1]
+    assert path == "/api/slides/deck/deck" and len(pages) == 4, "Railway has no base for single pages"
+    assert world["printed"][-1] == [(3, 3)]
+
+
+def test_a_print_nobody_asked_for_never_starts_with_powerpoint_in_front(tmp_path, world):
+    """Asked inside the print lock: he may have come back while another deck was printing."""
+    source = _save(tmp_path, world, {"256": "one"})
+    world["frontmost"] = True
+
+    assert local_publish.attempt("deck", source, upload=True, in_front_ok=False) == "not_now"
+    assert world["printed"] == []
+
+    assert local_publish.attempt("deck", source, upload=True) == "done", "his own save prints at once"
 
 
 def test_a_failure_falls_back_and_is_tried_again_next_save(tmp_path, world, monkeypatch):
@@ -236,4 +328,5 @@ def test_a_failure_falls_back_and_is_tried_again_next_save(tmp_path, world, monk
     assert local_publish.publish("deck", source) is False
 
     monkeypatch.setattr(local_publish.pdf_pages, "matches_aspect", lambda box, aspect: True)
+    os.utime(source, (2000, 2000))  # the next save
     assert local_publish.publish("deck", source) is True

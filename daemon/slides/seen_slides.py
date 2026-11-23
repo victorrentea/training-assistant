@@ -16,10 +16,11 @@ front, where the print's progress bar would cover his work, and never during a s
 show. Decks outside the slides catalog are printed too, into a local `deck.pdf` that is
 not sent anywhere.
 
-A print that failed is not asked for again until the deck is saved again: the same save
-fails the same way, and each try shows PowerPoint's print progress bar. On 2026-11-23 three
-decks with hidden slides (which PowerPoint's print leaves out) were printed whole once a
-minute for a whole training day, ~340 prints, none of them kept.
+A print is asked for again every minute, but local_publish.py decides whether PowerPoint
+really prints: a save whose print failed is printed again after ~5 and ~25 min, then no
+more, and a deck with hidden slides (which PowerPoint's print leaves out) not at all. On
+2026-11-23 three such decks were printed whole once a minute for a whole training day,
+~340 prints, none of them kept.
 
 Files: the registry in the session folder (`slides-seen.json`, next to
 session-state.json); the pages and the assembled `seen.pdf` in the local cache, from
@@ -50,8 +51,8 @@ from daemon.slides.seen_registry import SeenRegistry, SeenSlide
 REGISTRY_FILE = "slides-seen.json"
 ZIP_FILENAME = "Slides seen.pdf"
 _CACHE = Path.home() / "Library" / "Caches" / "training-assistant" / "slides-seen"
-# A save PowerPoint could not print just now (deck closed, a slide show) is asked for again
-# after this. A print that failed is not: see `_print`.
+# The same save of a deck is asked for again only after this (deck closed, a slide show, a
+# failed print — whose real retries local_publish.py spaces out much further).
 _PRINT_RETRY_S = 60.0
 _TICK_S = 10.0
 _NAME = "slides"
@@ -112,8 +113,7 @@ class SeenSlides:
         self.deps = deps
         self._lock = threading.RLock()
         self._registries: dict[str, SeenRegistry] = {}
-        # deck key → (deck mtime, when, failed): the last save of the deck a print was asked for.
-        self._last_print: dict[str, tuple[float, float, bool]] = {}
+        self._last_print: dict[str, tuple[float, float]] = {}  # deck key → (deck mtime, when)
         self._uploaded: dict[str, str | None] = {}  # session → updated_at Railway holds
 
     # ── files ──
@@ -277,22 +277,24 @@ class SeenSlides:
             except OSError:
                 continue
             last = self._last_print.get(key)
-            if last and last[0] == mtime:
-                if last[2]:
-                    continue  # this save does not print: only a new save is worth a new try
-                if time.monotonic() - last[1] < _PRINT_RETRY_S:
-                    continue  # deck closed or a slide show a moment ago: not yet
+            if last and last[0] == mtime and time.monotonic() - last[1] < _PRINT_RETRY_S:
+                continue  # asked a moment ago and still no page: not yet
             # Never under his hands: the print shows a progress bar. Asked before every
             # deck — a whole deck takes ~20 s to print, and he may be back by the next one.
+            # (local_publish asks once more when the print is really about to start.)
             if self.deps.powerpoint_frontmost():
                 break
-            outcome = (self.deps.publish if catalog else self.deps.print_locally)(key, source)
-            self._last_print[key] = (mtime, time.monotonic(), outcome == "failed")
+            # Noted before the call: whatever it raises, the next tick 10 s later must not
+            # ask again.
+            self._last_print[key] = (mtime, time.monotonic())
+            try:
+                outcome = (self.deps.publish if catalog else self.deps.print_locally)(key, source)
+            except Exception as exc:  # noqa: BLE001 — the other decks still get their turn
+                log.error(_NAME, f"Seen slides: printing {source.name} failed: {exc}")
+                continue
             if outcome == "done":
                 log.info(_NAME, f"Seen slides: printed {source.name} for slides shown since its last print")
                 printed = True
-            elif outcome == "failed":
-                log.info(_NAME, f"Seen slides: {source.name} does not print as saved — its slides wait for its next save")
         return printed
 
     def _assemble(self, session_id: str) -> None:
@@ -398,7 +400,7 @@ def _publish_catalog_deck(slug: str, source: Path) -> PrintOutcome:
     from daemon.slides import local_publish
     from daemon.slides.router import _mark_cache_status
 
-    outcome = local_publish.attempt(slug, source, upload=True)
+    outcome = local_publish.attempt(slug, source, upload=True, in_front_ok=False)
     if outcome == "done":
         _mark_cache_status(slug, "cached")
     return outcome
@@ -417,7 +419,7 @@ def service() -> SeenSlides:
             catalog_slug=lambda path: _catalog_slug(path),
             page_of=local_publish.page_of,
             publish=_publish_catalog_deck,
-            print_locally=lambda key, source: local_publish.attempt(key, source, upload=False),
+            print_locally=lambda key, source: local_publish.attempt(key, source, upload=False, in_front_ok=False),
             powerpoint_frontmost=save_origin.powerpoint_frontmost,
             upload=_upload,
             broadcast=_broadcast,

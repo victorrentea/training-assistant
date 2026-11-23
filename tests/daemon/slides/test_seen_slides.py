@@ -168,36 +168,43 @@ def test_no_print_while_powerpoint_is_in_front_the_slide_waits(world):
     assert world.seen() == [100]
 
 
-def test_a_failed_print_is_not_repeated_until_the_deck_is_saved_again(world, monkeypatch):
-    """2026-11-23: decks with hidden slides were printed whole once a minute, all day."""
-    monkeypatch.setattr("daemon.slides.seen_slides._PRINT_RETRY_S", 0.0)
+@pytest.mark.parametrize("outcome", ["not_now", "failed"])
+def test_a_deck_that_did_not_print_is_asked_for_again_but_not_at_every_tick(world, monkeypatch, outcome):
+    """How often PowerPoint really prints a failed save is local_publish's rule; here it is
+    only asked again, a minute later at the earliest."""
     deck = world.save({"256": "a"})
-    world.outcome = "failed"
+    world.outcome = outcome
     world.show("256")
     world.service.resolve()
-    world.service.resolve()
-    assert len(world.prints) == 1 and world.service.state().count == 0
-
-    world.outcome = "done"
-    world.service.resolve()
-    assert len(world.prints) == 1, "still the same save: nothing new to print"
-
-    os.utime(deck, (deck.stat().st_atime, deck.stat().st_mtime + 5))  # saved again
-    world.service.resolve()
-    assert len(world.prints) == 2 and world.seen() == [100]
-
-
-def test_a_deck_powerpoint_cannot_print_right_now_is_asked_for_again_later(world, monkeypatch):
-    world.save({"256": "a"})
-    world.outcome = "not_now"  # the deck is closed, or a slide show runs
-    world.show("256")
     world.service.resolve()
     assert len(world.prints) == 1, "not within the retry period"
 
+    os.utime(deck, (deck.stat().st_atime, deck.stat().st_mtime + 5))  # saved again: asked at once
+    world.service.resolve()
+    assert len(world.prints) == 2
+
     monkeypatch.setattr("daemon.slides.seen_slides._PRINT_RETRY_S", 0.0)
     world.outcome = "done"
     world.service.resolve()
-    assert len(world.prints) == 2 and world.seen() == [100]
+    assert len(world.prints) == 3 and world.seen() == [100]
+
+
+def test_a_print_that_blows_up_is_not_asked_for_again_at_every_tick(world):
+    world.save({"256": "a"})
+    other = _deck(world.tmp / "other.pptx", {"900": "zz"})
+    world.frontmost = True
+    world.show("256")
+    world.service.on_slide_seen(SlideSeenEvent(path=str(other), deck="other.pptx", slide_id="900", slide=1))
+    world.frontmost = False
+
+    def boom():
+        raise RuntimeError("cache status went wrong")
+
+    world.on_print = boom
+    world.service.resolve()
+    assert len(world.prints) == 2, "the second deck still got its turn"
+    world.service.resolve()
+    assert len(world.prints) == 2
 
 
 def test_powerpoint_back_in_front_stops_the_decks_still_to_print(world):
