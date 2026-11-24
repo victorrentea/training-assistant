@@ -3905,8 +3905,17 @@ function takeBugScreenshot() {
   var badge = document.getElementById('bug-shot-badge');
   var take = badge && badge.querySelector('.shot-take');
   if (take) take.disabled = true;
+  var instantScroll = null;
   _loadHtml2canvas()
     .then(function(h2c) {
+      // html2canvas puts every scrolled box of its clone back with `scrollTop = y`,
+      // and draws right after. Under scroll-behavior:smooth (the slide buffers have
+      // scroll-smooth) that only starts an animation, so the picture showed the
+      // Slides viewer at its top: page 1, long since released to its grey "1"
+      // placeholder. The clone copies this <style> along with the page's own.
+      instantScroll = document.createElement('style');
+      instantScroll.textContent = '*{scroll-behavior:auto!important}';
+      document.head.appendChild(instantScroll);
       return h2c(document.body, {
         useCORS: true,
         logging: false,
@@ -3932,7 +3941,10 @@ function takeBugScreenshot() {
       showView('report-bug');
       _setReportBugStatus('Could not take the screenshot (' + ((e && e.message) || e) + ').', true);
     })
-    .finally(function() { if (take) take.disabled = false; });
+    .finally(function() {
+      if (instantScroll) instantScroll.remove();
+      if (take) take.disabled = false;
+    });
 }
 // html2canvas never paints ::placeholder, so an empty field came out blank.
 // In its cloned document, write the hint in as the value, in the hint's color.
