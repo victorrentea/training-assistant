@@ -5237,8 +5237,22 @@ function _copyToClipboard(text) {
 // A delayed mailto: (after a countdown) is NOT used: by then the click's user
 // activation has expired and browsers silently drop the external-protocol launch.
 var VICTOR_EMAIL = 'victorrentea@gmail.com';
+// The session name minus its date prefix, e.g. "DistributedArch@DB"; set from the snapshot.
+var _courseLabel = '';
+// Prefilled mail: subject "Hi from <course@client>", body "Hi, I'm <name set in the tool>".
+function _emailVictorHref() {
+  var subject = _courseLabel ? 'Hi from ' + _courseLabel : 'Hi';
+  var me = (_myName || '').trim();
+  var body = me ? "Hi, I'm " + me : '';
+  var q = '?subject=' + encodeURIComponent(subject);
+  if (body) q += '&body=' + encodeURIComponent(body);
+  return 'mailto:' + VICTOR_EMAIL + q;
+}
 function emailVictor(event) {
-  // No preventDefault: the <a href="mailto:…"> navigation happens natively.
+  // No preventDefault: the <a href="mailto:…"> navigation happens natively —
+  // rewriting href here, before the default action runs, prefills subject/body.
+  var link = event && event.currentTarget;
+  if (link && link.tagName === 'A') link.href = _emailVictorHref();
   _copyToClipboard(VICTOR_EMAIL).catch(function () {});
 
   var overlay = document.createElement('div');
@@ -6124,6 +6138,7 @@ function _applyState(msg) {
     var sn = msg.session_name;
     var spaceIdx = sn.indexOf(' ');
     if (spaceIdx !== -1) sn = sn.slice(spaceIdx + 1);
+    _courseLabel = sn.trim();
     var parts = sn.split('@');
     document.getElementById('session-title').textContent = parts[0].trim();
     var orgEl = document.getElementById('session-org');
