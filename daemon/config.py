@@ -128,6 +128,47 @@ class SessionFolderDates:
             for first, last in self.ranges
         )
 
+    def human_label(self) -> str:
+        """Short English label for people, e.g. '23-25 Nov 2026', '12, 14-16 Oct 2026',
+        '31 Aug-1 Sep 2026', '30 Dec 2026-2 Jan 2027'. Locale-independent."""
+        one_year = self.start.year == self.end.year
+
+        def day(d: date, with_month: bool = True) -> str:
+            out = str(d.day)
+            if with_month:
+                out += " " + _MONTHS[d.month - 1]
+                if not one_year:
+                    out += f" {d.year}"
+            return out
+
+        parts = []
+        for i, (first, last) in enumerate(self.ranges):
+            # The month is written once, after the last day of a run in the same month.
+            nxt = self.ranges[i + 1][0] if i + 1 < len(self.ranges) else None
+            same_as_next = nxt is not None and (nxt.year, nxt.month) == (last.year, last.month)
+            if first == last:
+                parts.append(day(first, not same_as_next))
+            elif (first.year, first.month) == (last.year, last.month):
+                parts.append(f"{first.day}-{day(last, not same_as_next)}")
+            else:
+                parts.append(f"{day(first)}-{day(last, not same_as_next)}")
+        label = ", ".join(parts)
+        return f"{label} {self.end.year}" if one_year else label
+
+
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def session_dates_label(session_name: str | None) -> str:
+    """'23-25 Nov 2026' for '2026-11-23..25 DistributedArch@DB'; '' when the name has no valid date prefix."""
+    if not session_name:
+        return ""
+    try:
+        dates = parse_session_folder_dates(session_name)
+    except ValueError:
+        return ""
+    return dates.human_label() if dates else ""
+
 
 def _next_date(prev: date, ey, em, ed, em2, ed2, ed3) -> date:
     """Resolve one '..X' / '+X' step relative to the date before it."""

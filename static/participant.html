@@ -842,7 +842,10 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
 /* Sidebar "Victor" row: quick contact icons */
 /* Monochrome, in the row's own text colour: present, not shouting. */
 /* Hover/focus: the shared yellow pop-out of .side-icon. */
-.about-quick-btn { width: 1.6rem; height: 1.6rem; }
+/* Six icons (call, @, QR, web, LinkedIn, YouTube) must fit the 243px sidebar beside
+   "Victor": narrower buttons and a tighter row gap than the other nav rows. */
+[data-nav="about"] { gap: .5rem; }
+.about-quick-btn { width: 1.35rem; height: 1.6rem; }
 .about-quick-btn .material-symbols-outlined { font-size: 1.05rem; }
 /* ❤️ on a multi option: tap the one you love most; once revealed it also counts everyone's. */
 .aishare-opt .row { justify-content: space-between; }
@@ -1454,6 +1457,8 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
      data-tip="Call Victor: +40 720 019 564" aria-label="Call Victor" onclick="event.stopPropagation()"><span class="material-symbols-outlined">call</span></a>
   <button type="button" class="about-quick-btn side-icon" data-tip="Email Victor" aria-label="Email Victor"
           onclick="event.stopPropagation();emailVictor(event)"><span class="material-symbols-outlined">alternate_email</span></button>
+  <button type="button" class="about-quick-btn side-icon" data-tip="Email Victor from your phone (QR)" aria-label="Show a QR code to email Victor from your phone"
+          onclick="showEmailQr(event)"><span class="material-symbols-outlined">qr_code_2</span></button>
   <a class="about-quick-btn side-icon" href="https://victorrentea.ro" target="_blank" rel="noopener"
      data-tip="victorrentea.ro" aria-label="Website" onclick="event.stopPropagation()"><span class="material-symbols-outlined">public</span></a>
   <a class="about-quick-btn side-icon" href="https://www.linkedin.com/in/victor-rentea-trainer/" target="_blank" rel="noopener"
@@ -1817,7 +1822,11 @@ aside .nav-item{padding-top:.375rem;padding-bottom:.375rem}
         <span class="flex-1 min-w-0">
           <span class="inline-flex items-center text-base font-semibold text-on-surface" style="gap:0.4rem">Email</span>
           <span class="block text-sm text-on-surface-variant truncate">victorrentea@gmail.com</span>
-        </span>      </a>
+        </span>
+        <span role="button" tabindex="0" class="side-icon flex-shrink-0" data-tip="Email Victor from your phone (QR)"
+              aria-label="Show a QR code to email Victor from your phone"
+              onclick="showEmailQr(event)" onkeydown="if(event.key==='Enter'){showEmailQr(event);}"><span class="material-symbols-outlined">qr_code_2</span></span>
+      </a>
     </div>
   </div>
 </div>
@@ -5239,9 +5248,13 @@ function _copyToClipboard(text) {
 var VICTOR_EMAIL = 'victorrentea@gmail.com';
 // The session name minus its date prefix, e.g. "DistributedArch@DB"; set from the snapshot.
 var _courseLabel = '';
-// Prefilled mail: subject "Hi from <course@client>", body "Hi, I'm <name set in the tool>".
+// The course days, e.g. "23-25 Nov 2026"; set from the snapshot's session_dates.
+var _courseDates = '';
+// Prefilled mail: subject "Hi from <course@client> (<course days>)", body "Hi, I'm <name set in the tool>".
+// The days tell apart two runs of the same course at the same client.
 function _emailVictorHref() {
   var subject = _courseLabel ? 'Hi from ' + _courseLabel : 'Hi';
+  if (_courseDates) subject += ' (' + _courseDates + ')';
   var me = (_myName || '').trim();
   var body = me ? "Hi, I'm " + me : '';
   var q = '?subject=' + encodeURIComponent(subject);
@@ -5280,6 +5293,54 @@ function emailVictor(event) {
   overlay.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', close); });
   overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
   document.addEventListener('keydown', onKey);
+}
+
+// QR of the same mailto: as the Email links, full screen, so a participant on a
+// locked-down work laptop can scan it and draft the mail on their personal phone.
+// qrcodejs is fetched on first use only (jsdelivr is in the page CSP).
+var _qrLibPromise = null;
+function _loadQrLib() {
+  if (typeof QRCode !== 'undefined') return Promise.resolve();
+  if (!_qrLibPromise) {
+    _qrLibPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+      s.onload = function () { resolve(); };
+      s.onerror = function () { _qrLibPromise = null; reject(new Error('QR library failed to load')); };
+      document.head.appendChild(s);
+    });
+  }
+  return _qrLibPromise;
+}
+function showEmailQr(event) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  var href = _emailVictorHref();
+  var overlay = document.createElement('div');
+  overlay.id = 'email-qr-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;background:rgba(0,0,0,.85);padding:1rem;cursor:pointer';
+  overlay.innerHTML =
+    '<div style="font-size:.95rem;color:#fff;opacity:.85;text-align:center">Scan with your phone to draft your email to Victor</div>' +
+    '<div data-qr style="background:#fff;padding:1rem;border-radius:1rem;line-height:0"></div>' +
+    '<div style="font-size:.8rem;color:#fff;opacity:.5">Click anywhere or press Esc to close</div>';
+  document.body.appendChild(overlay);
+  var box = overlay.querySelector('[data-qr]');
+  var size = Math.max(160, Math.min(window.innerWidth, window.innerHeight) - 180);
+
+  function close() {
+    document.removeEventListener('keydown', onKey, true);
+    overlay.remove();
+  }
+  function onKey(e) { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); close(); } }
+  overlay.addEventListener('click', close);
+  document.addEventListener('keydown', onKey, true);
+
+  _loadQrLib().then(function () {
+    if (!overlay.isConnected) return;
+    new QRCode(box, { text: href, width: size, height: size, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  }).catch(function () {
+    box.style.cssText += ';line-height:1.4;color:#1a1c1e;padding:1.25rem;max-width:22rem;text-align:center';
+    box.textContent = 'Could not load the QR code. Email victorrentea@gmail.com instead.';
+  });
 }
 
 // Live "5s ago / 1m ago / 2h ago" delta — recomputed every second per toast.
@@ -6144,6 +6205,7 @@ function _applyState(msg) {
     var orgEl = document.getElementById('session-org');
     orgEl.textContent = (parts.length > 1 && parts[1].trim()) ? parts[1].trim() : '';
   }
+  if (msg.session_dates !== undefined) _courseDates = msg.session_dates || '';
   if (msg.notes_updated_at !== undefined) {
     document.querySelector('[data-nav="notes"]').style.display = msg.notes_updated_at ? '' : 'none';
     var notesBadge = document.getElementById('notes-badge');

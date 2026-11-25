@@ -64,3 +64,28 @@ def test_find_session_folder_new_patterns(tmp_path, monkeypatch):
     assert find_session_folder(date(2026, 9, 4))[0] == nice
     assert find_session_folder(date(2026, 9, 9))[0] == nice
     assert find_session_folder(date(2026, 9, 5)) == (None, None)
+
+
+@pytest.mark.parametrize(
+    "name, label",
+    [
+        ("2026-11-23..25 DistributedArch@DB", "23-25 Nov 2026"),
+        ("2026-09-15 AI@Acme", "15 Sep 2026"),
+        ("2026-09-4+9 AI@Nice", "4, 9 Sep 2026"),
+        ("2026-10-12+14..16 EDA@Amex", "12, 14-16 Oct 2026"),
+        ("2026-08-31..1 AI@Adobe", "31 Aug-1 Sep 2026"),
+        ("2026-08-28+09-02 X", "28 Aug, 2 Sep 2026"),
+        ("2026-12-31..2027-01-02 Full end", "31 Dec 2026-2 Jan 2027"),
+    ],
+)
+def test_session_dates_label(name, label):
+    from daemon.config import session_dates_label
+
+    assert session_dates_label(name) == label
+
+
+@pytest.mark.parametrize("name", [None, "", "Random notes", "2026-09-15..2026-09-10 Backwards"])
+def test_session_dates_label_empty_without_valid_dates(name):
+    from daemon.config import session_dates_label
+
+    assert session_dates_label(name) == ""

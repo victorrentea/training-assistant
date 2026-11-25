@@ -987,8 +987,10 @@ async def get_participant_state(request: Request):
     summary = read_summary_payload()
     notes_updated_at = read_notes_updated_at()
 
+    from daemon.config import session_dates_label
     from daemon.session.state import get_active_session_name
 
+    session_name = get_active_session_name()
     state_msg = {
         # Core identity / session
         "mode": ps.mode,
@@ -997,7 +999,9 @@ async def get_participant_state(request: Request):
         "my_score_token": _score_token(pid),
         "my_name": ps.participant_names.get(pid, ""),
         "current_activity": ps.current_activity,
-        "session_name": get_active_session_name(),
+        "session_name": session_name,
+        # Course days for people, e.g. "23-25 Nov 2026" ("" if the name has no dates).
+        "session_dates": session_dates_label(session_name),
         # Roster display names only (UUID-free) — feeds the duplicate indicator.
         "participant_names": _participant_display_names(),
         # Wordcloud
