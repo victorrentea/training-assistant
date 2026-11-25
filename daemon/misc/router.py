@@ -147,6 +147,15 @@ async def paste_text(request: Request, body: PasteRequest):
     # Send only to host (not broadcast to all participants)
     await notify_host(PasteReceivedMsg(uuid=pid, **entry))
 
+    # And to Victor Mac: a persistent bottom-left pill with a Copy button, so the
+    # text lands in the trainer's clipboard without switching to the host panel.
+    # Best-effort — the host panel already has it. Never a UUID on this wire.
+    from daemon import addon_bridge_client
+
+    sender = (participant_state.participant_names.get(pid) or "").strip() or "Someone"
+    if not addon_bridge_client.send_paste_received(sender, text):
+        logger.info("Paste pill drop: addons bridge disconnected pid=%s", pid)
+
     return Response(status_code=204)
 
 

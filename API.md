@@ -31,6 +31,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 - [Host-Machine](#feature-host-machine)
 - [Intellij](#feature-intellij)
 - [Materials Zip](#feature-materials-zip)
+- [Paste](#feature-paste)
 - [Prompts](#feature-prompts)
 - [Quiz](#feature-quiz)
 - [Wiki](#feature-wiki)
@@ -625,6 +626,13 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 | Message | Payload |
 | --- | --- |
 | Railway asks the daemon to build and upload the session materials archive<br>Sent when a participant requests GET /{session_id}/api/materials/zip and Railway has no fresh cached archive. The daemon zips its local session folder and POSTs the result to /api/materials/zip/upload. Concurrent participant requests are deduplicated by Railway, so this is sent once per build, not once per click.<br>`build_materials_zip` | `session_id: string  # Active session id the archive is built for` |
+
+## Feature: Paste
+
+### Addons WS
+| Message | Payload |
+| --- | --- |
+| A participant sent text from the Participant View — overlay offers it to copy<br>Fire-and-forget, best-effort. The host panel gets the same paste over its own channel, so a closed overlay loses nothing.<br>`sender` is a display name resolved by the daemon; never a raw UUID — an unknown or unnamed participant is "Someone".<br>On receipt the overlay raises a bottom-left pill "📋 [sender]: [first line]" with a Copy button (puts the full text on the clipboard) and a Dismiss button. No countdown: it stays until dismissed, one pill per paste.<br>`paste_received` | `sender: string  # Resolved display name of the participant ("Someone" when unknown)`<br>`text: string  # The full pasted text (max 100 KB)` |
 
 ## Feature: Prompts
 

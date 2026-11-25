@@ -28,6 +28,7 @@ channels:
           - $ref: '#/components/messages/display_emoji'
           - $ref: '#/components/messages/bell_ring'
           - $ref: '#/components/messages/fx_fired'
+          - $ref: '#/components/messages/paste_received'
           - $ref: '#/components/messages/session_started'
           - $ref: '#/components/messages/session_ended'
     publish:
@@ -122,6 +123,33 @@ components:
           anonymous:
             type: boolean
             description: Whether that participant joined anonymously
+
+    paste_received:
+      summary: A participant sent text from the Participant View — overlay offers it to copy
+      x-feature: paste
+      x-doc-notes:
+        - Fire-and-forget, best-effort. The host panel gets the same paste over its
+          own channel, so a closed overlay loses nothing.
+        - >-
+          `sender` is a display name resolved by the daemon; never a raw UUID — an
+          unknown or unnamed participant is "Someone".
+        - >-
+          On receipt the overlay raises a bottom-left pill "📋 [sender]: [first line]"
+          with a Copy button (puts the full text on the clipboard) and a Dismiss
+          button. No countdown: it stays until dismissed, one pill per paste.
+      payload:
+        type: object
+        required: [type, sender, text]
+        properties:
+          type:
+            type: string
+            enum: [paste_received]
+          sender:
+            type: string
+            description: Resolved display name of the participant ("Someone" when unknown)
+          text:
+            type: string
+            description: The full pasted text (max 100 KB)
 
     session_started:
       summary: Notify addons that a workshop session has started

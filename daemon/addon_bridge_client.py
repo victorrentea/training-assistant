@@ -174,6 +174,15 @@ class AddonBridgeClient:
         msg = {"type": "fx_fired", "caller": caller, "anonymous": anonymous}
         return self._send(msg)
 
+    def send_paste_received(self, sender: str, text: str) -> bool:
+        """A participant sent text from the Participant View: Victor Mac raises a
+        bottom-left pill with a Copy button that stays until Victor dismisses it,
+        so the text reaches his clipboard without opening the host panel.
+
+        `sender` is a resolved display name, never a UUID.
+        """
+        return self._send({"type": "paste_received", "sender": sender, "text": text})
+
     def send_slide_seen_captured(self, deck: str, slide: int, change: str) -> bool:
         """The session's seen deck changed: Victor Mac shows a passing toast."""
         sent = self._send({"type": "slide_seen_captured", "deck": deck, "slide": slide, "change": change})
@@ -368,6 +377,11 @@ def send_session_started(
 def send_session_ended() -> bool:
     """Best-effort session_ended message to addons. Returns True if sent."""
     return _client is not None and _client.send_session_ended()
+
+
+def send_paste_received(sender: str, text: str) -> bool:
+    """Best-effort paste_received message to addons. Returns True if sent."""
+    return _client is not None and _client.send_paste_received(sender, text)
 
 
 def send_slide_seen_captured(deck: str, slide: int, change: str) -> bool:
