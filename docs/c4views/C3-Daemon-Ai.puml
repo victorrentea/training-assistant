@@ -15,7 +15,7 @@ left to right direction
 !include <C4/C4_Context>
 !include <C4/C4_Component>
 
-System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used by the daemon for debate AI cleanup and code-review smart paste extraction.", $tags="", $link="")
+System(Claudesubscriptionviaclaudep, "Claude (subscription, via claude -p)", $descr="LLM used by the daemon only for debate AI cleanup and code-review smart paste extraction; quizzes do not call it.", $tags="", $link="")
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
   Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
@@ -32,9 +32,9 @@ Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInte
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, "Triggers Claude smart-paste extraction (host create path)", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes host-driven updates through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, "Triggers", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, AnthropicClaudeAPI, "Requests cleanup suggestions from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, Claudesubscriptionviaclaudep, "Requests cleanup suggestions from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes cleanup results through", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, AnthropicClaudeAPI, "Requests code/language extraction from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, Claudesubscriptionviaclaudep, "Requests code/language extraction from", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

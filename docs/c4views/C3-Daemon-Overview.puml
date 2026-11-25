@@ -17,10 +17,10 @@ left to right direction
 !include <C4/C4_Component>
 
 System(LocalChromaDBstore, "Local ChromaDB store", $descr="~/.workshop-rag/chroma — background-indexed local materials.", $tags="", $link="")
-System(AnthropicClaudeAPI, "Anthropic Claude API", $descr="LLM used by the daemon for debate AI cleanup and code-review smart paste extraction.", $tags="", $link="")
+System(Claudesubscriptionviaclaudep, "Claude (subscription, via claude -p)", $descr="LLM used by the daemon only for debate AI cleanup and code-review smart paste extraction; quizzes do not call it.", $tags="", $link="")
 System(GitHubAPI, "GitHub API", $descr="Repo metadata (default branch), repo trees, and blob existence checks used to link opened files to the branch captured at open time. Unauthenticated.", $tags="", $link="")
-System(victormacosaddons, "victor-mac", $descr="Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications.", $tags="", $link="")
-System(AgentMail, "AgentMail", $descr="Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks.", $tags="", $link="")
+System(victormac, "victor-mac", $descr="Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications.", $tags="", $link="")
+System(AgentMail, "AgentMail", $descr="Hosted email service: delivers participant notifications.", $tags="", $link="")
 System(Hostsessionfiles, "Host session files", $descr="Session folders, normalized transcripts, ai-summary.md, uploaded files, and slide manifests on the trainer's Mac.", $tags="", $link="")
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
@@ -46,7 +46,7 @@ System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interacti
   }
 
   Container(WorkshopLiveInteractionTool.HostSPA, "Host SPA", $techn="HTML/CSS/JavaScript", $descr="Host control panel served from the daemon host server on localhost.", $tags="", $link="")
-  Container(WorkshopLiveInteractionTool.RailwayBackend, "Railway Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="Thin session-aware bridge for participants, slides, uploads, daemon sync, inbox webhooks, and telemetry.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.RailwayBackend, "Railway Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="Thin session-aware bridge for participants, slides, uploads, daemon sync, and telemetry.", $tags="", $link="")
 }
 
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Embeddedhostserver, WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, "Mounts", $techn="", $tags="", $link="")
@@ -68,14 +68,14 @@ Rel(WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, WorkshopLiveInteraction
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Runtimestatemodules, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Is snapshotted by", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, WorkshopLiveInteractionTool.RailwayBackend, "Connects over /ws/daemon and host-auth REST", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Reads session metadata for sync payloads from", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, AnthropicClaudeAPI, "Requests cleanup suggestions from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, Claudesubscriptionviaclaudep, "Requests cleanup suggestions from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.DebateAIcleanup, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes cleanup results through", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, AnthropicClaudeAPI, "Requests code/language extraction from", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Codereviewsmartpaste, Claudesubscriptionviaclaudep, "Requests code/language extraction from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Summaryhelpers, Hostsessionfiles, "Reads ai-summary.md and mtime from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, Hostsessionfiles, "Reads slide catalogs and generated PDFs from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Publishes slide metadata/files through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, WorkshopLiveInteractionTool.RailwayBackend, "Uses cache and upload helpers on", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, victormacosaddons, "Connects over local WebSocket", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, victormac, "Connects over local WebSocket", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Forwards slide events to", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Forwards emoji/session notifications through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, WorkshopLiveInteractionTool.TrainingDaemon.Openedfileslinking, "Forwards IDE file-open events to", $techn="", $tags="", $link="")
@@ -86,7 +86,6 @@ Rel(WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, Hostsessionf
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, LocalChromaDBstore, "Writes embeddings into", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Emailnotifications, AgentMail, "Sends notification emails via AgentMail SDK", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, WorkshopLiveInteractionTool.TrainingDaemon.Emailnotifications, "Triggers paste/feedback notifications through", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.RailwayBackend, AgentMail, "Receives signed AgentMail webhooks for incoming Claude email", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.HostSPA, WorkshopLiveInteractionTool.TrainingDaemon.Embeddedhostserver, "Loads host pages and local APIs", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend, WorkshopLiveInteractionTool.TrainingDaemon.Daemontelemetry, "Configures OTel tracing and FastAPI instrumentation through (Railway side)", $techn="", $tags="", $link="")
 

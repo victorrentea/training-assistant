@@ -43,56 +43,15 @@
       "target_module": "railway.shared"
     },
     {
-      "source_component": "inboxBridge",
-      "source_module": "railway.features.inbox.router",
-      "target_component": "sharedCore",
-      "target_module": "railway.shared"
-    },
-    {
       "source_component": "wsBridge",
       "source_module": "railway.features.ws",
       "target_component": "slidesBridge",
       "target_module": "railway.features.slides"
     }
   ],
-  "generated_contract_count": 39,
+  "generated_contract_count": 27,
   "generated_contracts": [
     {
-      "source_module": "railway.features.inbox.router",
-      "target_module": "railway.features.internal.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.inbox.router",
-      "target_module": "railway.features.pages.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.inbox.router",
-      "target_module": "railway.features.slides",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.inbox.router",
-      "target_module": "railway.features.telemetry.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.inbox.router",
-      "target_module": "railway.features.upload",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.inbox.router",
-      "target_module": "railway.features.ws",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.internal.router",
-      "target_module": "railway.features.inbox.router",
-      "type": "forbidden"
-    },
-    {
       "source_module": "railway.features.internal.router",
       "target_module": "railway.features.pages.router",
       "type": "forbidden"
@@ -115,11 +74,6 @@
     {
       "source_module": "railway.features.internal.router",
       "target_module": "railway.features.ws",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.pages.router",
-      "target_module": "railway.features.inbox.router",
       "type": "forbidden"
     },
     {
@@ -149,11 +103,6 @@
     },
     {
       "source_module": "railway.features.slides",
-      "target_module": "railway.features.inbox.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.slides",
       "target_module": "railway.features.internal.router",
       "type": "forbidden"
     },
@@ -170,11 +119,6 @@
     {
       "source_module": "railway.features.slides",
       "target_module": "railway.features.upload",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.telemetry.router",
-      "target_module": "railway.features.inbox.router",
       "type": "forbidden"
     },
     {
@@ -204,11 +148,6 @@
     },
     {
       "source_module": "railway.features.upload",
-      "target_module": "railway.features.inbox.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.upload",
       "target_module": "railway.features.internal.router",
       "type": "forbidden"
     },
@@ -225,11 +164,6 @@
     {
       "source_module": "railway.features.upload",
       "target_module": "railway.features.telemetry.router",
-      "type": "forbidden"
-    },
-    {
-      "source_module": "railway.features.ws",
-      "target_module": "railway.features.inbox.router",
       "type": "forbidden"
     },
     {
@@ -254,11 +188,6 @@
     }
   ],
   "resolved_components": [
-    {
-      "code_path": "railway/features/inbox/router.py",
-      "id": "inboxBridge",
-      "module": "railway.features.inbox.router"
-    },
     {
       "code_path": "railway/features/pages/router.py",
       "id": "pageRoutes",

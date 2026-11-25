@@ -4,19 +4,19 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         host = person "Host" "Runs the workshop, controls activities, and monitors the live session."
         participant = person "Participant" "Joins from a browser, votes, reacts, uploads, and follows the session."
 
-        claudeApi = softwareSystem "Anthropic Claude API" "LLM used by the daemon for debate AI cleanup and code-review smart paste extraction."
+        claudeApi = softwareSystem "Claude (subscription, via claude -p)" "LLM used by the daemon only for debate AI cleanup and code-review smart paste extraction; quizzes do not call it."
         githubApi = softwareSystem "GitHub API" "Repo metadata (default branch), repo trees, and blob existence checks used to link opened files to the branch captured at open time. Unauthenticated."
         macosAddons = softwareSystem "victor-mac" "Local Mac bridge that emits slide and IDE file-open events, and receives emoji/session notifications."
         nominatim = softwareSystem "Nominatim" "Reverse geocodes GPS coordinates into city and country."
         googleDrive = softwareSystem "Google Drive" "Hosts exported slide PDFs consumed by the Railway cache."
-        agentMail = softwareSystem "AgentMail" "Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks."
+        agentMail = softwareSystem "AgentMail" "Hosted email service: delivers participant notifications."
         hostFiles = softwareSystem "Host session files" "Session folders, normalized transcripts, ai-summary.md, uploaded files, and slide manifests on the trainer's Mac."
         localRag = softwareSystem "Local ChromaDB store" "~/.workshop-rag/chroma — background-indexed local materials."
 
         workshop = softwareSystem "Workshop Live Interaction Tool" "Self-hosted real-time audience interaction platform." {
             participantSpa = container "Participant SPA" "Participant-facing UI served from Railway session routes." "HTML/CSS/JavaScript"
             hostSpa = container "Host SPA" "Host control panel served from the daemon host server on localhost." "HTML/CSS/JavaScript"
-            railwayBackend = container "Railway Backend" "Thin session-aware bridge for participants, slides, uploads, daemon sync, inbox webhooks, and telemetry." "Python 3.12 / FastAPI / Uvicorn" {
+            railwayBackend = container "Railway Backend" "Thin session-aware bridge for participants, slides, uploads, daemon sync, and telemetry." "Python 3.12 / FastAPI / Uvicorn" {
                 bootstrap = component "Bootstrap" "Registers route ordering, OTel instrumentation, session guards, and startup stamping (version.js / deploy-info.json)." "railway/app.py"
                 sharedCore = component "Shared Core" "AppState, auth, session registry/guard, throttling, metrics, messaging, and version helpers." "railway/shared/*"
                 wsBridge = component "WebSocket bridge" "Daemon auth, session-scoped browser sockets, participant proxy bridge, and broadcast fan-out." "railway/features/ws/*"
@@ -24,7 +24,6 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
                 slidesBridge = component "Slides cache and file serving" "Public slide catalog/current slide, Google Drive cache, and host upload/invalidate helpers." "railway/features/slides/*"
                 uploadsBridge = component "Temporary upload bridge" "Streams participant uploads into temporary storage and lets the daemon fetch and acknowledge them." "railway/features/upload/*"
                 staticSync = component "Static sync endpoints" "Allows the daemon to upload and delete generated files under static/." "railway/features/internal/router.py"
-                inboxBridge = component "Inbox webhook bridge" "Verifies AgentMail (Svix) webhooks for incoming Claude email and forwards events to the connected claude-inbox WebSocket listener." "railway/features/inbox/router.py"
                 telemetryReceiver = component "Telemetry receiver" "Receives browser OTel spans (POST /api/telemetry/spans) and appends them to the shared traces file." "railway/features/telemetry/router.py"
             }
             trainingDaemon = container "Training Daemon" "Local source of truth for host control, live state, persistence, and AI-assisted jobs." "Python 3.12 CLI + embedded FastAPI" {
@@ -67,7 +66,6 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         trainingDaemon -> localRag "Indexes local materials in the background"
 
         railwayBackend -> googleDrive "Downloads slide PDFs into cache"
-        railwayBackend -> agentMail "Receives signed AgentMail webhooks for incoming Claude email"
 
         participantSpa -> pageRoutes "Loads participant pages"
         participantSpa -> wsBridge "Connects as participant and forwards REST commands via the daemon proxy"
@@ -83,7 +81,6 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         bootstrap -> slidesBridge "Registers"
         bootstrap -> uploadsBridge "Registers"
         bootstrap -> staticSync "Registers"
-        bootstrap -> inboxBridge "Registers"
         bootstrap -> telemetryReceiver "Registers when OTEL_TRACES_FILE is set"
 
         wsBridge -> sharedCore "Reads auth, session, and connection state from"
@@ -93,7 +90,6 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
         uploadsBridge -> sharedCore "Associates uploads with active participants from"
         uploadsBridge -> wsBridge "Uses daemon protocol helpers from"
         staticSync -> sharedCore "Uses host auth from"
-        inboxBridge -> sharedCore "Stores the connected claude-inbox WebSocket on"
         wsBridge -> slidesBridge "Triggers slide cache downloads and broadcasts through"
 
         bootstrap -> daemonTelemetry "Configures OTel tracing and FastAPI instrumentation through (Railway side)"
@@ -291,8 +287,8 @@ workspace "Workshop Live Interaction Tool" "Structurizr DSL model aligned to the
             autoLayout lr
         }
 
-        component railwayBackend "C3BackendInboxAndTelemetry" "Inbox webhook + browser telemetry receivers." {
-            include participantSpa trainingDaemon bootstrap sharedCore inboxBridge telemetryReceiver agentMail
+        component railwayBackend "C3BackendTelemetry" "Browser telemetry receiver." {
+            include participantSpa trainingDaemon bootstrap sharedCore telemetryReceiver
             autoLayout lr
         }
 

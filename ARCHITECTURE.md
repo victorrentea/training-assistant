@@ -33,9 +33,9 @@ For product goals, workflow rules, and operational conventions, see [CLAUDE.md](
 - Participant traffic is served from Railway. The participant journey is `landing.html` -> `/{session_id}` -> session-scoped REST and WebSocket calls.
 - The host control plane is daemon-first. `python3 -m daemon` starts a local host panel at `http://127.0.0.1:1234/host`, serves the same static host assets there, mounts most live feature routers locally, and proxies the rest to Railway.
 - Railway is now a thin session-aware bridge: page serving, session validation, browser WebSockets, daemon WebSocket, slide cache/downloads, temporary file uploads, and daemon-driven static sync.
-- Most live workshop behavior lives in the daemon: session lifecycle, participant and host snapshots, quiz/word cloud/Q&A/code review/debate state, quiz generation, slide orchestration, upload handoff, opened-file GitHub link resolution, and local persistence.
+- Most live workshop behavior lives in the daemon: session lifecycle, participant and host snapshots, quiz/word cloud/Q&A/code review/debate state, the queue of pre-written quiz questions, slide orchestration, upload handoff, opened-file GitHub link resolution, and local persistence.
 - There is no standalone database in the current runtime. Railway keeps in-memory state plus temp files; the daemon persists session files on disk.
-- Summary publication is currently file-driven, with `ai-summary.md` as the primary current path while legacy/fallback summary content can still exist in the session folder. Claude is currently used for quiz generation/refinement and debate cleanup.
+- Summary publication is currently file-driven, with `ai-summary.md` as the primary current path while legacy/fallback summary content can still exist in the session folder. Claude (the trainer's subscription, via headless `claude -p` in `daemon/llm/claude_cli.py`) is used only for debate cleanup and code-review smart paste; quiz questions arrive pre-written.
 
 ---
 
@@ -63,7 +63,7 @@ Rel(host, workshop, "Controls sessions, activities, slides, and participant stat
 Rel(participant, workshop, "Votes, reacts, uploads, follows slides, reads notes/key points", "HTTPS / WSS")
 Rel(fx_holder, workshop, "Opens the secret /fx/<token> link and fires a soundboard tile", "HTTPS")
 
-Rel(workshop, claude_api, "Quiz generation/refinement and debate AI cleanup", "HTTPS")
+Rel(workshop, claude_api, "Debate AI cleanup and code-review smart paste", "claude -p")
 Rel(workshop, macos_addons, "Receives slide events; sends emoji and session notifications", "Local WSS")
 Rel(workshop, macos_addons, "Presses soundboard tiles for the FX link", "Local HTTP")
 Rel(participant, nominatim, "Shares optional location", "HTTPS")
@@ -90,7 +90,7 @@ System_Boundary(workshop, "Workshop Tool") {
     Container(participant_spa, "Participant SPA", "Vanilla HTML/CSS/JS served by Railway", "Join flow, participant UI, slides dock, notes/key points, uploads, emoji, live updates.")
     Container(host_spa, "Host SPA", "Vanilla HTML/CSS/JS served by the daemon host server", "Session creation/resume and live control panel.")
     Container(railway_backend, "Railway Backend", "FastAPI on Railway", "Session validation, browser/daemon WebSockets, slide cache, temporary uploads, static sync endpoints, public participant pages.")
-    Container(training_daemon, "Training Daemon", "Python CLI with embedded FastAPI", "Local host control plane, state ownership, persistence, quiz/debate/slides jobs, Railway bridge.")
+    Container(training_daemon, "Training Daemon", "Python CLI with embedded FastAPI", "Local host control plane, state ownership, persistence, debate/slides jobs, Railway bridge.")
 }
 
 System_Ext(macos_addons, "victor-mac", "Local WebSocket bridge for slide and overlay events.")
@@ -110,11 +110,11 @@ Rel(host_spa, training_daemon, "Host REST + proxied WebSocket", "HTTP / WSS on 1
 Rel(fx_holder, railway_backend, "Opens /fx/<token>, session-independent, unauthenticated at Railway", "HTTPS")
 
 Rel(training_daemon, railway_backend, "Daemon WS, host-auth REST, static sync, upload handoff", "WSS /ws/daemon + HTTPS")
-Rel(training_daemon, claude_api, "Quiz generation/refinement and debate cleanup", "HTTPS")
+Rel(training_daemon, claude_api, "Debate cleanup and code-review smart paste", "claude -p")
 Rel(training_daemon, macos_addons, "Receives slide events; sends emoji/session notifications", "Local WSS")
 Rel(training_daemon, macos_addons, "Presses FX soundboard tiles; reads the live tile catalog", "Local HTTP :55123")
 Rel(training_daemon, host_files, "Reads and writes session files", "Local filesystem")
-Rel(training_daemon, local_rag, "Indexes and queries local materials", "Local filesystem")
+Rel(training_daemon, local_rag, "Indexes local materials in the background", "Local filesystem")
 
 Rel(railway_backend, google_drive, "Downloads slide PDFs into cache", "HTTPS")
 @enduml
@@ -226,8 +226,9 @@ Container_Boundary(daemon_pkg, "Training Daemon") {
     Component(state_singletons, "*state.py modules", "Runtime state", "participant_state, quiz_state, qa_state, wordcloud_state, codereview_state, debate_state, misc_state, leaderboard_state, session stack.")
     Component(railway_bridge, "daemon/ws_client.py + daemon/proxy_handler.py + daemon/ws_publish.py", "Railway bridge", "Persistent `/ws/daemon` client, write-back event transport, typed broadcasts/send_to_host, static sync triggers.")
     Component(session_state, "daemon/session_state.py", "Disk persistence", "Persists `global-state.json`, `session-state.json`, session metadata, key points, slide manifests, and uploads.")
-    Component(quiz, "daemon/quiz/* + daemon/llm/adapter.py + daemon/rag/*", "Quiz pipeline", "Generates/refines quiz suggestions from notes, key points, transcripts, and local materials.")
-    Component(debate_ai, "daemon/debate/ai_cleanup.py", "Debate AI cleanup", "Claude-backed argument dedupe/cleanup/new suggestions.")
+    Component(quiz, "daemon/quiz/* + daemon/quiz_queue/*", "Quiz", "Holds the queue of pre-written questions the host fires one at a time, plus the live quiz; no LLM.")
+    Component(smart_paste, "daemon/codereview/router.py", "Code-review smart paste", "Claude call that extracts a code snippet and language from pasted LLM output.")
+    Component(debate_ai, "daemon/debate/ai_cleanup.py + daemon/llm/*", "Debate AI cleanup", "Claude-backed argument dedupe/cleanup/new suggestions.")
     Component(summary, "daemon/summary/loop.py", "Summary sync", "Reads `ai-summary.md`, rewrites key points, and republishes them.")
     Component(slides, "daemon/slides/* + daemon/upload.py", "Slides and upload pipeline", "Catalog loading, Railway cache checks, PDF invalidation, participant upload handoff.")
     Component(addons_bridge, "daemon/addon_bridge_client.py", "Local addons bridge", "Receives slide events and forwards emoji/session_started/session_ended messages.")
@@ -240,8 +241,9 @@ Rel(host_spa, host_server, "Loads host pages and calls host APIs", "HTTP / WSS o
 Rel(main, host_server, "Starts embedded Uvicorn thread")
 Rel(main, railway_bridge, "Starts daemon WS and drains incoming work")
 Rel(main, session_state, "Loads/saves global and per-session files")
-Rel(main, quiz, "Triggers quiz generation/refinement")
-Rel(main, debate_ai, "Triggers debate cleanup")
+Rel(feature_routes, debate_ai, "Triggers debate cleanup")
+Rel(feature_routes, quiz, "Queues and fires quiz questions")
+Rel(feature_routes, smart_paste, "Triggers smart-paste extraction")
 Rel(main, summary, "Triggers summary republish from `ai-summary.md`")
 Rel(main, slides, "Starts slides runner and slide-related jobs")
 Rel(main, addons_bridge, "Starts local WebSocket bridge client")
@@ -257,12 +259,11 @@ Rel(feature_routes, effects_client, "Presses FX tiles and reads the live catalog
 Rel(session_state, host_files, "Reads and writes persisted session files", "Local filesystem")
 Rel(summary, host_files, "Reads `ai-summary.md` and writes key points", "Local filesystem")
 Rel(slides, host_files, "Reads catalogs/manifests and stores uploads", "Local filesystem")
-Rel(quiz, host_files, "Reads notes, key points, and normalized transcripts", "Local filesystem")
-Rel(quiz, local_rag, "Indexes and queries local workshop materials")
+Rel(main, local_rag, "Indexes local workshop materials in the background")
 
 Rel(railway_bridge, railway_backend, "Daemon WS, static sync, upload handoff, slide cache coordination", "WSS /ws/daemon + HTTPS")
-Rel(quiz, claude_api, "Quiz generation/refinement", "HTTPS")
-Rel(debate_ai, claude_api, "Debate cleanup", "HTTPS")
+Rel(debate_ai, claude_api, "Debate cleanup", "claude -p")
+Rel(smart_paste, claude_api, "Code/language extraction", "claude -p")
 Rel(addons_bridge, macos_addons, "Slide and overlay/session events", "Local WSS")
 Rel(effects_client, macos_addons, "Press tile / fetch catalog / ping", "Local HTTP :55123")
 @enduml
@@ -291,8 +292,9 @@ Rel(effects_client, macos_addons, "Press tile / fetch catalog / ping", "Local HT
   - session artifacts such as `ai-summary.md`, slide manifests, uploads, and normalized transcripts
 - The current summary path is file-backed. [`daemon/summary/loop.py`](daemon/summary/loop.py) primarily republishes key points from `ai-summary.md`, while legacy/fallback summary content can still exist in the session folder; it does not currently call Claude itself.
 - Claude-backed paths are currently:
-  - [`daemon/quiz/generator.py`](daemon/quiz/generator.py) for quiz generation and refinement
   - [`daemon/debate/ai_cleanup.py`](daemon/debate/ai_cleanup.py) for debate cleanup/suggestions
+  - [`daemon/codereview/router.py`](daemon/codereview/router.py) for code-review smart paste
+  - both go through [`daemon/llm/adapter.py`](daemon/llm/adapter.py) to [`daemon/llm/claude_cli.py`](daemon/llm/claude_cli.py) (headless `claude -p` on the trainer's subscription). Quizzes do not call an LLM: questions are pre-written and queued via [`daemon/quiz_queue/router.py`](daemon/quiz_queue/router.py).
 - The daemon also performs two infrastructure jobs that are easy to miss:
   - static asset sync via [`daemon/static_sync.py`](daemon/static_sync.py), driven by Railway's `sync_files` message on daemon WS connect
   - participant upload handoff via [`daemon/upload.py`](daemon/upload.py), which downloads temp files from Railway into the current session folder and then acks Railway to delete them
@@ -332,7 +334,7 @@ Rel(effects_client, macos_addons, "Press tile / fetch catalog / ping", "Local HT
 | Transcript inputs | Host filesystem | Normalized `YYYY-MM-DD transcription.txt` files under `TRANSCRIPTION_FOLDER` | Current consumers read normalized files only; raw transcript normalization is not implemented in this repo anymore. |
 | Summary inputs | Host filesystem | `ai-summary.md` in the session folder | Summary publication reads `ai-summary.md`. |
 | Opened files | [`daemon/files_md.py`](daemon/files_md.py) | `opened-files.md` in the session folder | GitHub blob links per `(repo, path)`, keyed to the branch captured at open time (falling back to the repo default branch). Same file is the persisted state and the sanitized wire format served to participants; re-resolved wholesale by `python3 -m daemon.relink_open_files`. |
-| Local materials index | [`daemon/rag/indexer.py`](daemon/rag/indexer.py), [`daemon/rag/retriever.py`](daemon/rag/retriever.py) | `~/.workshop-rag/chroma` | Local ChromaDB index used to enrich quiz generation. |
+| Local materials index | [`daemon/rag/indexer.py`](daemon/rag/indexer.py), [`daemon/rag/retriever.py`](daemon/rag/retriever.py) | `~/.workshop-rag/chroma` | Local ChromaDB index, built in the background; retriever helpers exist but nothing queries it today. |
 
 ---
 
@@ -419,9 +421,9 @@ Current code path / behavior family: [`static/participant.js`](static/participan
 
 ### Quiz
 
-This diagram covers Claude-backed quiz draft generation plus the live quiz lifecycle from host draft/open through participant votes, close, and score reveal.
+This diagram covers queuing pre-written quiz questions plus the live quiz lifecycle: the host fires a question, participants vote, the host ends the quiz and reveals the correct answers.
 
-Current code path / behavior family: [`daemon/quiz_queue/router.py`](daemon/quiz_queue/router.py), [`daemon/quiz_queue/generator.py`](daemon/quiz_queue/generator.py), [`daemon/quiz_queue/history.py`](daemon/quiz_queue/history.py), [`daemon/quiz/router.py`](daemon/quiz/router.py), [`daemon/quiz/state.py`](daemon/quiz/state.py)
+Current code path / behavior family: [`daemon/quiz_queue/router.py`](daemon/quiz_queue/router.py), [`daemon/quiz_queue/queue.py`](daemon/quiz_queue/queue.py), [`daemon/quiz/router.py`](daemon/quiz/router.py), [`daemon/quiz/state.py`](daemon/quiz/state.py)
 
 ![quiz](docs/sequences/manual/svg/03-quiz.svg)
 

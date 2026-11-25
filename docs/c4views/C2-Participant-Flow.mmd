@@ -16,17 +16,17 @@ graph LR
 
       12["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from Railway session routes.</div>"]
       style 12 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      14["<div style='font-weight: bold'>Railway Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>Thin session-aware bridge for<br />participants, slides,<br />uploads, daemon sync, inbox<br />webhooks, and telemetry.</div>"]
+      14["<div style='font-weight: bold'>Railway Backend</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 / FastAPI / Uvicorn]</div><div style='font-size: 80%; margin-top:10px'>Thin session-aware bridge for<br />participants, slides,<br />uploads, daemon sync, and<br />telemetry.</div>"]
       style 14 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      24["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
-      style 24 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      23["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
+      style 23 fill:#5aa05a,stroke:#3e703e,color:#ffffff
     end
 
     2-. "<div>Uses in browser</div><div style='font-size: 70%'></div>" .->12
     12-. "<div>Calls session-scoped REST and<br />WebSocket APIs</div><div style='font-size: 70%'></div>" .->14
     12-. "<div>Reverse geocodes optional<br />location</div><div style='font-size: 70%'></div>" .->6
-    24-. "<div>Synchronizes active session,<br />participant events, uploads,<br />and generated static assets</div><div style='font-size: 70%'></div>" .->14
+    23-. "<div>Synchronizes active session,<br />participant events, uploads,<br />and generated static assets</div><div style='font-size: 70%'></div>" .->14
     14-. "<div>Downloads slide PDFs into<br />cache</div><div style='font-size: 70%'></div>" .->7
-    14-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->24
+    14-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->23
 
   end

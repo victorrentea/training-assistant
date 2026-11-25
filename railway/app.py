@@ -17,7 +17,6 @@ from railway.features.bridge.clip_relay import router as clip_relay_router
 from railway.features.bridge.file_relay import router as file_relay_router
 from railway.features.bridge.phone_battery import router as phone_battery_router
 from railway.features.bridge.router import router as bridge_router
-from railway.features.inbox.router import router as inbox_router
 from railway.features.internal.router import router as internal_router
 from railway.features.materials import router as materials
 from railway.features.pages.router import host_router, landing_router, participant_router
@@ -140,9 +139,6 @@ app.include_router(clip_relay_router)
 app.include_router(file_relay_router)
 # WebSocket: session-scoped participant connections
 app.include_router(ws_session_router)
-
-# AgentMail webhook receiver + claude-inbox WebSocket
-app.include_router(inbox_router)
 
 # Pages: landing at /, host at /host (auth-protected)
 app.include_router(landing_router)

@@ -19,7 +19,6 @@ class AppState:
         self.slides: list[dict] = []
         self.daemon_last_seen: Optional[datetime] = None
         self.daemon_ws: Optional[WebSocket] = None
-        self.claude_inbox_ws: WebSocket | None = None
         self.daemon_code_timestamp: Optional[str] = None  # ISO timestamp of last git commit in daemon repo
         self.slides_updated: dict[str, dict] = {}      # slug -> {status, size_bytes, downloaded_at}
         self.session_type: str = "workshop"     # "workshop" | "talk"

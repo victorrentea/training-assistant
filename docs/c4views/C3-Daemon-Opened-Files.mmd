@@ -14,23 +14,23 @@ graph LR
     subgraph 11 ["Workshop Live Interaction Tool"]
       style 11 fill:#ffffff,stroke:#144d2e,color:#144d2e
 
-      subgraph 24 ["Training Daemon"]
-        style 24 fill:#ffffff,stroke:#3e703e,color:#3e703e
+      subgraph 23 ["Training Daemon"]
+        style 23 fill:#ffffff,stroke:#3e703e,color:#3e703e
 
-        27["<div style='font-weight: bold'>Participant APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/participant/router.py + daemon/quiz/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py]</div><div style='font-size: 80%; margin-top:10px'>Authoritative participant<br />REST handlers for identity,<br />quizzes, Q&A, debate, code<br />review, misc actions, slides,<br />emoji, and word cloud.</div>"]
-        style 27 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        37["<div style='font-weight: bold'>Addons bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/addon_bridge_client.py + daemon/adapters/*]</div><div style='font-size: 80%; margin-top:10px'>Receives slide events,<br />slides_viewed deltas, and IDE<br />file-open events from<br />victor-mac, and<br />forwards emoji/session<br />notifications back.</div>"]
+        26["<div style='font-weight: bold'>Participant APIs</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/participant/router.py + daemon/quiz/router.py + daemon/qa/router.py + daemon/debate/router.py + daemon/codereview/router.py + daemon/misc/router.py + daemon/slides/router.py + daemon/emoji/router.py + daemon/wordcloud/router.py]</div><div style='font-size: 80%; margin-top:10px'>Authoritative participant<br />REST handlers for identity,<br />quizzes, Q&A, debate, code<br />review, misc actions, slides,<br />emoji, and word cloud.</div>"]
+        style 26 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        36["<div style='font-weight: bold'>Addons bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/addon_bridge_client.py + daemon/adapters/*]</div><div style='font-size: 80%; margin-top:10px'>Receives slide events,<br />slides_viewed deltas, and IDE<br />file-open events from<br />victor-mac, and forwards<br />emoji/session notifications<br />back.</div>"]
+        style 36 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        37["<div style='font-weight: bold'>Opened files linking</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/files_md.py + daemon/github_client.py + daemon/relink_open_files.py]</div><div style='font-size: 80%; margin-top:10px'>Resolves IDE file-open events<br />to GitHub blob links against<br />the branch captured at open<br />time (falling back to the<br />repo default branch), and<br />maintains the opened-files.md<br />artifact; a standalone CLI<br />re-resolves every link before<br />summarization.</div>"]
         style 37 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        38["<div style='font-weight: bold'>Opened files linking</div><div style='font-size: 70%; margin-top: 0px'>[Component: daemon/files_md.py + daemon/github_client.py + daemon/relink_open_files.py]</div><div style='font-size: 80%; margin-top:10px'>Resolves IDE file-open events<br />to GitHub blob links against<br />the branch captured at open<br />time (falling back to the<br />repo default branch), and<br />maintains the opened-files.md<br />artifact; a standalone CLI<br />re-resolves every link before<br />summarization.</div>"]
-        style 38 fill:#d6e8c8,stroke:#95a28c,color:#10210f
       end
 
     end
 
-    27-. "<div>Reads and serves<br />opened-files.md through</div><div style='font-size: 70%'></div>" .->38
-    37-. "<div>Connects over local WebSocket</div><div style='font-size: 70%'></div>" .->5
-    37-. "<div>Forwards IDE file-open events<br />to</div><div style='font-size: 70%'></div>" .->38
-    38-. "<div>Resolves branch and<br />default-branch blob links via</div><div style='font-size: 70%'></div>" .->4
-    38-. "<div>Reads and writes<br />opened-files.md in</div><div style='font-size: 70%'></div>" .->9
+    26-. "<div>Reads and serves<br />opened-files.md through</div><div style='font-size: 70%'></div>" .->37
+    36-. "<div>Connects over local WebSocket</div><div style='font-size: 70%'></div>" .->5
+    36-. "<div>Forwards IDE file-open events<br />to</div><div style='font-size: 70%'></div>" .->37
+    37-. "<div>Resolves branch and<br />default-branch blob links via</div><div style='font-size: 70%'></div>" .->4
+    37-. "<div>Reads and writes<br />opened-files.md in</div><div style='font-size: 70%'></div>" .->9
 
   end

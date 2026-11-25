@@ -24,11 +24,11 @@ graph LR
       style 12 fill:#5aa05a,stroke:#3e703e,color:#ffffff
       13["<div style='font-weight: bold'>Host SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Host control panel served<br />from the daemon host server<br />on localhost.</div>"]
       style 13 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      24["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
-      style 24 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      23["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
+      style 23 fill:#5aa05a,stroke:#3e703e,color:#ffffff
     end
 
-    13-. "<div>Calls host REST and proxied<br />WebSocket APIs on localhost</div><div style='font-size: 70%'></div>" .->24
+    13-. "<div>Calls host REST and proxied<br />WebSocket APIs on localhost</div><div style='font-size: 70%'></div>" .->23
     12-. "<div>Loads participant pages</div><div style='font-size: 70%'></div>" .->18
     12-. "<div>Connects as participant and<br />forwards REST commands via<br />the daemon proxy</div><div style='font-size: 70%'></div>" .->17
     15-. "<div>Initializes</div><div style='font-size: 70%'></div>" .->16
@@ -36,6 +36,6 @@ graph LR
     15-. "<div>Registers</div><div style='font-size: 70%'></div>" .->18
     17-. "<div>Reads auth, session, and<br />connection state from</div><div style='font-size: 70%'></div>" .->16
     18-. "<div>Uses auth/session helpers<br />from</div><div style='font-size: 70%'></div>" .->16
-    15-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->24
+    15-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->23
 
   end

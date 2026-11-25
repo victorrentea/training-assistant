@@ -25,7 +25,6 @@ System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interacti
     Component(WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Slides cache and file serving", $techn="railway/features/slides/*", $descr="Public slide catalog/current slide, Google Drive cache, and host upload/invalidate helpers.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, "Temporary upload bridge", $techn="railway/features/upload/*", $descr="Streams participant uploads into temporary storage and lets the daemon fetch and acknowledge them.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, "Static sync endpoints", $techn="railway/features/internal/router.py", $descr="Allows the daemon to upload and delete generated files under static/.", $tags="", $link="")
-    Component(WorkshopLiveInteractionTool.RailwayBackend.Inboxwebhookbridge, "Inbox webhook bridge", $techn="railway/features/inbox/router.py", $descr="Verifies AgentMail (Svix) webhooks for incoming Claude email and forwards events to the connected claude-inbox WebSocket listener.", $tags="", $link="")
     Component(WorkshopLiveInteractionTool.RailwayBackend.Telemetryreceiver, "Telemetry receiver", $techn="railway/features/telemetry/router.py", $descr="Receives browser OTel spans (POST /api/telemetry/spans) and appends them to the shared traces file.", $tags="", $link="")
   }
 
@@ -44,7 +43,6 @@ Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractio
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Registers", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, "Registers", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, "Registers", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Inboxwebhookbridge, "Registers", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.RailwayBackend.Telemetryreceiver, "Registers when OTEL_TRACES_FILE is set", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Reads auth, session, and connection state from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Pageroutes, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Uses auth/session helpers from", $techn="", $tags="", $link="")
@@ -53,7 +51,6 @@ Rel(WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, Worksh
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Associates uploads with active participants from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Temporaryuploadbridge, WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, "Uses daemon protocol helpers from", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Staticsyncendpoints, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Uses host auth from", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.RailwayBackend.Inboxwebhookbridge, WorkshopLiveInteractionTool.RailwayBackend.SharedCore, "Stores the connected claude-inbox WebSocket on", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.WebSocketbridge, WorkshopLiveInteractionTool.RailwayBackend.Slidescacheandfileserving, "Triggers slide cache downloads and broadcasts through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.RailwayBackend.Bootstrap, WorkshopLiveInteractionTool.TrainingDaemon, "Configures OTel tracing and FastAPI instrumentation through (Railway side)", $techn="", $tags="", $link="")
 

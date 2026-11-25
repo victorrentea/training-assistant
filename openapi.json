@@ -510,22 +510,6 @@
         }
       }
     },
-    "/webhook/agentmail": {
-      "post": {
-        "summary": "Agentmail Webhook",
-        "operationId": "agentmail_webhook_webhook_agentmail_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
     "/": {
       "get": {
         "summary": "Landing Page",
@@ -726,6 +710,116 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RefreshSlideResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/slides/deck/{slug}": {
+      "post": {
+        "summary": "Store Deck",
+        "description": "The whole deck as PowerPoint prints it (daemon/slides/local_publish.py): replaces\nwhatever is cached for the slug, Google Drive's conversion included.",
+        "operationId": "store_deck_api_slides_deck__slug__post",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_store_deck_api_slides_deck__slug__post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckStoredResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/slides/pages/{slug}": {
+      "post": {
+        "summary": "Replace Deck Pages",
+        "description": "Only the pages a save changed, put into the cached deck at `positions` (a JSON list,\n1-based). 409 unless the cached deck is the one the daemon thinks it is (`base_sha256`):\nafter a restart, or with Google Drive's version in the cache, it must send the whole deck.",
+        "operationId": "replace_deck_pages_api_slides_pages__slug__post",
+        "security": [
+          {
+            "HTTPBasic": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_replace_deck_pages_api_slides_pages__slug__post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckStoredResponse"
                 }
               }
             }
@@ -1443,6 +1537,44 @@
   },
   "components": {
     "schemas": {
+      "Body_replace_deck_pages_api_slides_pages__slug__post": {
+        "properties": {
+          "base_sha256": {
+            "type": "string",
+            "title": "Base Sha256"
+          },
+          "positions": {
+            "type": "string",
+            "title": "Positions"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "base_sha256",
+          "positions",
+          "file"
+        ],
+        "title": "Body_replace_deck_pages_api_slides_pages__slug__post"
+      },
+      "Body_store_deck_api_slides_deck__slug__post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_store_deck_api_slides_deck__slug__post"
+      },
       "Body_upload_file__session_id__api_upload_post": {
         "properties": {
           "file": {
@@ -1571,6 +1703,34 @@
           "ciphertext"
         ],
         "title": "Clip"
+      },
+      "DeckStoredResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "sha256",
+          "size"
+        ],
+        "title": "DeckStoredResponse"
       },
       "DeleteStaticRequest": {
         "properties": {

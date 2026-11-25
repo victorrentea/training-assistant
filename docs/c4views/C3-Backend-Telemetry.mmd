@@ -1,0 +1,32 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Workshop Live Interaction Tool - Railway Backend"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 11 ["Workshop Live Interaction Tool"]
+      style 11 fill:#ffffff,stroke:#144d2e,color:#144d2e
+
+      subgraph 14 ["Railway Backend"]
+        style 14 fill:#ffffff,stroke:#3e703e,color:#3e703e
+
+        15["<div style='font-weight: bold'>Bootstrap</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/app.py]</div><div style='font-size: 80%; margin-top:10px'>Registers route ordering,<br />OTel instrumentation, session<br />guards, and startup stamping<br />(version.js /<br />deploy-info.json).</div>"]
+        style 15 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        16["<div style='font-weight: bold'>Shared Core</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/shared/*]</div><div style='font-size: 80%; margin-top:10px'>AppState, auth, session<br />registry/guard, throttling,<br />metrics, messaging, and<br />version helpers.</div>"]
+        style 16 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+        22["<div style='font-weight: bold'>Telemetry receiver</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/features/telemetry/router.py]</div><div style='font-size: 80%; margin-top:10px'>Receives browser OTel spans<br />(POST /api/telemetry/spans)<br />and appends them to the<br />shared traces file.</div>"]
+        style 22 fill:#d6e8c8,stroke:#95a28c,color:#10210f
+      end
+
+      12["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from Railway session routes.</div>"]
+      style 12 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      23["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
+      style 23 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+    end
+
+    12-. "<div>Posts browser OTel spans<br />(test/diagnostic mode)</div><div style='font-size: 70%'></div>" .->22
+    15-. "<div>Initializes</div><div style='font-size: 70%'></div>" .->16
+    15-. "<div>Registers when<br />OTEL_TRACES_FILE is set</div><div style='font-size: 70%'></div>" .->22
+    15-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->23
+
+  end

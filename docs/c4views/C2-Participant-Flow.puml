@@ -21,7 +21,7 @@ System(GoogleDrive, "Google Drive", $descr="Hosts exported slide PDFs consumed b
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
   Container(WorkshopLiveInteractionTool.ParticipantSPA, "Participant SPA", $techn="HTML/CSS/JavaScript", $descr="Participant-facing UI served from Railway session routes.", $tags="", $link="")
-  Container(WorkshopLiveInteractionTool.RailwayBackend, "Railway Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="Thin session-aware bridge for participants, slides, uploads, daemon sync, inbox webhooks, and telemetry.", $tags="", $link="")
+  Container(WorkshopLiveInteractionTool.RailwayBackend, "Railway Backend", $techn="Python 3.12 / FastAPI / Uvicorn", $descr="Thin session-aware bridge for participants, slides, uploads, daemon sync, and telemetry.", $tags="", $link="")
   Container(WorkshopLiveInteractionTool.TrainingDaemon, "Training Daemon", $techn="Python 3.12 CLI + embedded FastAPI", $descr="Local source of truth for host control, live state, persistence, and AI-assisted jobs.", $tags="", $link="")
 }
 

@@ -40,10 +40,6 @@ System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interacti
 
 }
 
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Starts", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Transcriptingest, "Polls for stats and time-window queries", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, "Starts background materials indexer", $techn="", $tags="", $link="")
-Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Lockandheartbeat, "Maintains", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Embeddedhostserver, WorkshopLiveInteractionTool.TrainingDaemon.ParticipantAPIs, "Mounts", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Embeddedhostserver, WorkshopLiveInteractionTool.TrainingDaemon.HostAPIs, "Mounts", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Embeddedhostserver, WorkshopLiveInteractionTool.TrainingDaemon.Quizqueue, "Mounts host quiz-queue routes", $techn="", $tags="", $link="")
@@ -72,6 +68,10 @@ Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInterac
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Railwaybridge, "Maintains", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Sessionpersistence, "Loads and flushes state through", $techn="", $tags="", $link="")
 Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Slidesanduploadpipeline, "Triggers", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Addonsbridge, "Starts", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Transcriptingest, "Polls for stats and time-window queries", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.MaterialsRAGindexer, "Starts background materials indexer", $techn="", $tags="", $link="")
+Rel(WorkshopLiveInteractionTool.TrainingDaemon.Orchestrator, WorkshopLiveInteractionTool.TrainingDaemon.Lockandheartbeat, "Maintains", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

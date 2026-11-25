@@ -10,11 +10,11 @@ graph LR
     style 10 fill:#1d6f42,stroke:#144d2e,color:#ffffff
     11["<div style='font-weight: bold'>Workshop Live Interaction Tool</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Self-hosted real-time<br />audience interaction<br />platform.</div>"]
     style 11 fill:#1d6f42,stroke:#144d2e,color:#ffffff
-    157["<div style='font-weight: bold'>Whisper transcripts</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>~/Documents/transcriptions/<br />-- files on disk, written by<br />the Mac and read by the<br />daemon.</div>"]
-    style 157 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
+    153["<div style='font-weight: bold'>Whisper transcripts</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>~/Documents/transcriptions/<br />-- files on disk, written by<br />the Mac and read by the<br />daemon.</div>"]
+    style 153 fill:#2c5f8a,stroke:#1e4260,color:#ffffff
     2["<div style='font-weight: bold'>Participant</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Joins from a browser, votes,<br />reacts, uploads, and follows<br />the session.</div>"]
     style 2 fill:#0b3d2c,stroke:#072a1e,color:#ffffff
-    3["<div style='font-weight: bold'>Anthropic Claude API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used by the daemon for<br />debate AI cleanup and<br />code-review smart paste<br />extraction.</div>"]
+    3["<div style='font-weight: bold'>Claude (subscription, via claude -p)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>LLM used by the daemon only<br />for debate AI cleanup and<br />code-review smart paste<br />extraction; quizzes do not<br />call it.</div>"]
     style 3 fill:#1d6f42,stroke:#144d2e,color:#ffffff
     4["<div style='font-weight: bold'>GitHub API</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Repo metadata (default<br />branch), repo trees, and blob<br />existence checks used to link<br />opened files to the branch<br />captured at open time.<br />Unauthenticated.</div>"]
     style 4 fill:#1d6f42,stroke:#144d2e,color:#ffffff
@@ -24,14 +24,14 @@ graph LR
     style 6 fill:#1d6f42,stroke:#144d2e,color:#ffffff
     7["<div style='font-weight: bold'>Google Drive</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosts exported slide PDFs<br />consumed by the Railway<br />cache.</div>"]
     style 7 fill:#1d6f42,stroke:#144d2e,color:#ffffff
-    8["<div style='font-weight: bold'>AgentMail</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosted inbox/email service:<br />delivers participant feedback<br />notifications and routes<br />incoming Claude email<br />webhooks.</div>"]
+    8["<div style='font-weight: bold'>AgentMail</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Hosted email service:<br />delivers participant<br />notifications.</div>"]
     style 8 fill:#1d6f42,stroke:#144d2e,color:#ffffff
     9["<div style='font-weight: bold'>Host session files</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Session folders, normalized<br />transcripts, ai-summary.md,<br />uploaded files, and slide<br />manifests on the trainer's<br />Mac.</div>"]
     style 9 fill:#1d6f42,stroke:#144d2e,color:#ffffff
 
     5-. "<div>POST<br />127.0.0.1:1234/feedback-form</div><div style='font-size: 70%'></div>" .->11
-    5-. "<div>Writes Whisper output to</div><div style='font-size: 70%'></div>" .->157
-    11-. "<div>Reads and tracks deltas of<br />normalized transcripts from</div><div style='font-size: 70%'></div>" .->157
+    5-. "<div>Writes Whisper output to</div><div style='font-size: 70%'></div>" .->153
+    11-. "<div>Reads and tracks deltas of<br />normalized transcripts from</div><div style='font-size: 70%'></div>" .->153
     2-. "<div>Uses in browser</div><div style='font-size: 70%'></div>" .->11
     1-. "<div>Uses in browser</div><div style='font-size: 70%'></div>" .->11
     11-. "<div>Reverse geocodes optional<br />location</div><div style='font-size: 70%'></div>" .->6

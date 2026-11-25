@@ -24,8 +24,8 @@ graph LR
 
       12["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from Railway session routes.</div>"]
       style 12 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      24["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
-      style 24 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      23["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
+      style 23 fill:#5aa05a,stroke:#3e703e,color:#ffffff
     end
 
     12-. "<div>Reads slides and downloads<br />PDFs</div><div style='font-size: 70%'></div>" .->19
@@ -37,6 +37,6 @@ graph LR
     19-. "<div>Reads slide/current-session<br />state from</div><div style='font-size: 70%'></div>" .->16
     20-. "<div>Associates uploads with<br />active participants from</div><div style='font-size: 70%'></div>" .->16
     21-. "<div>Uses host auth from</div><div style='font-size: 70%'></div>" .->16
-    15-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->24
+    15-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->23
 
   end

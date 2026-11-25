@@ -24,31 +24,28 @@ graph LR
         style 20 fill:#d6e8c8,stroke:#95a28c,color:#10210f
         21["<div style='font-weight: bold'>Static sync endpoints</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/features/internal/router.py]</div><div style='font-size: 80%; margin-top:10px'>Allows the daemon to upload<br />and delete generated files<br />under static/.</div>"]
         style 21 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        22["<div style='font-weight: bold'>Inbox webhook bridge</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/features/inbox/router.py]</div><div style='font-size: 80%; margin-top:10px'>Verifies AgentMail (Svix)<br />webhooks for incoming Claude<br />email and forwards events to<br />the connected claude-inbox<br />WebSocket listener.</div>"]
+        22["<div style='font-weight: bold'>Telemetry receiver</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/features/telemetry/router.py]</div><div style='font-size: 80%; margin-top:10px'>Receives browser OTel spans<br />(POST /api/telemetry/spans)<br />and appends them to the<br />shared traces file.</div>"]
         style 22 fill:#d6e8c8,stroke:#95a28c,color:#10210f
-        23["<div style='font-weight: bold'>Telemetry receiver</div><div style='font-size: 70%; margin-top: 0px'>[Component: railway/features/telemetry/router.py]</div><div style='font-size: 80%; margin-top:10px'>Receives browser OTel spans<br />(POST /api/telemetry/spans)<br />and appends them to the<br />shared traces file.</div>"]
-        style 23 fill:#d6e8c8,stroke:#95a28c,color:#10210f
       end
 
       12["<div style='font-weight: bold'>Participant SPA</div><div style='font-size: 70%; margin-top: 0px'>[Container: HTML/CSS/JavaScript]</div><div style='font-size: 80%; margin-top:10px'>Participant-facing UI served<br />from Railway session routes.</div>"]
       style 12 fill:#5aa05a,stroke:#3e703e,color:#ffffff
-      24["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
-      style 24 fill:#5aa05a,stroke:#3e703e,color:#ffffff
+      23["<div style='font-weight: bold'>Training Daemon</div><div style='font-size: 70%; margin-top: 0px'>[Container: Python 3.12 CLI + embedded FastAPI]</div><div style='font-size: 80%; margin-top:10px'>Local source of truth for<br />host control, live state,<br />persistence, and AI-assisted<br />jobs.</div>"]
+      style 23 fill:#5aa05a,stroke:#3e703e,color:#ffffff
     end
 
     12-. "<div>Loads participant pages</div><div style='font-size: 70%'></div>" .->18
     12-. "<div>Connects as participant and<br />forwards REST commands via<br />the daemon proxy</div><div style='font-size: 70%'></div>" .->17
     12-. "<div>Reads slides and downloads<br />PDFs</div><div style='font-size: 70%'></div>" .->19
     12-. "<div>Uploads participant files</div><div style='font-size: 70%'></div>" .->20
-    12-. "<div>Posts browser OTel spans<br />(test/diagnostic mode)</div><div style='font-size: 70%'></div>" .->23
+    12-. "<div>Posts browser OTel spans<br />(test/diagnostic mode)</div><div style='font-size: 70%'></div>" .->22
     15-. "<div>Initializes</div><div style='font-size: 70%'></div>" .->16
     15-. "<div>Registers</div><div style='font-size: 70%'></div>" .->17
     15-. "<div>Registers</div><div style='font-size: 70%'></div>" .->18
     15-. "<div>Registers</div><div style='font-size: 70%'></div>" .->19
     15-. "<div>Registers</div><div style='font-size: 70%'></div>" .->20
     15-. "<div>Registers</div><div style='font-size: 70%'></div>" .->21
-    15-. "<div>Registers</div><div style='font-size: 70%'></div>" .->22
-    15-. "<div>Registers when<br />OTEL_TRACES_FILE is set</div><div style='font-size: 70%'></div>" .->23
+    15-. "<div>Registers when<br />OTEL_TRACES_FILE is set</div><div style='font-size: 70%'></div>" .->22
     17-. "<div>Reads auth, session, and<br />connection state from</div><div style='font-size: 70%'></div>" .->16
     18-. "<div>Uses auth/session helpers<br />from</div><div style='font-size: 70%'></div>" .->16
     19-. "<div>Reads slide/current-session<br />state from</div><div style='font-size: 70%'></div>" .->16
@@ -56,8 +53,7 @@ graph LR
     20-. "<div>Associates uploads with<br />active participants from</div><div style='font-size: 70%'></div>" .->16
     20-. "<div>Uses daemon protocol helpers<br />from</div><div style='font-size: 70%'></div>" .->17
     21-. "<div>Uses host auth from</div><div style='font-size: 70%'></div>" .->16
-    22-. "<div>Stores the connected<br />claude-inbox WebSocket on</div><div style='font-size: 70%'></div>" .->16
     17-. "<div>Triggers slide cache<br />downloads and broadcasts<br />through</div><div style='font-size: 70%'></div>" .->19
-    15-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->24
+    15-. "<div>Configures OTel tracing and<br />FastAPI instrumentation<br />through (Railway side)</div><div style='font-size: 70%'></div>" .->23
 
   end

@@ -15,7 +15,7 @@ left to right direction
 !include <C4/C4_Context>
 !include <C4/C4_Component>
 
-System(AgentMail, "AgentMail", $descr="Hosted inbox/email service: delivers participant feedback notifications and routes incoming Claude email webhooks.", $tags="", $link="")
+System(AgentMail, "AgentMail", $descr="Hosted email service: delivers participant notifications.", $tags="", $link="")
 
 System_Boundary("WorkshopLiveInteractionTool_boundary", "Workshop Live Interaction Tool", $tags="") {
   Container_Boundary("WorkshopLiveInteractionTool.TrainingDaemon_boundary", "Training Daemon", $tags="") {
