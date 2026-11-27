@@ -821,3 +821,36 @@ def test_resolve_entry_skips_the_dominant_probe_when_it_is_the_entrys_branch(mon
                                        dominant="mm26")
     assert ref == "branch"
     assert probed == ["mm26"]  # probed once, not twice
+
+
+# ── would_record: the Mac asks before it shows its "file opened" pill ────────
+
+def test_would_record_a_public_repo(session_folder):
+    with patch.object(github_client, "get_repo_info", return_value=github_client.RepoInfo(default_branch="main")):
+        assert files_md.would_record("https://github.com/owner/repo.git", "src/a.py")
+    assert not (session_folder / "opened-files.md").exists(), "a question writes nothing"
+
+
+def test_would_not_record_private_foreign_host_or_no_file(session_folder):
+    with patch.object(github_client, "get_repo_info", return_value=None):
+        assert not files_md.would_record("https://github.com/owner/private", "src/a.py")
+    with patch.object(github_client, "get_repo_info", return_value=github_client.RepoInfo(default_branch="main")):
+        assert not files_md.would_record("https://gitlab.com/owner/repo", "src/a.py")
+        assert not files_md.would_record("https://github.com/owner/repo", "(none)")
+
+
+def test_would_not_record_without_a_session(monkeypatch):
+    monkeypatch.setattr(files_md, "_get_active_session_folder", lambda: None)
+    assert not files_md.would_record("https://github.com/owner/repo", "src/a.py")
+
+
+def test_would_record_rate_limited_only_an_already_listed_repo(session_folder, monkeypatch):
+    with patch.object(github_client, "get_repo_info", return_value=github_client.RATE_LIMITED):
+        assert not files_md.would_record("https://github.com/owner/unknown", "src/a.py")
+    _freeze_now(monkeypatch, "2026-05-27T10:00:00Z")
+    with patch.object(github_client, "get_repo_info", return_value=github_client.RepoInfo(default_branch="main")), \
+         patch.object(github_client, "get_repo_tree", return_value=github_client.UNKNOWN), \
+         patch.object(github_client, "head_blob", return_value=True):
+        files_md.record_file_opened("https://github.com/owner/known", "main", "src/a.py")
+    with patch.object(github_client, "get_repo_info", return_value=github_client.RATE_LIMITED):
+        assert files_md.would_record("https://github.com/owner/known", "src/b.py")

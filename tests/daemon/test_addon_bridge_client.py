@@ -114,3 +114,20 @@ def test_slide_event_wakes_the_main_loop(monkeypatch):
     bridge._connect_and_listen()
     assert bridge.slide_wakeup.is_set()
     assert [e["slide"] for e in bridge.drain_slides()] == [7]
+
+
+def test_git_file_check_answers_with_the_id_and_the_verdict(monkeypatch):
+    from daemon import files_md
+    from daemon.addon_bridge_client import _git_file_check_result
+    monkeypatch.setattr(files_md, "would_record", lambda url, f: url.endswith("/pub") and f == "a.py")
+    assert _git_file_check_result({"type": "git_file_check", "id": "7", "url": "https://github.com/o/pub", "file": "a.py"}) \
+        == {"type": "git_file_check_result", "id": "7", "listed": True}
+    assert _git_file_check_result({"type": "git_file_check", "id": "8", "url": "https://github.com/o/priv", "file": "a.py"})["listed"] is False
+
+
+def test_git_file_check_fails_closed(monkeypatch):
+    from daemon import files_md
+    from daemon.addon_bridge_client import _git_file_check_result
+    def boom(*_): raise RuntimeError("github down")
+    monkeypatch.setattr(files_md, "would_record", boom)
+    assert _git_file_check_result({"id": "9", "url": "u", "file": "f"})["listed"] is False

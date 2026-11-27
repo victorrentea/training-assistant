@@ -731,6 +731,21 @@ class GitFileOpenedMsg(BaseModel):
     file_url: str | None = None
 
 
+class GitFileCheckMsg(BaseModel):
+    """Inbound from the macOS addon: would this file be listed? (before its pill)"""
+    type: Literal["git_file_check"]
+    id: str
+    url: str
+    file: str
+
+
+class GitFileCheckResultMsg(BaseModel):
+    """Outbound to the macOS addon: the answer to `git_file_check`."""
+    type: Literal["git_file_check_result"] = "git_file_check_result"
+    id: str
+    listed: bool
+
+
 # ── Cross-cutting ────────────────────────────────────────────────────────────
 
 class ReloadMsg(BaseModel):

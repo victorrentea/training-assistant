@@ -51,6 +51,17 @@ def _handle_git_file_opened(data: dict) -> None:
     log.debug(_NAME, f"← git {url.split('/')[-1]}@{branch or '?'} {file_path}")
 
 
+def _git_file_check_result(data: dict) -> dict:
+    """Answer the Mac's `git_file_check`: would this file reach the session's
+    opened-files list? Only then does the Mac offer its pill (and send)."""
+    from daemon import files_md
+    try:
+        listed = files_md.would_record(data.get("url", "") or "", data.get("file", "") or "")
+    except Exception:
+        listed = False
+    return {"type": "git_file_check_result", "id": data.get("id", ""), "listed": listed}
+
+
 def _session_started_msg(
     participant_url: str, session_folder: str | None, show_join_link: bool = False
 ) -> dict:
@@ -316,6 +327,12 @@ class AddonBridgeClient:
                         self._slides_viewed_queue.put(slides)
                 elif data.get("type") == "git_file_opened":
                     _handle_git_file_opened(data)
+                elif data.get("type") == "git_file_check":
+                    # A GitHub lookup may be slow: answer off the receive loop.
+                    threading.Thread(
+                        target=lambda d=data: self._send(_git_file_check_result(d)),
+                        name="git-file-check", daemon=True,
+                    ).start()
                 if _ctx and _token:
                     context.detach(_token)
         except ConnectionClosed:

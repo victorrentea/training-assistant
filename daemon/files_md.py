@@ -443,6 +443,34 @@ def resolve_entry(
     return None, None, ("not-pushed" if branch_exists else "no-branch")
 
 
+def would_record(url: str, file_path: str) -> bool:
+    """Would `record_file_opened` list this file? Asked by the Mac before it
+    shows its "file opened" pill (2026-11-27, Victor: *"de ce a apărut în
+    overlay dacă nu a ajuns în Open Files?"*) — the pill, and the send it
+    offers, appear only for a file that will reach the session's list.
+
+    The same gates as `_record_into_folder`, in the same order, without
+    writing anything: a live session, a github.com repo, a real path, a repo
+    GitHub confirms public — or, while rate-limited, one already listed.
+    """
+    folder = _get_active_session_folder()
+    if folder is None:
+        return False
+    canonical = _canonical_repo_url(url)
+    if canonical is None:
+        return False
+    path = (file_path or "").strip()
+    if not path or path == _ADDON_NO_FILE_SENTINEL:
+        return False
+    owner, repo = _owner_repo(canonical)
+    info = github_client.get_repo_info(owner, repo)
+    if info is None:
+        return False
+    if info is github_client.RATE_LIMITED:
+        return _load_doc(folder).find_repo(canonical) is not None
+    return True
+
+
 def record_file_opened(url: str, branch: str, file_path: str) -> None:
     """Process one addon git_file_opened event for the active session."""
     folder = _get_active_session_folder()
