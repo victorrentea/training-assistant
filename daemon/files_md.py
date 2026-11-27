@@ -467,7 +467,14 @@ def would_record(url: str, file_path: str) -> bool:
     if info is None:
         return False
     if info is github_client.RATE_LIMITED:
-        return _load_doc(folder).find_repo(canonical) is not None
+        # A pure read, like `count_open_files`: `_load_doc` may rewrite the file,
+        # and this runs on its own thread, beside the recorder.
+        target = folder / _FILENAME
+        try:
+            doc = Doc.parse(target.read_text(encoding="utf-8", errors="replace"))
+        except Exception:  # noqa: BLE001
+            return False
+        return doc.find_repo(canonical) is not None
     return True
 
 

@@ -31,6 +31,7 @@ channels:
           - $ref: '#/components/messages/paste_received'
           - $ref: '#/components/messages/session_started'
           - $ref: '#/components/messages/session_ended'
+          - $ref: '#/components/messages/git_file_check_result'
     publish:
       summary: Messages addons sends to the daemon
       message:
@@ -38,6 +39,7 @@ channels:
           - $ref: '#/components/messages/slide_presenting_now'
           - $ref: '#/components/messages/slides_viewed'
           - $ref: '#/components/messages/git_file_opened'
+          - $ref: '#/components/messages/git_file_check'
 
 components:
   schemas:
@@ -237,3 +239,39 @@ components:
           file_url:
             type: string
             description: Full GitHub/GitLab URL to the file (omitted when filename is ambiguous)
+
+    git_file_check:
+      summary: Would this opened file be listed? Asked before the Mac offers its pill
+      x-feature: intellij
+      payload:
+        type: object
+        required: [type, id, url, file]
+        properties:
+          type:
+            type: string
+            enum: [git_file_check]
+          id:
+            type: string
+            description: Request id, echoed in git_file_check_result
+          url:
+            type: string
+            description: Git remote URL of the project
+          file:
+            type: string
+            description: Repo-relative path of the open file
+
+    git_file_check_result:
+      summary: The daemon's answer to git_file_check (same gates as recording, nothing written)
+      x-feature: intellij
+      payload:
+        type: object
+        required: [type, id, listed]
+        properties:
+          type:
+            type: string
+            enum: [git_file_check_result]
+          id:
+            type: string
+          listed:
+            type: boolean
+            description: true only when git_file_opened for it would reach opened-files.md

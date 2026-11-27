@@ -854,3 +854,12 @@ def test_would_record_rate_limited_only_an_already_listed_repo(session_folder, m
         files_md.record_file_opened("https://github.com/owner/known", "main", "src/a.py")
     with patch.object(github_client, "get_repo_info", return_value=github_client.RATE_LIMITED):
         assert files_md.would_record("https://github.com/owner/known", "src/b.py")
+
+
+def test_would_record_rate_limited_never_rewrites_the_file(session_folder):
+    target = session_folder / "opened-files.md"
+    target.write_text("# Files opened this session\n\n## [known](https://github.com/owner/known) — branch `main` <!-- branch:main default_branch:main -->\n\n- src/a.py — 09:00 <!-- ts:2026-05-27T07:00:00Z branch:main reason:unknown -->\n")
+    before = target.read_text()
+    with patch.object(github_client, "get_repo_info", return_value=github_client.RATE_LIMITED):
+        assert files_md.would_record("https://github.com/owner/known", "src/b.py")
+    assert target.read_text() == before

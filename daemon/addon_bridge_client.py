@@ -26,6 +26,7 @@ Protocol:
               — periodic (60s) delta of per-slide viewing durations
   On connect:  server immediately sends the last known slide state as a welcome message.
 """
+import concurrent.futures
 import json
 import os
 import queue
@@ -38,6 +39,12 @@ _PORT = int(os.environ.get("WS_SERVER_PORT", "8765"))
 _RECONNECT_INTERVAL = 5.0  # seconds between reconnect attempts
 _OPEN_TIMEOUT = 5.0
 _NAME = "addons   "
+
+
+# One recorder thread: a GitHub lookup in `record_file_opened` takes seconds, and
+# on the receive loop it would hold back the next `git_file_check` past the
+# Mac's 5 s wait. One worker keeps the load-modify-save of opened-files.md serial.
+_RECORDER = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="git-file-record")
 
 
 def _handle_git_file_opened(data: dict) -> None:
@@ -326,7 +333,7 @@ class AddonBridgeClient:
                     if slides:
                         self._slides_viewed_queue.put(slides)
                 elif data.get("type") == "git_file_opened":
-                    _handle_git_file_opened(data)
+                    _RECORDER.submit(_handle_git_file_opened, data)
                 elif data.get("type") == "git_file_check":
                     # A GitHub lookup may be slow: answer off the receive loop.
                     threading.Thread(
