@@ -135,8 +135,10 @@ components:
           unknown or unnamed participant is "Someone".
         - >-
           On receipt the overlay raises a bottom-left pill "📋 [sender]: [first line]"
-          with a Copy button (puts the full text on the clipboard) and a Dismiss
-          button. No countdown: it stays until dismissed, one pill per paste.
+          with a Copy + Send button (puts the full text on the clipboard AND appends
+          it to the session notes file as a "- 📋 [text]" line, then the pill leaves;
+          if the notes write fails it stays, copied, for a retry) and a Dismiss
+          button. No countdown: it stays until acted on, one pill per paste.
       payload:
         type: object
         required: [type, sender, text]

@@ -632,7 +632,7 @@ Generated from `docs/openapi.yaml`, `docs/participant-ws.yaml`, `docs/host-ws.ya
 ### Addons WS
 | Message | Payload |
 | --- | --- |
-| A participant sent text from the Participant View — overlay offers it to copy<br>Fire-and-forget, best-effort. The host panel gets the same paste over its own channel, so a closed overlay loses nothing.<br>`sender` is a display name resolved by the daemon; never a raw UUID — an unknown or unnamed participant is "Someone".<br>On receipt the overlay raises a bottom-left pill "📋 [sender]: [first line]" with a Copy button (puts the full text on the clipboard) and a Dismiss button. No countdown: it stays until dismissed, one pill per paste.<br>`paste_received` | `sender: string  # Resolved display name of the participant ("Someone" when unknown)`<br>`text: string  # The full pasted text (max 100 KB)` |
+| A participant sent text from the Participant View — overlay offers it to copy<br>Fire-and-forget, best-effort. The host panel gets the same paste over its own channel, so a closed overlay loses nothing.<br>`sender` is a display name resolved by the daemon; never a raw UUID — an unknown or unnamed participant is "Someone".<br>On receipt the overlay raises a bottom-left pill "📋 [sender]: [first line]" with a Copy + Send button (puts the full text on the clipboard AND appends it to the session notes file as a "- 📋 [text]" line, then the pill leaves; if the notes write fails it stays, copied, for a retry) and a Dismiss button. No countdown: it stays until acted on, one pill per paste.<br>`paste_received` | `sender: string  # Resolved display name of the participant ("Someone" when unknown)`<br>`text: string  # The full pasted text (max 100 KB)` |
 
 ## Feature: Prompts
 
